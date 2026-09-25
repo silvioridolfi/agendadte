@@ -31,7 +31,31 @@ export const SUB_ACCIONES: Partial<Record<Accion, string[]>> = {
   'REUNIÓN': ['Reunión institucional', 'Reunión técnica', 'Trabajo interregional'],
 }
 
-export type Fed = { id: string; nombre_completo: string; distritos_a_cargo: string[] }
+// DD.JJ. de horarios: un registro por día hábil (1 = lunes ... 5 = viernes).
+export type DdjjDia = { dia: number; dte: string; dte_desde?: string; dte_hasta?: string; externo?: string }
+export type Fed = { id: string; nombre_completo: string; distritos_a_cargo: string[]; carga_horaria: string | null; ddjj: DdjjDia[] }
+// Participación en clubes, talleres y prácticas (hoja CAPACITACIONES del master). 0..N por acción.
+export type Encuentro = {
+  id: string
+  agenda_item_id: string | null
+  fed_id: string
+  school_id: string | null
+  lugar: string | null
+  fecha: string
+  tipo: Accion
+  propuesta: string | null
+  encuentro_n: number | null
+  modalidad: 'Presencial' | 'Virtual' | null
+  destinatarios: string | null
+  inscriptos: number | null
+  asistentes: number | null
+  descripcion: string | null
+  fotos_url: string | null
+  origen: 'app' | 'planilla'
+  school: School | null
+}
+// `id`: encuentro existente que se está editando (si no viene, se crea uno nuevo).
+export type EncuentroInput = Pick<Encuentro, 'propuesta' | 'encuentro_n' | 'modalidad' | 'destinatarios' | 'inscriptos' | 'asistentes'> & { id?: string }
 // Fila de public.establecimientos (misma fuente que el buscador DTE).
 export type School = { id: string; cue: number | null; nombre: string | null; distrito: string | null; ciudad: string | null }
 export type AgendaItem = {
@@ -46,16 +70,12 @@ export type AgendaItem = {
   detalle: string | null
   estado: Estado
   cantidad: number | null
-  encuentro_n: number | null
-  propuesta: string | null
-  destinatarios: string | null
-  modalidad: 'Presencial' | 'Virtual' | null
-  inscriptos: number | null
-  asistentes: number | null
+  lugar: string | null
   origen: 'app' | 'planilla'
   created_at: string
   updated_at: string
   school: School | null
+  encuentros: Encuentro[]
 }
 export type AgendaItemInput = {
   fed_id: string
@@ -68,10 +88,7 @@ export type AgendaItemInput = {
   detalle: string | null
   estado: Estado
   cantidad: number | null
-  encuentro_n: number | null
-  propuesta: string | null
-  destinatarios: string | null
-  modalidad: 'Presencial' | 'Virtual' | null
-  inscriptos: number | null
-  asistentes: number | null
+  lugar: string | null
+  // Datos del encuentro (sólo clubes, talleres y prácticas); se guardan en agenda_encuentros.
+  encuentro: EncuentroInput | null
 }

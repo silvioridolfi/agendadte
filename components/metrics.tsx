@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { titleCase } from '@/lib/format'
-import { CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, type Accion, type AgendaItem, type Categoria, type Fed } from '@/lib/agenda'
+import { CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, type Accion, type AgendaItem, type Categoria, type Encuentro, type Fed } from '@/lib/agenda'
 
 // Colores por categoría: validados con la guía de dataviz (CVD y contraste sobre fondo claro).
 export const CAT_COLOR: Record<Categoria, string> = { tecnica: '#2a6fb0', pedagogica: '#d41c6c', institucional: '#6f5fc2' }
@@ -51,7 +51,27 @@ function HBar({ label, value, max, sub, color = CAT_COLOR.tecnica }: { label: st
   </li>
 }
 
-export function MetricsView({ items, feds }: { items: AgendaItem[], feds: Fed[] }) {
+const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+
+// Disponibilidad declarada en la DD.JJ. de horarios de cada FED (horario DTE y otros cargos).
+export function DdjjPanel({ feds }: { feds: Fed[] }) {
+  if (!feds.some(f => f.ddjj?.length)) return null
+  return <Panel title="Equipo y disponibilidad" subtitle="Horarios DTE según la DD.JJ. de cada FED · en gris, otros cargos declarados">
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[720px] text-sm">
+        <thead><tr className="text-left text-xs text-dte-gris"><th className="pb-2 font-semibold">FED</th><th className="pb-2 font-semibold">Carga</th>{DIAS.map(d => <th key={d} className="pb-2 font-semibold">{d}</th>)}</tr></thead>
+        <tbody className="divide-y divide-dte-linea">{feds.map(f => <tr key={f.id} className="align-top">
+          <td className="py-2.5 pr-3 font-semibold">{f.nombre_completo}</td>
+          <td className="py-2.5 pr-3 tabular-nums text-dte-gris">{f.carga_horaria ?? '—'}</td>
+          {DIAS.map((_, i) => { const d = f.ddjj?.find(x => x.dia === i + 1); return <td key={i} className="py-2.5 pr-3">{d ? <><span className="block font-medium tabular-nums">{d.dte}</span>{d.externo && <span className="block text-xs text-dte-gris">{d.externo}</span>}</> : <span className="text-dte-gris-claro">—</span>}</td> })}
+        </tr>)}</tbody>
+      </table>
+    </div>
+  </Panel>
+}
+
+// `encuentros` llega ya filtrado con los mismos criterios que las acciones (FED, distrito, búsqueda).
+export function MetricsView({ items, encuentros, feds }: { items: AgendaItem[], encuentros: Encuentro[], feds: Fed[] }) {
   // Las métricas cuentan trabajo hecho: sólo acciones realizadas.
   const done = useMemo(() => items.filter(i => i.estado === 'realizada'), [items])
   const planned = items.filter(i => i.estado === 'planificada').length
@@ -83,14 +103,14 @@ export function MetricsView({ items, feds }: { items: AgendaItem[], feds: Fed[] 
       }
     }
     // Encuentros de clubes, talleres y prácticas
-    const enc = done.filter(i => CON_ENCUENTRO.includes(i.accion))
+    const enc = encuentros
     const paired = enc.filter(i => i.inscriptos != null && i.asistentes != null)
     const byPropuesta = new Map<string, number>(), clubSchools = new Map<string, { name: string, distrito: string, encuentros: number, asistentes: number }>()
     const encByDistrict = new Map<string, number>()
     for (const i of enc) {
-      const p = i.propuesta || titleCase(i.accion); byPropuesta.set(p, (byPropuesta.get(p) ?? 0) + (i.asistentes ?? 0))
+      const p = i.propuesta || titleCase(i.tipo); byPropuesta.set(p, (byPropuesta.get(p) ?? 0) + (i.asistentes ?? 0))
       const d = i.school?.distrito ?? 'Sin escuela'; encByDistrict.set(d, (encByDistrict.get(d) ?? 0) + (i.asistentes ?? 0))
-      if (i.accion === 'CLUB DE TECNOLOGÍA' && i.school) {
+      if (i.tipo === 'CLUB DE TECNOLOGÍA' && i.school) {
         const c = clubSchools.get(i.school.id) ?? { name: i.school.nombre ?? '', distrito: i.school.distrito ?? '', encuentros: 0, asistentes: 0 }
         c.encuentros++; c.asistentes += i.asistentes ?? 0; clubSchools.set(i.school.id, c)
       }
@@ -102,7 +122,7 @@ export function MetricsView({ items, feds }: { items: AgendaItem[], feds: Fed[] 
       byPropuesta: [...byPropuesta.entries()].sort((a, b) => b[1] - a[1]), encByDistrict: [...encByDistrict.entries()].sort((a, b) => b[1] - a[1]),
       clubSchools: [...clubSchools.values()].sort((a, b) => b.encuentros - a.encuentros).slice(0, 8),
     }
-  }, [done])
+  }, [done, encuentros])
 
   const totalDone = done.length
   const fedRows = feds.map(f => ({ fed: f, ...(m.byFed.get(f.id) ?? { counts: emptyCounts(), schools: new Set<string>(), last: '' }) }))
@@ -111,10 +131,10 @@ export function MetricsView({ items, feds }: { items: AgendaItem[], feds: Fed[] 
   const cellMax = Math.max(1, ...[...m.byDistrict.values()].flatMap(r => [...r.values()]))
   const districts = [...m.byDistrict.keys()].sort((a, b) => (a === 'Sin escuela' ? 1 : b === 'Sin escuela' ? -1 : a.localeCompare(b)))
 
-  if (!totalDone) return <div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-10 text-center">
+  if (!totalDone) return <div className="flex flex-col gap-4"><div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-10 text-center">
     <p className="font-semibold">Todavía no hay acciones realizadas en este período</p>
     <p className="mt-1 text-sm text-dte-gris">Las métricas cuentan las acciones marcadas como realizadas{planned ? ` (hay ${planned} planificadas)` : ''}.</p>
-  </div>
+  </div><DdjjPanel feds={feds} /></div>
 
   return <div className="flex flex-col gap-4">
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
@@ -174,5 +194,6 @@ export function MetricsView({ items, feds }: { items: AgendaItem[], feds: Fed[] 
     {m.clubSchools.length > 0 && <Panel title="Escuelas con clubes activos" subtitle="Ordenadas por cantidad de encuentros del Club de Tecnología">
       <ul className="divide-y divide-dte-linea">{m.clubSchools.map(c => <li key={c.name + c.distrito} className="flex items-center justify-between gap-3 py-2 text-sm"><span className="min-w-0"><span className="line-clamp-2 font-semibold leading-snug">{titleCase(c.name)}</span><span className="text-xs text-dte-gris">{titleCase(c.distrito)}</span></span><span className="shrink-0 text-right tabular-nums"><span className="font-semibold">{c.encuentros}</span> <span className="text-xs text-dte-gris">encuentros · {c.asistentes} asistentes</span></span></li>)}</ul>
     </Panel>}
+    <DdjjPanel feds={feds} />
   </div>
 }
