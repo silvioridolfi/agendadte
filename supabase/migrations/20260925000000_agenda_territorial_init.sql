@@ -1,5 +1,5 @@
 -- Aplicada al proyecto supabase-sigte-DB (jylmhpxcyrhbhxpvuwsu).
--- Las escuelas se leen de la tabla existente bitacora_pp.schools (no se duplican).
+-- (La FK de school_id se cambió a public.establecimientos en la migración siguiente.)
 create type public.agenda_accion as enum ('VISITA TÉCNICA','VISITA PEDAGÓGICA','REUNIÓN','CLUB DE TECNOLOGÍA','PRÁCTICAS PROFESIONALIZANTES','TALLER/CAPACITACIÓN','ASISTENCIA REMOTA','CONECTIVIDAD','ADMINISTRATIVO','CHECKLIST','OFICINA R1','PARO');
 create type public.agenda_estado as enum ('planificada','realizada','reprogramada','cancelada');
 

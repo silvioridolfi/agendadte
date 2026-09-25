@@ -31,7 +31,7 @@ const timeRange = (i: AgendaItem) => (i.hora_inicio ? `${hhmm(i.hora_inicio)}${i
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 const fedColor = (feds: Fed[], id: string) => avatarColors[Math.max(0, feds.findIndex(f => f.id === id)) % avatarColors.length]
-const schoolLabel = (s: School | null) => (s ? `${s.nombre_completo || s.nombre || 'Escuela'}${s.cue ? ` (CUE: ${s.cue})` : ''}` : 'Sin escuela')
+const schoolLabel = (s: School | null) => (s ? `${s.nombre || 'Escuela'}${s.cue ? ` (CUE: ${s.cue})` : ''}` : 'Sin escuela')
 
 function ActionChip({ label }: { label: Accion }) { return <span className={`inline-flex max-w-full items-center rounded-md px-2 py-1 text-[10px] font-bold tracking-[0.04em] ${actionStyle[label] || 'bg-muted text-muted-foreground'}`}>{label}</span> }
 function StatusBadge({ status }: { status: Estado }) { return <Badge variant="outline" className={`rounded-md text-[10px] font-semibold capitalize ${statusStyle[status] || ''}`}>{status}</Badge> }
@@ -122,7 +122,7 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
   const distritos = useMemo(() => [...new Set([...feds.flatMap(f => f.distritos_a_cargo), ...(items ?? []).map(i => i.school?.distrito).filter((d): d is string => !!d)])].sort((a, b) => a.localeCompare(b, 'es', { numeric: true })), [feds, items])
   const filtered = useMemo(() => (items ?? []).filter(i =>
     (!distrito || i.school?.distrito === distrito) && (!fedId || i.fed_id === fedId) && (!accion || i.accion === accion) && (!estado || i.estado === estado) &&
-    (!search || `${fedName(i.fed_id)} ${i.school?.nombre ?? ''} ${i.school?.nombre_completo ?? ''} ${i.school?.cue ?? ''} ${i.accion} ${i.sub_accion ?? ''}`.toLowerCase().includes(search.toLowerCase()))), [items, distrito, fedId, accion, estado, search, fedName])
+    (!search || `${fedName(i.fed_id)} ${i.school?.nombre ?? ''} ${i.school?.ciudad ?? ''} ${i.school?.cue ?? ''} ${i.accion} ${i.sub_accion ?? ''}`.toLowerCase().includes(search.toLowerCase()))), [items, distrito, fedId, accion, estado, search, fedName])
   const groups = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName])
   const title = range === 'day' ? fmt(from, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : range === 'week' ? `Semana del ${fmt(from, { day: 'numeric', month: 'short' })} al ${fmt(to, { day: 'numeric', month: 'short', year: 'numeric' })}` : fmt(from, { month: 'long', year: 'numeric' })
 
@@ -149,8 +149,8 @@ function SchoolPicker({ value, onChange }: { value: School | null, onChange: (s:
     return () => clearTimeout(t)
   }, [query])
   if (value) return <div className="flex min-h-9 items-center justify-between gap-2 rounded-lg border border-input px-3 py-1.5 text-sm font-normal"><span className="line-clamp-2">{value.distrito ? `${value.distrito} | ` : ''}{schoolLabel(value)}</span><Button type="button" variant="ghost" size="icon" aria-label="Quitar escuela" onClick={() => onChange(null)}><X /></Button></div>
-  return <div className="relative"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10 font-normal" placeholder="Nombre o CUE..." value={query} onChange={e => { setQuery(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
-    {open && query.trim().length >= 2 && <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-[#dce4e8] bg-white text-sm font-normal shadow-lg">{loading ? <p className="p-3 text-muted-foreground">Buscando…</p> : !results.length ? <p className="p-3 text-muted-foreground">Sin resultados</p> : results.map(s => <button key={s.id} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { onChange(s); setQuery(''); setOpen(false) }} className="block w-full px-3 py-2 text-left hover:bg-[#f5f7f8]"><span className="font-semibold">{s.nombre_completo || s.nombre}</span><span className="block text-xs text-muted-foreground">CUE {s.cue ?? '—'}{s.distrito ? ` · ${s.distrito}` : ''}</span></button>)}</div>}</div>
+  return <div className="relative"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10 font-normal" placeholder="Nombre, localidad o CUE..." value={query} onChange={e => { setQuery(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
+    {open && query.trim().length >= 2 && <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-[#dce4e8] bg-white text-sm font-normal shadow-lg">{loading ? <p className="p-3 text-muted-foreground">Buscando…</p> : !results.length ? <p className="p-3 text-muted-foreground">Sin resultados</p> : results.map(s => <button key={s.id} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { onChange(s); setQuery(''); setOpen(false) }} className="block w-full px-3 py-2 text-left hover:bg-[#f5f7f8]"><span className="font-semibold">{s.nombre}</span><span className="block text-xs text-muted-foreground">CUE {s.cue ?? '—'}{s.distrito ? ` · ${s.distrito}` : ''}{s.ciudad && s.ciudad !== s.distrito ? ` · ${s.ciudad}` : ''}</span></button>)}</div>}</div>
 }
 
 function ItemForm({ fed, item, onCancel, onSaved }: { fed: Fed, item: AgendaItem | null, onCancel: () => void, onSaved: () => void }) {
