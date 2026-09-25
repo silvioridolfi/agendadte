@@ -4,19 +4,22 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Identidad Gobierno de la Provincia de Buenos Aires / DGCyE */
+/* Identidad Dirección de Tecnología Educativa (degradado institucional) */
 @theme {
-  --color-pba-azul: #417099;
-  --color-pba-azul-oscuro: #2f5577;
-  --color-pba-celeste: #00aec3;
-  --color-pba-celeste-texto: #007d8c;
-  --color-pba-celeste-claro: #e5f6f8;
-  --color-pba-fucsia: #e81f76;
-  --color-pba-tinta: #25323c;
-  --color-pba-gris: #5d6f7c;
-  --color-pba-gris-claro: #8a9aa5;
-  --color-pba-linea: #dde5ea;
-  --color-pba-fondo: #f3f6f8;
+  --color-dte-petroleo: #05476e;
+  --color-dte-petroleo-oscuro: #04364f;
+  --color-dte-violeta: #683a74;
+  --color-dte-magenta: #d41c6c;
+  --color-dte-rosa: #f34091;
+  --color-dte-celeste: #8fd6e5;
+  --color-dte-lila: #705ccb;
+  --color-dte-rosa-suave: #d576ab;
+  --color-dte-tinta: #1f2a3a;
+  --color-dte-gris: #5b6474;
+  --color-dte-gris-claro: #8d95a3;
+  --color-dte-linea: #e3e1ea;
+  --color-dte-fondo: #f6f5f9;
+  --color-dte-tinte: #f7eef4;
 }
 
 @theme inline {
@@ -70,7 +73,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #417099;
+  --primary: #05476e;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -81,7 +84,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: #00aec3;
+  --ring: #705ccb;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -178,3 +181,6 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Degradado de la marca: petróleo → violeta → magenta */
+.bg-dte-degradado { background-image: linear-gradient(160deg, #05476e 0%, #683a74 55%, #d41c6c 100%); }
