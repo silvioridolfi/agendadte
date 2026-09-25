@@ -1,6 +1,9 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { Encode_Sans } from 'next/font/google'
 import './globals.css'
+
+const encodeSans = Encode_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-encode-sans' })
 
 export const metadata: Metadata = {
   title: 'Agenda Territorial · Equipo FED',
@@ -26,11 +29,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light dark',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' },
-  ],
+  colorScheme: 'light',
+  themeColor: '#417099',
 }
 
 export default function RootLayout({
@@ -39,8 +39,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es">
-      <body className="antialiased">
+    <html lang="es" className={encodeSans.variable}>
+      <body className="font-sans antialiased">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

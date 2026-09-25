@@ -4,7 +4,23 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Identidad Gobierno de la Provincia de Buenos Aires / DGCyE */
+@theme {
+  --color-pba-azul: #417099;
+  --color-pba-azul-oscuro: #2f5577;
+  --color-pba-celeste: #00aec3;
+  --color-pba-celeste-texto: #007d8c;
+  --color-pba-celeste-claro: #e5f6f8;
+  --color-pba-fucsia: #e81f76;
+  --color-pba-tinta: #25323c;
+  --color-pba-gris: #5d6f7c;
+  --color-pba-gris-claro: #8a9aa5;
+  --color-pba-linea: #dde5ea;
+  --color-pba-fondo: #f3f6f8;
+}
+
 @theme inline {
+  --font-sans: var(--font-encode-sans), 'Encode Sans', Arial, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,14 +63,14 @@
 
 :root {
   color-scheme: light;
-  --font-sans: 'Arial', 'Helvetica Neue', sans-serif;
+  
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: #417099;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -65,7 +81,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: #00aec3;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
