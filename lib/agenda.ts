@@ -92,3 +92,7 @@ export type AgendaItemInput = {
   // Datos del encuentro (sólo clubes, talleres y prácticas); se guardan en agenda_encuentros.
   encuentro: EncuentroInput | null
 }
+
+// Feriados nacionales, días con fines turísticos y aniversarios distritales (tabla public.feriados).
+// distrito null = aplica a todos; si no, sólo a quienes tienen ese distrito a cargo.
+export type Feriado = { fecha: string; nombre: string; tipo: 'nacional' | 'turistico' | 'distrital'; distrito: string | null; confirmado: boolean }

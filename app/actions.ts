@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseServer } from '@/lib/supabase-server'
-import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type School } from '@/lib/agenda'
+import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School } from '@/lib/agenda'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
 // así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
@@ -114,6 +114,12 @@ async function deleteItemImpl(id: string, fedId: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
+async function getFeriadosImpl(from: string, to: string): Promise<Feriado[]> {
+  const { data, error } = await supabaseServer().from('feriados').select('fecha, nombre, tipo, distrito, confirmado').gte('fecha', from).lte('fecha', to).order('fecha')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as Feriado[]
+}
+
 export const getFeds = async () => run(() => getFedsImpl())
 export const searchSchools = async (query: string) => run(() => searchSchoolsImpl(query))
 export const getFedItems = async (fedId: string, from: string, to: string) => run(() => getFedItemsImpl(fedId, from, to))
@@ -122,3 +128,4 @@ export const getEncuentros = async (from: string, to: string) => run(() => getEn
 export const saveItem = async (input: AgendaItemInput, id?: string) => run(() => saveItemImpl(input, id))
 export const setItemStatus = async (id: string, fedId: string, estado: AgendaItemInput['estado']) => run(() => setItemStatusImpl(id, fedId, estado))
 export const deleteItem = async (id: string, fedId: string) => run(() => deleteItemImpl(id, fedId))
+export const getFeriados = async (from: string, to: string) => run(() => getFeriadosImpl(from, to))
