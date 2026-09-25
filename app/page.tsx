@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
-import { getAllItems, getFedItems, getFeds, saveItem, searchSchools } from '@/app/actions'
+import * as api from '@/app/actions'
 import { ACCIONES, ESTADOS, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type School } from '@/lib/agenda'
 
 const actionStyle: Record<Accion, string> = {
@@ -37,6 +37,9 @@ function ActionChip({ label }: { label: Accion }) { return <span className={`inl
 function StatusBadge({ status }: { status: Estado }) { return <Badge variant="outline" className={`rounded-md text-[10px] font-semibold capitalize ${statusStyle[status] || ''}`}>{status}</Badge> }
 function ErrorBox({ message }: { message: string }) { return <p className="rounded-lg border border-[#e3aaaa] bg-[#fff0f0] p-3 text-sm text-[#9b4040]">{message}</p> }
 function Loading() { return <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground"><Loader2 className="animate-spin" />Cargando…</div> }
+// Desenvuelve el Result de las server actions: lanza con el mensaje real del servidor.
+const call = <A extends unknown[], T>(fn: (...a: A) => Promise<api.Result<T>>) => async (...a: A): Promise<T> => { const r = await fn(...a); if (!r.ok) throw new Error(r.error); return r.data }
+const getFeds = call(api.getFeds), searchSchools = call(api.searchSchools), getFedItems = call(api.getFedItems), getAllItems = call(api.getAllItems), saveItem = call(api.saveItem)
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : 'Error inesperado')
 
 export default function Page() {

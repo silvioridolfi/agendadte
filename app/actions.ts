@@ -3,16 +3,23 @@
 import { supabaseServer } from '@/lib/supabase-server'
 import { ACCIONES, ESTADOS, type AgendaItem, type AgendaItemInput, type Fed, type School } from '@/lib/agenda'
 
+// En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
+// así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
+export type Result<T> = { ok: true; data: T } | { ok: false; error: string }
+async function run<T>(fn: () => Promise<T>): Promise<Result<T>> {
+  try { return { ok: true, data: await fn() } } catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) } }
+}
+
 const SCHOOL_COLS = 'id, cue, nombre, nombre_completo, distrito'
 const schools = () => supabaseServer().schema('bitacora_pp').from('schools')
 
-export async function getFeds(): Promise<Fed[]> {
+async function getFedsImpl(): Promise<Fed[]> {
   const { data, error } = await supabaseServer().from('feds').select('id, nombre_completo, distritos_a_cargo').order('nombre_completo')
   if (error) throw new Error(error.message)
   return data ?? []
 }
 
-export async function searchSchools(query: string): Promise<School[]> {
+async function searchSchoolsImpl(query: string): Promise<School[]> {
   const q = query.trim()
   if (q.length < 2) return []
   let req = schools().select(SCHOOL_COLS).limit(15)
@@ -43,13 +50,13 @@ function itemsQuery(from: string, to: string) {
     .order('fecha').order('hora_inicio', { nullsFirst: true })
 }
 
-export async function getFedItems(fedId: string, from: string, to: string): Promise<AgendaItem[]> {
+async function getFedItemsImpl(fedId: string, from: string, to: string): Promise<AgendaItem[]> {
   const { data, error } = await itemsQuery(from, to).eq('fed_id', fedId)
   if (error) throw new Error(error.message)
   return withSchools(data ?? [])
 }
 
-export async function getAllItems(from: string, to: string): Promise<AgendaItem[]> {
+async function getAllItemsImpl(from: string, to: string): Promise<AgendaItem[]> {
   const { data, error } = await itemsQuery(from, to)
   if (error) throw new Error(error.message)
   return withSchools(data ?? [])
@@ -62,10 +69,16 @@ function clean(input: AgendaItemInput): AgendaItemInput {
   return { ...input, school_id: opt(input.school_id), hora_inicio: opt(input.hora_inicio), hora_fin: opt(input.hora_fin), sub_accion: opt(input.sub_accion), detalle: opt(input.detalle) }
 }
 
-export async function saveItem(input: AgendaItemInput, id?: string): Promise<void> {
+async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<void> {
   const row = clean(input)
   const table = supabaseServer().from('agenda_items')
   // Al editar, el item debe pertenecer al FED que lo edita.
   const { error } = id ? await table.update(row).eq('id', id).eq('fed_id', row.fed_id) : await table.insert(row)
   if (error) throw new Error(error.message)
 }
+
+export const getFeds = async () => run(() => getFedsImpl())
+export const searchSchools = async (query: string) => run(() => searchSchoolsImpl(query))
+export const getFedItems = async (fedId: string, from: string, to: string) => run(() => getFedItemsImpl(fedId, from, to))
+export const getAllItems = async (from: string, to: string) => run(() => getAllItemsImpl(from, to))
+export const saveItem = async (input: AgendaItemInput, id?: string) => run(() => saveItemImpl(input, id))
