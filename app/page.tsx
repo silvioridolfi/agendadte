@@ -1,24 +1,41 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, LayoutDashboard, Loader2, Plus, Search, X } from 'lucide-react'
+import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Clock, LayoutDashboard, Loader2, MapPin, Pencil, Plus, School as SchoolIcon, Search, Trash2, UserRound, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import * as api from '@/app/actions'
 import { ACCIONES, ESTADOS, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type School } from '@/lib/agenda'
 
-const actionStyle: Record<Accion, string> = {
-  'VISITA TÉCNICA': 'bg-[#d9eaf5] text-[#246182]', 'VISITA PEDAGÓGICA': 'bg-[#e5def4] text-[#644c91]', 'REUNIÓN': 'bg-[#f8e8bd] text-[#8a6714]', 'CLUB DE TECNOLOGÍA': 'bg-[#d8eedf] text-[#34734d]', 'PRÁCTICAS PROFESIONALIZANTES': 'bg-[#f5d9e2] text-[#97506b]', 'TALLER/CAPACITACIÓN': 'bg-[#f8dfcf] text-[#955932]', 'ASISTENCIA REMOTA': 'bg-[#d6e9ee] text-[#3c707a]', 'CONECTIVIDAD': 'bg-[#e4e8c5] text-[#667323]', 'ADMINISTRATIVO': 'bg-[#e7e7e7] text-[#626262]', 'CHECKLIST': 'bg-[#e2e0ee] text-[#625c89]', 'OFICINA R1': 'bg-[#f0ded9] text-[#8d5148]', 'PARO': 'bg-[#f2d4d4] text-[#9b4040]',
+// ---- estilos por categoría ----
+// Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
+const actionStyle: Record<Accion, { chip: string, dot: string }> = {
+  'VISITA TÉCNICA': { chip: 'bg-[#dcebf5] text-[#1d5a7d]', dot: 'bg-[#2f7fae]' },
+  'VISITA PEDAGÓGICA': { chip: 'bg-[#e8e2f6] text-[#553f86]', dot: 'bg-[#705ccb]' },
+  'REUNIÓN': { chip: 'bg-[#f8ebc6] text-[#7a5a0c]', dot: 'bg-[#d9a520]' },
+  'CLUB DE TECNOLOGÍA': { chip: 'bg-[#dbefe2] text-[#2c6644]', dot: 'bg-[#3f9a64]' },
+  'PRÁCTICAS PROFESIONALIZANTES': { chip: 'bg-[#f8dfe9] text-[#8e3b61]', dot: 'bg-[#d576ab]' },
+  'TALLER/CAPACITACIÓN': { chip: 'bg-[#f9e2d3] text-[#86491f]', dot: 'bg-[#e0874a]' },
+  'ASISTENCIA REMOTA': { chip: 'bg-[#d9f1f5] text-[#0d6573]', dot: 'bg-[#00aec3]' },
+  'CONECTIVIDAD': { chip: 'bg-[#e7ebcb] text-[#5a661b]', dot: 'bg-[#99a832]' },
+  'ADMINISTRATIVO': { chip: 'bg-[#eaeaee] text-[#4f5461]', dot: 'bg-[#8d95a3]' },
+  'CHECKLIST': { chip: 'bg-[#e4e2f0] text-[#57507e]', dot: 'bg-[#8a82b8]' },
+  'OFICINA R1': { chip: 'bg-[#e1e9f1] text-[#2f5577]', dot: 'bg-[#417099]' },
+  'PARO': { chip: 'bg-[#fbdde8] text-[#a3164f]', dot: 'bg-[#e81f76]' },
 }
-const statusStyle: Record<Estado, string> = { planificada: 'border-pba-azul/40 bg-pba-azul/10 text-pba-azul', realizada: 'border-pba-celeste/50 bg-pba-celeste/10 text-pba-celeste-texto', reprogramada: 'border-[#e6c98b] bg-[#fff6dd] text-[#8a6714]', cancelada: 'border-pba-fucsia/40 bg-pba-fucsia/10 text-pba-fucsia' }
+const statusStyle: Record<Estado, { badge: string, label: string }> = {
+  planificada: { badge: 'border-pba-azul/40 bg-pba-azul/10 text-pba-azul', label: 'Planificada' },
+  realizada: { badge: 'border-pba-celeste/50 bg-pba-celeste/10 text-pba-celeste-texto', label: 'Realizada' },
+  reprogramada: { badge: 'border-[#e6c98b] bg-[#fff6dd] text-[#7a5a0c]', label: 'Reprogramada' },
+  cancelada: { badge: 'border-pba-fucsia/40 bg-pba-fucsia/10 text-[#b8155c]', label: 'Cancelada' },
+}
 const avatarColors = ['bg-[#dff3f8]', 'bg-[#e9e5f8]', 'bg-[#fbe3ee]', 'bg-[#dde8f0]', 'bg-[#f1e4f0]', 'bg-[#fde8f1]']
-const selectClass = 'h-9 w-full rounded-lg border border-input bg-white px-2.5 text-sm md:w-44'
+const selectClass = 'h-9 w-full rounded-lg border border-input bg-white px-2.5 text-sm text-dte-tinta outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+const eyebrow = 'text-xs font-bold uppercase tracking-[0.15em] text-dte-magenta'
+const PROFILE_KEY = 'agenda-territorial:fed'
 
 // ---- fechas (siempre en hora local, formato YYYY-MM-DD) ----
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -26,74 +43,308 @@ const parse = (s: string) => { const [y, m, d] = s.split('-').map(Number); retur
 const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
 const startOfWeek = (d: Date) => addDays(d, -((d.getDay() + 6) % 7))
 const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString('es-AR', opts)
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '')
-const timeRange = (i: AgendaItem) => (i.hora_inicio ? `${hhmm(i.hora_inicio)}${i.hora_fin ? ` — ${hhmm(i.hora_fin)}` : ''}` : 'Sin horario')
-
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
-const fedColor = (feds: Fed[], id: string) => avatarColors[Math.max(0, feds.findIndex(f => f.id === id)) % avatarColors.length]
-const schoolLabel = (s: School | null) => (s ? `${s.nombre || 'Escuela'}${s.cue ? ` (CUE: ${s.cue})` : ''}` : 'Sin escuela')
-
-function ActionChip({ label }: { label: Accion }) { return <span className={`inline-flex max-w-full items-center rounded-md px-2 py-1 text-[10px] font-bold tracking-[0.04em] ${actionStyle[label] || 'bg-muted text-muted-foreground'}`}>{label}</span> }
-function StatusBadge({ status }: { status: Estado }) { return <Badge variant="outline" className={`rounded-md text-[10px] font-semibold capitalize ${statusStyle[status] || ''}`}>{status}</Badge> }
-function ErrorBox({ message }: { message: string }) { return <p className="rounded-lg border border-[#e3aaaa] bg-[#fff0f0] p-3 text-sm text-[#9b4040]">{message}</p> }
-function Loading() { return <div className="flex items-center justify-center gap-2 py-16 text-sm opacity-70"><Loader2 className="animate-spin" />Cargando…</div> }
-// Desenvuelve el Result de las server actions: lanza con el mensaje real del servidor.
-const call = <A extends unknown[], T>(fn: (...a: A) => Promise<api.Result<T>>) => async (...a: A): Promise<T> => { const r = await fn(...a); if (!r.ok) throw new Error(r.error); return r.data }
-const getFeds = call(api.getFeds), searchSchools = call(api.searchSchools), getFedItems = call(api.getFedItems), getAllItems = call(api.getAllItems), saveItem = call(api.saveItem)
-const errMsg = (e: unknown) => (e instanceof Error ? e.message : 'Error inesperado')
-
-export default function Page() {
-  const [feds, setFeds] = useState<Fed[] | null>(null)
-  const [fedsError, setFedsError] = useState('')
-  const [profile, setProfile] = useState<Fed | null>(null)
-  const [section, setSection] = useState<'agenda' | 'board'>('agenda')
-  const [editing, setEditing] = useState<AgendaItem | 'new' | null>(null)
-  const [selected, setSelected] = useState<AgendaItem | null>(null)
-  const [reloadKey, setReloadKey] = useState(0)
-
-  useEffect(() => { getFeds().then(setFeds).catch(e => setFedsError(errMsg(e))) }, [])
-
-  if (!profile) return <ProfileSelect feds={feds} error={fedsError} onSelect={setProfile} />
-  return <div className="min-h-screen bg-dte-fondo text-dte-tinta">
-    <header className="border-b border-dte-linea bg-white"><div className="bg-dte-degradado h-1.5" /><div className="mx-auto flex max-w-[1440px] items-center justify-between px-5 py-4 lg:px-10"><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-xl bg-dte-degradado text-white"><ClipboardList /></div><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-dte-magenta">Equipo FED</p><h1 className="text-lg font-bold tracking-tight">Agenda Territorial</h1></div></div><div className="flex items-center gap-3"><Button variant="ghost" size="sm" className="text-dte-gris" onClick={() => setSection(section === 'agenda' ? 'board' : 'agenda')}><LayoutDashboard data-icon="inline-start" /><span className="hidden sm:inline">{section === 'agenda' ? 'Tablero coordinador' : 'Mi agenda'}</span></Button><Avatar className="size-9"><AvatarFallback className={`${fedColor(feds ?? [], profile.id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(profile.nombre_completo)}</AvatarFallback></Avatar><div className="hidden text-right sm:block"><p className="text-xs font-semibold">{profile.nombre_completo}</p><p className="text-[11px] text-muted-foreground">FED · {profile.distritos_a_cargo.join(', ') || 'Sin distritos'}</p></div><Button variant="ghost" size="icon" aria-label="Cambiar perfil" onClick={() => { setProfile(null); setSection('agenda') }}><ChevronDown /></Button></div></div></header>
-    {section === 'agenda'
-      ? <AgendaView fed={profile} reloadKey={reloadKey} onNew={() => setEditing('new')} onSelect={setSelected} />
-      : <CoordinatorView feds={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} />}
-    <Dialog open={!!selected} onOpenChange={() => setSelected(null)}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Detalle de la acción</DialogTitle></DialogHeader>{selected && <div className="flex flex-col gap-4"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{fmt(parse(selected.fecha), { weekday: 'long', day: 'numeric', month: 'long' })} · {timeRange(selected)}</p><h3 className="mt-1 text-lg font-bold">{schoolLabel(selected.school)}</h3>{selected.school?.distrito && <p className="text-sm text-muted-foreground">Distrito {selected.school.distrito}</p>}<p className="mt-1 text-xs text-muted-foreground">FED: {feds?.find(f => f.id === selected.fed_id)?.nombre_completo ?? '—'}</p></div><StatusBadge status={selected.estado} /></div><Separator /><div className="flex flex-col gap-3"><ActionChip label={selected.accion} />{selected.sub_accion && <p className="text-sm font-semibold">{selected.sub_accion}</p>}{selected.detalle && <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{selected.detalle}</p>}</div><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setSelected(null)}>Cerrar</Button>{selected.fed_id === profile.id && <Button onClick={() => { setEditing(selected); setSelected(null) }}>Editar acción</Button>}</div></div>}</DialogContent></Dialog>
-    <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{editing === 'new' ? 'Nueva acción' : 'Editar acción'}</DialogTitle></DialogHeader>{editing && <ItemForm key={editing === 'new' ? 'new' : editing.id} fed={profile} item={editing === 'new' ? null : editing} onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); setReloadKey(k => k + 1) }} />}</DialogContent></Dialog>
-  </div>
+const timeRange = (i: AgendaItem) => (i.hora_inicio ? `${hhmm(i.hora_inicio)}${i.hora_fin ? ` a ${hhmm(i.hora_fin)}` : ''}` : 'Sin horario')
+// "21 – 27 de septiembre de 2026" o "29 de septiembre – 5 de octubre de 2026"
+function weekTitle(from: Date, to: Date) {
+  const sameMonth = from.getMonth() === to.getMonth()
+  return `${sameMonth ? from.getDate() : fmt(from, { day: 'numeric', month: 'long' })} – ${fmt(to, { day: 'numeric', month: 'long', year: 'numeric' })}`
 }
 
-function ProfileSelect({ feds, error, onSelect }: { feds: Fed[] | null, error: string, onSelect: (fed: Fed) => void }) {
-  return <main className="bg-dte-degradado relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-10 text-white"><span aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-44 rotate-45 rounded-[2.5rem] border-[22px] border-dte-rosa" /><span aria-hidden className="pointer-events-none absolute right-40 top-4 size-10 rounded-full bg-dte-celeste" /><span aria-hidden className="pointer-events-none absolute right-8 top-40 size-8 rounded-full bg-dte-lila" /><div className="relative w-full max-w-3xl"><div className="mb-10 flex items-center gap-3"><div className="flex size-11 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/30"><ClipboardList /></div><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-dte-celeste">Equipo FED</p><h1 className="text-xl font-bold">Agenda Territorial</h1></div></div><div className="mb-8"><h2 className="text-3xl font-bold tracking-tight sm:text-4xl">¿Con quién vas a trabajar hoy?</h2><span className="mt-4 inline-flex rounded-full bg-dte-magenta px-4 py-1.5 text-sm font-bold">Dirección de Tecnología Educativa</span><p className="mt-4 text-white/80">Seleccioná tu perfil para entrar a la agenda.</p></div>
-    {error ? <ErrorBox message={`No se pudieron cargar los FEDs: ${error}`} /> : !feds ? <Loading /> : !feds.length
-      ? <p className="rounded-2xl border border-dashed border-white/40 p-8 text-center text-sm text-white/90">Todavía no hay FEDs cargados en la tabla <code>feds</code>.</p>
-      : <div className="grid gap-4 sm:grid-cols-2">{feds.map((fed, i) => <button key={fed.id} onClick={() => onSelect(fed)} className="group flex items-center gap-4 rounded-2xl border border-dte-linea bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 text-dte-tinta hover:border-pba-celeste hover:shadow-md"><Avatar className="size-12"><AvatarFallback className={`${avatarColors[i % avatarColors.length]} font-bold text-dte-petroleo-oscuro`}>{initials(fed.nombre_completo)}</AvatarFallback></Avatar><div className="flex-1"><p className="font-semibold">{fed.nombre_completo}</p><p className="mt-1 text-sm text-muted-foreground">{fed.distritos_a_cargo.length ? `Distritos: ${fed.distritos_a_cargo.join(', ')}` : 'Sin distritos asignados'}</p></div><ChevronRight className="text-dte-gris-claro transition group-hover:translate-x-1" /></button>)}</div>}
-  </div></main>
+// Los nombres en `establecimientos` vienen en mayúsculas: se muestran en formato título para que sean legibles.
+const lowerWords = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'en', 'a', 'al', 'para', 'por', 'con'])
+function titleCase(s: string) {
+  return s.toLowerCase().split(/(\s+)/).map((w, i) => {
+    if (/^\s+$/.test(w) || (i > 0 && lowerWords.has(w))) return w
+    if (/^(i|ii|iii|iv|v|vi|vii|viii|ix|x)$/.test(w)) return w.toUpperCase()
+    return w.replace(/^(["“(]?)(\p{L})/u, (_, p, c) => p + c.toUpperCase())
+  }).join('')
+}
+const schoolName = (s: School | null) => (s?.nombre ? titleCase(s.nombre) : 'Sin escuela asignada')
+// Siglas usuales de la DGCyE para las tarjetas angostas (el nombre completo se ve en el detalle).
+const siglas: [RegExp, string][] = [
+  [/^Escuela de Educación Secundaria Técnica/i, 'EEST'], [/^Escuela de Educación Secundaria Agraria/i, 'EESA'], [/^Escuela de Educación Secundaria/i, 'EES'],
+  [/^Escuela de Educación Primaria/i, 'EP'], [/^Escuela de Educación Especial/i, 'EEE'], [/^Jardín de Infantes/i, 'JI'],
+  [/^Instituto Superior de Formación Docente/i, 'ISFD'], [/^Instituto Superior de Formación Técnica/i, 'ISFT'], [/^Centro de Educación Física/i, 'CEF'],
+]
+const shortSchoolName = (s: School | null) => { const n = schoolName(s); const m = siglas.find(([re]) => re.test(n)); return m ? n.replace(m[0], m[1]) : n }
+const schoolPlace = (s: School | null) => (s ? [s.ciudad && s.ciudad !== s.distrito ? titleCase(s.ciudad) : null, s.distrito ? titleCase(s.distrito) : null].filter(Boolean).join(', ') : '')
+
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+const firstName = (name: string) => name.split(/\s+/)[0]
+const fedColor = (feds: Fed[], id: string) => avatarColors[Math.max(0, feds.findIndex(f => f.id === id)) % avatarColors.length]
+const districtsLabel = (f: Fed) => (f.distritos_a_cargo.length ? f.distritos_a_cargo.map(titleCase).join(' · ') : 'Sin distritos asignados')
+
+// Desenvuelve el Result de las server actions: lanza con el mensaje real del servidor.
+const call = <A extends unknown[], T>(fn: (...a: A) => Promise<api.Result<T>>) => async (...a: A): Promise<T> => { const r = await fn(...a); if (!r.ok) throw new Error(r.error); return r.data }
+const getFeds = call(api.getFeds), searchSchools = call(api.searchSchools), getFedItems = call(api.getFedItems), getAllItems = call(api.getAllItems)
+const saveItem = call(api.saveItem), setItemStatus = call(api.setItemStatus), deleteItem = call(api.deleteItem)
+const errMsg = (e: unknown) => (e instanceof Error ? e.message : 'Error inesperado')
+
+function storage<T>(fn: () => T): T | null { try { return fn() } catch { return null } }
+
+// ---- piezas chicas ----
+function ActionChip({ label, className = '' }: { label: Accion, className?: string }) {
+  return <span className={`inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-bold uppercase leading-tight tracking-[0.04em] ${actionStyle[label]?.chip ?? 'bg-muted text-muted-foreground'} ${className}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[label]?.dot ?? 'bg-current'}`} />{label}</span>
+}
+function StatusBadge({ status }: { status: Estado }) {
+  return <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyle[status]?.badge ?? ''}`}>{statusStyle[status]?.label ?? status}</span>
+}
+function ErrorBox({ message, onRetry }: { message: string, onRetry?: () => void }) {
+  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#f1b8cd] bg-[#fff1f6] p-4 text-sm text-[#a3164f]"><p><span className="font-semibold">No se pudo completar la operación.</span> {message}</p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>}</div>
+}
+function Skeleton({ className = '' }: { className?: string }) { return <div className={`animate-pulse rounded-xl bg-[#e9e6f0] ${className}`} /> }
+
+function Toast({ message, onDone }: { message: string, onDone: () => void }) {
+  useEffect(() => { const t = setTimeout(onDone, 3200); return () => clearTimeout(t) }, [message, onDone])
+  return <div role="status" aria-live="polite" className="fixed inset-x-0 bottom-24 z-[60] flex justify-center px-4 sm:bottom-8"><div className="flex items-center gap-2 rounded-full bg-dte-tinta px-4 py-2.5 text-sm font-medium text-white shadow-lg"><Check className="size-4 text-dte-celeste" />{message}</div></div>
 }
 
 function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[]) {
   const [items, setItems] = useState<AgendaItem[] | null>(null)
   const [error, setError] = useState('')
+  const [retry, setRetry] = useState(0)
   useEffect(() => {
     let alive = true
     setItems(null); setError('')
     load().then(r => alive && setItems(r)).catch(e => alive && setError(errMsg(e)))
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps)
-  return { items, error }
+  }, [...deps, retry])
+  return { items, error, retry: () => setRetry(n => n + 1) }
 }
 
-function AgendaView({ fed, reloadKey, onNew, onSelect }: { fed: Fed, reloadKey: number, onNew: () => void, onSelect: (item: AgendaItem) => void }) {
+// =====================================================================
+
+export default function Page() {
+  const [feds, setFeds] = useState<Fed[] | null>(null)
+  const [fedsError, setFedsError] = useState('')
+  const [profile, setProfile] = useState<Fed | null>(null)
+  const [section, setSection] = useState<'agenda' | 'board'>('agenda')
+  const [editing, setEditing] = useState<{ item: AgendaItem | null, fecha?: string } | null>(null)
+  const [selected, setSelected] = useState<AgendaItem | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [toast, setToast] = useState('')
+
+  const loadFeds = useCallback(() => {
+    setFedsError(''); setFeds(null)
+    getFeds().then(list => {
+      setFeds(list)
+      // Recordar el último perfil usado en este navegador.
+      const saved = storage(() => localStorage.getItem(PROFILE_KEY))
+      const fed = saved ? list.find(f => f.id === saved) : undefined
+      if (fed) setProfile(fed)
+    }).catch(e => setFedsError(errMsg(e)))
+  }, [])
+  useEffect(loadFeds, [loadFeds])
+
+  const choose = (fed: Fed | null) => {
+    setProfile(fed); setSection('agenda')
+    storage(() => (fed ? localStorage.setItem(PROFILE_KEY, fed.id) : localStorage.removeItem(PROFILE_KEY)))
+  }
+  const changed = (message: string) => { setReloadKey(k => k + 1); setToast(message) }
+  const hideToast = useCallback(() => setToast(''), [])
+
+  if (!profile) return <ProfileSelect feds={feds} error={fedsError} onRetry={loadFeds} onSelect={choose} />
+
+  return <div className="min-h-screen bg-dte-fondo text-dte-tinta">
+    <header className="sticky top-0 z-40 border-b border-dte-linea bg-white/95 backdrop-blur">
+      <div className="bg-dte-degradado h-1" />
+      <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 lg:px-10">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-dte-degradado text-white"><ClipboardList className="size-5" /></div>
+          <div className="hidden min-w-0 sm:block"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-dte-magenta">Equipo FED · DTE</p><h1 className="truncate text-base font-bold leading-tight">Agenda Territorial</h1></div>
+        </div>
+        <nav aria-label="Secciones" className="flex rounded-full border border-dte-linea bg-dte-fondo p-1">
+          {([['agenda', 'Mi agenda', CalendarDays], ['board', 'Tablero', LayoutDashboard]] as const).map(([key, label, Icon]) =>
+            <button key={key} onClick={() => setSection(key)} aria-current={section === key ? 'page' : undefined} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition ${section === key ? 'bg-dte-petroleo text-white shadow-sm' : 'text-dte-gris hover:text-dte-tinta'}`}><Icon className="size-4" />{label}</button>)}
+        </nav>
+        <button onClick={() => choose(null)} className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-left transition hover:bg-dte-fondo" aria-label={`Perfil: ${profile.nombre_completo}. Cambiar de perfil`}>
+          <Avatar className="size-9"><AvatarFallback className={`${fedColor(feds ?? [], profile.id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(profile.nombre_completo)}</AvatarFallback></Avatar>
+          <span className="hidden md:block"><span className="block text-sm font-semibold leading-tight">{profile.nombre_completo}</span><span className="block text-[11px] text-dte-gris">Cambiar de perfil</span></span>
+          <ChevronDown className="hidden size-4 text-dte-gris md:block" />
+        </button>
+      </div>
+    </header>
+
+    {section === 'agenda'
+      ? <AgendaView fed={profile} reloadKey={reloadKey} onNew={fecha => setEditing({ item: null, fecha })} onSelect={setSelected} />
+      : <CoordinatorView feds={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} />}
+
+    <DetailDialog item={selected} feds={feds ?? []} profile={profile} onClose={() => setSelected(null)}
+      onEdit={item => { setSelected(null); setEditing({ item }) }}
+      onChanged={(msg, updated) => { changed(msg); setSelected(updated) }} />
+
+    <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
+      <DialogContent className="max-h-[92vh] overflow-y-auto bg-white sm:max-w-2xl">
+        <DialogHeader><DialogTitle className="text-lg">{editing?.item ? 'Editar acción' : 'Nueva acción'}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>
+        {editing && <ItemForm key={editing.item?.id ?? `new-${editing.fecha}`} fed={profile} item={editing.item} defaultFecha={editing.fecha} onCancel={() => setEditing(null)} onSaved={() => { changed(editing.item ? 'Acción actualizada' : 'Acción agregada a tu agenda'); setEditing(null) }} />}
+      </DialogContent>
+    </Dialog>
+
+    {toast && <Toast message={toast} onDone={hideToast} />}
+  </div>
+}
+
+// =====================================================================
+
+function ProfileSelect({ feds, error, onRetry, onSelect }: { feds: Fed[] | null, error: string, onRetry: () => void, onSelect: (fed: Fed) => void }) {
+  return <main className="bg-dte-degradado relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-12 text-white">
+    <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-44 rotate-45 rounded-[2.5rem] border-[22px] border-dte-rosa" />
+    <span aria-hidden className="pointer-events-none absolute right-40 top-4 size-10 rounded-full bg-dte-celeste" />
+    <span aria-hidden className="pointer-events-none absolute right-8 top-40 size-8 rounded-full bg-dte-lila" />
+    <div className="relative w-full max-w-3xl">
+      <div className="mb-10 flex items-center gap-3"><div className="flex size-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/30"><ClipboardList /></div><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-dte-celeste">Equipo FED</p><h1 className="text-xl font-bold">Agenda Territorial</h1></div></div>
+      <div className="mb-8"><h2 className="text-3xl font-bold tracking-tight sm:text-4xl">¿Con quién vas a trabajar hoy?</h2><span className="mt-4 inline-flex rounded-full bg-dte-magenta px-4 py-1.5 text-sm font-bold">Dirección de Tecnología Educativa</span><p className="mt-4 text-white/85">Seleccioná tu perfil para entrar a la agenda. Lo vamos a recordar en este dispositivo.</p></div>
+      {error ? <ErrorBox message={error} onRetry={onRetry} />
+        : !feds ? <div className="grid gap-4 sm:grid-cols-2">{[0, 1, 2, 3].map(i => <div key={i} className="h-[88px] animate-pulse rounded-2xl bg-white/15" />)}</div>
+        : !feds.length ? <p className="rounded-2xl border border-dashed border-white/40 p-8 text-center text-sm text-white/90">Todavía no hay FEDs cargados en la tabla <code>feds</code>.</p>
+        : <div className="grid gap-3 sm:grid-cols-2">{feds.map((fed, i) =>
+          <button key={fed.id} onClick={() => onSelect(fed)} className="group flex items-center gap-4 rounded-2xl bg-white p-4 text-left text-dte-tinta shadow-sm ring-2 ring-transparent transition hover:-translate-y-0.5 hover:shadow-lg hover:ring-pba-celeste focus-visible:ring-pba-celeste focus-visible:outline-none">
+            <Avatar className="size-12"><AvatarFallback className={`${avatarColors[i % avatarColors.length]} font-bold text-dte-petroleo-oscuro`}>{initials(fed.nombre_completo)}</AvatarFallback></Avatar>
+            <div className="min-w-0 flex-1"><p className="truncate font-semibold">{fed.nombre_completo}</p><p className="mt-0.5 flex items-center gap-1 truncate text-sm text-dte-gris"><MapPin className="size-3.5 shrink-0" />{districtsLabel(fed)}</p></div>
+            <ChevronRight className="text-dte-gris-claro transition group-hover:translate-x-1 group-hover:text-dte-magenta" />
+          </button>)}</div>}
+    </div>
+  </main>
+}
+
+// =====================================================================
+
+function WeekNav({ onPrev, onToday, onNext, prevLabel, nextLabel }: { onPrev: () => void, onToday: () => void, onNext: () => void, prevLabel: string, nextLabel: string }) {
+  return <div className="flex items-center rounded-lg border border-dte-linea bg-white shadow-xs">
+    <Button variant="ghost" size="icon-lg" aria-label={prevLabel} onClick={onPrev}><ChevronLeft /></Button>
+    <Button variant="ghost" size="lg" className="border-x border-dte-linea rounded-none px-4 font-semibold" onClick={onToday}>Hoy</Button>
+    <Button variant="ghost" size="icon-lg" aria-label={nextLabel} onClick={onNext}><ChevronRight /></Button>
+  </div>
+}
+
+function AgendaView({ fed, reloadKey, onNew, onSelect }: { fed: Fed, reloadKey: number, onNew: (fecha?: string) => void, onSelect: (item: AgendaItem) => void }) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()))
   const weekEnd = addDays(weekStart, 6)
-  const { items, error } = useItems(() => getFedItems(fed.id, iso(weekStart), iso(weekEnd)), [fed.id, iso(weekStart), reloadKey])
+  const { items, error, retry } = useItems(() => getFedItems(fed.id, iso(weekStart), iso(weekEnd)), [fed.id, iso(weekStart), reloadKey])
   const today = iso(new Date())
-  return <main className="mx-auto max-w-[1440px] px-5 py-7 lg:px-10"><div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.15em] text-dte-magenta">Mi agenda</p><h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Semana del {fmt(weekStart, { day: 'numeric', month: 'long' })} al {fmt(weekEnd, { day: 'numeric', month: 'long' })}</h2><p className="mt-2 text-sm text-muted-foreground">{fed.nombre_completo.split(' ')[0]}, acá está tu territorio.</p></div><div className="flex items-center gap-2"><Button variant="outline" size="icon" aria-label="Semana anterior" onClick={() => setWeekStart(addDays(weekStart, -7))}><ChevronLeft /></Button><Button variant="outline" size="sm" onClick={() => setWeekStart(startOfWeek(new Date()))}>Hoy</Button><Button variant="outline" size="icon" aria-label="Semana siguiente" onClick={() => setWeekStart(addDays(weekStart, 7))}><ChevronRight /></Button><Button onClick={onNew} className="hidden bg-dte-petroleo hover:bg-dte-petroleo-oscuro sm:flex"><Plus data-icon="inline-start" />Nueva acción</Button></div></div>
-    <div className="mt-8">{error ? <ErrorBox message={error} /> : !items ? <Loading /> : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{items.map(item => { const d = parse(item.fecha); return <button key={item.id} onClick={() => onSelect(item)} className="text-left"><Card className={`h-full border-dte-linea shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${item.fecha === today ? 'ring-2 ring-pba-celeste ring-offset-2' : ''}`}><CardHeader className="flex-row items-start justify-between pb-3"><div><p className="text-xs font-bold uppercase tracking-wider text-dte-magenta">{fmt(d, { weekday: 'short' }).replace('.', '')}</p><p className="mt-1 text-3xl font-bold text-dte-tinta">{d.getDate()}</p></div><StatusBadge status={item.estado} /></CardHeader><CardContent><div className="flex flex-col gap-3"><p className="text-xs font-medium text-dte-magenta">{timeRange(item)}</p><p className="line-clamp-3 text-sm font-semibold leading-snug">{item.school?.distrito ? `${item.school.distrito} | ` : ''}{schoolLabel(item.school)}</p><ActionChip label={item.accion} />{item.sub_accion && <p className="text-xs text-muted-foreground">{item.sub_accion}</p>}</div></CardContent></Card></button> })}<Card className="border-dashed border-dte-linea bg-transparent shadow-none md:col-span-2 xl:col-span-4"><CardContent className="flex min-h-28 flex-col items-center justify-center gap-2 text-center"><CalendarDays className="text-dte-lila" /><p className="text-sm font-medium text-dte-gris">{items.length ? 'No hay más acciones esta semana' : 'No hay acciones cargadas esta semana'}</p><Button variant="link" className="text-dte-petroleo" onClick={onNew}>Agregar una acción</Button></CardContent></Card></div>}</div>
-    <Button onClick={onNew} size="icon" aria-label="Nueva acción" className="fixed bottom-6 right-5 size-14 rounded-full bg-dte-petroleo shadow-lg hover:bg-dte-petroleo-oscuro sm:hidden"><Plus /></Button></main>
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const byDay = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of items ?? []) m.set(i.fecha, [...(m.get(i.fecha) ?? []), i]); return m }, [items])
+  const counts = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, (items ?? []).filter(i => i.estado === e).length])) as Record<Estado, number>, [items])
+  const isCurrentWeek = iso(weekStart) === iso(startOfWeek(new Date()))
+  // Fecha sugerida para "Nueva acción": hoy si es esta semana, si no el lunes de la semana visible.
+  const suggested = isCurrentWeek ? today : iso(weekStart)
+
+  return <main className="mx-auto max-w-[1440px] px-4 pb-28 pt-6 lg:px-10 lg:pb-10">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p className={eyebrow}>Mi agenda · {isCurrentWeek ? 'Esta semana' : 'Semana'}</p>
+        <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{weekTitle(weekStart, weekEnd)}</h2>
+        <p className="mt-1.5 text-sm text-dte-gris">Hola, {firstName(fed.nombre_completo)}. {items ? (items.length ? `Tenés ${items.length} ${items.length === 1 ? 'acción' : 'acciones'} esta semana${counts.realizada ? `, ${counts.realizada} ${counts.realizada === 1 ? 'realizada' : 'realizadas'}` : ''}.` : 'Todavía no cargaste acciones para esta semana.') : 'Cargando tu semana…'}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <WeekNav prevLabel="Semana anterior" nextLabel="Semana siguiente" onPrev={() => setWeekStart(addDays(weekStart, -7))} onToday={() => setWeekStart(startOfWeek(new Date()))} onNext={() => setWeekStart(addDays(weekStart, 7))} />
+        <Button size="lg" onClick={() => onNew(suggested)} className="hidden h-10 bg-dte-magenta px-4 font-semibold text-white hover:bg-[#b8155c] sm:inline-flex"><Plus data-icon="inline-start" />Nueva acción</Button>
+      </div>
+    </div>
+
+    <div className="mt-6">
+      {error ? <ErrorBox message={error} onRetry={retry} />
+        : !items ? <div className="grid gap-3 lg:grid-cols-7">{days.map(d => <Skeleton key={iso(d)} className="h-24 lg:h-64" />)}</div>
+        : <div className="grid gap-3 lg:grid-cols-7">
+          {days.map(d => {
+            const key = iso(d), list = byDay.get(key) ?? [], isToday = key === today, weekend = d.getDay() === 0 || d.getDay() === 6
+            return <section key={key} aria-label={cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))} className={`group/day flex flex-col rounded-2xl border bg-white p-2.5 lg:min-h-64 ${isToday ? 'border-pba-celeste shadow-[0_0_0_1px] shadow-pba-celeste' : 'border-dte-linea'} ${weekend && !list.length ? 'bg-white/60' : ''}`}>
+              <header className="mb-2 flex items-center justify-between px-1">
+                <div className="flex items-baseline gap-1.5" aria-current={isToday ? 'date' : undefined}>
+                  <span className={`text-xs font-bold uppercase tracking-wider ${isToday ? 'text-pba-celeste-texto' : 'text-dte-gris'}`}>{fmt(d, { weekday: 'short' }).replace('.', '')}</span>
+                  <span className={`flex size-7 items-center justify-center rounded-full text-sm font-bold ${isToday ? 'bg-pba-celeste text-white' : 'text-dte-tinta'}`}>{d.getDate()}</span>
+                  {isToday && <span className="text-[11px] font-semibold text-pba-celeste-texto">Hoy</span>}
+                </div>
+                <Button variant="ghost" size="icon-sm" aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric' })}`} onClick={() => onNew(key)} className="text-dte-gris hover:text-dte-magenta lg:opacity-0 lg:group-hover/day:opacity-100 lg:focus-visible:opacity-100"><Plus /></Button>
+              </header>
+              <div className="flex flex-1 flex-col gap-2">
+                {list.map(item => <ItemCard key={item.id} item={item} onClick={() => onSelect(item)} />)}
+                {!list.length && <button onClick={() => onNew(key)} className="hidden flex-1 items-center justify-center rounded-xl border border-dashed border-transparent text-xs text-dte-gris-claro transition hover:border-dte-linea hover:text-dte-magenta lg:flex">Sin acciones</button>}
+                {!list.length && <p className="px-1 pb-1 text-xs text-dte-gris-claro lg:hidden">Sin acciones</p>}
+              </div>
+            </section>
+          })}
+        </div>}
+    </div>
+
+    {items && !items.length && !error && <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-dte-linea bg-white/60 px-6 py-10 text-center">
+      <div className="flex size-12 items-center justify-center rounded-full bg-dte-tinte text-dte-magenta"><CalendarDays /></div>
+      <div><p className="font-semibold">Tu semana está vacía</p><p className="mt-1 text-sm text-dte-gris">Planificá visitas, reuniones o talleres para que el equipo pueda seguir tu trabajo territorial.</p></div>
+      <Button onClick={() => onNew(suggested)} className="bg-dte-petroleo hover:bg-dte-petroleo-oscuro"><Plus data-icon="inline-start" />Cargar primera acción</Button>
+    </div>}
+
+    <Button onClick={() => onNew(suggested)} aria-label="Nueva acción" className="fixed bottom-5 right-4 z-30 h-14 gap-2 rounded-full bg-dte-magenta px-5 text-base font-semibold text-white shadow-lg hover:bg-[#b8155c] sm:hidden"><Plus className="size-5" />Nueva</Button>
+  </main>
 }
+
+function ItemCard({ item, onClick }: { item: AgendaItem, onClick: () => void }) {
+  const muted = item.estado === 'cancelada'
+  return <button onClick={onClick} title={item.school ? schoolName(item.school) : undefined} className={`relative w-full overflow-hidden rounded-xl border border-dte-linea bg-white p-2.5 pl-3.5 text-left transition hover:border-pba-celeste hover:shadow-md focus-visible:border-pba-celeste focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-pba-celeste/30 ${muted ? 'opacity-65' : ''}`}>
+    <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${actionStyle[item.accion]?.dot}`} />
+    <span className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-dte-gris"><Clock className="size-3 shrink-0" />{timeRange(item)}</span>
+    <p className={`mt-1 line-clamp-3 text-sm font-semibold leading-snug ${muted ? 'line-through decoration-1' : ''}`}>{item.school ? shortSchoolName(item.school) : item.sub_accion || item.accion}</p>
+    {item.school && <p className="mt-0.5 truncate text-xs text-dte-gris">{schoolPlace(item.school)}</p>}
+    <div className="mt-2 flex flex-wrap items-center gap-1.5"><ActionChip label={item.accion} /><StatusBadge status={item.estado} /></div>
+  </button>
+}
+
+// =====================================================================
+
+function DetailDialog({ item, feds, profile, onClose, onEdit, onChanged }: { item: AgendaItem | null, feds: Fed[], profile: Fed, onClose: () => void, onEdit: (item: AgendaItem) => void, onChanged: (msg: string, updated: AgendaItem | null) => void }) {
+  const [busy, setBusy] = useState<string>('')
+  const [error, setError] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  useEffect(() => { setError(''); setConfirmDelete(false); setBusy('') }, [item?.id])
+  if (!item) return <Dialog open={false} />
+  const own = item.fed_id === profile.id
+  const fed = feds.find(f => f.id === item.fed_id)
+
+  async function changeStatus(estado: Estado) {
+    if (!item) return
+    setBusy(estado); setError('')
+    try { await setItemStatus(item.id, profile.id, estado); onChanged(`Marcada como ${statusStyle[estado].label.toLowerCase()}`, { ...item, estado }) } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
+  }
+  async function remove() {
+    if (!item) return
+    setBusy('delete'); setError('')
+    try { await deleteItem(item.id, profile.id); onChanged('Acción eliminada', null) } catch (e) { setError(errMsg(e)); setBusy('') }
+  }
+
+  const row = (Icon: typeof Clock, label: string, value: React.ReactNode) => value ? <div className="flex gap-3"><Icon className="mt-0.5 size-4 shrink-0 text-dte-gris-claro" /><div className="min-w-0"><dt className="text-[11px] font-semibold uppercase tracking-wider text-dte-gris">{label}</dt><dd className="text-sm">{value}</dd></div></div> : null
+
+  return <Dialog open onOpenChange={o => !o && onClose()}>
+    <DialogContent className="bg-white sm:max-w-lg">
+      <DialogHeader>
+        <div className="flex flex-wrap items-center gap-2"><ActionChip label={item.accion} /><StatusBadge status={item.estado} /></div>
+        <DialogTitle className="pt-1 text-lg leading-snug">{item.school ? schoolName(item.school) : item.sub_accion || item.accion}</DialogTitle>
+        <DialogDescription>{cap(fmt(parse(item.fecha), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))} · {timeRange(item)}</DialogDescription>
+      </DialogHeader>
+      <dl className="flex flex-col gap-3 rounded-xl bg-dte-fondo p-4">
+        {row(SchoolIcon, 'Escuela', item.school && <>CUE {item.school.cue ?? '—'}{schoolPlace(item.school) ? ` · ${schoolPlace(item.school)}` : ''}</>)}
+        {row(ClipboardList, 'Sub-acción', item.sub_accion)}
+        {row(Pencil, 'Detalle', item.detalle && <span className="whitespace-pre-wrap">{item.detalle}</span>)}
+        {row(UserRound, 'FED responsable', fed?.nombre_completo ?? '—')}
+      </dl>
+      {own && <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-dte-gris">Cambiar estado</p>
+        <div className="flex flex-wrap gap-2">{ESTADOS.map(e => <button key={e} disabled={!!busy || item.estado === e} onClick={() => changeStatus(e)} aria-pressed={item.estado === e} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-default ${item.estado === e ? statusStyle[e].badge : 'border-dte-linea text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>{busy === e ? <Loader2 className="size-3 animate-spin" /> : item.estado === e ? <Check className="size-3" /> : null}{statusStyle[e].label}</button>)}</div>
+      </div>}
+      {error && <ErrorBox message={error} />}
+      <div className="flex flex-col-reverse gap-2 border-t border-dte-linea pt-4 sm:flex-row sm:items-center sm:justify-between">
+        {own ? (confirmDelete
+          ? <div className="flex items-center gap-2"><span className="text-sm text-[#a3164f]">¿Eliminar definitivamente?</span><Button variant="destructive" size="sm" disabled={busy === 'delete'} onClick={remove}>{busy === 'delete' && <Loader2 className="animate-spin" />}Sí, eliminar</Button><Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>No</Button></div>
+          : <Button variant="ghost" className="justify-start text-[#a3164f] hover:bg-[#fff1f6] hover:text-[#a3164f]" onClick={() => setConfirmDelete(true)}><Trash2 data-icon="inline-start" />Eliminar</Button>)
+          : <p className="text-xs text-dte-gris">Sólo {fed ? firstName(fed.nombre_completo) : 'el FED responsable'} puede modificar esta acción.</p>}
+        <div className="flex gap-2 sm:justify-end"><Button variant="outline" className="flex-1 sm:flex-none" onClick={onClose}>Cerrar</Button>{own && <Button className="flex-1 bg-dte-petroleo hover:bg-dte-petroleo-oscuro sm:flex-none" onClick={() => onEdit(item)}><Pencil data-icon="inline-start" />Editar</Button>}</div>
+      </div>
+    </DialogContent>
+  </Dialog>
+}
+
+// =====================================================================
 
 type Range = 'day' | 'week' | 'month'
 function rangeBounds(anchor: Date, range: Range): [Date, Date] {
@@ -106,6 +357,7 @@ function shift(anchor: Date, range: Range, dir: number) {
   if (range === 'week') return addDays(anchor, 7 * dir)
   return new Date(anchor.getFullYear(), anchor.getMonth() + dir, 1)
 }
+const rangeNames: Record<Range, [string, string, string]> = { day: ['Día', 'día', 'este día'], week: ['Semana', 'semana', 'esta semana'], month: ['Mes', 'mes', 'este mes'] }
 
 function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void }) {
   const [range, setRange] = useState<Range>('week')
@@ -116,61 +368,170 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
   const [accion, setAccion] = useState('')
   const [estado, setEstado] = useState('')
   const [from, to] = rangeBounds(anchor, range)
-  const { items, error } = useItems(() => getAllItems(iso(from), iso(to)), [iso(from), iso(to), reloadKey])
+  const { items, error, retry } = useItems(() => getAllItems(iso(from), iso(to)), [iso(from), iso(to), reloadKey])
 
   const fedName = useCallback((id: string) => feds.find(f => f.id === id)?.nombre_completo ?? 'FED desconocido', [feds])
-  const distritos = useMemo(() => [...new Set([...feds.flatMap(f => f.distritos_a_cargo), ...(items ?? []).map(i => i.school?.distrito).filter((d): d is string => !!d)])].sort((a, b) => a.localeCompare(b, 'es', { numeric: true })), [feds, items])
-  const filtered = useMemo(() => (items ?? []).filter(i =>
-    (!distrito || i.school?.distrito === distrito) && (!fedId || i.fed_id === fedId) && (!accion || i.accion === accion) && (!estado || i.estado === estado) &&
-    (!search || `${fedName(i.fed_id)} ${i.school?.nombre ?? ''} ${i.school?.ciudad ?? ''} ${i.school?.cue ?? ''} ${i.accion} ${i.sub_accion ?? ''}`.toLowerCase().includes(search.toLowerCase()))), [items, distrito, fedId, accion, estado, search, fedName])
+  const distritos = useMemo(() => [...new Set([...feds.flatMap(f => f.distritos_a_cargo), ...(items ?? []).map(i => i.school?.distrito).filter((d): d is string => !!d)])].sort((a, b) => a.localeCompare(b, 'es')), [feds, items])
+  const q = search.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+  // Todos los filtros menos el de estado: así los contadores muestran cuántas hay de cada estado.
+  const base = useMemo(() => (items ?? []).filter(i =>
+    (!distrito || i.school?.distrito === distrito) && (!fedId || i.fed_id === fedId) && (!accion || i.accion === accion) &&
+    (!q || `${fedName(i.fed_id)} ${i.school?.nombre ?? ''} ${i.school?.ciudad ?? ''} ${i.school?.cue ?? ''} ${i.accion} ${i.sub_accion ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [items, distrito, fedId, accion, q, fedName])
+  const filtered = useMemo(() => base.filter(i => !estado || i.estado === estado), [base, estado])
+  const counts = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, base.filter(i => i.estado === e).length])) as Record<Estado, number>, [base])
   const groups = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName])
-  const title = range === 'day' ? fmt(from, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : range === 'week' ? `Semana del ${fmt(from, { day: 'numeric', month: 'short' })} al ${fmt(to, { day: 'numeric', month: 'short', year: 'numeric' })}` : fmt(from, { month: 'long', year: 'numeric' })
+  const anyFilter = !!(search || distrito || fedId || accion || estado)
+  const fedsSinAcciones = useMemo(() => (items && !anyFilter ? feds.filter(f => !items.some(i => i.fed_id === f.id)) : []), [items, feds, anyFilter])
+  const clear = () => { setSearch(''); setDistrito(''); setFedId(''); setAccion(''); setEstado('') }
+  const title = range === 'day' ? cap(fmt(from, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) : range === 'week' ? weekTitle(from, to) : cap(fmt(from, { month: 'long', year: 'numeric' }))
 
-  return <main className="mx-auto max-w-[1440px] px-5 py-7 lg:px-10"><div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.15em] text-dte-magenta">Tablero del coordinador</p><h2 className="mt-1 text-3xl font-bold tracking-tight">Seguimiento territorial</h2><p className="mt-2 text-sm capitalize text-muted-foreground">{title} · {items ? `${filtered.length} acciones` : '…'}</p></div><div className="flex flex-wrap items-center gap-2"><Button variant="outline" size="icon" aria-label="Anterior" onClick={() => setAnchor(shift(anchor, range, -1))}><ChevronLeft /></Button><div className="flex rounded-lg border border-dte-linea bg-white p-0.5">{([['day', 'Día'], ['week', 'Semana'], ['month', 'Mes']] as const).map(([v, l]) => <button key={v} onClick={() => setRange(v)} className={`rounded-md px-3 py-1 text-sm ${range === v ? 'bg-dte-petroleo text-white' : 'text-dte-gris'}`}>{l}</button>)}</div><Button variant="outline" size="icon" aria-label="Siguiente" onClick={() => setAnchor(shift(anchor, range, 1))}><ChevronRight /></Button><Button variant="outline" size="sm" onClick={() => setAnchor(new Date())}>Hoy</Button></div></div>
-    <div className="mt-7 flex flex-col gap-3 rounded-xl border border-dte-linea bg-white p-3 shadow-sm md:flex-row md:flex-wrap"><div className="relative min-w-52 flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por escuela, CUE o FED..." className="border-0 bg-dte-fondo pl-10 shadow-none" /></div>
-      <select aria-label="Distrito" className={selectClass} value={distrito} onChange={e => setDistrito(e.target.value)}><option value="">Todos los distritos</option>{distritos.map(d => <option key={d} value={d}>{d}</option>)}</select>
-      <select aria-label="FED" className={selectClass} value={fedId} onChange={e => setFedId(e.target.value)}><option value="">Todos los FEDs</option>{feds.map(f => <option key={f.id} value={f.id}>{f.nombre_completo}</option>)}</select>
-      <select aria-label="Acción" className={selectClass} value={accion} onChange={e => setAccion(e.target.value)}><option value="">Todas las acciones</option>{ACCIONES.map(a => <option key={a} value={a}>{a}</option>)}</select>
-      <select aria-label="Estado" className={selectClass} value={estado} onChange={e => setEstado(e.target.value)}><option value="">Todos los estados</option>{ESTADOS.map(s => <option key={s} value={s} className="capitalize">{s}</option>)}</select></div>
-    <div className="mt-8 flex flex-col gap-6">{error ? <ErrorBox message={error} /> : !items ? <Loading /> : !groups.length ? <p className="rounded-xl border border-dashed border-dte-linea p-8 text-center text-sm text-dte-gris">No hay acciones para este período y filtros.</p> : groups.map(([id, group]) => <section key={id}><div className="mb-3 flex items-center gap-3"><Avatar className="size-9"><AvatarFallback className={`${fedColor(feds, id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(fedName(id))}</AvatarFallback></Avatar><div><h3 className="text-sm font-bold">{fedName(id)}</h3><p className="text-xs text-muted-foreground">{group.length} {group.length === 1 ? 'acción' : 'acciones'}</p></div></div><div className="divide-y divide-dte-linea overflow-hidden rounded-xl border border-dte-linea bg-white shadow-sm">{group.map(item => <button key={item.id} className="flex w-full flex-col gap-3 p-4 text-left transition hover:bg-dte-tinte sm:flex-row sm:items-center" onClick={() => onSelect(item)}><span className="w-28 text-sm font-semibold text-dte-magenta">{range !== 'day' && <span className="block text-xs capitalize">{fmt(parse(item.fecha), { weekday: 'short', day: 'numeric', month: 'short' })}</span>}{item.hora_inicio ? hhmm(item.hora_inicio) : '—'}</span><div className="flex-1"><p className="font-semibold">{schoolLabel(item.school)}</p><p className="mt-1 text-xs text-muted-foreground">{item.school?.distrito ? `Distrito ${item.school.distrito}` : ''}{item.sub_accion ? `${item.school?.distrito ? ' · ' : ''}${item.sub_accion}` : ''}</p></div><ActionChip label={item.accion} /><StatusBadge status={item.estado} /></button>)}</div></section>)}</div></main>
+  return <main className="mx-auto max-w-[1440px] px-4 pb-16 pt-6 lg:px-10">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div><p className={eyebrow}>Tablero del coordinador</p><h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2><p className="mt-1.5 text-sm text-dte-gris">Seguimiento territorial de todo el equipo.</p></div>
+      <div className="flex flex-wrap items-center gap-2">
+        <div role="group" aria-label="Período" className="flex rounded-lg border border-dte-linea bg-white p-1 shadow-xs">{(Object.keys(rangeNames) as Range[]).map(v => <button key={v} onClick={() => setRange(v)} aria-pressed={range === v} className={`rounded-md px-3 py-1 text-sm font-semibold transition ${range === v ? 'bg-dte-petroleo text-white' : 'text-dte-gris hover:text-dte-tinta'}`}>{rangeNames[v][0]}</button>)}</div>
+        <WeekNav prevLabel={`${cap(rangeNames[range][1])} anterior`} nextLabel={`${cap(rangeNames[range][1])} siguiente`} onPrev={() => setAnchor(shift(anchor, range, -1))} onToday={() => setAnchor(new Date())} onNext={() => setAnchor(shift(anchor, range, 1))} />
+      </div>
+    </div>
+
+    <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+      {ESTADOS.map(e => <button key={e} onClick={() => setEstado(estado === e ? '' : e)} aria-pressed={estado === e} className={`rounded-2xl border bg-white px-4 py-3 text-left transition hover:shadow-md ${estado === e ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>
+        <span className="text-xs font-semibold text-dte-gris">{statusStyle[e].label}s</span>
+        <span className="mt-1 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums sm:text-3xl">{items ? counts[e] : '–'}</span>{estado === e && <span className="text-[11px] font-semibold text-dte-petroleo">Filtrando</span>}</span>
+      </button>)}
+    </div>
+
+    <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs md:flex-row md:flex-wrap md:items-center">
+      <div className="relative min-w-56 flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar escuela, localidad, CUE o FED…" aria-label="Buscar" className="h-9 bg-dte-fondo pl-9" /></div>
+      <select aria-label="Distrito" className={`${selectClass} md:w-44`} value={distrito} onChange={e => setDistrito(e.target.value)}><option value="">Todos los distritos</option>{distritos.map(d => <option key={d} value={d}>{titleCase(d)}</option>)}</select>
+      <select aria-label="FED" className={`${selectClass} md:w-52`} value={fedId} onChange={e => setFedId(e.target.value)}><option value="">Todos los FEDs</option>{feds.map(f => <option key={f.id} value={f.id}>{f.nombre_completo}</option>)}</select>
+      <select aria-label="Tipo de acción" className={`${selectClass} md:w-56`} value={accion} onChange={e => setAccion(e.target.value)}><option value="">Todas las acciones</option>{ACCIONES.map(a => <option key={a} value={a}>{cap(a.toLowerCase())}</option>)}</select>
+      {anyFilter && <Button variant="ghost" onClick={clear} className="text-dte-magenta hover:text-dte-magenta"><X data-icon="inline-start" />Limpiar</Button>}
+    </div>
+
+    <div className="mt-6 flex flex-col gap-6">
+      {error ? <ErrorBox message={error} onRetry={retry} />
+        : !items ? [0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)
+        : !groups.length ? <div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-10 text-center"><p className="font-semibold">{anyFilter ? 'Ninguna acción coincide con los filtros' : `No hay acciones cargadas en ${rangeNames[range][2]}`}</p>{anyFilter && <Button variant="link" onClick={clear} className="mt-1 text-dte-magenta">Limpiar filtros</Button>}</div>
+        : groups.map(([id, group]) => <section key={id} aria-label={fedName(id)}>
+          <div className="mb-2 flex items-center gap-3">
+            <Avatar className="size-9"><AvatarFallback className={`${fedColor(feds, id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(fedName(id))}</AvatarFallback></Avatar>
+            <div className="min-w-0"><h3 className="truncate text-sm font-bold">{fedName(id)}</h3><p className="text-xs text-dte-gris">{group.length} {group.length === 1 ? 'acción' : 'acciones'} · {group.filter(i => i.estado === 'realizada').length} realizadas</p></div>
+          </div>
+          <ul className="divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xs">{group.map(item =>
+            <li key={item.id}><button className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte focus-visible:bg-dte-tinte focus-visible:outline-none sm:grid-cols-[6.5rem_1fr_auto] sm:items-center" onClick={() => onSelect(item)}>
+              <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize text-dte-tinta">{range === 'day' ? (hhmm(item.hora_inicio) || '—') : fmt(parse(item.fecha), { weekday: 'short', day: 'numeric' }).replace('.', '')}</span>{range !== 'day' && <span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span>}</span>
+              <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{item.school ? schoolName(item.school) : item.sub_accion || '—'}</span><span className="block truncate text-xs text-dte-gris">{[schoolPlace(item.school), item.school ? item.sub_accion : null].filter(Boolean).join(' · ') || ' '}</span></span>
+              <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ActionChip label={item.accion} /><StatusBadge status={item.estado} /></span>
+            </button></li>)}</ul>
+        </section>)}
+      {fedsSinAcciones.length > 0 && <div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-dte-gris">Sin acciones cargadas en {rangeNames[range][2]}</p><div className="mt-2 flex flex-wrap gap-2">{fedsSinAcciones.map(f => <span key={f.id} className="rounded-full bg-white px-3 py-1 text-sm ring-1 ring-dte-linea">{f.nombre_completo}</span>)}</div></div>}
+    </div>
+  </main>
 }
+
+// =====================================================================
 
 function SchoolPicker({ value, onChange }: { value: School | null, onChange: (s: School | null) => void }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<School[]>([])
   const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
   const seq = useRef(0)
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); return }
+    if (query.trim().length < 2) { setResults([]); setLoading(false); return }
     const n = ++seq.current
-    setLoading(true)
-    const t = setTimeout(() => searchSchools(query).then(r => { if (n === seq.current) setResults(r) }).catch(() => { if (n === seq.current) setResults([]) }).finally(() => { if (n === seq.current) setLoading(false) }), 250)
+    setLoading(true); setFailed(false)
+    const t = setTimeout(() => searchSchools(query)
+      .then(r => { if (n === seq.current) { setResults(r); setActive(0) } })
+      .catch(() => { if (n === seq.current) { setResults([]); setFailed(true) } })
+      .finally(() => { if (n === seq.current) setLoading(false) }), 250)
     return () => clearTimeout(t)
   }, [query])
-  if (value) return <div className="flex min-h-9 items-center justify-between gap-2 rounded-lg border border-input px-3 py-1.5 text-sm font-normal"><span className="line-clamp-2">{value.distrito ? `${value.distrito} | ` : ''}{schoolLabel(value)}</span><Button type="button" variant="ghost" size="icon" aria-label="Quitar escuela" onClick={() => onChange(null)}><X /></Button></div>
-  return <div className="relative"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10 font-normal" placeholder="Nombre, localidad o CUE..." value={query} onChange={e => { setQuery(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
-    {open && query.trim().length >= 2 && <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-dte-linea bg-white text-sm font-normal shadow-lg">{loading ? <p className="p-3 text-muted-foreground">Buscando…</p> : !results.length ? <p className="p-3 text-muted-foreground">Sin resultados</p> : results.map(s => <button key={s.id} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { onChange(s); setQuery(''); setOpen(false) }} className="block w-full px-3 py-2 text-left hover:bg-dte-fondo"><span className="font-semibold">{s.nombre}</span><span className="block text-xs text-muted-foreground">CUE {s.cue ?? '—'}{s.distrito ? ` · ${s.distrito}` : ''}{s.ciudad && s.ciudad !== s.distrito ? ` · ${s.ciudad}` : ''}</span></button>)}</div>}</div>
+  const pick = (s: School) => { onChange(s); setQuery(''); setOpen(false) }
+
+  if (value) return <div className="flex items-center gap-3 rounded-lg border border-pba-celeste/60 bg-pba-celeste/5 p-2.5 pl-3 font-normal">
+    <SchoolIcon className="size-4 shrink-0 text-pba-celeste-texto" />
+    <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{schoolName(value)}</p><p className="truncate text-xs text-dte-gris">CUE {value.cue ?? '—'}{schoolPlace(value) ? ` · ${schoolPlace(value)}` : ''}</p></div>
+    <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)}>Cambiar</Button>
+  </div>
+
+  const showList = open && query.trim().length >= 2
+  return <div className="relative">
+    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" />
+    <Input role="combobox" aria-expanded={showList} aria-controls="school-results" aria-autocomplete="list" className="h-10 pl-9 font-normal" placeholder="Nombre, localidad o CUE…" value={query}
+      onChange={e => { setQuery(e.target.value); setOpen(true) }} onFocus={e => { setOpen(true); e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' }) }} onBlur={() => setTimeout(() => setOpen(false), 150)}
+      onKeyDown={e => {
+        if (!showList || !results.length) return
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActive(a => Math.min(a + 1, results.length - 1)) }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(a => Math.max(a - 1, 0)) }
+        else if (e.key === 'Enter') { e.preventDefault(); pick(results[active]) }
+        else if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
+      }} />
+    {showList && <div id="school-results" role="listbox" className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-dte-linea bg-white p-1 text-sm font-normal text-dte-tinta shadow-xl">
+      {loading ? <p className="flex items-center gap-2 p-3 text-dte-gris"><Loader2 className="size-4 animate-spin" />Buscando…</p>
+        : failed ? <p className="p-3 text-[#a3164f]">No se pudo buscar. Probá de nuevo.</p>
+        : !results.length ? <p className="p-3 text-dte-gris">Sin resultados para “{query.trim()}”.</p>
+        : results.map((s, i) => <button key={s.id} type="button" role="option" aria-selected={i === active} onMouseDown={e => e.preventDefault()} onMouseEnter={() => setActive(i)} onClick={() => pick(s)} className={`block w-full rounded-lg px-3 py-2 text-left ${i === active ? 'bg-dte-tinte' : ''}`}>
+          <span className="block font-semibold leading-snug">{schoolName(s)}</span>
+          <span className="block text-xs text-dte-gris">CUE {s.cue ?? '—'}{schoolPlace(s) ? ` · ${schoolPlace(s)}` : ''}</span>
+        </button>)}
+    </div>}
+  </div>
 }
 
-function ItemForm({ fed, item, onCancel, onSaved }: { fed: Fed, item: AgendaItem | null, onCancel: () => void, onSaved: () => void }) {
+function Field({ label, hint, required, children, className = '' }: { label: string, hint?: string, required?: boolean, children: React.ReactNode, className?: string }) {
+  return <label className={`flex flex-col gap-1.5 ${className}`}><span className="text-sm font-semibold text-dte-tinta">{label}{required && <span className="text-dte-magenta"> *</span>}{hint && <span className="ml-1 font-normal text-dte-gris">{hint}</span>}</span>{children}</label>
+}
+
+function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, item: AgendaItem | null, defaultFecha?: string, onCancel: () => void, onSaved: () => void }) {
   const [school, setSchool] = useState<School | null>(item?.school ?? null)
-  const [form, setForm] = useState({ fecha: item?.fecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? ('VISITA TÉCNICA' as Accion), estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? '', detalle: item?.detalle ?? '' })
+  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? '', detalle: item?.detalle ?? '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm(f => ({ ...f, [k]: v }))
+  const timeError = form.hora_inicio && form.hora_fin && form.hora_fin <= form.hora_inicio ? 'La hora de fin tiene que ser posterior a la de inicio.' : ''
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (form.hora_inicio && form.hora_fin && form.hora_fin < form.hora_inicio) { setError('La hora de fin es anterior a la de inicio.'); return }
+    if (!form.accion) { setError('Elegí el tipo de acción.'); return }
+    if (timeError) { setError(timeError); return }
     setSaving(true); setError('')
-    const input: AgendaItemInput = { ...form, fed_id: fed.id, school_id: school?.id ?? null, hora_inicio: form.hora_inicio || null, hora_fin: form.hora_fin || null }
+    const input: AgendaItemInput = { ...form, accion: form.accion, fed_id: fed.id, school_id: school?.id ?? null, hora_inicio: form.hora_inicio || null, hora_fin: form.hora_fin || null }
     try { await saveItem(input, item?.id); onSaved() } catch (err) { setError(errMsg(err)); setSaving(false) }
   }
-  return <form onSubmit={submit} className="flex flex-col gap-5"><div className="grid gap-4 sm:grid-cols-2"><label className="flex flex-col gap-2 text-sm font-semibold">Fecha<Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} /></label><div className="flex flex-col gap-2 text-sm font-semibold">Escuela (opcional)<SchoolPicker value={school} onChange={setSchool} /></div></div>
-    <div className="flex flex-col gap-2"><p className="text-sm font-semibold">Tipo de acción</p><div className="flex flex-wrap gap-2">{ACCIONES.map(name => <button key={name} type="button" onClick={() => set('accion', name)} className={`rounded-md px-2.5 py-1.5 text-left text-[10px] font-bold transition ${actionStyle[name]} ${form.accion === name ? 'ring-2 ring-pba-azul ring-offset-1' : 'opacity-70 hover:opacity-100'}`}>{name}</button>)}</div></div>
-    <div className="grid gap-4 sm:grid-cols-3"><label className="flex flex-col gap-2 text-sm font-semibold">Hora de inicio<Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} /></label><label className="flex flex-col gap-2 text-sm font-semibold">Hora de fin<Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} /></label><label className="flex flex-col gap-2 text-sm font-semibold">Estado<select className="h-8 rounded-lg border border-input bg-white px-2.5 text-sm font-normal capitalize" value={form.estado} onChange={e => set('estado', e.target.value as Estado)}>{ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}</select></label></div>
-    <label className="flex flex-col gap-2 text-sm font-semibold">Sub-acción (opcional)<Input placeholder="Ej. Revisión de equipamiento" value={form.sub_accion} onChange={e => set('sub_accion', e.target.value)} /></label>
-    <label className="flex flex-col gap-2 text-sm font-semibold">Detalle (opcional)<Textarea placeholder="Agregá información útil para el seguimiento..." rows={3} value={form.detalle} onChange={e => set('detalle', e.target.value)} /></label>
+
+  return <form onSubmit={submit} className="flex flex-col gap-5">
+    <fieldset>
+      <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta">*</span></legend>
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.map(name => {
+        const on = form.accion === name
+        return <button key={name} type="button" aria-pressed={on} onClick={() => set('accion', name)} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-[11px] font-bold uppercase leading-tight transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
+          <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span>{name}
+        </button>
+      })}</div>
+    </fieldset>
+
+    <div className="grid gap-4 sm:grid-cols-3">
+      <Field label="Fecha" required><Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} className="h-10" /></Field>
+      <Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="h-10" /></Field>
+      <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="h-10" /></Field>
+    </div>
+    {timeError && <p className="-mt-3 text-xs text-[#a3164f]">{timeError}</p>}
+
+    <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">Escuela <span className="font-normal text-dte-gris">(opcional)</span></span><SchoolPicker value={school} onChange={setSchool} /></div>
+
+    <Field label="Sub-acción" hint="(opcional)"><Input placeholder="Ej.: revisión de equipamiento del laboratorio" value={form.sub_accion} onChange={e => set('sub_accion', e.target.value)} className="h-10" /></Field>
+    <Field label="Detalle" hint="(opcional)"><Textarea placeholder="Información útil para el seguimiento: con quién, qué se acordó, pendientes…" rows={3} value={form.detalle} onChange={e => set('detalle', e.target.value)} /></Field>
+
+    {item && <fieldset><legend className="mb-2 text-sm font-semibold">Estado</legend><div className="flex flex-wrap gap-2">{ESTADOS.map(e => <button key={e} type="button" aria-pressed={form.estado === e} onClick={() => set('estado', e)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${form.estado === e ? statusStyle[e].badge : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{form.estado === e && <Check className="size-3" />}{statusStyle[e].label}</button>)}</div></fieldset>}
+
     {error && <ErrorBox message={error} />}
-    <div className="flex justify-end gap-2 border-t border-dte-linea pt-4"><Button variant="outline" type="button" onClick={onCancel}>Cancelar</Button><Button type="submit" disabled={saving} className="bg-dte-petroleo hover:bg-dte-petroleo-oscuro">{saving && <Loader2 className="animate-spin" data-icon="inline-start" />}Guardar acción</Button></div></form>
+    <div className="sticky bottom-0 -mx-4 -mb-4 flex gap-2 border-t border-dte-linea bg-white px-4 py-3 sm:justify-end">
+      <Button variant="outline" type="button" size="lg" className="flex-1 sm:flex-none" onClick={onCancel}>Cancelar</Button>
+      <Button type="submit" size="lg" disabled={saving} className="flex-1 bg-dte-petroleo px-4 sm:flex-none font-semibold hover:bg-dte-petroleo-oscuro">{saving && <Loader2 className="animate-spin" data-icon="inline-start" />}{item ? 'Guardar cambios' : 'Agregar a mi agenda'}</Button>
+    </div>
+  </form>
 }

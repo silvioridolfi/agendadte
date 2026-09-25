@@ -59,8 +59,22 @@ async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<void> 
   if (error) throw new Error(error.message)
 }
 
+// Cambio rápido de estado desde el detalle; sólo sobre items del propio FED.
+async function setItemStatusImpl(id: string, fedId: string, estado: AgendaItemInput['estado']): Promise<void> {
+  if (!ESTADOS.includes(estado)) throw new Error('Estado inválido')
+  const { error } = await supabaseServer().from('agenda_items').update({ estado }).eq('id', id).eq('fed_id', fedId)
+  if (error) throw new Error(error.message)
+}
+
+async function deleteItemImpl(id: string, fedId: string): Promise<void> {
+  const { error } = await supabaseServer().from('agenda_items').delete().eq('id', id).eq('fed_id', fedId)
+  if (error) throw new Error(error.message)
+}
+
 export const getFeds = async () => run(() => getFedsImpl())
 export const searchSchools = async (query: string) => run(() => searchSchoolsImpl(query))
 export const getFedItems = async (fedId: string, from: string, to: string) => run(() => getFedItemsImpl(fedId, from, to))
 export const getAllItems = async (from: string, to: string) => run(() => getAllItemsImpl(from, to))
 export const saveItem = async (input: AgendaItemInput, id?: string) => run(() => saveItemImpl(input, id))
+export const setItemStatus = async (id: string, fedId: string, estado: AgendaItemInput['estado']) => run(() => setItemStatusImpl(id, fedId, estado))
+export const deleteItem = async (id: string, fedId: string) => run(() => deleteItemImpl(id, fedId))
