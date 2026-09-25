@@ -8,7 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import * as api from '@/app/actions'
-import { ACCIONES, ESTADOS, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type School } from '@/lib/agenda'
+import { MetricsView, CAT_COLOR } from '@/components/metrics'
+import { titleCase } from '@/lib/format'
+import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type School } from '@/lib/agenda'
 
 // ---- estilos por categoría ----
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
@@ -25,6 +27,9 @@ const actionStyle: Record<Accion, { chip: string, dot: string }> = {
   'CHECKLIST': { chip: 'bg-[#e4e2f0] text-[#57507e]', dot: 'bg-[#8a82b8]' },
   'OFICINA R1': { chip: 'bg-[#e1e9f1] text-[#2f5577]', dot: 'bg-[#417099]' },
   'PARO': { chip: 'bg-[#fbdde8] text-[#a3164f]', dot: 'bg-[#e81f76]' },
+  'ENTREGA DE TABLETS': { chip: 'bg-[#dbe6f4] text-[#244f86]', dot: 'bg-[#2a6fb0]' },
+  'PLANIFICACIÓN': { chip: 'bg-[#ece9f7] text-[#4e4390]', dot: 'bg-[#6f5fc2]' },
+  'LICENCIA': { chip: 'bg-[#eeeaee] text-[#5c5160]', dot: 'bg-[#9a8f9d]' },
 }
 const statusStyle: Record<Estado, { badge: string, label: string }> = {
   planificada: { badge: 'border-pba-azul/40 bg-pba-azul/10 text-pba-azul', label: 'Planificada' },
@@ -52,15 +57,6 @@ function weekTitle(from: Date, to: Date) {
   return `${sameMonth ? from.getDate() : fmt(from, { day: 'numeric', month: 'long' })} – ${fmt(to, { day: 'numeric', month: 'long', year: 'numeric' })}`
 }
 
-// Los nombres en `establecimientos` vienen en mayúsculas: se muestran en formato título para que sean legibles.
-const lowerWords = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'en', 'a', 'al', 'para', 'por', 'con'])
-function titleCase(s: string) {
-  return s.toLowerCase().split(/(\s+)/).map((w, i) => {
-    if (/^\s+$/.test(w) || (i > 0 && lowerWords.has(w))) return w
-    if (/^(i|ii|iii|iv|v|vi|vii|viii|ix|x)$/.test(w)) return w.toUpperCase()
-    return w.replace(/^(["“(]?)(\p{L})/u, (_, p, c) => p + c.toUpperCase())
-  }).join('')
-}
 const schoolName = (s: School | null) => (s?.nombre ? titleCase(s.nombre) : 'Sin escuela asignada')
 // Siglas usuales de la DGCyE para las tarjetas angostas (el nombre completo se ve en el detalle).
 const siglas: [RegExp, string][] = [
@@ -324,7 +320,8 @@ function DetailDialog({ item, feds, profile, onClose, onEdit, onChanged }: { ite
       </DialogHeader>
       <dl className="flex flex-col gap-3 rounded-xl bg-dte-fondo p-4">
         {row(SchoolIcon, 'Escuela', item.school && <>CUE {item.school.cue ?? '—'}{schoolPlace(item.school) ? ` · ${schoolPlace(item.school)}` : ''}</>)}
-        {row(ClipboardList, 'Sub-acción', item.sub_accion)}
+        {row(ClipboardList, 'Sub-acción', item.sub_accion && <>{item.sub_accion}{item.cantidad ? <span className="text-dte-gris"> · {item.cantidad} equipos</span> : null}</>)}
+        {row(UserRound, 'Encuentro', (item.encuentro_n || item.asistentes != null || item.propuesta) && <>{[item.propuesta, item.encuentro_n ? `Encuentro N° ${item.encuentro_n}` : null, item.modalidad].filter(Boolean).join(' · ')}<span className="block text-xs text-dte-gris">{[item.destinatarios, item.inscriptos != null ? `${item.inscriptos} inscriptos` : null, item.asistentes != null ? `${item.asistentes} asistentes` : null].filter(Boolean).join(' · ')}</span></>)}
         {row(Pencil, 'Detalle', item.detalle && <span className="whitespace-pre-wrap">{item.detalle}</span>)}
         {row(UserRound, 'FED responsable', fed?.nombre_completo ?? '—')}
       </dl>
@@ -346,21 +343,24 @@ function DetailDialog({ item, feds, profile, onClose, onEdit, onChanged }: { ite
 
 // =====================================================================
 
-type Range = 'day' | 'week' | 'month'
+type Range = 'day' | 'week' | 'month' | 'year'
 function rangeBounds(anchor: Date, range: Range): [Date, Date] {
   if (range === 'day') return [anchor, anchor]
   if (range === 'week') { const s = startOfWeek(anchor); return [s, addDays(s, 6)] }
+  if (range === 'year') return [new Date(anchor.getFullYear(), 0, 1), new Date(anchor.getFullYear(), 11, 31)]
   return [new Date(anchor.getFullYear(), anchor.getMonth(), 1), new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)]
 }
 function shift(anchor: Date, range: Range, dir: number) {
   if (range === 'day') return addDays(anchor, dir)
   if (range === 'week') return addDays(anchor, 7 * dir)
+  if (range === 'year') return new Date(anchor.getFullYear() + dir, 0, 1)
   return new Date(anchor.getFullYear(), anchor.getMonth() + dir, 1)
 }
-const rangeNames: Record<Range, [string, string, string]> = { day: ['Día', 'día', 'este día'], week: ['Semana', 'semana', 'esta semana'], month: ['Mes', 'mes', 'este mes'] }
+const rangeNames: Record<Range, [string, string, string]> = { day: ['Día', 'día', 'este día'], week: ['Semana', 'semana', 'esta semana'], month: ['Mes', 'mes', 'este mes'], year: ['Año', 'año', 'este año'] }
 
 function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void }) {
-  const [range, setRange] = useState<Range>('week')
+  const [tab, setTab] = useState<'resumen' | 'acciones'>('resumen')
+  const [range, setRange] = useState<Range>('month')
   const [anchor, setAnchor] = useState(() => new Date())
   const [search, setSearch] = useState('')
   const [distrito, setDistrito] = useState('')
@@ -383,7 +383,7 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
   const anyFilter = !!(search || distrito || fedId || accion || estado)
   const fedsSinAcciones = useMemo(() => (items && !anyFilter ? feds.filter(f => !items.some(i => i.fed_id === f.id)) : []), [items, feds, anyFilter])
   const clear = () => { setSearch(''); setDistrito(''); setFedId(''); setAccion(''); setEstado('') }
-  const title = range === 'day' ? cap(fmt(from, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) : range === 'week' ? weekTitle(from, to) : cap(fmt(from, { month: 'long', year: 'numeric' }))
+  const title = range === 'day' ? cap(fmt(from, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) : range === 'week' ? weekTitle(from, to) : range === 'year' ? `Año ${from.getFullYear()}` : cap(fmt(from, { month: 'long', year: 'numeric' }))
 
   return <main className="mx-auto max-w-[1440px] px-4 pb-16 pt-6 lg:px-10">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -394,12 +394,16 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
       </div>
     </div>
 
-    <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div role="tablist" aria-label="Vista del tablero" className="mt-6 flex gap-1 border-b border-dte-linea">
+      {([['resumen', 'Resumen y métricas'], ['acciones', 'Acciones del equipo']] as const).map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 pb-2.5 pt-1 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
+    </div>
+
+    {tab === 'acciones' && <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
       {ESTADOS.map(e => <button key={e} onClick={() => setEstado(estado === e ? '' : e)} aria-pressed={estado === e} className={`rounded-2xl border bg-white px-4 py-3 text-left transition hover:shadow-md ${estado === e ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>
         <span className="text-xs font-semibold text-dte-gris">{statusStyle[e].label}s</span>
         <span className="mt-1 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums sm:text-3xl">{items ? counts[e] : '–'}</span>{estado === e && <span className="text-[11px] font-semibold text-dte-petroleo">Filtrando</span>}</span>
       </button>)}
-    </div>
+    </div>}
 
     <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs md:flex-row md:flex-wrap md:items-center">
       <div className="relative min-w-56 flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar escuela, localidad, CUE o FED…" aria-label="Buscar" className="h-9 bg-dte-fondo pl-9" /></div>
@@ -409,7 +413,8 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
       {anyFilter && <Button variant="ghost" onClick={clear} className="text-dte-magenta hover:text-dte-magenta"><X data-icon="inline-start" />Limpiar</Button>}
     </div>
 
-    <div className="mt-6 flex flex-col gap-6">
+    {tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base} feds={fedId ? feds.filter(f => f.id === fedId) : feds} />}</div>
+    : <div className="mt-6 flex flex-col gap-6">
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? [0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)
         : !groups.length ? <div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-10 text-center"><p className="font-semibold">{anyFilter ? 'Ninguna acción coincide con los filtros' : `No hay acciones cargadas en ${rangeNames[range][2]}`}</p>{anyFilter && <Button variant="link" onClick={clear} className="mt-1 text-dte-magenta">Limpiar filtros</Button>}</div>
@@ -420,13 +425,13 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
           </div>
           <ul className="divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xs">{group.map(item =>
             <li key={item.id}><button className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte focus-visible:bg-dte-tinte focus-visible:outline-none sm:grid-cols-[6.5rem_1fr_auto] sm:items-center" onClick={() => onSelect(item)}>
-              <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize text-dte-tinta">{range === 'day' ? (hhmm(item.hora_inicio) || '—') : fmt(parse(item.fecha), { weekday: 'short', day: 'numeric' }).replace('.', '')}</span>{range !== 'day' && <span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span>}</span>
+              <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize text-dte-tinta">{range === 'day' ? (hhmm(item.hora_inicio) || '—') : fmt(parse(item.fecha), range === 'week' ? { weekday: 'short', day: 'numeric' } : { day: 'numeric', month: 'short' }).replace('.', '')}</span>{range !== 'day' && <span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span>}</span>
               <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{item.school ? schoolName(item.school) : item.sub_accion || '—'}</span><span className="block truncate text-xs text-dte-gris">{[schoolPlace(item.school), item.school ? item.sub_accion : null].filter(Boolean).join(' · ') || ' '}</span></span>
               <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ActionChip label={item.accion} /><StatusBadge status={item.estado} /></span>
             </button></li>)}</ul>
         </section>)}
       {fedsSinAcciones.length > 0 && <div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-dte-gris">Sin acciones cargadas en {rangeNames[range][2]}</p><div className="mt-2 flex flex-wrap gap-2">{fedsSinAcciones.map(f => <span key={f.id} className="rounded-full bg-white px-3 py-1 text-sm ring-1 ring-dte-linea">{f.nombre_completo}</span>)}</div></div>}
-    </div>
+    </div>}
   </main>
 }
 
@@ -488,10 +493,13 @@ function Field({ label, hint, required, children, className = '' }: { label: str
 
 function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, item: AgendaItem | null, defaultFecha?: string, onCancel: () => void, onSaved: () => void }) {
   const [school, setSchool] = useState<School | null>(item?.school ?? null)
-  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? '', detalle: item?.detalle ?? '' })
+  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? '', detalle: item?.detalle ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: item?.encuentro_n?.toString() ?? '', propuesta: item?.propuesta ?? '', destinatarios: item?.destinatarios ?? '', modalidad: item?.modalidad ?? ('Presencial' as 'Presencial' | 'Virtual'), inscriptos: item?.inscriptos?.toString() ?? '', asistentes: item?.asistentes?.toString() ?? '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm(f => ({ ...f, [k]: v }))
+  const toNum = (v: string) => (v.trim() === '' ? null : Number(v))
+  const cat = form.accion ? CATEGORIA[form.accion] : null
+  const conEncuentro = !!form.accion && CON_ENCUENTRO.includes(form.accion)
   const timeError = form.hora_inicio && form.hora_fin && form.hora_fin <= form.hora_inicio ? 'La hora de fin tiene que ser posterior a la de inicio.' : ''
 
   async function submit(e: React.FormEvent) {
@@ -499,19 +507,22 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
     if (!form.accion) { setError('Elegí el tipo de acción.'); return }
     if (timeError) { setError(timeError); return }
     setSaving(true); setError('')
-    const input: AgendaItemInput = { ...form, accion: form.accion, fed_id: fed.id, school_id: school?.id ?? null, hora_inicio: form.hora_inicio || null, hora_fin: form.hora_fin || null }
+    const input: AgendaItemInput = { ...form, accion: form.accion, fed_id: fed.id, school_id: school?.id ?? null, hora_inicio: form.hora_inicio || null, hora_fin: form.hora_fin || null, cantidad: cat === 'tecnica' ? toNum(form.cantidad) : null, encuentro_n: toNum(form.encuentro_n), inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes) }
     try { await saveItem(input, item?.id); onSaved() } catch (err) { setError(errMsg(err)); setSaving(false) }
   }
 
   return <form onSubmit={submit} className="flex flex-col gap-5">
     <fieldset>
       <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta">*</span></legend>
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.map(name => {
-        const on = form.accion === name
-        return <button key={name} type="button" aria-pressed={on} onClick={() => set('accion', name)} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-[11px] font-bold uppercase leading-tight transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
-          <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span>{name}
-        </button>
-      })}</div>
+      <div className="flex flex-col gap-3">{CATEGORIAS.map(c => <div key={c}>
+        <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-dte-gris"><span className="size-2 rounded-sm" style={{ background: CAT_COLOR[c] }} />{CATEGORIA_LABEL[c]}</p>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c).map(name => {
+          const on = form.accion === name
+          return <button key={name} type="button" aria-pressed={on} onClick={() => set('accion', name)} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-[11px] font-bold uppercase leading-tight transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
+            <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span>{name}
+          </button>
+        })}</div>
+      </div>)}</div>
     </fieldset>
 
     <div className="grid gap-4 sm:grid-cols-3">
@@ -523,7 +534,22 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
 
     <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">Escuela <span className="font-normal text-dte-gris">(opcional)</span></span><SchoolPicker value={school} onChange={setSchool} /></div>
 
-    <Field label="Sub-acción" hint="(opcional)"><Input placeholder="Ej.: revisión de equipamiento del laboratorio" value={form.sub_accion} onChange={e => set('sub_accion', e.target.value)} className="h-10" /></Field>
+    <div className={`grid gap-4 ${cat === 'tecnica' ? 'sm:grid-cols-[1fr_9rem]' : ''}`}>
+      <Field label="Sub-acción" hint="(opcional)"><Input list="sub-acciones" placeholder={form.accion && SUB_ACCIONES[form.accion] ? `Ej.: ${SUB_ACCIONES[form.accion]!.slice(0, 2).join(', ')}` : 'Ej.: revisión de equipamiento'} value={form.sub_accion} onChange={e => set('sub_accion', e.target.value)} className="h-10" /></Field>
+      {cat === 'tecnica' && <Field label="Cantidad" hint="(equipos)"><Input type="number" min={0} inputMode="numeric" placeholder="0" value={form.cantidad} onChange={e => set('cantidad', e.target.value)} className="h-10" /></Field>}
+    </div>
+    <datalist id="sub-acciones">{(form.accion ? SUB_ACCIONES[form.accion] ?? [] : []).map(o => <option key={o} value={o} />)}</datalist>
+    {form.accion && SUB_ACCIONES[form.accion] && <div className="-mt-3 flex flex-wrap gap-1.5">{SUB_ACCIONES[form.accion]!.map(o => { const on = form.sub_accion.split(',').map(x => x.trim()).includes(o); return <button key={o} type="button" aria-pressed={on} onClick={() => { const cur = form.sub_accion.split(',').map(x => x.trim()).filter(Boolean); set('sub_accion', (on ? cur.filter(x => x !== o) : [...cur, o]).join(', ')) }} className={`rounded-full border px-2.5 py-1 text-xs transition ${on ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{o}</button> })}</div>}
+
+    {conEncuentro && <fieldset className="grid gap-4 rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
+      <legend className="px-1 text-sm font-semibold">Datos del encuentro <span className="font-normal text-dte-gris">(para las métricas de participación)</span></legend>
+      <Field label="Propuesta" className="sm:col-span-4"><Input placeholder={form.accion === 'CLUB DE TECNOLOGÍA' ? 'Club de Tecnología' : 'Ej.: Ciudadanía digital en el aula'} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
+      <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
+      <Field label="Destinatarios" className="sm:col-span-4"><Input placeholder="Ej.: estudiantes de 6° A, docentes" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" /></Field>
+      <Field label="Modalidad" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as 'Presencial' | 'Virtual')}><option>Presencial</option><option>Virtual</option></select></Field>
+      <Field label="Inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
+      <Field label="Asistentes" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>
+    </fieldset>}
     <Field label="Detalle" hint="(opcional)"><Textarea placeholder="Información útil para el seguimiento: con quién, qué se acordó, pendientes…" rows={3} value={form.detalle} onChange={e => set('detalle', e.target.value)} /></Field>
 
     {item && <fieldset><legend className="mb-2 text-sm font-semibold">Estado</legend><div className="flex flex-wrap gap-2">{ESTADOS.map(e => <button key={e} type="button" aria-pressed={form.estado === e} onClick={() => set('estado', e)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${form.estado === e ? statusStyle[e].badge : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{form.estado === e && <Check className="size-3" />}{statusStyle[e].label}</button>)}</div></fieldset>}

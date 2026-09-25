@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseServer } from '@/lib/supabase-server'
-import { ACCIONES, ESTADOS, type AgendaItem, type AgendaItemInput, type Fed, type School } from '@/lib/agenda'
+import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Fed, type School } from '@/lib/agenda'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
 // así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
@@ -48,7 +48,16 @@ function clean(input: AgendaItemInput): AgendaItemInput {
   if (!input.fed_id || !/^\d{4}-\d{2}-\d{2}$/.test(input.fecha)) throw new Error('FED y fecha son obligatorios')
   if (!ACCIONES.includes(input.accion) || !ESTADOS.includes(input.estado)) throw new Error('Acción o estado inválido')
   const opt = (v: string | null) => (v && v.trim() ? v.trim() : null)
-  return { ...input, school_id: opt(input.school_id), hora_inicio: opt(input.hora_inicio), hora_fin: opt(input.hora_fin), sub_accion: opt(input.sub_accion), detalle: opt(input.detalle) }
+  const num = (v: number | null) => (v == null || Number.isNaN(v) ? null : Math.max(0, Math.round(v)))
+  const encuentro = CON_ENCUENTRO.includes(input.accion)
+  return {
+    ...input, school_id: opt(input.school_id), hora_inicio: opt(input.hora_inicio), hora_fin: opt(input.hora_fin), sub_accion: opt(input.sub_accion), detalle: opt(input.detalle),
+    cantidad: num(input.cantidad),
+    // Los datos de encuentro sólo aplican a clubes, talleres y prácticas.
+    encuentro_n: encuentro ? num(input.encuentro_n) || null : null, propuesta: encuentro ? opt(input.propuesta) : null, destinatarios: encuentro ? opt(input.destinatarios) : null,
+    modalidad: encuentro && (input.modalidad === 'Presencial' || input.modalidad === 'Virtual') ? input.modalidad : null,
+    inscriptos: encuentro ? num(input.inscriptos) : null, asistentes: encuentro ? num(input.asistentes) : null,
+  }
 }
 
 async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<void> {
