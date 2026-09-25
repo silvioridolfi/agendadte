@@ -20,6 +20,12 @@
   --color-dte-linea: #e3e1ea;
   --color-dte-fondo: #f6f5f9;
   --color-dte-tinte: #f7eef4;
+
+  /* Colores institucionales del manual de marca PBA (secundarios) */
+  --color-pba-fucsia: #e81f76;
+  --color-pba-azul: #417099;
+  --color-pba-celeste: #00aec3;
+  --color-pba-celeste-texto: #00808f; /* celeste oscurecido para texto sobre fondo claro (contraste AA) */
 }
 
 @theme inline {
@@ -84,7 +90,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: #705ccb;
+  --ring: #00aec3;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
