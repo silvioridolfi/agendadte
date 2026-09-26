@@ -11,7 +11,7 @@ import * as api from '@/app/actions'
 import { ClubesView } from '@/components/clubes'
 import { MetricsView, CAT_COLOR } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
-import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Feriado, type Estado, type Fed, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, CLUB_MAX_PARTICIPANTES, clubEstado, clubEncuentrosRealizados } from '@/lib/agenda'
+import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Feriado, type Estado, type Fed, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, CLUB_MAX_PARTICIPANTES, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela } from '@/lib/agenda'
 
 // ---- estilos por categoría ----
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
@@ -630,7 +630,7 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
   const [school, setSchool] = useState<School | null>(item?.school ?? null)
   // Encuentro editable desde la app: el propio (origen app) o, si no hay, el primero importado.
   const enc0 = item?.encuentros?.find(e => e.origen === 'app') ?? item?.encuentros?.[0]
-  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', club_id: enc0?.club_id ?? '', grupo: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
+  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', club_id: enc0?.club_id ?? '', nivel: '', curso: '', seccion: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
   const esClub = form.accion === 'CLUB DE TECNOLOGÍA'
   // Clubes del FED (para elegir a cuál corresponde el encuentro). Los finalizados sólo si es el del encuentro que se edita.
   const [clubes, setClubes] = useState<Club[] | null>(null)
@@ -639,6 +639,10 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
   const clubOpts = (clubes ?? []).filter(c => c.id === form.club_id || clubEstado(c, hoy) !== 'finalizado')
   const club = clubes?.find(c => c.id === form.club_id) ?? null
   const clubLabel = (c: Club) => `${c.grupo ? `${c.grupo} · ` : ''}${c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar'} · desde ${fmt(parse(c.fecha_inicio), { day: 'numeric', month: 'short' })}${clubEstado(c, hoy) === 'sin_actividad' ? ' (sin actividad)' : ''}`
+  // Grado/curso del club nuevo: nivel sugerido por el nombre de la escuela, editable (cualquier nivel o modalidad).
+  const nivelId = form.nivel || nivelDeEscuela(school?.nombre)
+  const nivel = NIVELES.find(n => n.id === nivelId) ?? NIVELES[0]
+  const grupo = form.curso ? `${form.curso}${form.seccion ? ` ${form.seccion}` : ''}` : ''
   function pickClub(id: string) {
     const c = clubes?.find(x => x.id === id)
     setForm(f => ({ ...f, club_id: id, encuentros_previstos: c?.encuentros_previstos?.toString() ?? f.encuentros_previstos,
@@ -661,14 +665,14 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
     if (!form.accion) { setError('Elegí el tipo de acción.'); return }
     if (timeError) { setError(timeError); return }
     if (esClub && !form.club_id) { setError('Elegí a qué club corresponde el encuentro, o iniciá uno nuevo.'); return }
-    if (esClub && form.club_id === 'nuevo' && !form.grupo.trim()) { setError('Indicá el grado (y sección) del club nuevo: cada grado es un club.'); return }
+    if (esClub && form.club_id === 'nuevo' && !form.curso) { setError('Indicá el grado (y sección) del club nuevo: cada grado es un club.'); return }
     setSaving(true); setError('')
     const input: AgendaItemInput = {
       fed_id: fed.id, school_id: school?.id ?? null, lugar: school ? null : form.lugar || null, fecha: form.fecha, accion: form.accion, estado: form.estado,
       hora_inicio: form.hora_inicio || null, hora_fin: form.hora_fin || null, sub_accion: form.sub_accion, detalle: form.detalle,
       cantidad: cat === 'tecnica' ? toNum(form.cantidad) : null,
       encuentro: conEncuentro ? { id: enc0?.id, propuesta: form.propuesta, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: form.destinatarios, inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes),
-        ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', grupo: form.grupo, encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
+        ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', grupo: grupo, encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
     }
     try { await saveItem(input, item?.id); onSaved() } catch (err) { setError(errMsg(err)); setSaving(false) }
   }
@@ -712,7 +716,13 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
         {clubOpts.map(c => <option key={c.id} value={c.id}>{clubLabel(c)}</option>)}
         <option value="nuevo">+ Iniciar un club nuevo (comienza en esta fecha)</option>
       </select></Field>
-      {form.club_id === 'nuevo' && <Field label="Grado y sección del club" required hint="(cada grado es un club)" className="sm:col-span-6"><Input placeholder="Ej.: 5° A" value={form.grupo} onChange={e => set('grupo', e.target.value)} className="h-10 bg-white" /></Field>}
+      {form.club_id === 'nuevo' && <div className="grid gap-3 rounded-lg border border-dashed border-[#7d5a95]/50 bg-white p-3 sm:col-span-6 sm:grid-cols-6">
+        <p className="text-xs text-dte-gris sm:col-span-6">Cada grado o curso es un club en sí mismo. {school ? 'El nivel se sugiere según la escuela; podés cambiarlo.' : 'Elegí primero la escuela para sugerir el nivel.'}</p>
+        <Field label="Nivel / modalidad" className="sm:col-span-3"><select className={`${selectClass} h-10`} value={nivel.id} onChange={e => setForm(f => ({ ...f, nivel: e.target.value, curso: '' }))}>{NIVELES.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select></Field>
+        <Field label={nivel.cursoLabel} required className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.curso} onChange={e => set('curso', e.target.value)}><option value="">Elegí…</option>{nivel.cursos.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
+        <Field label="Sección" className="sm:col-span-1"><select className={`${selectClass} h-10`} value={form.seccion} onChange={e => set('seccion', e.target.value)}><option value="">—</option>{SECCIONES.map(x => <option key={x}>{x}</option>)}</select></Field>
+        {grupo && <p className="text-xs sm:col-span-6">El club se va a registrar como <b>{grupo}</b>{school ? ` · ${shortSchoolName(school)}` : ''}.</p>}
+      </div>}
       {club && <p className="-mt-2 text-xs text-dte-gris sm:col-span-6">{clubEncuentrosRealizados(club)} encuentros registrados{club.encuentros_previstos ? ` de ${club.encuentros_previstos} previstos` : ''}. El lugar del encuentro es el del club{club.school ? '' : ' (arriba)'}.</p>}
       <Field label="Propuesta dictada" hint="(ej.: taller de redes dentro del club)" className="sm:col-span-4"><Input placeholder="Club de Tecnología" value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentros de la propuesta" hint="(previstos)" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={form.encuentros_previstos} onChange={e => set('encuentros_previstos', e.target.value)} className="h-10 bg-white" /></Field>

@@ -146,3 +146,30 @@ export function clubEstado(c: Club, hoy: string): ClubEstado {
 }
 // Encuentros distintos del club (varios registros el mismo día con distintos grupos cuentan como uno).
 export function clubEncuentrosRealizados(c: Club) { return new Set(c.encuentros.map(e => e.fecha)).size }
+
+// Niveles y modalidades para elegir el grado/curso de un club. Se sugiere según el nombre del establecimiento.
+export type Nivel = { id: string, label: string, cursos: string[], cursoLabel: string }
+export const NIVELES: Nivel[] = [
+  { id: 'primaria', label: 'Primaria', cursoLabel: 'Grado', cursos: ['1°', '2°', '3°', '4°', '5°', '6°'] },
+  { id: 'secundaria', label: 'Secundaria', cursoLabel: 'Año', cursos: ['1°', '2°', '3°', '4°', '5°', '6°'] },
+  { id: 'tecnica', label: 'Secundaria técnica / agraria', cursoLabel: 'Año', cursos: ['1°', '2°', '3°', '4°', '5°', '6°', '7°'] },
+  { id: 'cens', label: 'Secundaria de adultos (CENS)', cursoLabel: 'Año', cursos: ['1°', '2°', '3°'] },
+  { id: 'adultos', label: 'Primaria de adultos', cursoLabel: 'Ciclo', cursos: ['1° ciclo', '2° ciclo', '3° ciclo'] },
+  { id: 'especial', label: 'Especial', cursoLabel: 'Nivel', cursos: ['Inicial', 'Primario', 'Formación integral', 'Formación laboral'] },
+  { id: 'inicial', label: 'Inicial', cursoLabel: 'Sala', cursos: ['Sala de 3', 'Sala de 4', 'Sala de 5'] },
+  { id: 'superior', label: 'Superior', cursoLabel: 'Año', cursos: ['1°', '2°', '3°', '4°'] },
+  { id: 'fp', label: 'Formación profesional / otros', cursoLabel: 'Grupo', cursos: ['Grupo único', 'Grupo 1', 'Grupo 2', 'Grupo 3', 'Grupo 4'] },
+]
+export const SECCIONES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+export function nivelDeEscuela(nombre: string | null | undefined): string {
+  const n = (nombre ?? '').toUpperCase()
+  if (/T[ÉE]CNICA|AGRARIA|C\.?E\.?P\.?T|PRODUCCI[ÓO]N TOTAL/.test(n) && /SECUNDARIA|PRODUCCI[ÓO]N|C\.?E\.?P\.?T/.test(n)) return 'tecnica'
+  if (/NIVEL SECUNDARIO|C\.?E\.?N\.?S/.test(n)) return 'cens'
+  if (/ADULTOS|ALFABETIZACI[ÓO]N|C\.?E\.?B\.?A\.?S/.test(n)) return 'adultos'
+  if (/ESPECIAL|LABORAL/.test(n)) return 'especial'
+  if (/JARD[ÍI]N/.test(n)) return 'inicial'
+  if (/SUPERIOR|INSTITUTO/.test(n)) return 'superior'
+  if (/SECUNDARIA|MEDIA|POLIMODAL/.test(n)) return 'secundaria'
+  if (/PRIMARIA/.test(n)) return 'primaria'
+  return 'fp'
+}
