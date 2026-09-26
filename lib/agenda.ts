@@ -85,7 +85,10 @@ export type AgendaItem = {
   school: School | null
   encuentros: Encuentro[]
   // Compañeros etiquetados ("acompañado por"): la acción también aparece en su calendario.
-  participantes: { fed_id: string }[]
+  participantes: { fed_id: string, respuesta?: 'pendiente' | 'acepta' | 'rechaza' }[]
+  // Serie de acciones repetidas y club/práctica asociado (para completar cada encuentro).
+  serie_id?: string | null
+  club_id?: string | null
 }
 export type AgendaItemInput = {
   fed_id: string
@@ -103,13 +106,15 @@ export type AgendaItemInput = {
   encuentro: EncuentroInput | null
   // FEDs etiquetados (sin incluir a quien la crea).
   participantes?: string[]
+  // Sólo al crear: repetir la acción los días de semana indicados (1 = lunes … 5 = viernes) hasta `hasta`.
+  repeticion?: { dias: number[], hasta: string } | null
 }
 
-export type Notificacion = { id: string; tipo: 'etiqueta' | 'modificacion'; leida: boolean; created_at: string; autor_id: string | null; item: AgendaItem | null }
+export type Notificacion = { id: string; tipo: 'etiqueta' | 'modificacion' | 'cancelacion' | 'respuesta'; detalle: string | null; leida: boolean; created_at: string; autor_id: string | null; item: AgendaItem | null }
 
 // Feriados nacionales, días con fines turísticos y aniversarios distritales (tabla public.feriados).
 // distrito null = aplica a todos; si no, sólo a quienes tienen ese distrito a cargo.
-export type Feriado = { fecha: string; nombre: string; tipo: 'nacional' | 'turistico' | 'distrital'; distrito: string | null; confirmado: boolean }
+export type Feriado = { id?: string; fecha: string; nombre: string; tipo: 'nacional' | 'turistico' | 'distrital' | 'receso'; distrito: string | null; confirmado: boolean }
 
 export const MODALIDADES = ['Presencial', 'Virtual', 'Híbrido'] as const
 export type Modalidad = (typeof MODALIDADES)[number]
@@ -141,22 +146,37 @@ export type Club = {
 }
 export type ClubEstado = 'activo' | 'sin_actividad' | 'finalizado'
 
-// Receso invernal 2026 (PBA): no cuenta para "sin actividad".
+// Receso invernal 2026 (PBA), por si todavía no se cargaron los recesos de la tabla de feriados.
 const RECESO = [['2026-07-20', '2026-07-31']]
-export function diasHabilesEntre(desde: string, hasta: string) {
+// Días hábiles entre dos fechas (sin contar `desde`). `noHabiles`: feriados y recesos cargados en la tabla.
+export function diasHabilesEntre(desde: string, hasta: string, noHabiles?: Set<string>) {
   const d = new Date(`${desde}T12:00:00`), end = new Date(`${hasta}T12:00:00`)
   let n = 0
   while (d < end) {
     d.setDate(d.getDate() + 1)
     const s = d.toISOString().slice(0, 10), w = d.getDay()
-    if (w !== 0 && w !== 6 && !RECESO.some(([a, b]) => s >= a && s <= b)) n++
+    if (w !== 0 && w !== 6 && !noHabiles?.has(s) && !RECESO.some(([a, b]) => s >= a && s <= b)) n++
   }
   return n
 }
+
+// Fechas de una serie semanal: los días elegidos (1 = lunes … 5 = viernes) después de `desde` y hasta `hasta`,
+// salteando no laborables. Máximo 60 fechas.
+export function serieFechas(desde: string, dias: number[], hasta: string, noLaborables: Set<string> = new Set()) {
+  const out: string[] = []
+  const d = new Date(`${desde}T12:00:00`), end = new Date(`${hasta}T12:00:00`)
+  while (out.length < 60) {
+    d.setDate(d.getDate() + 1)
+    if (d > end) break
+    const s = d.toISOString().slice(0, 10)
+    if (dias.includes(d.getDay()) && !noLaborables.has(s)) out.push(s)
+  }
+  return out
+}
 export function ultimaActividad(c: Club) { return c.encuentros.reduce((m, e) => (e.fecha > m ? e.fecha : m), c.fecha_inicio) }
-export function clubEstado(c: Club, hoy: string): ClubEstado {
+export function clubEstado(c: Club, hoy: string, noHabiles?: Set<string>): ClubEstado {
   if (c.fecha_cierre) return 'finalizado'
-  return diasHabilesEntre(ultimaActividad(c), hoy) > CLUB_DIAS_SIN_ACTIVIDAD ? 'sin_actividad' : 'activo'
+  return diasHabilesEntre(ultimaActividad(c), hoy, noHabiles) > CLUB_DIAS_SIN_ACTIVIDAD ? 'sin_actividad' : 'activo'
 }
 // Encuentros distintos del club (varios registros el mismo día con distintos grupos cuentan como uno).
 export function clubEncuentrosRealizados(c: Club) { return new Set(c.encuentros.map(e => e.fecha)).size }
