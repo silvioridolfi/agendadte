@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, PartyPopper } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, CircleAlert, PartyPopper, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import * as api from '@/app/actions'
 import { guardarCache, leerCache } from '@/components/app/offline'
@@ -106,13 +106,28 @@ export function StatusBadge({ status }: { status: Estado }) {
   return <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusStyle[status]?.badge ?? ''}`}>{statusStyle[status]?.label ?? status}</span>
 }
 export function ErrorBox({ message, onRetry }: { message: string, onRetry?: () => void }) {
-  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p><span className="font-semibold">No se pudo completar la operación.</span> {message}</p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>}</div>
+  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p className="flex items-start gap-2"><CircleAlert className="mt-px size-4 shrink-0" aria-hidden /><span><span className="font-semibold">No se pudo completar la operación.</span> {message}</span></p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>}</div>
+}
+// Estado vacío común: ícono, mensaje y, si corresponde, una acción para salir de él.
+export function Vacio({ icono: Icono, titulo, texto, children }: { icono: React.ComponentType<{ className?: string }>, titulo: string, texto?: string, children?: React.ReactNode }) {
+  return <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-dte-linea bg-white/60 px-6 py-10 text-center">
+    <span className="flex size-12 items-center justify-center rounded-full bg-dte-fondo text-dte-gris"><Icono className="size-6" /></span>
+    <p className="font-semibold text-dte-tinta">{titulo}</p>{texto && <p className="max-w-sm text-sm text-dte-gris">{texto}</p>}
+    {children && <div className="mt-2">{children}</div>}
+  </div>
 }
 export function Skeleton({ className = '' }: { className?: string }) { return <div className={`animate-pulse rounded-xl bg-dte-linea/70 ${className}`} /> }
 
 export function Toast({ message, onDone }: { message: string, onDone: () => void }) {
-  useEffect(() => { const t = setTimeout(onDone, 3200); return () => clearTimeout(t) }, [message, onDone])
-  return <div role="status" aria-live="polite" className="fixed inset-x-0 bottom-safe-24 z-toast flex justify-center px-4 sm:bottom-8"><div className="flex items-center gap-2 rounded-full bg-dte-tinta px-4 py-2.5 text-sm font-medium text-white shadow-lg"><Check className="size-4 text-dte-celeste" />{message}</div></div>
+  // Tiempo suficiente para leerlo; se pausa mientras el puntero o el foco están encima.
+  const [pausa, setPausa] = useState(false)
+  useEffect(() => { if (pausa) return; const t = setTimeout(onDone, 5000); return () => clearTimeout(t) }, [message, onDone, pausa])
+  return <div role="status" aria-live="polite" aria-atomic="true" className="pointer-events-none fixed inset-x-0 bottom-safe-24 z-toast flex justify-center px-4 sm:bottom-8">
+    <div onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)} onFocus={() => setPausa(true)} onBlur={() => setPausa(false)} className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full bg-dte-tinta py-1 pl-4 pr-1 text-sm font-medium text-white shadow-lg">
+      <Check className="size-4 shrink-0 text-dte-celeste" aria-hidden /><span className="min-w-0">{message}</span>
+      <button onClick={onDone} aria-label="Cerrar aviso" className="flex size-11 shrink-0 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white md:size-8"><X className="size-4" /></button>
+    </div>
+  </div>
 }
 
 // `cacheKey`: guarda lo cargado en el dispositivo y, si no hay conexión, muestra la última copia.
