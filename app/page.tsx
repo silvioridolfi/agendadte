@@ -103,7 +103,7 @@ export default function Page() {
       onChanged={(msg, updated) => { changed(msg); setSelected(updated) }} />
 
     <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto bg-white sm:max-w-2xl">
+      <DialogContent className="bg-white sm:max-w-2xl">
         <DialogHeader><DialogTitle className="text-lg">{editing?.item ? 'Editar acción' : 'Nueva acción'}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>
         {editing && <ItemForm key={editing.item?.id ?? `new-${editing.fecha}`} fed={profile} feds={feds ?? []} item={editing.item} defaultFecha={editing.fecha} preset={editing.preset} onCancel={() => setEditing(null)} onSaved={({ creadas, offline }) => { changed(offline ? 'Sin conexión: la acción quedó guardada en este dispositivo y se envía al volver la señal' : editing.item ? 'Acción actualizada' : creadas > 1 ? `Se crearon ${creadas} acciones de la serie` : editing.preset?.participantes?.length ? 'Reunión creada y notificada al equipo' : 'Acción agregada a tu agenda'); setEditing(null) }} />}
       </DialogContent>
