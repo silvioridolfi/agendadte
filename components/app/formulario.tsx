@@ -144,6 +144,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (!esParo && !esLicencia && !school && !form.lugar.trim()) { setError('Indicá el establecimiento (o el lugar, si no es una escuela).'); return }
     if (!form.accion) { setError('Elegí el tipo de acción.'); return }
     if (timeError) { setError(timeError); return }
     if (esClub && !form.club_id) { setError(`Elegí a qué ${marca.corto} corresponde el encuentro, o iniciá uno nuevo.`); return }
@@ -168,6 +169,16 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   }
 
   return <form onSubmit={submit} className="flex flex-col gap-5">
+    {!esParo && !esLicencia && <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">Establecimiento <span className="text-dte-magenta">*</span> <span className="font-normal text-dte-gris">(escuela o lugar; no hace falta para Licencia ni Paro)</span></span><SchoolPicker value={school} onChange={setSchool} />{!school && <Input placeholder="…o lugar, si no es una escuela (ej.: Jefatura Distrital, Feria de Ciencias)" value={form.lugar} onChange={e => set('lugar', e.target.value)} className="h-10" aria-label="Lugar" />}</div>}
+
+    <div className="grid gap-4 sm:grid-cols-3">
+      <Field label="Fecha" required><Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} className="h-10" /></Field>
+      {!esParo && <><Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="h-10" /></Field>
+      <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="h-10" /></Field></>}
+    </div>
+    {timeError && <p className="-mt-3 text-xs text-[#a3164f]">{timeError}</p>}
+    {ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-[#7a5a0c]' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{ddjjDia.dte}</b>{ddjjDia.externo ? ` · Otro cargo: ${ddjjDia.externo}` : ''}{fueraDeHorario ? '. La acción queda fuera de ese horario.' : ''}</span></p>}
+
     <fieldset>
       <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta">*</span></legend>
       <div className="flex flex-col gap-3">{CATEGORIAS.map(c => <div key={c}>
@@ -180,18 +191,9 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         })}</div>
       </div>)}</div>
     </fieldset>
+    {esParo && <p className="rounded-lg border border-dte-linea bg-dte-fondo px-3 py-2 text-sm text-dte-gris">Adhesión a paro gremial/docente. Se registra en la <b className="text-dte-tinta">Dirección de Tecnología Educativa</b> (lugar de trabajo); no hace falta completar nada más.</p>}
+    {esLicencia && <p className="rounded-lg border border-[#e9d8a6] bg-[#fdf6e3] px-3 py-2 text-sm text-[#6b5210]"><b>Recordatorio:</b> {RECORDATORIO_LICENCIA}</p>}
 
-    <div className="grid gap-4 sm:grid-cols-3">
-      <Field label="Fecha" required><Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} className="h-10" /></Field>
-      {!esParo && <><Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="h-10" /></Field>
-      <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="h-10" /></Field></>}
-    </div>
-    {esParo && <p className="-mt-2 rounded-lg border border-dte-linea bg-dte-fondo px-3 py-2 text-sm text-dte-gris">Adhesión a paro gremial/docente. Se registra en la <b className="text-dte-tinta">Dirección de Tecnología Educativa</b> (lugar de trabajo); no hace falta completar nada más.</p>}
-    {esLicencia && <p className="-mt-2 rounded-lg border border-[#e9d8a6] bg-[#fdf6e3] px-3 py-2 text-sm text-[#6b5210]"><b>Recordatorio:</b> {RECORDATORIO_LICENCIA}</p>}
-    {timeError && <p className="-mt-3 text-xs text-[#a3164f]">{timeError}</p>}
-    {ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-[#7a5a0c]' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{ddjjDia.dte}</b>{ddjjDia.externo ? ` · Otro cargo: ${ddjjDia.externo}` : ''}{fueraDeHorario ? '. La acción queda fuera de ese horario.' : ''}</span></p>}
-
-    {!esParo && !esLicencia && <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">Escuela <span className="font-normal text-dte-gris">(opcional)</span></span><SchoolPicker value={school} onChange={setSchool} />{!school && <Input placeholder="…o lugar, si no es una escuela (ej.: Jefatura Distrital, Feria de Ciencias)" value={form.lugar} onChange={e => set('lugar', e.target.value)} className="h-10" aria-label="Lugar" />}</div>}
 
     {!esParo && !esLicencia && companeros.length > 0 && <fieldset>
       <legend className="mb-1.5 flex w-full items-center justify-between text-sm font-semibold"><span>Acompañado por <span className="font-normal text-dte-gris">(opcional)</span></span>
