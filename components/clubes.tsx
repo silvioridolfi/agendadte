@@ -36,18 +36,18 @@ function participacion(c: Club) {
 
 // Clubes de Tecnología o Prácticas (PEAT). `desde`/`hasta`: período del tablero; se muestran los trayectos
 // con actividad en el período y se cuentan sólo los encuentros de ese período.
-export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 'CLUB DE TECNOLOGÍA', desde, hasta, periodo }: { clubes: Club[], feds: Fed[], onCierre: (club: Club, fecha: string | null) => Promise<void>, schoolLabel: (c: Club) => string, tipo?: Trayecto, desde: string, hasta: string, periodo: string }) {
+export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 'CLUB DE TECNOLOGÍA', desde, hasta, periodo, noHabiles }: { clubes: Club[], feds: Fed[], onCierre: (club: Club, fecha: string | null) => Promise<void>, schoolLabel: (c: Club) => string, tipo?: Trayecto, desde: string, hasta: string, periodo: string, noHabiles?: Set<string> }) {
   const hoy = new Date().toISOString().slice(0, 10)
   const [busy, setBusy] = useState('')
   const [drill, setDrill] = useState<{ title: string, subtitle?: string, rows: DrillRow[] } | null>(null)
   const marca = TRAYECTO_MARCA[tipo]
   const clubesTxt = marca.plural
   // Trayectos con actividad en el período (del inicio al cierre o, si sigue abierto, hasta hoy) y sus encuentros del período.
-  const clubes = useMemo(() => todos.filter(c => c.tipo === tipo && c.fecha_inicio <= hasta && (c.fecha_cierre ?? (clubEstado(c, hoy) === 'activo' ? hoy : ultimaActividad(c))) >= desde)
+  const clubes = useMemo(() => todos.filter(c => c.tipo === tipo && c.fecha_inicio <= hasta && (c.fecha_cierre ?? (clubEstado(c, hoy, noHabiles) === 'activo' ? hoy : ultimaActividad(c))) >= desde)
     .map(c => ({ ...c, encuentros: c.encuentros.filter(e => e.fecha >= desde && e.fecha <= hasta) })), [todos, tipo, desde, hasta, hoy])
   const completos = useMemo(() => new Map(todos.map(c => [c.id, c])), [todos])
   const fedName = (id: string) => feds.find(f => f.id === id)?.nombre_completo ?? '—'
-  const rows = useMemo(() => clubes.map(c => { const full = completos.get(c.id)!; return { c, estado: clubEstado(full, hoy), realizados: new Set(c.encuentros.map(e => e.fecha)).size, total: new Set(full.encuentros.map(e => e.fecha)).size, ultima: ultimaActividad(full), fechas: [...new Set(full.encuentros.map(e => e.fecha))], ...participacion(c) } })
+  const rows = useMemo(() => clubes.map(c => { const full = completos.get(c.id)!; return { c, estado: clubEstado(full, hoy, noHabiles), realizados: new Set(c.encuentros.map(e => e.fecha)).size, total: new Set(full.encuentros.map(e => e.fecha)).size, ultima: ultimaActividad(full), fechas: [...new Set(full.encuentros.map(e => e.fecha))], ...participacion(c) } })
     .sort((a, b) => ORDEN.indexOf(a.estado) - ORDEN.indexOf(b.estado) || a.c.fecha_inicio.localeCompare(b.c.fecha_inicio)), [clubes, completos, hoy])
   const n = (e: ClubEstado) => rows.filter(r => r.estado === e).length
   const encuentros = rows.reduce((a, r) => a + r.realizados, 0)
@@ -96,7 +96,7 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
   }, [todos, tipo, cicloYear])
   const verCiclo = (titulo: string, t: string, list: Club[]) => setDrill({ title: `${titulo} · ${t}`, subtitle: `${list.length} ${clubesTxt}`, rows: list.map(c => {
     const full = completos.get(c.id) ?? c
-    return { key: c.id, title: nombre(c), sub: [fedName(c.fed_id), `inicio ${corta(c.fecha_inicio)}`, c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : null].filter(Boolean).join(' · '), right: ESTADO_CLUB[clubEstado(full, hoy)].label }
+    return { key: c.id, title: nombre(c), sub: [fedName(c.fed_id), `inicio ${corta(c.fecha_inicio)}`, c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : null].filter(Boolean).join(' · '), right: ESTADO_CLUB[clubEstado(full, hoy, noHabiles)].label }
   }) })
   const porFed = feds.map(f => ({ f, r: rows.filter(r => r.c.fed_id === f.id) })).filter(x => x.r.length).sort((a, b) => b.r.length - a.r.length)
   const maxFed = Math.max(1, ...porFed.map(x => x.r.length))

@@ -1,5 +1,6 @@
 'use client'
 
+import { ConfiguracionView } from '@/components/app/configuracion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Search, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -9,7 +10,7 @@ import { ClubesView } from '@/components/clubes'
 import { MetricsView } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
 import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed, type Club } from '@/lib/agenda'
-import { statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, schoolPlace, itemTitle, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav } from '@/components/app/comun'
+import { getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, schoolPlace, itemTitle, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav } from '@/components/app/comun'
 
 // =====================================================================
 
@@ -30,8 +31,9 @@ export const rangeNames: Record<Range, [string, string, string]> = { day: ['Día
 
 export const LISTA_INICIAL = 5, LISTA_PASO = 20
 
-export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void }) {
-  const [tab, setTab] = useState<'resumen' | 'clubes' | 'practicas' | 'acciones'>('resumen')
+// `autorId`: perfil de coordinación que usa el tablero (habilita Configuración); `onChanged`: aviso tras editar equipo o feriados.
+export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion, autorId, onChanged }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void, autorId?: string, onChanged?: (msg: string) => void }) {
+  const [tab, setTab] = useState<'resumen' | 'clubes' | 'practicas' | 'acciones' | 'config'>('resumen')
   const [range, setRange] = useState<Range>('month')
   const [anchor, setAnchor] = useState(() => new Date())
   const [search, setSearch] = useState('')
@@ -58,6 +60,9 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   const [clubes, setClubesState] = useState<Club[] | null>(null)
   const [clubKey, setClubKey] = useState(0)
   useEffect(() => { let alive = true; getClubes().then(r => alive && setClubesState(r)).catch(() => alive && setClubesState([])); return () => { alive = false } }, [reloadKey, clubKey])
+  // Feriados y recesos del año: no cuentan para "sin actividad" de clubes y prácticas.
+  const [noHabiles, setNoHabiles] = useState<Set<string>>(new Set())
+  useEffect(() => { const y = new Date().getFullYear(); getFeriados(`${y}-01-01`, `${y}-12-31`).then(l => setNoHabiles(new Set(l.filter(f => f.tipo !== 'distrital').map(f => f.fecha)))).catch(() => {}) }, [reloadKey])
   const fedName = useCallback((id: string) => todos.find(f => f.id === id)?.nombre_completo ?? 'FED desconocido', [todos])
   const distritos = useMemo(() => [...new Set([...feds.flatMap(f => f.distritos_a_cargo), ...(items ?? []).map(i => i.school?.distrito).filter((d): d is string => !!d)])].sort((a, b) => a.localeCompare(b, 'es')), [feds, items])
   const q = search.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
@@ -90,7 +95,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     </div>
 
     <div role="tablist" aria-label="Vista del tablero" className="mt-6 flex gap-1 border-b border-dte-linea">
-      {([['resumen', 'Resumen y métricas'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo']] as const).map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 pb-2.5 pt-1 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
+      {([['resumen', 'Resumen y métricas'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo'], ...(autorId ? [['config', 'Configuración']] as const : [])] as const).map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 pb-2.5 pt-1 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
     </div>
 
     {tab === 'acciones' && <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -100,15 +105,16 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
       </button>)}
     </div>}
 
-    <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs md:flex-row md:flex-wrap md:items-center">
+    {tab !== 'config' && <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs md:flex-row md:flex-wrap md:items-center">
       <div className="relative min-w-56 flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar escuela, localidad, CUE o FED…" aria-label="Buscar" className="h-9 bg-dte-fondo pl-9" /></div>
       <select aria-label="Distrito" className={`${selectClass} md:w-44`} value={distrito} onChange={e => setDistrito(e.target.value)}><option value="">Todos los distritos</option>{distritos.map(d => <option key={d} value={d}>{titleCase(d)}</option>)}</select>
       <select aria-label="FED" className={`${selectClass} md:w-52`} value={fedId} onChange={e => setFedId(e.target.value)}><option value="">Todos los FEDs</option>{[...feds].sort((a, b) => az(a.nombre_completo, b.nombre_completo)).map(f => <option key={f.id} value={f.id}>{f.nombre_completo}</option>)}</select>
       <select aria-label="Tipo de acción" className={`${selectClass} md:w-56`} value={accion} onChange={e => setAccion(e.target.value)}><option value="">Todas las acciones</option>{[...ACCIONES].sort(az).map(a => <option key={a} value={a}>{cap(a.toLowerCase())}</option>)}</select>
       {anyFilter && <Button variant="ghost" onClick={clear} className="text-dte-magenta hover:text-dte-magenta"><X data-icon="inline-start" />Limpiar</Button>}
-    </div>
+    </div>}
 
-    {tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) }} />}</div>
+    {tab === 'config' && autorId ? <div className="mt-6"><ConfiguracionView feds={todos} autorId={autorId} onChanged={m => onChanged?.(m)} /></div>
+    : tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} noHabiles={noHabiles} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) }} />}</div>
     : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base.filter(i => feds.some(f => f.id === i.fed_id))} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} />}</div>
     : <div className="mt-6 flex flex-col gap-6">
       {error ? <ErrorBox message={error} onRetry={retry} />

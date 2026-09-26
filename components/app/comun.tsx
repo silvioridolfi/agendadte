@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Check, ChevronLeft, ChevronRight, PartyPopper } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import * as api from '@/app/actions'
+import { guardarCache, leerCache } from '@/components/app/offline'
 import { titleCase } from '@/lib/format'
 import { type Accion, type AgendaItem, type Feriado, type Estado, type Fed, type School } from '@/lib/agenda'
 
@@ -112,18 +113,24 @@ export function Toast({ message, onDone }: { message: string, onDone: () => void
   return <div role="status" aria-live="polite" className="fixed inset-x-0 bottom-24 z-[60] flex justify-center px-4 sm:bottom-8"><div className="flex items-center gap-2 rounded-full bg-dte-tinta px-4 py-2.5 text-sm font-medium text-white shadow-lg"><Check className="size-4 text-dte-celeste" />{message}</div></div>
 }
 
-export function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[]) {
+// `cacheKey`: guarda lo cargado en el dispositivo y, si no hay conexión, muestra la última copia.
+export function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[], cacheKey?: string) {
   const [items, setItems] = useState<AgendaItem[] | null>(null)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
+  const [desdeCache, setDesdeCache] = useState<number | null>(null)
   useEffect(() => {
     let alive = true
-    setItems(null); setError('')
-    load().then(r => alive && setItems(r)).catch(e => alive && setError(errMsg(e)))
+    setItems(null); setError(''); setDesdeCache(null)
+    load().then(r => { if (!alive) return; setItems(r); if (cacheKey) guardarCache(cacheKey, r) }).catch(e => {
+      if (!alive) return
+      const c = cacheKey ? leerCache(cacheKey) : null
+      if (c) { setItems(c.items); setDesdeCache(c.ts) } else setError(errMsg(e))
+    })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, retry])
-  return { items, error, retry: () => setRetry(n => n + 1) }
+  return { items, error, retry: () => setRetry(n => n + 1), desdeCache }
 }
 
 // =====================================================================

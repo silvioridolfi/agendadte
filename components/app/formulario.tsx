@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Clock, Loader2, Plus, School as SchoolIcon, Search } from 'lucide-react'
+import { Check, Clock, Loader2, Plus, School as SchoolIcon, Search, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
-import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Estado, type Fed, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA } from '@/lib/agenda'
-import { actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, saveItem, errMsg, ErrorBox, ItemPreset } from '@/components/app/comun'
+import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA } from '@/lib/agenda'
+import { actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, saveItem, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
+import { encolarOffline } from '@/components/app/offline'
 
 // =====================================================================
 
@@ -65,7 +66,7 @@ export function Field({ label, hint, required, children, className = '' }: { lab
   return <label className={`flex flex-col gap-1.5 ${className}`}><span className="text-sm font-semibold text-dte-tinta">{label}{required && <span className="text-dte-magenta"> *</span>}{hint && <span className="ml-1 font-normal text-dte-gris">{hint}</span>}</span>{children}</label>
 }
 
-export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSaved }: { fed: Fed, feds: Fed[], item: AgendaItem | null, defaultFecha?: string, preset?: ItemPreset, onCancel: () => void, onSaved: () => void }) {
+export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSaved }: { fed: Fed, feds: Fed[], item: AgendaItem | null, defaultFecha?: string, preset?: ItemPreset, onCancel: () => void, onSaved: (r: { creadas: number, offline?: boolean }) => void }) {
   // Compañeros etiquetados: la acción aparece también en su calendario y reciben una notificación.
   const [participantes, setParticipantes] = useState<string[]>(() => item?.participantes?.map(p => p.fed_id) ?? preset?.participantes ?? [])
   const companeros = useMemo(() => feds.filter(f => f.id !== fed.id).sort((a, b) => (a.rol === b.rol ? az(a.nombre_completo, b.nombre_completo) : a.rol === 'coordinacion' ? 1 : -1)), [feds, fed.id])
@@ -73,7 +74,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const [school, setSchool] = useState<School | null>(item?.school ?? null)
   // Encuentro editable desde la app: el propio (origen app) o, si no hay, el primero importado.
   const enc0 = item?.encuentros?.find(e => e.origen === 'app') ?? item?.encuentros?.[0]
-  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? preset?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? preset?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', club_id: enc0?.club_id ?? '', nivel: '', curso: '', seccion: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
+  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? preset?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? preset?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', club_id: enc0?.club_id ?? item?.club_id ?? '', nivel: '', curso: '', seccion: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
   // Clubes y prácticas: registro por grupo con inicio y cierre (cada uno con su identidad visual).
   const esClub = esTrayecto(form.accion)
   const marca = esClub ? TRAYECTO_MARCA[form.accion as keyof typeof TRAYECTO_MARCA] : TRAYECTO_MARCA['CLUB DE TECNOLOGÍA']
@@ -109,6 +110,36 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const timeError = form.hora_inicio && form.hora_fin && form.hora_fin <= form.hora_inicio ? 'La hora de fin tiene que ser posterior a la de inicio.' : ''
   // Horario DTE declarado para ese día (DD.JJ.). Sólo avisa, no impide guardar.
   const ddjjDia = ddjjFor(fed, form.fecha)
+  // Repetir (sólo al crear): mismos datos los días elegidos hasta una fecha, salteando feriados y recesos.
+  const [repetir, setRepetir] = useState(false)
+  const [dias, setDias] = useState<number[]>([])
+  const [hasta, setHasta] = useState('')
+  const diaFecha = parse(form.fecha).getDay()
+  const diasSerie = dias.length ? dias : diaFecha >= 1 && diaFecha <= 5 ? [diaFecha] : []
+  const hastaSerie = hasta || iso(addDays(parse(form.fecha), 7 * 8))
+  // Avisos al cargar: superposición, feriado, fin de semana, sin DD.JJ., realizada a futuro. No impiden guardar.
+  const [delDia, setDelDia] = useState<{ items: AgendaItem[], feriados: Feriado[] }>({ items: [], feriados: [] })
+  useEffect(() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.fecha)) return
+    let alive = true
+    Promise.all([getFedItems(fed.id, form.fecha, form.fecha).catch(() => []), getFeriados(form.fecha, form.fecha).catch(() => [])])
+      .then(([items, fer]) => alive && setDelDia({ items: items.filter(i => i.id !== item?.id), feriados: fer.filter(f => !f.distrito || fed.distritos_a_cargo.includes(f.distrito)) }))
+    return () => { alive = false }
+  }, [form.fecha, fed.id, fed.distritos_a_cargo, item?.id])
+  const avisos = useMemo(() => {
+    const out: string[] = []
+    if (!form.accion || esLicencia) return out
+    const d = parse(form.fecha).getDay()
+    if (d === 0 || d === 6) out.push('La fecha cae en fin de semana.')
+    for (const f of delDia.feriados) out.push(`${cap(fmt(parse(f.fecha), { weekday: 'long', day: 'numeric', month: 'long' }))} es ${f.tipo === 'receso' ? 'receso escolar' : 'feriado'}: ${f.nombre}${f.confirmado ? '' : ' (a confirmar)'}.`)
+    if (!esParo && d >= 1 && d <= 5 && fed.ddjj?.length && !ddjjFor(fed, form.fecha)) out.push('No tenés horario DTE declarado ese día en la DD.JJ.')
+    const solapa = delDia.items.filter(i => i.estado !== 'cancelada' && (
+      (form.hora_inicio && i.hora_inicio && (form.hora_inicio < (hhmm(i.hora_fin) || hhmm(i.hora_inicio)) || form.hora_inicio === hhmm(i.hora_inicio)) && (hhmm(i.hora_inicio) < (form.hora_fin || form.hora_inicio) || form.hora_inicio === hhmm(i.hora_inicio)))
+      || (school && i.school_id === school.id && i.accion === form.accion)))
+    for (const i of solapa) out.push(`Ya tenés ${cap(i.accion.toLowerCase())} ${i.hora_inicio ? `a las ${hhmm(i.hora_inicio)} ` : ''}ese día${i.school ? ` en ${shortSchoolName(i.school)}` : ''}.`)
+    if (form.estado === 'realizada' && form.fecha > iso(new Date())) out.push('Está marcada como realizada pero la fecha todavía no llegó.')
+    return out
+  }, [form.accion, form.fecha, form.hora_inicio, form.hora_fin, form.estado, delDia, fed, school, esLicencia, esParo])
   const fueraDeHorario = !!ddjjDia?.dte_desde && !!ddjjDia?.dte_hasta && ((!!form.hora_inicio && form.hora_inicio < ddjjDia.dte_desde) || (!!form.hora_fin && form.hora_fin > ddjjDia.dte_hasta))
 
   async function submit(e: React.FormEvent) {
@@ -117,8 +148,10 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     if (timeError) { setError(timeError); return }
     if (esClub && !form.club_id) { setError(`Elegí a qué ${marca.corto} corresponde el encuentro, o iniciá uno nuevo.`); return }
     if (esClub && form.club_id === 'nuevo' && !form.curso) { setError(`Indicá el grado o curso (y sección): cada grupo es un ${marca.corto}.`); return }
+    if (repetir && !item && (!diasSerie.length || hastaSerie <= form.fecha)) { setError('Para repetir, elegí al menos un día y una fecha de fin posterior.'); return }
     setSaving(true); setError('')
     const input: AgendaItemInput = {
+      repeticion: repetir && !item ? { dias: diasSerie, hasta: hastaSerie } : null,
       fed_id: fed.id, school_id: esLicencia || esParo ? null : school?.id ?? null, lugar: school || esLicencia || esParo ? null : form.lugar || null, fecha: form.fecha, accion: form.accion, estado: form.estado,
       hora_inicio: esParo ? null : form.hora_inicio || null, hora_fin: esParo ? null : form.hora_fin || null, sub_accion: conSubAccion ? form.sub_accion : null, detalle: form.detalle,
       cantidad: cat === 'tecnica' ? toNum(form.cantidad) : null,
@@ -126,7 +159,12 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       encuentro: conEncuentro ? { id: enc0?.id, propuesta: form.propuesta, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: form.destinatarios, inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes),
         ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', grupo: grupo, escuela_origen_id: otroOrigen ? origen?.id ?? null : null, encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
     }
-    try { await saveItem(input, item?.id); onSaved() } catch (err) { setError(errMsg(err)); setSaving(false) }
+    // Sin conexión: queda en cola en este dispositivo y se envía al volver la señal.
+    if (typeof navigator !== 'undefined' && !navigator.onLine) { encolarOffline(input, item?.id); onSaved({ creadas: 1, offline: true }); return }
+    try { const r = await saveItem(input, item?.id); onSaved({ creadas: r.creadas }) } catch (err) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) { encolarOffline(input, item?.id); onSaved({ creadas: 1, offline: true }); return }
+      setError(errMsg(err)); setSaving(false)
+    }
   }
 
   return <form onSubmit={submit} className="flex flex-col gap-5">
@@ -211,6 +249,19 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
 
     {item && <fieldset><legend className="mb-2 text-sm font-semibold">Estado</legend><div className="flex flex-wrap gap-2">{ESTADOS.map(e => <button key={e} type="button" aria-pressed={form.estado === e} onClick={() => set('estado', e)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${form.estado === e ? statusStyle[e].badge : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{form.estado === e && <Check className="size-3" />}{statusStyle[e].label}</button>)}</div></fieldset>}
 
+    {!item && !esParo && !esLicencia && form.accion && <fieldset className="rounded-xl border border-dte-linea p-3">
+      <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={repetir} onChange={e => setRepetir(e.target.checked)} className="size-4" />Se repite cada semana <span className="font-normal text-dte-gris">(ej.: el club todos los miércoles)</span></label>
+      {repetir && <div className="mt-3 flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-1.5"><span className="mr-1 text-xs font-semibold uppercase tracking-wider text-dte-gris">Días</span>{DIAS_HABILES.map((d, i) => { const n = i + 1, on = diasSerie.includes(n); return <button key={d} type="button" aria-pressed={on} onClick={() => setDias((on ? diasSerie.filter(x => x !== n) : [...diasSerie, n]).sort())} className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${on ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-petroleo/20 bg-dte-petroleo/[0.06] text-dte-petroleo hover:bg-dte-petroleo/[0.12]'}`}>{d}</button> })}</div>
+        <Field label="Hasta" className="max-w-48"><Input type="date" min={form.fecha} value={hastaSerie} onChange={e => setHasta(e.target.value)} className="h-10" /></Field>
+        <p className="text-xs text-dte-gris">Se crean como <b>planificadas</b> con los mismos datos, salteando feriados y recesos. Después completás cada encuentro{esClub ? ` y queda asociado al ${marca.corto}` : ''}. Máximo 60 fechas.</p>
+      </div>}
+    </fieldset>}
+
+    {avisos.length > 0 && <div role="status" className="rounded-xl border border-[#e9d8a6] bg-[#fdf6e3] px-3 py-2.5 text-sm text-[#6b5210]">
+      <p className="mb-1 flex items-center gap-1.5 font-semibold"><TriangleAlert className="size-4" />Revisá antes de guardar</p>
+      <ul className="list-disc pl-5 text-[13px]">{avisos.map(a => <li key={a}>{a}</li>)}</ul>
+    </div>}
     {error && <ErrorBox message={error} />}
     <div className="sticky bottom-0 -mx-4 -mb-4 flex gap-2 border-t border-dte-linea bg-white px-4 py-3 sm:justify-end">
       <Button variant="outline" type="button" size="lg" className="flex-1 sm:flex-none" onClick={onCancel}>Cancelar</Button>

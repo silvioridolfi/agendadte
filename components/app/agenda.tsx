@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Clock, Plus, Users } from 'lucide-react'
+import { Clock, Plus, Users, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ESTADOS, type AgendaItem, type Feriado, type Estado, type Fed } from '@/lib/agenda'
 import { actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, shortSchoolName, schoolPlace, ddjjFor, itemTitle, firstName, getFedItems, storage, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
@@ -11,7 +11,7 @@ export function AgendaView({ fed, reloadKey, onNew, onSelect }: { fed: Fed, relo
   const setView = (v: CalView) => { setViewState(v); storage(() => localStorage.setItem(CAL_KEY, v)) }
   const [anchor, setAnchor] = useState(() => toWeekday(new Date()))
   const [from, to] = calBounds(anchor, view)
-  const { items, error, retry } = useItems(() => getFedItems(fed.id, iso(from), iso(to)), [fed.id, iso(from), iso(to), reloadKey])
+  const { items, error, retry, desdeCache } = useItems(() => getFedItems(fed.id, iso(from), iso(to)), [fed.id, iso(from), iso(to), reloadKey], `${fed.id}:${iso(from)}:${iso(to)}`)
   const feriados = useFeriados(iso(from), iso(to), fed.distritos_a_cargo)
   const today = iso(new Date())
   const byDay = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of items ?? []) m.set(i.fecha, [...(m.get(i.fecha) ?? []), i]); return m }, [items])
@@ -51,6 +51,7 @@ export function AgendaView({ fed, reloadKey, onNew, onSelect }: { fed: Fed, relo
     </div>
 
     <div className="mt-6">
+      {desdeCache && <p role="status" className="mb-3 flex items-center gap-2 rounded-xl border border-[#e9d8a6] bg-[#fdf6e3] px-3 py-2 text-sm text-[#6b5210]"><WifiOff className="size-4 shrink-0" />Sin conexión: estás viendo la copia guardada el {new Date(desdeCache).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. Lo que cargues se envía al volver la señal.</p>}
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? <Skeleton className="h-72" />
         : view === 'day' ? <section className="rounded-2xl border border-dte-linea bg-white p-4">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { CalendarDays, ChevronDown, ClipboardList, LayoutDashboard } from 'lucide-react'
+import { CalendarDays, ChevronDown, ClipboardList, CloudUpload, LayoutDashboard } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { type AgendaItem, type Fed } from '@/lib/agenda'
@@ -11,6 +11,7 @@ import { AgendaView } from '@/components/app/agenda'
 import { DetailDialog } from '@/components/app/detalle'
 import { CoordinatorView } from '@/components/app/tablero'
 import { ItemForm } from '@/components/app/formulario'
+import { pendientes, sincronizarPendientes } from '@/components/app/offline'
 import { PROFILE_KEY, iso, initials, firstName, fedColor, getFeds, errMsg, storage, Toast, ItemPreset, toWeekday } from '@/components/app/comun'
 
 export default function Page() {
@@ -43,6 +44,20 @@ export default function Page() {
   const changed = (message: string) => { setReloadKey(k => k + 1); setToast(message) }
   const hideToast = useCallback(() => setToast(''), [])
 
+  // Acciones cargadas sin conexión: se envían al volver la señal (y al abrir la app).
+  const [enCola, setEnCola] = useState(0)
+  useEffect(() => {
+    const contar = () => setEnCola(pendientes())
+    const enviar = () => sincronizarPendientes().then(({ enviadas, fallidas }) => {
+      contar()
+      if (enviadas) { setReloadKey(k => k + 1); setToast(`Se enviaron ${enviadas} ${enviadas === 1 ? 'acción cargada' : 'acciones cargadas'} sin conexión`) }
+      if (fallidas.length) setToast(`No se pudo enviar: ${fallidas[0]}`)
+    })
+    contar(); enviar()
+    window.addEventListener('online', enviar); window.addEventListener('agenda-pendientes', contar)
+    return () => { window.removeEventListener('online', enviar); window.removeEventListener('agenda-pendientes', contar) }
+  }, [])
+
   if (!profile) return <ProfileSelect feds={feds} error={fedsError} onRetry={loadFeds} onSelect={choose} />
 
   return <div className="min-h-screen bg-dte-fondo text-dte-tinta">
@@ -58,6 +73,7 @@ export default function Page() {
             <button key={key} onClick={() => setSection(key)} aria-current={section === key ? 'page' : undefined} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition ${section === key ? 'bg-dte-petroleo text-white shadow-sm' : 'text-dte-gris hover:text-dte-tinta'}`}><Icon className="size-4" />{label}</button>)}
         </nav>
         <div className="flex items-center gap-1">
+        {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-[#fdf1d8] px-2.5 py-1 text-xs font-semibold text-[#7a5200]"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <NotificacionesBell profile={profile} feds={feds ?? []} reloadKey={reloadKey} onOpen={setSelected} />
         <button onClick={() => choose(null)} className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-left transition hover:bg-dte-fondo" aria-label={`Perfil: ${profile.nombre_completo}. Cambiar de perfil`}>
           <Avatar className="size-9"><AvatarFallback className={`${fedColor(feds ?? [], profile.id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(profile.nombre_completo)}</AvatarFallback></Avatar>
@@ -71,6 +87,7 @@ export default function Page() {
     {section === 'agenda'
       ? <AgendaView fed={profile} reloadKey={reloadKey} onNew={fecha => setEditing({ item: null, fecha })} onSelect={setSelected} />
       : <CoordinatorView feds={(feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected}
+          autorId={profile.rol === 'coordinacion' ? profile.id : undefined} onChanged={msg => { setToast(msg); loadFeds() }}
           onNuevaReunion={profile.rol !== 'coordinacion' ? undefined : () => setEditing({ item: null, fecha: iso(toWeekday(new Date())), preset: { accion: 'REUNIÓN', sub_accion: 'Reunión de equipo (CED/FED)', participantes: (feds ?? []).filter(f => f.id !== profile.id).map(f => f.id) } })} />}
 
     <DetailDialog item={selected} feds={feds ?? []} profile={profile} onClose={() => setSelected(null)}
@@ -80,7 +97,7 @@ export default function Page() {
     <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
       <DialogContent className="max-h-[92vh] overflow-y-auto bg-white sm:max-w-2xl">
         <DialogHeader><DialogTitle className="text-lg">{editing?.item ? 'Editar acción' : 'Nueva acción'}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>
-        {editing && <ItemForm key={editing.item?.id ?? `new-${editing.fecha}`} fed={profile} feds={feds ?? []} item={editing.item} defaultFecha={editing.fecha} preset={editing.preset} onCancel={() => setEditing(null)} onSaved={() => { changed(editing.item ? 'Acción actualizada' : editing.preset?.participantes?.length ? 'Reunión creada y notificada al equipo' : 'Acción agregada a tu agenda'); setEditing(null) }} />}
+        {editing && <ItemForm key={editing.item?.id ?? `new-${editing.fecha}`} fed={profile} feds={feds ?? []} item={editing.item} defaultFecha={editing.fecha} preset={editing.preset} onCancel={() => setEditing(null)} onSaved={({ creadas, offline }) => { changed(offline ? 'Sin conexión: la acción quedó guardada en este dispositivo y se envía al volver la señal' : editing.item ? 'Acción actualizada' : creadas > 1 ? `Se crearon ${creadas} acciones de la serie` : editing.preset?.participantes?.length ? 'Reunión creada y notificada al equipo' : 'Acción agregada a tu agenda'); setEditing(null) }} />}
       </DialogContent>
     </Dialog>
 
