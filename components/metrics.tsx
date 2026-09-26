@@ -215,9 +215,9 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
 
       <Panel title="Clubes, talleres y prácticas" subtitle="Encuentros realizados y participación">
         <div className="mb-4 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-dte-fondo p-2"><p className="text-xl font-bold tabular-nums">{nf.format(m.enc.count)}</p><p className="text-[11px] text-dte-gris">encuentros</p></div>
-          <div className="rounded-xl bg-dte-fondo p-2"><p className="text-xl font-bold tabular-nums">{nf.format(m.enc.asistentes)}</p><p className="text-[11px] text-dte-gris">asistentes</p></div>
-          <div className="rounded-xl bg-dte-fondo p-2" title="Asistentes sobre inscriptos, sólo en encuentros que tienen ambos datos"><p className="text-xl font-bold tabular-nums">{m.enc.inscriptosP ? `${pct(m.enc.asistentesP, m.enc.inscriptosP)}%` : '—'}</p><p className="text-[11px] text-dte-gris">asistencia</p></div>
+          <div className="rounded-xl bg-dte-fondo p-2"><p className="text-xl font-bold tabular-nums">{nf.format(m.enc.count)}</p><p className="text-xs text-dte-gris">encuentros</p></div>
+          <div className="rounded-xl bg-dte-fondo p-2"><p className="text-xl font-bold tabular-nums">{nf.format(m.enc.asistentes)}</p><p className="text-xs text-dte-gris">asistentes</p></div>
+          <div className="rounded-xl bg-dte-fondo p-2" title="Asistentes sobre inscriptos, sólo en encuentros que tienen ambos datos"><p className="text-xl font-bold tabular-nums">{m.enc.inscriptosP ? `${pct(m.enc.asistentesP, m.enc.inscriptosP)}%` : '—'}</p><p className="text-xs text-dte-gris">asistencia</p></div>
         </div>
         {m.byPropuesta.length > 0 && <><p className="mb-2 text-xs font-semibold uppercase tracking-wider text-dte-gris">Asistentes por propuesta</p><ul className="flex flex-col gap-2.5">{m.byPropuesta.slice(0, 6).map(([k, v]) => <HBar key={k} label={k} value={v} max={m.byPropuesta[0][1]} color={CAT_COLOR.pedagogica} />)}</ul></>}
         {m.encByDistrict.length > 0 && <><p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-dte-gris">Asistentes por distrito</p><ul className="flex flex-col gap-2.5">{m.encByDistrict.map(([k, v]) => <HBar key={k} label={titleCase(k)} value={v} max={m.encByDistrict[0][1]} color={CAT_COLOR.pedagogica} />)}</ul></>}

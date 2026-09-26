@@ -99,10 +99,10 @@ export function storage<T>(fn: () => T): T | null { try { return fn() } catch { 
 
 // ---- piezas chicas ----
 export function ActionChip({ label, className = '' }: { label: Accion, className?: string }) {
-  return <span className={`inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-bold uppercase leading-tight tracking-[0.04em] ${actionStyle[label]?.chip ?? 'bg-muted text-muted-foreground'} ${className}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[label]?.dot ?? 'bg-current'}`} />{label}</span>
+  return <span className={`inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs font-bold uppercase leading-tight tracking-[0.04em] ${actionStyle[label]?.chip ?? 'bg-muted text-muted-foreground'} ${className}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[label]?.dot ?? 'bg-current'}`} />{label}</span>
 }
 export function StatusBadge({ status }: { status: Estado }) {
-  return <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyle[status]?.badge ?? ''}`}>{statusStyle[status]?.label ?? status}</span>
+  return <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusStyle[status]?.badge ?? ''}`}>{statusStyle[status]?.label ?? status}</span>
 }
 export function ErrorBox({ message, onRetry }: { message: string, onRetry?: () => void }) {
   return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p><span className="font-semibold">No se pudo completar la operación.</span> {message}</p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>}</div>
@@ -197,7 +197,7 @@ export function useFeriados(from: string, to: string, distritos: string[] | null
 
 export function FeriadoTag({ f, compact = false }: { f: Feriado, compact?: boolean }) {
   const distrital = f.tipo === 'distrital'
-  return <span title={`${f.nombre}${f.confirmado ? '' : ' (fecha a confirmar)'}`} className={`inline-flex max-w-full items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${distrital ? 'bg-aniversario-marca text-aniversario-texto' : 'bg-feriado-marca text-peligro'}`}>
+  return <span title={`${f.nombre}${f.confirmado ? '' : ' (fecha a confirmar)'}`} className={`inline-flex max-w-full items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-xs font-semibold ${distrital ? 'bg-aniversario-marca text-aniversario-texto' : 'bg-feriado-marca text-peligro'}`}>
     <PartyPopper className="size-3 shrink-0" />{compact ? (distrital ? 'Aniv. distrital' : 'Feriado') : f.nombre}{!f.confirmado && ' *'}
   </span>
 }

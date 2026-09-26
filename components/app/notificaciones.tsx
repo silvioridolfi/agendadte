@@ -22,7 +22,7 @@ export function NotificacionesBell({ profile, feds, reloadKey, onOpen }: { profi
   const leer = (ids?: string[]) => { setList(l => l.map(n => (!ids || ids.includes(n.id) ? { ...n, leida: true } : n))); marcarLeidas(profile.id, ids).catch(() => {}) }
   return <div ref={ref} className="relative">
     <button onClick={() => setOpen(o => !o)} aria-label={`Notificaciones${unread ? ` (${unread} sin leer)` : ''}`} aria-expanded={open} className="relative flex size-10 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-fondo hover:text-dte-tinta">
-      <Bell className="size-5" />{unread > 0 && <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-dte-magenta px-1 text-[10px] font-bold text-white">{unread}</span>}
+      <Bell className="size-5" />{unread > 0 && <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-dte-magenta px-1 text-xs font-bold text-white">{unread}</span>}
     </button>
     {open && <div className="absolute right-0 top-12 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xl">
       <div className="flex items-center justify-between border-b border-dte-linea px-4 py-2.5"><p className="text-sm font-bold">Notificaciones</p>{unread > 0 && <button onClick={() => leer()} className="text-xs font-semibold text-dte-petroleo hover:opacity-80">Marcar todas como leídas</button>}</div>

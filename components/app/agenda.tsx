@@ -44,7 +44,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
     return <div className="flex items-baseline gap-1.5" aria-current={isToday ? 'date' : undefined}>
       <span className={`text-xs font-bold uppercase tracking-wider ${isToday ? 'text-pba-celeste-texto' : 'text-dte-gris'}`}>{fmt(d, { weekday: big ? 'long' : 'short' }).replace('.', '')}</span>
       <span className={`flex size-7 items-center justify-center rounded-full text-sm font-bold ${isToday ? 'bg-pba-celeste text-white' : 'text-dte-tinta'}`}>{d.getDate()}</span>
-      {isToday && <span className="text-[11px] font-semibold text-pba-celeste-texto">Hoy</span>}
+      {isToday && <span className="text-xs font-semibold text-pba-celeste-texto">Hoy</span>}
     </div>
   }
 
@@ -114,8 +114,8 @@ export function MonthGrid({ month, byDay, feriados, today, onDay, onSelect, onNe
           <button onClick={() => onNew(key)} aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })}`} title="Agregar acción" className="absolute right-1.5 top-1.5 flex size-7 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-magenta hover:text-white focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"><Plus className="size-4" /></button>
           {fer.map(f => <span key={f.nombre} className="hidden sm:block"><FeriadoTag f={f} /></span>)}
           {fer.length > 0 && <span className="sm:hidden"><FeriadoTag f={fer[0]} compact /></span>}
-          {list.slice(0, 3).map(i => <button key={i.id} onClick={() => onSelect(i)} title={itemTitle(i)} className={`hidden items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] hover:bg-dte-tinte sm:flex ${i.estado === 'cancelada' ? 'opacity-60 line-through' : ''}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[i.accion]?.dot}`} /><span className="truncate">{i.hora_inicio ? `${hhmm(i.hora_inicio)} ` : ''}{i.school ? shortSchoolName(i.school) : itemTitle(i)}</span></button>)}
-          {list.length > 3 && <button onClick={() => onDay(d)} className="hidden px-1 text-left text-[11px] font-semibold text-dte-petroleo sm:block">+{list.length - 3} más</button>}
+          {list.slice(0, 3).map(i => <button key={i.id} onClick={() => onSelect(i)} title={itemTitle(i)} className={`hidden items-center gap-1 truncate rounded px-1 py-0.5 text-left text-xs hover:bg-dte-tinte sm:flex ${i.estado === 'cancelada' ? 'opacity-60 line-through' : ''}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[i.accion]?.dot}`} /><span className="truncate">{i.hora_inicio ? `${hhmm(i.hora_inicio)} ` : ''}{i.school ? shortSchoolName(i.school) : itemTitle(i)}</span></button>)}
+          {list.length > 3 && <button onClick={() => onDay(d)} className="hidden px-1 text-left text-xs font-semibold text-dte-petroleo sm:block">+{list.length - 3} más</button>}
           {list.length > 0 && <button onClick={() => onDay(d)} className="flex flex-wrap gap-0.5 sm:hidden" aria-label={`${list.length} acciones`}>{list.slice(0, 6).map(i => <span key={i.id} className={`size-2 rounded-full ${actionStyle[i.accion]?.dot}`} />)}</button>}
         </div>
       })}
@@ -127,7 +127,7 @@ export function MiniMonth({ month, byDay, feriados, today, onDay }: { month: Dat
   const total = monthWeeks(month).flat().reduce((a, d) => a + (d ? (byDay.get(iso(d))?.length ?? 0) : 0), 0)
   return <section className="rounded-2xl border border-dte-linea bg-white p-3">
     <header className="mb-2 flex items-baseline justify-between"><h3 className="font-bold capitalize">{fmt(month, { month: 'long', year: 'numeric' })}</h3><span className="text-xs text-dte-gris">{total} {total === 1 ? 'acción' : 'acciones'}</span></header>
-    <div className="grid grid-cols-5 gap-1 text-center text-[10px] font-bold uppercase text-dte-gris-claro">{DIAS_HABILES.map(d => <div key={d}>{d}</div>)}</div>
+    <div className="grid grid-cols-5 gap-1 text-center text-xs font-bold uppercase text-dte-gris-claro">{DIAS_HABILES.map(d => <div key={d}>{d}</div>)}</div>
     {monthWeeks(month).map((week, wi) => <div key={wi} className="mt-1 grid grid-cols-5 gap-1">
       {week.map((d, di) => {
         if (!d) return <div key={di} />
@@ -136,7 +136,7 @@ export function MiniMonth({ month, byDay, feriados, today, onDay }: { month: Dat
         return <button key={di} onClick={() => onDay(d)} title={[cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })), ...fer.map(f => f.nombre + (f.confirmado ? '' : ' (a confirmar)')), n ? `${n} ${n === 1 ? 'acción' : 'acciones'}` : ''].filter(Boolean).join(' · ')}
           className={`relative flex h-9 flex-col items-center justify-center rounded-md text-xs transition hover:ring-2 hover:ring-pba-celeste ${key === today ? 'font-bold ring-2 ring-pba-celeste' : ''} ${nacional ? 'bg-peligro-suave text-peligro' : fer.length ? 'bg-aniversario-marca text-aniversario-texto' : n ? 'bg-dte-petroleo/10' : 'bg-dte-fondo'}`}>
           <span>{d.getDate()}</span>
-          {n > 0 && <span className="text-[9px] font-bold leading-none text-dte-petroleo">{n}</span>}
+          {n > 0 && <span className="text-xs font-bold leading-none text-dte-petroleo">{n}</span>}
         </button>
       })}
     </div>)}
@@ -153,7 +153,7 @@ export function ListaAcciones({ items, viewer, onSelect }: { items: AgendaItem[]
       <li key={item.id}><button onClick={() => onSelect(item)} className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte sm:grid-cols-[6.5rem_1fr_auto] sm:items-center">
         <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize">{fmt(parse(item.fecha), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')}</span><span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span></span>
         <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemTitle(item)}</span><span className="block truncate text-xs text-dte-gris">{[schoolPlace(item.school), item.sub_accion].filter(Boolean).join(' · ') || ' '}</span></span>
-        <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ActionChip label={item.accion} /><StatusBadge status={item.estado} />{item.fed_id !== viewer && <span className="inline-flex items-center gap-0.5 rounded-full bg-dte-tinte px-1.5 py-0.5 text-[10px] font-semibold text-dte-petroleo"><Users className="size-3" />Compartida</span>}</span>
+        <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ActionChip label={item.accion} /><StatusBadge status={item.estado} />{item.fed_id !== viewer && <span className="inline-flex items-center gap-0.5 rounded-full bg-dte-tinte px-1.5 py-0.5 text-xs font-semibold text-dte-petroleo"><Users className="size-3" />Compartida</span>}</span>
       </button></li>)}</ul>
     {orden.length > n && <div className="flex items-center justify-center gap-2"><Button variant="outline" size="sm" onClick={() => setN(n + 20)}>Ver {Math.min(20, orden.length - n)} más</Button><span className="text-xs text-dte-gris">Mostrando {n} de {orden.length}</span></div>}
   </div>
@@ -166,6 +166,6 @@ export function ItemCard({ item, onClick, viewer }: { item: AgendaItem, onClick:
     <span className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-dte-gris"><Clock className="size-3 shrink-0" />{timeRange(item)}</span>
     <p className={`mt-1 line-clamp-3 text-sm font-semibold leading-snug ${muted ? 'line-through decoration-1' : ''}`}>{item.school ? shortSchoolName(item.school) : itemTitle(item)}</p>
     {item.school && <p className="mt-0.5 truncate text-xs text-dte-gris">{schoolPlace(item.school)}</p>}
-    <div className="mt-2 flex flex-wrap items-center gap-1.5"><ActionChip label={item.accion} /><StatusBadge status={item.estado} />{(item.participantes?.length > 0 || (viewer && item.fed_id !== viewer)) && <span title={viewer && item.fed_id !== viewer ? 'Te etiquetaron en esta acción' : 'Con compañeros'} className="inline-flex items-center gap-0.5 rounded-full bg-dte-tinte px-1.5 py-0.5 text-[10px] font-semibold text-dte-petroleo"><Users className="size-3" />{viewer && item.fed_id !== viewer ? 'Compartida' : `+${item.participantes.length}`}</span>}</div>
+    <div className="mt-2 flex flex-wrap items-center gap-1.5"><ActionChip label={item.accion} /><StatusBadge status={item.estado} />{(item.participantes?.length > 0 || (viewer && item.fed_id !== viewer)) && <span title={viewer && item.fed_id !== viewer ? 'Te etiquetaron en esta acción' : 'Con compañeros'} className="inline-flex items-center gap-0.5 rounded-full bg-dte-tinte px-1.5 py-0.5 text-xs font-semibold text-dte-petroleo"><Users className="size-3" />{viewer && item.fed_id !== viewer ? 'Compartida' : `+${item.participantes.length}`}</span>}</div>
   </button>
 }

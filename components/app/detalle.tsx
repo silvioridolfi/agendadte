@@ -42,7 +42,7 @@ export function DetailDialog({ item, feds, profile, onClose, onEdit, onChanged }
     try { const n = await deleteItem(item.id, profile.id, serie); onChanged(n > 1 ? `Se eliminaron ${n} acciones de la serie` : 'Acción eliminada', null) } catch (e) { setError(errMsg(e)); setBusy('') }
   }
 
-  const row = (Icon: typeof Clock, label: string, value: React.ReactNode) => value ? <div className="flex gap-3"><Icon className="mt-0.5 size-4 shrink-0 text-dte-gris-claro" /><div className="min-w-0"><dt className="text-[11px] font-semibold uppercase tracking-wider text-dte-gris">{label}</dt><dd className="text-sm">{value}</dd></div></div> : null
+  const row = (Icon: typeof Clock, label: string, value: React.ReactNode) => value ? <div className="flex gap-3"><Icon className="mt-0.5 size-4 shrink-0 text-dte-gris-claro" /><div className="min-w-0"><dt className="text-xs font-semibold uppercase tracking-wider text-dte-gris">{label}</dt><dd className="text-sm">{value}</dd></div></div> : null
 
   return <Dialog open onOpenChange={o => !o && onClose()}>
     <DialogContent className="bg-white sm:max-w-lg">
@@ -58,7 +58,7 @@ export function DetailDialog({ item, feds, profile, onClose, onEdit, onChanged }
         {row(UserRound, item.encuentros?.length > 1 ? `Encuentros (${item.encuentros.length})` : 'Encuentro', item.encuentros?.length ? <ul className="flex flex-col gap-1.5">{item.encuentros.map(e => <li key={e.id}>{[e.propuesta, e.encuentro_n ? `Encuentro N° ${e.encuentro_n}` : null, e.modalidad].filter(Boolean).join(' · ')}<span className="block text-xs text-dte-gris">{[e.destinatarios, e.inscriptos != null ? `${e.inscriptos} inscriptos` : null, e.asistentes != null ? `${e.asistentes} asistentes` : null].filter(Boolean).join(' · ')}{e.fotos_url && <> · <a href={e.fotos_url} target="_blank" rel="noreferrer" className="text-dte-petroleo underline">fotos</a></>}</span></li>)}</ul> : null)}
         {row(Pencil, 'Detalle', item.detalle && <span className="whitespace-pre-wrap">{item.detalle}</span>)}
         {row(UserRound, 'Creada por', fed?.nombre_completo ?? '—')}
-        {row(Users, 'Acompañado por', item.participantes?.length ? <ul className="flex flex-col gap-0.5">{item.participantes.map(p => <li key={p.fed_id} className="flex items-center gap-1.5">{nombre(p.fed_id)}<span className={`rounded-full px-1.5 text-[10px] font-semibold ${p.respuesta === 'acepta' ? 'bg-exito-fondo text-exito' : p.respuesta === 'rechaza' ? 'bg-peligro-suave text-peligro' : 'bg-dte-tinte text-dte-gris'}`}>{p.respuesta === 'acepta' ? 'Confirmó' : p.respuesta === 'rechaza' ? 'No puede' : 'Sin respuesta'}</span></li>)}</ul> : null)}
+        {row(Users, 'Acompañado por', item.participantes?.length ? <ul className="flex flex-col gap-0.5">{item.participantes.map(p => <li key={p.fed_id} className="flex items-center gap-1.5">{nombre(p.fed_id)}<span className={`rounded-full px-1.5 text-xs font-semibold ${p.respuesta === 'acepta' ? 'bg-exito-fondo text-exito' : p.respuesta === 'rechaza' ? 'bg-peligro-suave text-peligro' : 'bg-dte-tinte text-dte-gris'}`}>{p.respuesta === 'acepta' ? 'Confirmó' : p.respuesta === 'rechaza' ? 'No puede' : 'Sin respuesta'}</span></li>)}</ul> : null)}
         {row(Repeat, 'Serie', item.serie_id ? 'Forma parte de una serie semanal' : null)}
       </dl>
       {mio && <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dte-linea p-3">

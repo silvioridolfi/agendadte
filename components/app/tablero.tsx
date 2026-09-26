@@ -112,7 +112,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     {tab === 'acciones' && <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
       {ESTADOS.map(e => <button key={e} onClick={() => setEstado(estado === e ? '' : e)} aria-pressed={estado === e} className={`rounded-2xl border bg-white px-4 py-3 text-left transition hover:shadow-md ${estado === e ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>
         <span className="text-xs font-semibold text-dte-gris">{statusStyle[e].label}s</span>
-        <span className="mt-1 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums sm:text-3xl">{items ? counts[e] : '–'}</span>{estado === e && <span className="text-[11px] font-semibold text-dte-petroleo">Filtrando</span>}</span>
+        <span className="mt-1 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums sm:text-3xl">{items ? counts[e] : '–'}</span>{estado === e && <span className="text-xs font-semibold text-dte-petroleo">Filtrando</span>}</span>
       </button>)}
     </div>}
 

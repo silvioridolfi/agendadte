@@ -66,7 +66,7 @@ export default function Page() {
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 lg:px-10">
         <div className="flex min-w-0 items-center gap-3">
           <img src="/brand/dte1-160.png" alt="DTE Región 1" width={40} height={40} className="size-10 shrink-0" />
-          <div className="hidden min-w-0 sm:block"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-dte-magenta">Equipo FED · DTE</p><h1 className="truncate text-base font-bold leading-tight">Agenda Territorial</h1></div>
+          <div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-[0.2em] text-dte-magenta">Equipo FED · DTE</p><h1 className="truncate text-base font-bold leading-tight">Agenda Territorial</h1></div>
         </div>
         <nav aria-label="Secciones" className="flex rounded-full border border-dte-linea bg-dte-fondo p-1">
           {([['agenda', 'Mi agenda', CalendarDays], ['board', 'Tablero', LayoutDashboard]] as const).map(([key, label, Icon]) =>
@@ -77,7 +77,7 @@ export default function Page() {
         <NotificacionesBell profile={profile} feds={feds ?? []} reloadKey={reloadKey} onOpen={setSelected} />
         <button onClick={() => choose(null)} className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-left transition hover:bg-dte-fondo" aria-label={`Perfil: ${profile.nombre_completo}. Cambiar de perfil`}>
           <Avatar className="size-9"><AvatarFallback className={`${fedColor(feds ?? [], profile.id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(profile.nombre_completo)}</AvatarFallback></Avatar>
-          <span className="hidden md:block"><span className="block text-sm font-semibold leading-tight">{profile.nombre_completo}</span><span className="block text-[11px] text-dte-gris">{profile.rol === 'coordinacion' ? 'Coordinación · cambiar' : 'Cambiar de perfil'}</span></span>
+          <span className="hidden md:block"><span className="block text-sm font-semibold leading-tight">{profile.nombre_completo}</span><span className="block text-xs text-dte-gris">{profile.rol === 'coordinacion' ? 'Coordinación · cambiar' : 'Cambiar de perfil'}</span></span>
           <ChevronDown className="hidden size-4 text-dte-gris md:block" />
         </button>
         </div>
