@@ -10,6 +10,7 @@ import { type Accion, type AgendaItem, type Feriado, type Estado, type Fed, type
 
 // ---- estilos por categoría ----
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
+// Paleta de categorías de acción: mapa único (texto con contraste AA sobre su fondo). No duplicar estos colores fuera de acá.
 export const actionStyle: Record<Accion, { chip: string, dot: string }> = {
   'VISITA TÉCNICA': { chip: 'bg-[#dcebf5] text-[#1d5a7d]', dot: 'bg-[#2f7fae]' },
   'VISITA PEDAGÓGICA': { chip: 'bg-[#e8e2f6] text-[#553f86]', dot: 'bg-[#705ccb]' },
@@ -29,8 +30,8 @@ export const actionStyle: Record<Accion, { chip: string, dot: string }> = {
 export const statusStyle: Record<Estado, { badge: string, label: string }> = {
   planificada: { badge: 'border-pba-azul/40 bg-pba-azul/10 text-pba-azul', label: 'Planificada' },
   realizada: { badge: 'border-pba-celeste/50 bg-pba-celeste/10 text-pba-celeste-texto', label: 'Realizada' },
-  reprogramada: { badge: 'border-[#e6c98b] bg-[#fff6dd] text-[#7a5a0c]', label: 'Reprogramada' },
-  cancelada: { badge: 'border-pba-fucsia/40 bg-pba-fucsia/10 text-[#b8155c]', label: 'Cancelada' },
+  reprogramada: { badge: 'border-aviso-borde bg-aviso-fondo text-aviso-fuerte', label: 'Reprogramada' },
+  cancelada: { badge: 'border-pba-fucsia/40 bg-pba-fucsia/10 text-dte-magenta-oscuro', label: 'Cancelada' },
 }
 export const avatarColors = ['bg-[#dff3f8]', 'bg-[#e9e5f8]', 'bg-[#fbe3ee]', 'bg-[#dde8f0]', 'bg-[#f1e4f0]', 'bg-[#fde8f1]']
 // Orden alfabético de la A a la Z para todas las listas (con números en orden natural: N° 2 antes que N° 10).
@@ -104,9 +105,9 @@ export function StatusBadge({ status }: { status: Estado }) {
   return <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyle[status]?.badge ?? ''}`}>{statusStyle[status]?.label ?? status}</span>
 }
 export function ErrorBox({ message, onRetry }: { message: string, onRetry?: () => void }) {
-  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#f1b8cd] bg-[#fff1f6] p-4 text-sm text-[#a3164f]"><p><span className="font-semibold">No se pudo completar la operación.</span> {message}</p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>}</div>
+  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p><span className="font-semibold">No se pudo completar la operación.</span> {message}</p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>}</div>
 }
-export function Skeleton({ className = '' }: { className?: string }) { return <div className={`animate-pulse rounded-xl bg-[#e9e6f0] ${className}`} /> }
+export function Skeleton({ className = '' }: { className?: string }) { return <div className={`animate-pulse rounded-xl bg-dte-linea/70 ${className}`} /> }
 
 export function Toast({ message, onDone }: { message: string, onDone: () => void }) {
   useEffect(() => { const t = setTimeout(onDone, 3200); return () => clearTimeout(t) }, [message, onDone])
@@ -196,7 +197,7 @@ export function useFeriados(from: string, to: string, distritos: string[] | null
 
 export function FeriadoTag({ f, compact = false }: { f: Feriado, compact?: boolean }) {
   const distrital = f.tipo === 'distrital'
-  return <span title={`${f.nombre}${f.confirmado ? '' : ' (fecha a confirmar)'}`} className={`inline-flex max-w-full items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${distrital ? 'bg-[#efeafa] text-[#4e4390]' : 'bg-[#fbe3ee] text-[#a3164f]'}`}>
+  return <span title={`${f.nombre}${f.confirmado ? '' : ' (fecha a confirmar)'}`} className={`inline-flex max-w-full items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${distrital ? 'bg-aniversario-marca text-aniversario-texto' : 'bg-feriado-marca text-peligro'}`}>
     <PartyPopper className="size-3 shrink-0" />{compact ? (distrital ? 'Aniv. distrital' : 'Feriado') : f.nombre}{!f.confirmado && ' *'}
   </span>
 }

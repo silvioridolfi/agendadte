@@ -52,7 +52,7 @@ export function SchoolPicker({ value, onChange }: { value: School | null, onChan
       }} />
     {showList && <div id="school-results" role="listbox" className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-dte-linea bg-white p-1 text-sm font-normal text-dte-tinta shadow-xl">
       {loading ? <p className="flex items-center gap-2 p-3 text-dte-gris"><Loader2 className="size-4 animate-spin" />Buscando…</p>
-        : failed ? <p className="p-3 text-[#a3164f]">No se pudo buscar. Probá de nuevo.</p>
+        : failed ? <p className="p-3 text-peligro">No se pudo buscar. Probá de nuevo.</p>
         : !results.length ? <p className="p-3 text-dte-gris">Sin resultados para “{query.trim()}”.</p>
         : results.map((s, i) => <button key={s.id} type="button" role="option" aria-selected={i === active} onMouseDown={e => e.preventDefault()} onMouseEnter={() => setActive(i)} onClick={() => pick(s)} className={`block w-full rounded-lg px-3 py-2 text-left ${i === active ? 'bg-dte-tinte' : ''}`}>
           <span className="block font-semibold leading-snug">{schoolName(s)}</span>
@@ -176,8 +176,8 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       {!esParo && <><Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="h-10" /></Field>
       <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="h-10" /></Field></>}
     </div>
-    {timeError && <p className="-mt-3 text-xs text-[#a3164f]">{timeError}</p>}
-    {ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-[#7a5a0c]' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{ddjjDia.dte}</b>{ddjjDia.externo ? ` · Otro cargo: ${ddjjDia.externo}` : ''}{fueraDeHorario ? '. La acción queda fuera de ese horario.' : ''}</span></p>}
+    {timeError && <p className="-mt-3 text-xs text-peligro">{timeError}</p>}
+    {ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-aviso-fuerte' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{ddjjDia.dte}</b>{ddjjDia.externo ? ` · Otro cargo: ${ddjjDia.externo}` : ''}{fueraDeHorario ? '. La acción queda fuera de ese horario.' : ''}</span></p>}
 
     <fieldset>
       <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta">*</span></legend>
@@ -192,7 +192,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       </div>)}</div>
     </fieldset>
     {esParo && <p className="rounded-lg border border-dte-linea bg-dte-fondo px-3 py-2 text-sm text-dte-gris">Adhesión a paro gremial/docente. Se registra en la <b className="text-dte-tinta">Dirección de Tecnología Educativa</b> (lugar de trabajo); no hace falta completar nada más.</p>}
-    {esLicencia && <p className="rounded-lg border border-[#e9d8a6] bg-[#fdf6e3] px-3 py-2 text-sm text-[#6b5210]"><b>Recordatorio:</b> {RECORDATORIO_LICENCIA}</p>}
+    {esLicencia && <p className="rounded-lg border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso"><b>Recordatorio:</b> {RECORDATORIO_LICENCIA}</p>}
 
 
     {!esParo && !esLicencia && companeros.length > 0 && <fieldset>
@@ -217,7 +217,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         {[...clubOpts].sort((a, b) => az(a.school ? shortSchoolName(a.school) : a.lugar ?? '', b.school ? shortSchoolName(b.school) : b.lugar ?? '') || az(a.grupo ?? '', b.grupo ?? '')).map(c => <option key={c.id} value={c.id}>{clubLabel(c)}</option>)}
         <option value="nuevo">{marca.corto === 'club' ? '+ Iniciar un club nuevo' : '+ Iniciar una práctica nueva'} (comienza en esta fecha)</option>
       </select></Field>
-      {form.club_id === 'nuevo' && <div className="grid gap-3 rounded-lg border border-dashed border-[#7d5a95]/50 bg-white p-3 sm:col-span-6 sm:grid-cols-6">
+      {form.club_id === 'nuevo' && <div className="grid gap-3 rounded-lg border border-dashed border-club-lila/50 bg-white p-3 sm:col-span-6 sm:grid-cols-6">
         <p className="text-xs text-dte-gris sm:col-span-6">Cada grado o curso es {marca.corto === 'club' ? 'un club' : 'una práctica'} en sí mismo. {school ? 'El nivel se sugiere según la escuela; podés cambiarlo.' : 'Elegí primero la escuela para sugerir el nivel.'}</p>
         <Field label="Nivel / modalidad" className="sm:col-span-3"><select className={`${selectClass} h-10`} value={nivel.id} onChange={e => setForm(f => ({ ...f, nivel: e.target.value, curso: '' }))}>{[...NIVELES].sort((a, b) => az(a.label, b.label)).map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select></Field>
         <Field label={nivel.cursoLabel} required className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.curso} onChange={e => set('curso', e.target.value)}><option value="">Elegí…</option>{nivel.cursos.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
@@ -260,7 +260,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       </div>}
     </fieldset>}
 
-    {avisos.length > 0 && <div role="status" className="rounded-xl border border-[#e9d8a6] bg-[#fdf6e3] px-3 py-2.5 text-sm text-[#6b5210]">
+    {avisos.length > 0 && <div role="status" className="rounded-xl border border-aviso-borde bg-aviso-fondo px-3 py-2.5 text-sm text-aviso">
       <p className="mb-1 flex items-center gap-1.5 font-semibold"><TriangleAlert className="size-4" />Revisá antes de guardar</p>
       <ul className="list-disc pl-5 text-[13px]">{avisos.map(a => <li key={a}>{a}</li>)}</ul>
     </div>}

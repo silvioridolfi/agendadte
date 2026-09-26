@@ -59,12 +59,12 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
         <div role="group" aria-label="Vista" className="flex rounded-lg border border-dte-linea bg-white p-1 shadow-xs">{CAL_VIEWS.map(([v, l]) => <button key={v} onClick={() => setView(v)} aria-pressed={view === v} className={`rounded-md px-3 py-1 text-sm font-semibold transition ${view === v ? 'bg-dte-petroleo text-white' : 'text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}</div>
         <WeekNav prevLabel="Anterior" nextLabel="Siguiente" onPrev={() => setAnchor(calShift(anchor, view, -1))} onToday={() => setAnchor(toWeekday(new Date()))} onNext={() => setAnchor(calShift(anchor, view, 1))} />
         <Button size="lg" variant="outline" disabled={!items?.length || exportando} onClick={exportar} title="Descargar la planilla del período en Excel" aria-label="Exportar la planilla del período a Excel" className="h-10 px-3"><FileSpreadsheet />{exportando && <span className="text-xs">…</span>}</Button>
-        <Button size="lg" onClick={() => onNew(suggested)} className="hidden h-10 bg-dte-magenta px-4 font-semibold text-white hover:bg-[#b8155c] sm:inline-flex"><Plus data-icon="inline-start" />Nueva acción</Button>
+        <Button size="lg" onClick={() => onNew(suggested)} className="hidden h-10 bg-dte-magenta px-4 font-semibold text-white hover:bg-dte-magenta-oscuro sm:inline-flex"><Plus data-icon="inline-start" />Nueva acción</Button>
       </div>
     </div>
 
     <div className="mt-6">
-      {desdeCache && <p role="status" className="mb-3 flex items-center gap-2 rounded-xl border border-[#e9d8a6] bg-[#fdf6e3] px-3 py-2 text-sm text-[#6b5210]"><WifiOff className="size-4 shrink-0" />Sin conexión: estás viendo la copia guardada el {new Date(desdeCache).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. Lo que cargues se envía al volver la señal.</p>}
+      {desdeCache && <p role="status" className="mb-3 flex items-center gap-2 rounded-xl border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso"><WifiOff className="size-4 shrink-0" />Sin conexión: estás viendo la copia guardada el {new Date(desdeCache).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. Lo que cargues se envía al volver la señal.</p>}
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? <Skeleton className="h-72" />
         : view === 'day' ? <section className="rounded-2xl border border-dte-linea bg-white p-4">
@@ -76,7 +76,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
         : view === 'week' ? <div className="grid gap-3 lg:grid-cols-5">
             {Array.from({ length: 5 }, (_, i) => addDays(from, i)).map(d => {
               const key = iso(d), list = byDay.get(key) ?? [], fer = feriados.get(key) ?? []
-              return <section key={key} aria-label={cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))} className={`group/day flex flex-col rounded-2xl border p-2.5 lg:min-h-72 ${key === today ? 'border-pba-celeste bg-white shadow-[0_0_0_1px] shadow-pba-celeste' : fer.length ? 'border-[#f1c6d8] bg-[#fff7fa]' : 'border-dte-linea bg-white'}`}>
+              return <section key={key} aria-label={cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))} className={`group/day flex flex-col rounded-2xl border p-2.5 lg:min-h-72 ${key === today ? 'border-pba-celeste bg-white shadow-[0_0_0_1px] shadow-pba-celeste' : fer.length ? 'border-feriado-borde bg-feriado-fondo' : 'border-dte-linea bg-white'}`}>
                 <header className="mb-2 flex items-center justify-between px-1">{dayHeader(d)}<Button variant="ghost" size="icon-sm" aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric' })}`} onClick={() => onNew(key)} className="text-dte-gris hover:text-dte-magenta lg:opacity-0 lg:group-hover/day:opacity-100 lg:focus-visible:opacity-100"><Plus /></Button></header>
                 {fer.length > 0 && <div className="mb-2 flex flex-col gap-1 px-1">{fer.map(f => <FeriadoTag key={f.nombre} f={f} />)}</div>}
                 <div className="flex flex-1 flex-col gap-2">
@@ -96,9 +96,9 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
       <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{weekendItems.map(item => <ItemCard key={item.id} item={item} viewer={fed.id} onClick={() => onSelect(item)} />)}</div>
     </details>}
 
-    {(view === 'month' || view === 'semester') && <p className="mt-3 flex flex-wrap items-center gap-3 text-xs text-dte-gris"><span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-[#fbe3ee] ring-1 ring-[#e81f76]/40" />Feriado nacional</span><span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-[#efeafa] ring-1 ring-[#6f5fc2]/40" />Aniversario distrital</span><span>* fecha a confirmar</span><span>Tocá un día para verlo en detalle.</span></p>}
+    {(view === 'month' || view === 'semester') && <p className="mt-3 flex flex-wrap items-center gap-3 text-xs text-dte-gris"><span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-feriado-marca ring-1 ring-pba-fucsia/40" />Feriado nacional</span><span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-aniversario-marca ring-1 ring-cat-institucional/40" />Aniversario distrital</span><span>* fecha a confirmar</span><span>Tocá un día para verlo en detalle.</span></p>}
 
-    <Button onClick={() => onNew(suggested)} aria-label="Nueva acción" className="fixed bottom-5 right-4 z-30 h-14 gap-2 rounded-full bg-dte-magenta px-5 text-base font-semibold text-white shadow-lg hover:bg-[#b8155c] sm:hidden"><Plus className="size-5" />Nueva</Button>
+    <Button onClick={() => onNew(suggested)} aria-label="Nueva acción" className="fixed bottom-5 right-4 z-30 h-14 gap-2 rounded-full bg-dte-magenta px-5 text-base font-semibold text-white shadow-lg hover:bg-dte-magenta-oscuro sm:hidden"><Plus className="size-5" />Nueva</Button>
   </main>
 }
 
@@ -109,7 +109,7 @@ export function MonthGrid({ month, byDay, feriados, today, onDay, onSelect, onNe
       {week.map((d, di) => {
         if (!d) return <div key={di} className="min-h-24 border-r border-dte-linea bg-dte-fondo/60 last:border-r-0 sm:min-h-32" />
         const key = iso(d), list = byDay.get(key) ?? [], fer = feriados.get(key) ?? []
-        return <div key={di} className={`group relative flex min-h-24 flex-col gap-1 border-r border-dte-linea p-1.5 last:border-r-0 sm:min-h-32 ${fer.some(f => f.tipo !== 'distrital') ? 'bg-[#fff7fa]' : fer.length ? 'bg-[#f8f6fd]' : ''}`}>
+        return <div key={di} className={`group relative flex min-h-24 flex-col gap-1 border-r border-dte-linea p-1.5 last:border-r-0 sm:min-h-32 ${fer.some(f => f.tipo !== 'distrital') ? 'bg-feriado-fondo' : fer.length ? 'bg-aniversario-fondo' : ''}`}>
           <button onClick={() => onDay(d)} aria-label={cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))} className={`flex size-7 items-center justify-center self-start rounded-full text-sm font-bold hover:bg-dte-tinte ${key === today ? 'bg-pba-celeste text-white hover:bg-pba-celeste' : ''}`}>{d.getDate()}</button>
           <button onClick={() => onNew(key)} aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })}`} title="Agregar acción" className="absolute right-1.5 top-1.5 flex size-7 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-magenta hover:text-white focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"><Plus className="size-4" /></button>
           {fer.map(f => <span key={f.nombre} className="hidden sm:block"><FeriadoTag f={f} /></span>)}
@@ -134,7 +134,7 @@ export function MiniMonth({ month, byDay, feriados, today, onDay }: { month: Dat
         const key = iso(d), n = byDay.get(key)?.length ?? 0, fer = feriados.get(key) ?? []
         const nacional = fer.some(f => f.tipo !== 'distrital')
         return <button key={di} onClick={() => onDay(d)} title={[cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })), ...fer.map(f => f.nombre + (f.confirmado ? '' : ' (a confirmar)')), n ? `${n} ${n === 1 ? 'acción' : 'acciones'}` : ''].filter(Boolean).join(' · ')}
-          className={`relative flex h-9 flex-col items-center justify-center rounded-md text-xs transition hover:ring-2 hover:ring-pba-celeste ${key === today ? 'font-bold ring-2 ring-pba-celeste' : ''} ${nacional ? 'bg-[#fbe3ee] text-[#a3164f]' : fer.length ? 'bg-[#efeafa] text-[#4e4390]' : n ? 'bg-dte-petroleo/10' : 'bg-dte-fondo'}`}>
+          className={`relative flex h-9 flex-col items-center justify-center rounded-md text-xs transition hover:ring-2 hover:ring-pba-celeste ${key === today ? 'font-bold ring-2 ring-pba-celeste' : ''} ${nacional ? 'bg-peligro-suave text-peligro' : fer.length ? 'bg-aniversario-marca text-aniversario-texto' : n ? 'bg-dte-petroleo/10' : 'bg-dte-fondo'}`}>
           <span>{d.getDate()}</span>
           {n > 0 && <span className="text-[9px] font-bold leading-none text-dte-petroleo">{n}</span>}
         </button>

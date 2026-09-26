@@ -73,7 +73,7 @@ export default function Page() {
             <button key={key} onClick={() => setSection(key)} aria-current={section === key ? 'page' : undefined} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition ${section === key ? 'bg-dte-petroleo text-white shadow-sm' : 'text-dte-gris hover:text-dte-tinta'}`}><Icon className="size-4" />{label}</button>)}
         </nav>
         <div className="flex items-center gap-1">
-        {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-[#fdf1d8] px-2.5 py-1 text-xs font-semibold text-[#7a5200]"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
+        {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <NotificacionesBell profile={profile} feds={feds ?? []} reloadKey={reloadKey} onOpen={setSelected} />
         <button onClick={() => choose(null)} className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-left transition hover:bg-dte-fondo" aria-label={`Perfil: ${profile.nombre_completo}. Cambiar de perfil`}>
           <Avatar className="size-9"><AvatarFallback className={`${fedColor(feds ?? [], profile.id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(profile.nombre_completo)}</AvatarFallback></Avatar>

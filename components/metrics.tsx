@@ -7,7 +7,7 @@ import { titleCase } from '@/lib/format'
 import { CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, type Accion, type AgendaItem, type Categoria, type Encuentro, type Fed } from '@/lib/agenda'
 
 // Colores por categoría: validados con la guía de dataviz (CVD y contraste sobre fondo claro).
-export const CAT_COLOR: Record<Categoria, string> = { tecnica: '#2a6fb0', pedagogica: '#d41c6c', institucional: '#6f5fc2' }
+export const CAT_COLOR: Record<Categoria, string> = { tecnica: 'var(--color-cat-tecnica)', pedagogica: 'var(--color-cat-pedagogica)', institucional: 'var(--color-cat-institucional)' }
 
 const pct = (n: number, d: number) => (d ? Math.round((n / d) * 100) : 0)
 const nf = new Intl.NumberFormat('es-AR')

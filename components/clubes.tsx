@@ -12,9 +12,9 @@ const parse = (s: string) => { const [y, m, d] = s.split('-').map(Number); retur
 const corta = (s: string) => parse(s).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }).replace('.', '')
 
 export const ESTADO_CLUB: Record<ClubEstado, { label: string, color: string, badge: string }> = {
-  activo: { label: 'Activo', color: '#00808f', badge: 'bg-[#e0f4f6] text-[#00606c]' },
-  sin_actividad: { label: 'Sin actividad', color: '#b07400', badge: 'bg-[#fdf1d8] text-[#7a5200]' },
-  finalizado: { label: 'Finalizado', color: '#5a2583', badge: 'bg-[#efe7f5] text-[#5a2583]' },
+  activo: { label: 'Activo', color: 'var(--color-pba-celeste-texto)', badge: 'bg-exito-fondo text-exito' },
+  sin_actividad: { label: 'Sin actividad', color: 'var(--color-estado-sin-actividad)', badge: 'bg-aviso-fondo-fuerte text-aviso-fuerte' },
+  finalizado: { label: 'Finalizado', color: 'var(--color-club-violeta)', badge: 'bg-club-violeta-fondo text-club-violeta' },
 }
 const ORDEN: ClubEstado[] = ['activo', 'sin_actividad', 'finalizado']
 
@@ -179,12 +179,12 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
                 {fechas.map(f => <span key={f} className="absolute top-[3px] h-[14px] w-[2px] rounded bg-white/90" style={{ left: `${pos(f)}%` }} />)}
                 <span className="absolute top-0 h-5 w-px bg-dte-magenta" style={{ left: `${pos(hoy)}%` }} title="Hoy" />
               </div><p className="text-[11px] text-dte-gris">{corta(c.fecha_inicio)} → {c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : `último ${corta(ultima)}`}</p></td>
-              <td className="py-2.5 pr-3"><div className="flex items-center gap-2"><div className="h-2 w-20 rounded bg-dte-fondo"><div className="h-full rounded" style={{ width: `${Math.min(100, pct(total, prev))}%`, background: total >= CLUB_MIN_ENCUENTROS ? '#00808f' : '#7d5a95' }} /></div><span className="tabular-nums" title={realizados !== total ? `${realizados} en el período` : undefined}><b>{total}</b><span className="text-dte-gris">/{prev}</span></span></div></td>
-              <td className="py-2.5 pr-3 text-right tabular-nums">{inscriptos || '—'}{inscriptos > CLUB_MAX_PARTICIPANTES && <span className="ml-1 text-[11px] text-[#7a5200]" title={`Supera los ${CLUB_MAX_PARTICIPANTES} sugeridos`}>▲</span>}</td>
+              <td className="py-2.5 pr-3"><div className="flex items-center gap-2"><div className="h-2 w-20 rounded bg-dte-fondo"><div className="h-full rounded" style={{ width: `${Math.min(100, pct(total, prev))}%`, background: total >= CLUB_MIN_ENCUENTROS ? 'var(--color-pba-celeste-texto)' : 'var(--color-club-lila)' }} /></div><span className="tabular-nums" title={realizados !== total ? `${realizados} en el período` : undefined}><b>{total}</b><span className="text-dte-gris">/{prev}</span></span></div></td>
+              <td className="py-2.5 pr-3 text-right tabular-nums">{inscriptos || '—'}{inscriptos > CLUB_MAX_PARTICIPANTES && <span className="ml-1 text-[11px] text-aviso-fuerte" title={`Supera los ${CLUB_MAX_PARTICIPANTES} sugeridos`}>▲</span>}</td>
               <td className="py-2.5 pr-3 text-right tabular-nums">{promedio ? nf.format(Math.round(promedio * 10) / 10) : '—'}</td>
               <td className="py-2.5"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.badge}`}>{st.label}</span>
                 {estado === 'finalizado' ? <button disabled={busy === c.id} onClick={() => cierre(c, null)} className="rounded-full border border-dte-linea px-2.5 py-0.5 text-xs font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte disabled:opacity-50">Reactivar</button>
-                  : <button disabled={busy === c.id} onClick={() => cierre(c, ultima)} title={`Finalizar con fecha ${corta(ultima)} (último encuentro)`} className="rounded-full border border-dte-linea px-2.5 py-0.5 text-xs font-semibold text-[#5a2583] transition hover:border-[#5a2583] hover:bg-[#efe7f5] disabled:opacity-50">Finalizar</button>}
+                  : <button disabled={busy === c.id} onClick={() => cierre(c, ultima)} title={`Finalizar con fecha ${corta(ultima)} (último encuentro)`} className="rounded-full border border-dte-linea px-2.5 py-0.5 text-xs font-semibold text-club-violeta transition hover:border-club-violeta hover:bg-club-violeta-fondo disabled:opacity-50">Finalizar</button>}
               </div></td>
             </tr>
           })}</tbody>
@@ -214,13 +214,13 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-dte-gris">{ORDEN.map(e => <li key={e} className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm" style={{ background: ESTADO_CLUB[e].color }} />{ESTADO_CLUB[e].label}</li>)}</ul>
       </Panel>
       <Panel title={`Propuestas dictadas en ${tipo === 'CLUB DE TECNOLOGÍA' ? 'los clubes' : 'las prácticas'}`} subtitle="Registros por propuesta (talleres y actividades dentro del trayecto)">
-        <ul className="flex flex-col gap-2">{propuestas.map(([k, v]) => <HBar key={k} label={k} value={v} max={Math.max(1, ...propuestas.map(x => x[1]))} color="#c21d6a" />)}</ul>
+        <ul className="flex flex-col gap-2">{propuestas.map(([k, v]) => <HBar key={k} label={k} value={v} max={Math.max(1, ...propuestas.map(x => x[1]))} color="var(--color-peat-magenta)" />)}</ul>
       </Panel>
       <Panel title="Tipo de jornada" subtitle={sinJornada ? `${sinJornada} registros previos sin este dato` : 'Registros de encuentros'}>
-        <ul className="flex flex-col gap-2">{jornadas.map(([t, k]) => <HBar key={t} label={t} value={k} max={Math.max(1, ...jornadas.map(x => x[1]))} color="#7d5a95" />)}</ul>
+        <ul className="flex flex-col gap-2">{jornadas.map(([t, k]) => <HBar key={t} label={t} value={k} max={Math.max(1, ...jornadas.map(x => x[1]))} color="var(--color-club-lila)" />)}</ul>
       </Panel>
       <Panel title="Formato de participación" subtitle="Registros de encuentros">
-        <ul className="flex flex-col gap-2">{formatos.map(([m, k]) => <HBar key={m} label={m} value={k} max={Math.max(1, ...formatos.map(x => x[1]))} color="#00808f" />)}</ul>
+        <ul className="flex flex-col gap-2">{formatos.map(([m, k]) => <HBar key={m} label={m} value={k} max={Math.max(1, ...formatos.map(x => x[1]))} color="var(--color-pba-celeste-texto)" />)}</ul>
       </Panel>
     </div>
   </div>

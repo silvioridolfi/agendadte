@@ -77,7 +77,7 @@ function Feriados({ autorId, distritos, onSaved }: { autorId: string, distritos:
       <label className="flex flex-col gap-1 text-xs font-semibold">Tipo<select className={selectClass} value={nuevo.tipo} onChange={e => setNuevo(n => ({ ...n, tipo: e.target.value as Feriado['tipo'] }))}>{(Object.keys(TIPO_FERIADO) as Feriado['tipo'][]).sort((a, b) => az(TIPO_FERIADO[a], TIPO_FERIADO[b])).map(t => <option key={t} value={t}>{TIPO_FERIADO[t]}</option>)}</select></label>
       <label className="flex flex-col gap-1 text-xs font-semibold">Distrito<select className={selectClass} disabled={nuevo.tipo !== 'distrital'} value={nuevo.distrito ?? ''} onChange={e => setNuevo(n => ({ ...n, distrito: e.target.value || null }))}><option value="">—</option>{distritos.map(d => <option key={d} value={d}>{titleCase(d)}</option>)}</select></label>
       <label className="flex items-center gap-1.5 pb-2 text-xs font-semibold"><input type="checkbox" checked={nuevo.confirmado} onChange={e => setNuevo(n => ({ ...n, confirmado: e.target.checked }))} className="size-4" />Confirmado</label>
-      <Button size="sm" disabled={busy === 'add' || !nuevo.fecha || !nuevo.nombre.trim() || (nuevo.tipo === 'distrital' && !nuevo.distrito)} onClick={agregar} className="h-9 bg-dte-magenta hover:bg-[#b8155c]">{busy === 'add' ? <Loader2 className="animate-spin" /> : <Plus data-icon="inline-start" />}Agregar</Button>
+      <Button size="sm" disabled={busy === 'add' || !nuevo.fecha || !nuevo.nombre.trim() || (nuevo.tipo === 'distrital' && !nuevo.distrito)} onClick={agregar} className="h-9 bg-dte-magenta hover:bg-dte-magenta-oscuro">{busy === 'add' ? <Loader2 className="animate-spin" /> : <Plus data-icon="inline-start" />}Agregar</Button>
     </div>
     <p className="mb-3 text-xs text-dte-gris">Para un receso de varios días, cargá cada día hábil (los fines de semana ya no cuentan).</p>
     {error && <div className="mb-3"><ErrorBox message={error} /></div>}
@@ -85,7 +85,7 @@ function Feriados({ autorId, distritos, onSaved }: { autorId: string, distritos:
       : <ul className="divide-y divide-dte-linea rounded-xl border border-dte-linea">{list.map(f => <li key={f.id ?? f.fecha + f.nombre} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
         <span className="min-w-0"><b className="tabular-nums">{cap(fmt(parse(f.fecha), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))}</b> · {f.nombre}{!f.confirmado && <span className="text-dte-gris"> (a confirmar)</span>}
           <span className="block text-xs text-dte-gris">{TIPO_FERIADO[f.tipo]}{f.distrito ? ` · ${titleCase(f.distrito)}` : ''}</span></span>
-        <Button variant="ghost" size="sm" disabled={busy === f.id} onClick={() => quitar(f)} aria-label={`Eliminar ${f.nombre}`} className="text-[#a3164f] hover:bg-[#fff1f6] hover:text-[#a3164f]">{busy === f.id ? <Loader2 className="animate-spin" /> : <Trash2 className="size-4" />}</Button>
+        <Button variant="ghost" size="sm" disabled={busy === f.id} onClick={() => quitar(f)} aria-label={`Eliminar ${f.nombre}`} className="text-peligro hover:bg-peligro-fondo hover:text-peligro">{busy === f.id ? <Loader2 className="animate-spin" /> : <Trash2 className="size-4" />}</Button>
       </li>)}</ul>}
   </Panel>
 }
