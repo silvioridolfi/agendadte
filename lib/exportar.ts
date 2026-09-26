@@ -4,7 +4,7 @@ import { titleCase } from '@/lib/format'
 
 type Datos = { titulo: string, desde: string, hasta: string, items: AgendaItem[], encuentros?: Encuentro[], feds: Fed[], clubes?: Club[], porFed?: boolean }
 
-const PETROLEO = 'FF05476E', TINTE = 'FFEAF2F7'
+const PETROLEO = 'FF05476E', TINTE = 'FFEAF2F7'  // colores de la identidad DTE
 const fecha = (s: string | null | undefined) => { if (!s) return ''; const [y, m, d] = s.split('-'); return `${d}/${m}/${y}` }
 const hora = (i: AgendaItem) => (i.hora_inicio ? `${i.hora_inicio.slice(0, 5)}${i.hora_fin ? ` a ${i.hora_fin.slice(0, 5)}` : ''}` : '')
 const escuela = (s: { nombre: string | null } | null, lugar?: string | null) => (s?.nombre ? titleCase(s.nombre) : lugar ?? '')
@@ -20,11 +20,19 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
   wb.creator = 'Agenda Territorial DTE'
   wb.created = new Date()
   const fedName = (id: string) => feds.find(f => f.id === id)?.nombre_completo ?? ''
+  // Logo DTE Región 1 en el encabezado de cada hoja (si no se puede cargar, la planilla sale igual).
+  let logo: number | null = null
+  try {
+    const buf = await (await fetch('/brand/dte1-160.png')).arrayBuffer()
+    logo = wb.addImage({ buffer: buf, extension: 'png' })
+  } catch { logo = null }
   const periodo = `Período: ${fecha(desde)} al ${fecha(hasta)}`
 
   type Col = { header: string, key: string, width: number }
   function tabla(nombre: string, cols: Col[], filas: Record<string, unknown>[], subtitulo?: string) {
     const ws = wb.addWorksheet(hoja(nombre), { views: [{ state: 'frozen', ySplit: 3 }] })
+    ws.getRow(1).height = 30; ws.getRow(2).height = 18
+    if (logo !== null) ws.addImage(logo, { tl: { col: cols.length, row: 0.1 }, ext: { width: 44, height: 44 } })
     ws.getCell('A1').value = `${titulo} · ${nombre}`
     ws.getCell('A1').font = { bold: true, size: 14, color: { argb: PETROLEO } }
     ws.getCell('A2').value = subtitulo ?? periodo

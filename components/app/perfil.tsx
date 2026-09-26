@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronRight, ClipboardList, LayoutDashboard, MapPin } from 'lucide-react'
+import { ChevronRight, LayoutDashboard, MapPin } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { type Fed } from '@/lib/agenda'
 import { avatarColors, initials, districtsLabel, ErrorBox } from '@/components/app/comun'
@@ -13,7 +13,7 @@ export function ProfileSelect({ feds, error, onRetry, onSelect }: { feds: Fed[] 
     <span aria-hidden className="pointer-events-none absolute right-40 top-4 size-10 rounded-full bg-dte-celeste" />
     <span aria-hidden className="pointer-events-none absolute right-8 top-40 size-8 rounded-full bg-dte-lila" />
     <div className="relative w-full max-w-3xl">
-      <div className="mb-10 flex items-center gap-3"><div className="flex size-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/30"><ClipboardList /></div><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-dte-celeste">Equipo FED</p><h1 className="text-xl font-bold">Agenda Territorial</h1></div></div>
+      <div className="mb-10 flex items-center gap-3"><img src="/brand/dte1-160.png" alt="DTE Región 1" width={56} height={56} className="size-14 shrink-0 drop-shadow-lg" /><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-dte-celeste">Equipo FED</p><h1 className="text-xl font-bold">Agenda Territorial</h1></div></div>
       <div className="mb-8"><h2 className="text-3xl font-bold tracking-tight sm:text-4xl">¿Con quién vas a trabajar hoy?</h2><span className="mt-4 inline-flex rounded-full bg-dte-magenta px-4 py-1.5 text-sm font-bold">Dirección de Tecnología Educativa</span><p className="mt-4 text-white/85">Seleccioná tu perfil para entrar a la agenda. Lo vamos a recordar en este dispositivo.</p></div>
       {error ? <ErrorBox message={error} onRetry={onRetry} />
         : !feds ? <div className="grid gap-4 sm:grid-cols-2">{[0, 1, 2, 3].map(i => <div key={i} className="h-[88px] animate-pulse rounded-2xl bg-white/15" />)}</div>

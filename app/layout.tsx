@@ -11,8 +11,9 @@ export const metadata: Metadata = {
   description: 'Agenda de trabajo territorial para Facilitadores de Educación Digital.',
   applicationName: 'Agenda FED',
   appleWebApp: { capable: true, title: 'Agenda FED', statusBarStyle: 'default' },
+  // Favicon: app/icon.png (perfil de la Provincia). Íconos grandes para instalar la app.
   icons: {
-    icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { url: '/icon-light-32x32.png', sizes: '32x32', type: 'image/png' }],
+    icon: [{ url: '/icon-32.png', sizes: '32x32', type: 'image/png' }, { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
     apple: '/apple-icon.png',
   },
 }

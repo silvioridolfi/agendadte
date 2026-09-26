@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { CalendarDays, ChevronDown, ClipboardList, CloudUpload, LayoutDashboard } from 'lucide-react'
+import { CalendarDays, ChevronDown, CloudUpload, LayoutDashboard } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { type AgendaItem, type Fed } from '@/lib/agenda'
@@ -65,7 +65,7 @@ export default function Page() {
       <div className="bg-dte-degradado h-1" />
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 lg:px-10">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-dte-degradado text-white"><ClipboardList className="size-5" /></div>
+          <img src="/brand/dte1-160.png" alt="DTE Región 1" width={40} height={40} className="size-10 shrink-0" />
           <div className="hidden min-w-0 sm:block"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-dte-magenta">Equipo FED · DTE</p><h1 className="truncate text-base font-bold leading-tight">Agenda Territorial</h1></div>
         </div>
         <nav aria-label="Secciones" className="flex rounded-full border border-dte-linea bg-dte-fondo p-1">

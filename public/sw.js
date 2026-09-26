@@ -1,6 +1,6 @@
 // Service worker de la Agenda Territorial: guarda la app para abrirla sin conexión.
 // Los datos (acciones) los guarda la propia app en el dispositivo; acá sólo se cachean páginas y archivos estáticos.
-const VERSION = 'agenda-v1'
+const VERSION = 'agenda-v2'
 const PRECACHE = ['/', '/icons/icon-192.png', '/icons/icon-512.png', '/manifest.webmanifest']
 
 self.addEventListener('install', event => {
