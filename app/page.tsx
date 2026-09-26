@@ -12,7 +12,7 @@ import { DetailDialog } from '@/components/app/detalle'
 import { CoordinatorView } from '@/components/app/tablero'
 import { ItemForm } from '@/components/app/formulario'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
-import { PROFILE_KEY, iso, initials, firstName, fedColor, getFeds, errMsg, storage, Toast, ItemPreset, toWeekday } from '@/components/app/comun'
+import { PROFILE_KEY, iso, initials, firstName, fedColor, getFeds, errMsg, storage, Toast, PieInstitucional, ItemPreset, toWeekday } from '@/components/app/comun'
 
 export default function Page() {
   const [feds, setFeds] = useState<Fed[] | null>(null)
@@ -60,7 +60,7 @@ export default function Page() {
 
   if (!profile) return <ProfileSelect feds={feds} error={fedsError} onRetry={loadFeds} onSelect={choose} />
 
-  return <div className="min-h-screen bg-dte-fondo text-dte-tinta">
+  return <div className="flex min-h-screen flex-col bg-dte-fondo text-dte-tinta">
     <header className="sticky top-0 z-40 border-b border-dte-linea bg-white/95 backdrop-blur">
       <div className="bg-dte-degradado h-1" />
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 lg:px-10">
@@ -101,6 +101,7 @@ export default function Page() {
       </DialogContent>
     </Dialog>
 
+    <PieInstitucional />
     {toast && <Toast message={toast} onDone={hideToast} />}
   </div>
 }

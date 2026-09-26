@@ -3,16 +3,16 @@
 import { ChevronRight, LayoutDashboard, MapPin } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { type Fed } from '@/lib/agenda'
-import { avatarColors, initials, districtsLabel, ErrorBox } from '@/components/app/comun'
+import { avatarColors, initials, districtsLabel, ErrorBox, PieInstitucional } from '@/components/app/comun'
 
 // =====================================================================
 
 export function ProfileSelect({ feds, error, onRetry, onSelect }: { feds: Fed[] | null, error: string, onRetry: () => void, onSelect: (fed: Fed) => void }) {
-  return <main className="bg-dte-degradado relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-12 text-white">
+  return <main className="bg-dte-degradado relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-5 pt-12 text-white">
     <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-44 rotate-45 rounded-[2.5rem] border-[22px] border-dte-rosa" />
     <span aria-hidden className="pointer-events-none absolute right-40 top-4 size-10 rounded-full bg-dte-celeste" />
     <span aria-hidden className="pointer-events-none absolute right-8 top-40 size-8 rounded-full bg-dte-lila" />
-    <div className="relative w-full max-w-3xl">
+    <div className="relative my-auto w-full max-w-3xl">
       <div className="mb-10 flex items-center gap-3"><img src="/brand/dte1-160.png" alt="DTE Región 1" width={56} height={56} className="size-14 shrink-0 drop-shadow-lg" /><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-dte-celeste">Equipo FED</p><h1 className="text-xl font-bold">Agenda Territorial</h1></div></div>
       <div className="mb-8"><h2 className="text-3xl font-bold tracking-tight sm:text-4xl">¿Con quién vas a trabajar hoy?</h2><span className="mt-4 inline-flex rounded-full bg-dte-magenta px-4 py-1.5 text-sm font-bold">Dirección de Tecnología Educativa</span><p className="mt-4 text-white/85">Seleccioná tu perfil para entrar a la agenda. Lo vamos a recordar en este dispositivo.</p></div>
       {error ? <ErrorBox message={error} onRetry={onRetry} />
@@ -30,5 +30,6 @@ export function ProfileSelect({ feds, error, onRetry, onSelect }: { feds: Fed[] 
             <ChevronRight className="text-white/70 transition group-hover:translate-x-1" />
           </button>)}</>}
     </div>
+    <div className="relative mt-12 w-full"><PieInstitucional oscuro /></div>
   </main>
 }

@@ -26,6 +26,9 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
     const buf = await (await fetch('/brand/dte1-160.png')).arrayBuffer()
     logo = wb.addImage({ buffer: buf, extension: 'png' })
   } catch { logo = null }
+  // Firma institucional oficial al pie de la hoja Resumen.
+  let oficial: number | null = null
+  try { oficial = wb.addImage({ buffer: await (await fetch('/brand/oficial-color.png')).arrayBuffer(), extension: 'png' }) } catch { oficial = null }
   const periodo = `Período: ${fecha(desde)} al ${fecha(hasta)}`
 
   type Col = { header: string, key: string, width: number }
@@ -87,6 +90,9 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
     { header: 'Escuelas alcanzadas', key: 'escuelas', width: 12 }, { header: 'Equipos intervenidos', key: 'equipos', width: 12 }, { header: 'Encuentros (clubes, talleres, prácticas)', key: 'encuentros', width: 16 },
   ], resumen, `${periodo} · cuenta acciones realizadas`)
   if (resumen.length > 1) wsRes.getRow(3 + resumen.length).font = { bold: true }
+  if (oficial !== null) wsRes.addImage(oficial, { tl: { col: 0, row: 4 + resumen.length }, ext: { width: 520, height: 72 } })
+  wsRes.getCell(`A${9 + resumen.length}`).value = `© ${new Date().getFullYear()} Dirección de Tecnología Educativa (DTE), Región 1 · Agenda Territorial`
+  wsRes.getCell(`A${9 + resumen.length}`).font = { size: 9, color: { argb: 'FF5B6472' } }
 
   tabla('Acciones', colsAcciones, ordenados.map(filaAccion))
 

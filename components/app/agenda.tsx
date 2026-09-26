@@ -50,15 +50,15 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
 
   return <main className="mx-auto max-w-[1440px] px-4 pb-28 pt-6 lg:px-10 lg:pb-10">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
+      <div className="min-w-0">
         <p className={eyebrow}>Mi agenda · {CAL_VIEWS.find(v => v[0] === view)?.[1]}</p>
         <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
         <p className="mt-1.5 text-sm text-dte-gris">Hola, {firstName(fed.nombre_completo)}. {items ? (items.length ? `Tenés ${items.length} ${items.length === 1 ? 'acción' : 'acciones'} en ${periodo}${counts.realizada ? `, ${counts.realizada} ${counts.realizada === 1 ? 'realizada' : 'realizadas'}` : ''}.` : `No hay acciones cargadas en ${periodo}.`) : 'Cargando…'}{ddjjFor(fed, today) && <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-xs ring-1 ring-dte-linea"><Clock className="size-3" />Hoy DTE {ddjjFor(fed, today)!.dte}</span>}</p>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
         <div role="group" aria-label="Vista" className="flex rounded-lg border border-dte-linea bg-white p-1 shadow-xs">{CAL_VIEWS.map(([v, l]) => <button key={v} onClick={() => setView(v)} aria-pressed={view === v} className={`rounded-md px-3 py-1 text-sm font-semibold transition ${view === v ? 'bg-dte-petroleo text-white' : 'text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}</div>
         <WeekNav prevLabel="Anterior" nextLabel="Siguiente" onPrev={() => setAnchor(calShift(anchor, view, -1))} onToday={() => setAnchor(toWeekday(new Date()))} onNext={() => setAnchor(calShift(anchor, view, 1))} />
-        <Button size="lg" variant="outline" disabled={!items?.length || exportando} onClick={exportar} title="Descargar la planilla del período en Excel" className="h-10"><FileSpreadsheet data-icon="inline-start" />{exportando ? 'Generando…' : 'Exportar'}</Button>
+        <Button size="lg" variant="outline" disabled={!items?.length || exportando} onClick={exportar} title="Descargar la planilla del período en Excel" aria-label="Exportar la planilla del período a Excel" className="h-10 px-3"><FileSpreadsheet />{exportando && <span className="text-xs">…</span>}</Button>
         <Button size="lg" onClick={() => onNew(suggested)} className="hidden h-10 bg-dte-magenta px-4 font-semibold text-white hover:bg-[#b8155c] sm:inline-flex"><Plus data-icon="inline-start" />Nueva acción</Button>
       </div>
     </div>
