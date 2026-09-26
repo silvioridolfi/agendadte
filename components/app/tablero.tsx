@@ -3,7 +3,7 @@
 import { exportarPlanilla } from '@/lib/exportar'
 import { ConfiguracionView } from '@/components/app/configuracion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, Users, X, FileSpreadsheet } from 'lucide-react'
+import { Search, Users, X, FileSpreadsheet, SlidersHorizontal } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -91,22 +91,26 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   const recientePrimero = (a: AgendaItem, b: AgendaItem) => b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)
   const groups = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].map(([id, l]) => [id, l.sort(recientePrimero)] as [string, AgendaItem[]]).sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName])
   const anyFilter = !!(search || distrito || fedId || accion || estado)
+  // Filtros plegables en mobile (buscador siempre visible).
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
+  const filtrosActivos = [distrito, fedId, accion].filter(Boolean).length
   const fedsSinAcciones = useMemo(() => (items && !anyFilter ? feds.filter(f => !items.some(i => i.fed_id === f.id)) : []), [items, feds, anyFilter])
   const clear = () => { setSearch(''); setDistrito(''); setFedId(''); setAccion(''); setEstado('') }
   const title = range === 'day' ? cap(fmt(from, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) : range === 'week' ? weekTitle(from, to) : range === 'year' ? `Año ${from.getFullYear()}` : cap(fmt(from, { month: 'long', year: 'numeric' }))
 
-  return <main className="mx-auto w-full min-w-0 max-w-[1440px] px-4 pb-16 pt-6 lg:px-10">
+  return <main className="mx-auto w-full min-w-0 max-w-[1440px] px-4 pb-8 pt-6 lg:px-10 lg:pb-16">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div><p className={eyebrow}>Tablero del coordinador</p><h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2><p className="mt-1.5 text-sm text-dte-gris">Seguimiento territorial de todo el equipo.</p>{onNuevaReunion && <Button onClick={onNuevaReunion} className="mt-3 bg-dte-magenta font-semibold text-white hover:bg-dte-magenta-oscuro"><Users data-icon="inline-start" />Nueva reunión de equipo</Button>}</div>
       <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="Período" className="flex rounded-lg border border-dte-linea bg-white p-1 shadow-xs">{(Object.keys(rangeNames) as Range[]).map(v => <button key={v} onClick={() => setRange(v)} aria-pressed={range === v} className={`rounded-md px-3 py-1 text-sm font-semibold transition ${range === v ? 'bg-dte-petroleo text-white' : 'text-dte-gris hover:text-dte-tinta'}`}>{rangeNames[v][0]}</button>)}</div>
+        <div role="group" aria-label="Período" className="grid w-full grid-cols-4 rounded-lg border border-dte-linea bg-white p-1 shadow-xs sm:flex sm:w-auto">{(Object.keys(rangeNames) as Range[]).map(v => <button key={v} onClick={() => setRange(v)} aria-pressed={range === v} className={`whitespace-nowrap rounded-md px-1.5 py-1 text-sm font-semibold transition sm:px-3 ${range === v ? 'bg-dte-petroleo text-white' : 'text-dte-gris hover:text-dte-tinta'}`}>{rangeNames[v][0]}</button>)}</div>
         <Button variant="outline" disabled={!items || exportando} onClick={exportar} title="Descargar planilla regional con los filtros aplicados"><FileSpreadsheet data-icon="inline-start" />{exportando ? 'Generando…' : 'Exportar Excel'}</Button>
         <WeekNav prevLabel={`${cap(rangeNames[range][1])} anterior`} nextLabel={`${cap(rangeNames[range][1])} siguiente`} onPrev={() => setAnchor(shift(anchor, range, -1))} onToday={() => setAnchor(new Date())} onNext={() => setAnchor(shift(anchor, range, 1))} />
       </div>
     </div>
 
-    <div role="tablist" aria-label="Vista del tablero" className="mt-6 flex gap-1 border-b border-dte-linea">
-      {([['resumen', 'Resumen y métricas'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo'], ...(autorId ? [['config', 'Configuración']] as const : [])] as const).map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 pb-2.5 pt-1 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
+    {/* Pestañas: en mobile se desplazan horizontalmente en una sola línea. */}
+    <div role="tablist" aria-label="Vista del tablero" className="-mx-4 mt-6 flex snap-x gap-1 overflow-x-auto border-b border-dte-linea px-4 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
+      {([['resumen', 'Resumen y métricas'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo'], ...(autorId ? [['config', 'Configuración']] as const : [])] as const).map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={e => { setTab(k); e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }} className={`-mb-px flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
     </div>
 
     {tab === 'acciones' && <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -117,11 +121,16 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     </div>}
 
     {tab !== 'config' && <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs md:flex-row md:flex-wrap md:items-center">
-      <div className="relative min-w-56 flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar escuela, localidad, CUE o FED…" aria-label="Buscar" className="h-9 bg-dte-fondo pl-9" /></div>
+      <div className="flex gap-2 md:contents">
+      <div className="relative min-w-0 flex-1 md:min-w-56"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar escuela, localidad, CUE o FED…" aria-label="Buscar" className="h-9 bg-dte-fondo pl-9" /></div>
+      <Button type="button" variant="outline" onClick={() => setFiltrosAbiertos(o => !o)} aria-expanded={filtrosAbiertos} aria-controls="filtros-tablero" className="h-9 shrink-0 md:hidden"><SlidersHorizontal data-icon="inline-start" />Filtros{filtrosActivos > 0 && <span className="ml-0.5 rounded-full bg-dte-petroleo px-1.5 text-xs text-white">{filtrosActivos}</span>}</Button>
+      </div>
+      <div id="filtros-tablero" className={`${filtrosAbiertos ? 'flex' : 'hidden'} flex-col gap-2 md:contents`}>
       <select aria-label="Distrito" className={`${selectClass} md:w-44`} value={distrito} onChange={e => setDistrito(e.target.value)}><option value="">Todos los distritos</option>{distritos.map(d => <option key={d} value={d}>{titleCase(d)}</option>)}</select>
       <select aria-label="FED" className={`${selectClass} md:w-52`} value={fedId} onChange={e => setFedId(e.target.value)}><option value="">Todos los FEDs</option>{[...feds].sort((a, b) => az(a.nombre_completo, b.nombre_completo)).map(f => <option key={f.id} value={f.id}>{f.nombre_completo}</option>)}</select>
       <select aria-label="Tipo de acción" className={`${selectClass} md:w-56`} value={accion} onChange={e => setAccion(e.target.value)}><option value="">Todas las acciones</option>{[...ACCIONES].sort(az).map(a => <option key={a} value={a}>{cap(a.toLowerCase())}</option>)}</select>
-      {anyFilter && <Button variant="ghost" onClick={clear} className="text-dte-magenta hover:text-dte-magenta"><X data-icon="inline-start" />Limpiar</Button>}
+      </div>
+      {anyFilter && <Button variant="ghost" onClick={clear} className="self-start text-dte-magenta hover:text-dte-magenta md:self-auto"><X data-icon="inline-start" />Limpiar</Button>}
     </div>}
 
     {tab === 'config' && autorId ? <div className="mt-6"><ConfiguracionView feds={todos} autorId={autorId} onChanged={m => onChanged?.(m)} /></div>
