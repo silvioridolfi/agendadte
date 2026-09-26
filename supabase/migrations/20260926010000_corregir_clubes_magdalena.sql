@@ -1,0 +1,6 @@
+-- Corrección de carga: dos registros de club de la EP 34 y la EP 36 se cargaron con las escuelas homónimas de Magdalena.
+-- Correctas: EP 34 Celia Zeballos de Heredia (CUE 60416600) y EP 36 Dr. Carlos Luis Spegazzini (CUE 60298300), La Plata.
+update public.agenda_encuentros set school_id='d1dbeac2-94e7-48f5-8ae7-87b893473589', club_id='ed6df9ed-aa0e-4877-91da-144c501e80eb' where school_id='e35957de-2986-4d47-81b9-3c19338f4815' and tipo='CLUB DE TECNOLOGÍA';
+update public.agenda_encuentros set school_id='71f6e313-e7e8-41fa-a43f-472d615aed72', club_id='452dc567-a31e-42f7-915e-613ef354dd33' where school_id='7ba89160-b36c-4d74-adce-87a8a7d287f8' and tipo='CLUB DE TECNOLOGÍA';
+delete from public.clubes where id in ('e6de6156-dc2b-49bc-9f16-44b7907cc7d7','2f661ee7-5f95-46f8-b241-29518a680be2') and not exists (select 1 from public.agenda_encuentros e where e.club_id = clubes.id);
+update public.clubes c set fecha_inicio = (select min(fecha) from public.agenda_encuentros where club_id=c.id), encuentros_previstos = greatest(8, coalesce((select max(encuentro_n) from public.agenda_encuentros where club_id=c.id),0)) where id in ('ed6df9ed-aa0e-4877-91da-144c501e80eb','452dc567-a31e-42f7-915e-613ef354dd33');
