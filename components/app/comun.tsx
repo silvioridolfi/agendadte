@@ -37,7 +37,8 @@ export const avatarColors = ['bg-[#dff3f8]', 'bg-[#e9e5f8]', 'bg-[#fbe3ee]', 'bg
 // Orden alfabético de la A a la Z para todas las listas (con números en orden natural: N° 2 antes que N° 10).
 export const az = (a: string, b: string) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })
 export const azOtroAlFinal = (a: string, b: string) => (a === 'Otro' ? 1 : b === 'Otro' ? -1 : az(a, b))
-export const selectClass = 'h-9 w-full rounded-lg border border-input bg-white px-2.5 text-sm text-dte-tinta outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+// Select nativo: 44px y 16px en mobile (sin zoom en iOS), compacto desde md.
+export const selectClass = 'h-11 w-full rounded-lg border border-input bg-white px-2.5 text-base text-dte-tinta md:h-9 md:text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
 export const eyebrow = 'text-xs font-bold uppercase tracking-[0.15em] text-dte-magenta'
 export const PROFILE_KEY = 'agenda-territorial:fed'
 
@@ -143,7 +144,7 @@ export type ItemPreset = { accion?: Accion, sub_accion?: string, participantes?:
 export function WeekNav({ onPrev, onToday, onNext, prevLabel, nextLabel }: { onPrev: () => void, onToday: () => void, onNext: () => void, prevLabel: string, nextLabel: string }) {
   return <div className="flex items-center rounded-lg border border-dte-linea bg-white shadow-xs">
     <Button variant="ghost" size="icon-lg" aria-label={prevLabel} onClick={onPrev}><ChevronLeft /></Button>
-    <Button variant="ghost" size="lg" className="border-x border-dte-linea rounded-none px-4 font-semibold" onClick={onToday}>Hoy</Button>
+    <Button variant="ghost" size="lg" className="rounded-none border-x border-dte-linea px-4 font-semibold" onClick={onToday}>Hoy</Button>
     <Button variant="ghost" size="icon-lg" aria-label={nextLabel} onClick={onNext}><ChevronRight /></Button>
   </div>
 }
