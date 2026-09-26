@@ -123,7 +123,7 @@ export function Toast({ message, onDone }: { message: string, onDone: () => void
   const [pausa, setPausa] = useState(false)
   useEffect(() => { if (pausa) return; const t = setTimeout(onDone, 5000); return () => clearTimeout(t) }, [message, onDone, pausa])
   return <div role="status" aria-live="polite" aria-atomic="true" className="pointer-events-none fixed inset-x-0 bottom-safe-24 z-toast flex justify-center px-4 sm:bottom-8">
-    <div onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)} onFocus={() => setPausa(true)} onBlur={() => setPausa(false)} className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full bg-dte-tinta py-1 pl-4 pr-1 text-sm font-medium text-white shadow-lg">
+    <div onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)} onFocus={() => setPausa(true)} onBlur={() => setPausa(false)} className="pointer-events-auto flex max-w-full items-center gap-2 rounded-2xl bg-dte-tinta py-1 pl-4 pr-1 text-sm font-medium text-white shadow-lg">
       <Check className="size-4 shrink-0 text-dte-celeste" aria-hidden /><span className="min-w-0">{message}</span>
       <button onClick={onDone} aria-label="Cerrar aviso" className="flex size-11 shrink-0 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white md:size-8"><X className="size-4" /></button>
     </div>
