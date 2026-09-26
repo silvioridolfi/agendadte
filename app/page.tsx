@@ -38,6 +38,9 @@ const statusStyle: Record<Estado, { badge: string, label: string }> = {
   cancelada: { badge: 'border-pba-fucsia/40 bg-pba-fucsia/10 text-[#b8155c]', label: 'Cancelada' },
 }
 const avatarColors = ['bg-[#dff3f8]', 'bg-[#e9e5f8]', 'bg-[#fbe3ee]', 'bg-[#dde8f0]', 'bg-[#f1e4f0]', 'bg-[#fde8f1]']
+// Orden alfabético de la A a la Z para todas las listas (con números en orden natural: N° 2 antes que N° 10).
+const az = (a: string, b: string) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })
+const azOtroAlFinal = (a: string, b: string) => (a === 'Otro' ? 1 : b === 'Otro' ? -1 : az(a, b))
 const selectClass = 'h-9 w-full rounded-lg border border-input bg-white px-2.5 text-sm text-dte-tinta outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
 const eyebrow = 'text-xs font-bold uppercase tracking-[0.15em] text-dte-magenta'
 const PROFILE_KEY = 'agenda-territorial:fed'
@@ -547,8 +550,8 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
     <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs md:flex-row md:flex-wrap md:items-center">
       <div className="relative min-w-56 flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar escuela, localidad, CUE o FED…" aria-label="Buscar" className="h-9 bg-dte-fondo pl-9" /></div>
       <select aria-label="Distrito" className={`${selectClass} md:w-44`} value={distrito} onChange={e => setDistrito(e.target.value)}><option value="">Todos los distritos</option>{distritos.map(d => <option key={d} value={d}>{titleCase(d)}</option>)}</select>
-      <select aria-label="FED" className={`${selectClass} md:w-52`} value={fedId} onChange={e => setFedId(e.target.value)}><option value="">Todos los FEDs</option>{feds.map(f => <option key={f.id} value={f.id}>{f.nombre_completo}</option>)}</select>
-      <select aria-label="Tipo de acción" className={`${selectClass} md:w-56`} value={accion} onChange={e => setAccion(e.target.value)}><option value="">Todas las acciones</option>{ACCIONES.map(a => <option key={a} value={a}>{cap(a.toLowerCase())}</option>)}</select>
+      <select aria-label="FED" className={`${selectClass} md:w-52`} value={fedId} onChange={e => setFedId(e.target.value)}><option value="">Todos los FEDs</option>{[...feds].sort((a, b) => az(a.nombre_completo, b.nombre_completo)).map(f => <option key={f.id} value={f.id}>{f.nombre_completo}</option>)}</select>
+      <select aria-label="Tipo de acción" className={`${selectClass} md:w-56`} value={accion} onChange={e => setAccion(e.target.value)}><option value="">Todas las acciones</option>{[...ACCIONES].sort(az).map(a => <option key={a} value={a}>{cap(a.toLowerCase())}</option>)}</select>
       {anyFilter && <Button variant="ghost" onClick={clear} className="text-dte-magenta hover:text-dte-magenta"><X data-icon="inline-start" />Limpiar</Button>}
     </div>
 
@@ -597,7 +600,7 @@ function SchoolPicker({ value, onChange }: { value: School | null, onChange: (s:
     const n = ++seq.current
     setLoading(true); setFailed(false)
     const t = setTimeout(() => searchSchools(query)
-      .then(r => { if (n === seq.current) { setResults(r); setActive(0) } })
+      .then(r => { if (n === seq.current) { setResults([...r].sort((a, b) => az(a.nombre ?? '', b.nombre ?? ''))); setActive(0) } })
       .catch(() => { if (n === seq.current) { setResults([]); setFailed(true) } })
       .finally(() => { if (n === seq.current) setLoading(false) }), 250)
     return () => clearTimeout(t)
@@ -654,7 +657,7 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
   const hoy = iso(new Date())
   const clubOpts = (clubes ?? []).filter(c => c.tipo === form.accion && (c.id === form.club_id || clubEstado(c, hoy) !== 'finalizado'))
   const club = clubOpts.find(c => c.id === form.club_id) ?? null
-  const clubLabel = (c: Club) => `${c.grupo ? `${c.grupo} · ` : ''}${c.escuela_origen ? `${shortSchoolName(c.escuela_origen)} en ` : ''}${c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar'} · desde ${fmt(parse(c.fecha_inicio), { day: 'numeric', month: 'short' })}${clubEstado(c, hoy) === 'sin_actividad' ? ' (sin actividad)' : ''}`
+  const clubLabel = (c: Club) => `${c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar'}${c.grupo ? ` · ${c.grupo}` : ''}${c.escuela_origen ? ` · estudiantes de ${shortSchoolName(c.escuela_origen)}` : ''} · desde ${fmt(parse(c.fecha_inicio), { day: 'numeric', month: 'short' })}${clubEstado(c, hoy) === 'sin_actividad' ? ' (sin actividad)' : ''}`
   // Grado/curso del club nuevo: nivel sugerido por el nombre de la escuela, editable (cualquier nivel o modalidad).
   const nivelId = form.nivel || nivelDeEscuela(school?.nombre)
   const nivel = NIVELES.find(n => n.id === nivelId) ?? NIVELES[0]
@@ -702,7 +705,7 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
       <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta">*</span></legend>
       <div className="flex flex-col gap-3">{CATEGORIAS.map(c => <div key={c}>
         <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-dte-gris"><span className="size-2 rounded-sm" style={{ background: CAT_COLOR[c] }} />{CATEGORIA_LABEL[c]}</p>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c).map(name => {
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c).sort(az).map(name => {
           const on = form.accion === name
           return <button key={name} type="button" aria-pressed={on} onClick={() => setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '', tipo_jornada: f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada }))} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-[11px] font-bold uppercase leading-tight transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
             <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span>{name}
@@ -727,20 +730,20 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
       <Field label="Sub-acción" hint="(opcional)"><Input list="sub-acciones" placeholder={form.accion && SUB_ACCIONES[form.accion] ? `Ej.: ${SUB_ACCIONES[form.accion]!.slice(0, 2).join(', ')}` : 'Ej.: revisión de equipamiento'} value={form.sub_accion} onChange={e => set('sub_accion', e.target.value)} className="h-10" /></Field>
       {cat === 'tecnica' && <Field label="Cantidad" hint="(equipos)"><Input type="number" min={0} inputMode="numeric" placeholder="0" value={form.cantidad} onChange={e => set('cantidad', e.target.value)} className="h-10" /></Field>}
     </div>}
-    <datalist id="sub-acciones">{(form.accion ? SUB_ACCIONES[form.accion] ?? [] : []).map(o => <option key={o} value={o} />)}</datalist>
-    {conSubAccion && form.accion && SUB_ACCIONES[form.accion] && <div className="-mt-3 flex flex-wrap items-center gap-1.5"><span className="mr-0.5 text-[11px] font-semibold uppercase tracking-wider text-dte-gris">Sugerencias</span>{SUB_ACCIONES[form.accion]!.map(o => { const on = form.sub_accion.split(',').map(x => x.trim()).includes(o); return <button key={o} type="button" aria-pressed={on} onClick={() => { const cur = form.sub_accion.split(',').map(x => x.trim()).filter(Boolean); set('sub_accion', (on ? cur.filter(x => x !== o) : [...cur, o]).join(', ')) }} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition ${on ? 'border-dte-petroleo bg-dte-petroleo text-white shadow-xs' : 'border-dte-petroleo/20 bg-dte-petroleo/[0.06] text-dte-petroleo hover:border-dte-petroleo/40 hover:bg-dte-petroleo/[0.12]'}`}>{on ? <Check className="size-3" /> : <Plus className="size-3 opacity-70" />}{o}</button> })}</div>}
+    <datalist id="sub-acciones">{[...(form.accion ? SUB_ACCIONES[form.accion] ?? [] : [])].sort(az).map(o => <option key={o} value={o} />)}</datalist>
+    {conSubAccion && form.accion && SUB_ACCIONES[form.accion] && <div className="-mt-3 flex flex-wrap items-center gap-1.5"><span className="mr-0.5 text-[11px] font-semibold uppercase tracking-wider text-dte-gris">Sugerencias</span>{[...SUB_ACCIONES[form.accion]!].sort(az).map(o => { const on = form.sub_accion.split(',').map(x => x.trim()).includes(o); return <button key={o} type="button" aria-pressed={on} onClick={() => { const cur = form.sub_accion.split(',').map(x => x.trim()).filter(Boolean); set('sub_accion', (on ? cur.filter(x => x !== o) : [...cur, o]).join(', ')) }} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition ${on ? 'border-dte-petroleo bg-dte-petroleo text-white shadow-xs' : 'border-dte-petroleo/20 bg-dte-petroleo/[0.06] text-dte-petroleo hover:border-dte-petroleo/40 hover:bg-dte-petroleo/[0.12]'}`}>{on ? <Check className="size-3" /> : <Plus className="size-3 opacity-70" />}{o}</button> })}</div>}
 
     {esClub && <fieldset className="grid gap-4 overflow-hidden rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
       <legend className="sr-only">Registro: {marca.nombre}</legend>
       <div className={`-m-3 mb-0 flex items-center gap-3 px-3 py-2.5 sm:col-span-6 ${marca.degradado}`}><img src={marca.logo} alt={marca.nombre} className="h-10 w-auto" /><span className="text-xs font-semibold text-white/95">{marca.nota}</span></div>
       <Field label={`¿A qué ${marca.corto} corresponde?`} required className="sm:col-span-6"><select className={`${selectClass} h-10`} value={form.club_id} onChange={e => pickClub(e.target.value)} disabled={!clubes}>
         <option value="">{clubes ? `Elegí ${marca.corto === 'club' ? 'un club' : 'una práctica'}…` : 'Cargando…'}</option>
-        {clubOpts.map(c => <option key={c.id} value={c.id}>{clubLabel(c)}</option>)}
+        {[...clubOpts].sort((a, b) => az(a.school ? shortSchoolName(a.school) : a.lugar ?? '', b.school ? shortSchoolName(b.school) : b.lugar ?? '') || az(a.grupo ?? '', b.grupo ?? '')).map(c => <option key={c.id} value={c.id}>{clubLabel(c)}</option>)}
         <option value="nuevo">{marca.corto === 'club' ? '+ Iniciar un club nuevo' : '+ Iniciar una práctica nueva'} (comienza en esta fecha)</option>
       </select></Field>
       {form.club_id === 'nuevo' && <div className="grid gap-3 rounded-lg border border-dashed border-[#7d5a95]/50 bg-white p-3 sm:col-span-6 sm:grid-cols-6">
         <p className="text-xs text-dte-gris sm:col-span-6">Cada grado o curso es {marca.corto === 'club' ? 'un club' : 'una práctica'} en sí mismo. {school ? 'El nivel se sugiere según la escuela; podés cambiarlo.' : 'Elegí primero la escuela para sugerir el nivel.'}</p>
-        <Field label="Nivel / modalidad" className="sm:col-span-3"><select className={`${selectClass} h-10`} value={nivel.id} onChange={e => setForm(f => ({ ...f, nivel: e.target.value, curso: '' }))}>{NIVELES.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select></Field>
+        <Field label="Nivel / modalidad" className="sm:col-span-3"><select className={`${selectClass} h-10`} value={nivel.id} onChange={e => setForm(f => ({ ...f, nivel: e.target.value, curso: '' }))}>{[...NIVELES].sort((a, b) => az(a.label, b.label)).map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select></Field>
         <Field label={nivel.cursoLabel} required className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.curso} onChange={e => set('curso', e.target.value)}><option value="">Elegí…</option>{nivel.cursos.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
         <Field label="Sección" className="sm:col-span-1"><select className={`${selectClass} h-10`} value={form.seccion} onChange={e => set('seccion', e.target.value)}><option value="">—</option>{SECCIONES.map(x => <option key={x}>{x}</option>)}</select></Field>
         <label className="flex items-center gap-2 text-sm sm:col-span-6"><input type="checkbox" checked={otroOrigen} onChange={e => setOtroOrigen(e.target.checked)} className="size-4" style={{ accentColor: marca.acento }} />Los estudiantes son de otra escuela (se desarrolla en esta sede o en territorio)</label>
@@ -751,8 +754,8 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
       <Field label="Propuesta dictada" hint={marca.corto === 'club' ? '(ej.: taller de redes dentro del club)' : undefined} className="sm:col-span-4"><Input placeholder={marca.propuesta} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentros de la propuesta" hint="(previstos)" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={form.encuentros_previstos} onChange={e => set('encuentros_previstos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
-      <Field label="Tipo de jornada" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.tipo_jornada} onChange={e => set('tipo_jornada', e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{TIPOS_JORNADA.map(t => <option key={t} value={t}>{t === 'Otro' ? 'Otro (aclarar en la descripción)' : t}</option>)}</select></Field>
-      <Field label="Formato de participación" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{MODALIDADES.map(m => <option key={m}>{m}</option>)}</select></Field>
+      <Field label="Tipo de jornada" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.tipo_jornada} onChange={e => set('tipo_jornada', e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{[...TIPOS_JORNADA].sort(azOtroAlFinal).map(t => <option key={t} value={t}>{t === 'Otro' ? 'Otro (aclarar en la descripción)' : t}</option>)}</select></Field>
+      <Field label="Formato de participación" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>
       <Field label="Destinatarios" className="sm:col-span-6"><Input placeholder="Ej.: estudiantes de 5° y 6°, familias" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Cantidad de inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Participantes reales" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>
@@ -764,7 +767,7 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
       <Field label="Propuesta" className="sm:col-span-4"><Input placeholder={form.accion === 'CLUB DE TECNOLOGÍA' ? 'Club de Tecnología' : 'Ej.: Ciudadanía digital en el aula'} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Destinatarios" className="sm:col-span-4"><Input placeholder="Ej.: estudiantes de 6° A, docentes" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" /></Field>
-      <Field label="Modalidad" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{MODALIDADES.map(m => <option key={m}>{m}</option>)}</select></Field>
+      <Field label="Modalidad" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>
       <Field label="Inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Asistentes" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>
     </fieldset>}
