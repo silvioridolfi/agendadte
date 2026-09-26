@@ -226,3 +226,13 @@
 @layer base {
   button:not(:disabled), [role="button"]:not([aria-disabled="true"]), [role="tab"], select:not(:disabled), summary, label:has(> input[type="checkbox"]), input[type="checkbox"], input[type="date"], input[type="time"] { cursor: pointer; }
 }
+
+/* Tablas anchas: en móvil cada fila se apila como tarjeta y cada celda muestra su rótulo (data-label). */
+@media (max-width: 639.98px) {
+  .tabla-apilada, .tabla-apilada tbody, .tabla-apilada tr, .tabla-apilada td { display: block; width: 100%; }
+  .tabla-apilada thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .tabla-apilada tbody { display: flex; flex-direction: column; gap: 0.5rem; border: 0; }
+  .tabla-apilada tr { border: 1px solid var(--color-dte-linea); border-radius: var(--radius-card, 0.75rem); padding: 0.5rem 0.75rem; }
+  .tabla-apilada td { padding: 0.25rem 0; text-align: left; }
+  .tabla-apilada td[data-label]::before { content: attr(data-label); display: block; font-size: 0.75rem; font-weight: 600; color: var(--color-dte-gris); }
+}

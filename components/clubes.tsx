@@ -159,7 +159,7 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
 
     <Panel title={`Recorrido de cada ${marca.corto}`} subtitle="Del primer encuentro al cierre (o al último registro). Cada marca es un encuentro.">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[860px] text-sm">
+        <table className="tabla-apilada w-full text-sm sm:min-w-[860px]">
           <thead><tr className="text-left text-xs text-dte-gris">
             <th className="pb-2 pr-3 font-semibold">Grupo y escuela</th>
             <th className="w-[34%] pb-2 pr-3 font-semibold"><div className="relative h-4">{meses.map(m => <span key={m.getMonth()} className="absolute -translate-x-0 capitalize" style={{ left: `${pos(`${year}-${String(m.getMonth() + 1).padStart(2, '0')}-01`)}%` }}>{m.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')}</span>)}</div></th>
@@ -173,16 +173,16 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
             const fin = c.fecha_cierre ?? ultima
             return <tr key={c.id} className="align-middle">
               <td className="py-2.5 pr-3"><p className="flex max-w-[20rem] items-center gap-1.5 font-semibold" title={c.school?.nombre ?? c.lugar ?? ''}>{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate">{schoolLabel(c)}</span></p><p className="text-xs text-dte-gris">{[c.escuela_origen ? `Estudiantes de ${schoolLabel({ school: c.escuela_origen, lugar: null } as Club)}` : null, c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id)].filter(Boolean).join(' · ')}</p>{(() => { const n = new Set(completos.get(c.id)!.encuentros.map(e => e.school_id ?? e.lugar)).size; return n > 1 ? <p className="text-xs font-semibold" style={{ color: marca.acento }}>{n} sedes</p> : null })()}</td>
-              <td className="py-2.5 pr-3"><div className="relative h-5" role="img" aria-label={`Del ${corta(c.fecha_inicio)} al ${corta(fin)}`}>
+              <td data-label="Recorrido" className="py-2.5 pr-3"><div className="relative h-5" role="img" aria-label={`Del ${corta(c.fecha_inicio)} al ${corta(fin)}`}>
                 <div className="absolute inset-y-[7px] left-0 right-0 rounded bg-dte-fondo" />
                 <div className="absolute inset-y-[5px] rounded" style={{ left: `${pos(c.fecha_inicio)}%`, width: `${Math.max(0.8, pos(fin) - pos(c.fecha_inicio))}%`, background: st.color, opacity: estado === 'finalizado' ? 0.55 : 0.85 }} title={`${corta(c.fecha_inicio)} → ${c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : `último ${corta(ultima)}`}`} />
                 {fechas.map(f => <span key={f} className="absolute top-[3px] h-[14px] w-[2px] rounded bg-white/90" style={{ left: `${pos(f)}%` }} />)}
                 <span className="absolute top-0 h-5 w-px bg-dte-magenta" style={{ left: `${pos(hoy)}%` }} title="Hoy" />
               </div><p className="text-xs text-dte-gris">{corta(c.fecha_inicio)} → {c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : `último ${corta(ultima)}`}</p></td>
-              <td className="py-2.5 pr-3"><div className="flex items-center gap-2"><div className="h-2 w-20 rounded bg-dte-fondo"><div className="h-full rounded" style={{ width: `${Math.min(100, pct(total, prev))}%`, background: total >= CLUB_MIN_ENCUENTROS ? 'var(--color-pba-celeste-texto)' : 'var(--color-club-lila)' }} /></div><span className="tabular-nums" title={realizados !== total ? `${realizados} en el período` : undefined}><b>{total}</b><span className="text-dte-gris">/{prev}</span></span></div></td>
-              <td className="py-2.5 pr-3 text-right tabular-nums">{inscriptos || '—'}{inscriptos > CLUB_MAX_PARTICIPANTES && <span className="ml-1 text-xs text-aviso-fuerte" title={`Supera los ${CLUB_MAX_PARTICIPANTES} sugeridos`}>▲</span>}</td>
-              <td className="py-2.5 pr-3 text-right tabular-nums">{promedio ? nf.format(Math.round(promedio * 10) / 10) : '—'}</td>
-              <td className="py-2.5"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.badge}`}>{st.label}</span>
+              <td data-label="Encuentros" className="py-2.5 pr-3"><div className="flex items-center gap-2"><div className="h-2 w-20 rounded bg-dte-fondo"><div className="h-full rounded" style={{ width: `${Math.min(100, pct(total, prev))}%`, background: total >= CLUB_MIN_ENCUENTROS ? 'var(--color-pba-celeste-texto)' : 'var(--color-club-lila)' }} /></div><span className="tabular-nums" title={realizados !== total ? `${realizados} en el período` : undefined}><b>{total}</b><span className="text-dte-gris">/{prev}</span></span></div></td>
+              <td data-label="Inscriptos" className="py-2.5 pr-3 text-right tabular-nums">{inscriptos || '—'}{inscriptos > CLUB_MAX_PARTICIPANTES && <span className="ml-1 text-xs text-aviso-fuerte" title={`Supera los ${CLUB_MAX_PARTICIPANTES} sugeridos`}>▲</span>}</td>
+              <td data-label="Prom. reales" className="py-2.5 pr-3 text-right tabular-nums">{promedio ? nf.format(Math.round(promedio * 10) / 10) : '—'}</td>
+              <td data-label="Estado" className="py-2.5"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.badge}`}>{st.label}</span>
                 {estado === 'finalizado' ? <button disabled={busy === c.id} onClick={() => cierre(c, null)} className="rounded-full border border-dte-linea px-2.5 py-0.5 text-xs font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte disabled:opacity-50">Reactivar</button>
                   : <button disabled={busy === c.id} onClick={() => cierre(c, ultima)} title={`Finalizar con fecha ${corta(ultima)} (último encuentro)`} className="rounded-full border border-dte-linea px-2.5 py-0.5 text-xs font-semibold text-club-violeta transition hover:border-club-violeta hover:bg-club-violeta-fondo disabled:opacity-50">Finalizar</button>}
               </div></td>
@@ -194,12 +194,12 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
     </Panel>
 
     <Panel title="Encuentros por escuela" subtitle={`Dónde se desarrollaron los encuentros de ${tipo === 'CLUB DE TECNOLOGÍA' ? 'los clubes' : 'las prácticas'} · ${periodo}`}>
-      {porEscuela.length ? <div className="overflow-x-auto"><table className="w-full min-w-[520px] text-sm">
+      {porEscuela.length ? <div className="overflow-x-auto"><table className="tabla-apilada w-full text-sm sm:min-w-[520px]">
         <thead><tr className="text-left text-xs text-dte-gris"><th className="pb-2 pr-3 font-semibold">Escuela o sede</th><th className="pb-2 pr-3 text-right font-semibold">{tipo === 'CLUB DE TECNOLOGÍA' ? 'Clubes (grupos)' : 'Grupos'}</th><th className="w-[40%] pb-2 font-semibold">Encuentros</th></tr></thead>
         <tbody className="divide-y divide-dte-linea">{porEscuela.map(x => <tr key={x.k}>
           <td className="py-2 pr-3"><p className="font-semibold">{x.nombre}</p>{x.distrito && <p className="text-xs text-dte-gris">{x.distrito}</p>}</td>
-          <td className="py-2 pr-3 text-right tabular-nums">{x.nGrupos}</td>
-          <td className="py-2"><div className="flex items-center gap-2"><div className="h-2.5 flex-1 rounded-r bg-dte-fondo"><div className="h-full rounded-r" style={{ width: `${(x.nEnc / Math.max(1, porEscuela[0].nEnc)) * 100}%`, background: marca.acento }} /></div><span className="w-8 text-right font-semibold tabular-nums">{x.nEnc}</span></div></td>
+          <td data-label={tipo === 'CLUB DE TECNOLOGÍA' ? 'Clubes (grupos)' : 'Grupos'} className="py-2 pr-3 text-right tabular-nums">{x.nGrupos}</td>
+          <td data-label="Encuentros" className="py-2"><div className="flex items-center gap-2"><div className="h-2.5 flex-1 rounded-r bg-dte-fondo"><div className="h-full rounded-r" style={{ width: `${(x.nEnc / Math.max(1, porEscuela[0].nEnc)) * 100}%`, background: marca.acento }} /></div><span className="w-8 text-right font-semibold tabular-nums">{x.nEnc}</span></div></td>
         </tr>)}</tbody>
       </table></div> : <p className="py-6 text-center text-sm text-dte-gris">Sin encuentros en este período.</p>}
     </Panel>

@@ -36,14 +36,14 @@ function FedEditor({ fed, autorId, onSaved }: { fed: Fed, autorId: string, onSav
       <label className="flex flex-col gap-1 text-sm font-semibold">Distritos a cargo <span className="text-xs font-normal text-dte-gris">(separados por coma)</span><Input value={distritos} onChange={e => setDistritos(e.target.value)} className="h-11 md:h-9" /></label>
       <label className="flex flex-col gap-1 text-sm font-semibold">Carga horaria<Input value={carga} onChange={e => setCarga(e.target.value)} placeholder="Ej.: 20 hs" className="h-11 md:h-9" /></label>
     </div>
-    <div className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm">
+    <div className="overflow-x-auto"><table className="tabla-apilada w-full text-sm sm:min-w-[640px]">
       <thead><tr className="text-left text-xs text-dte-gris"><th className="pb-1 font-semibold">DD.JJ.</th><th className="pb-1 font-semibold">Desde</th><th className="pb-1 font-semibold">Hasta</th><th className="pb-1 font-semibold">Horario DTE (texto)</th><th className="pb-1 font-semibold">Otro cargo</th></tr></thead>
       <tbody>{ddjj.map((d, i) => <tr key={d.dia}>
         <td className="py-1 pr-2 font-semibold">{DIAS_LARGOS[i]}</td>
-        <td className="py-1 pr-2"><Input type="time" value={d.dte_desde ?? ''} onChange={e => setDia(d.dia, { dte_desde: e.target.value })} className="h-11 md:h-8" /></td>
-        <td className="py-1 pr-2"><Input type="time" value={d.dte_hasta ?? ''} onChange={e => setDia(d.dia, { dte_hasta: e.target.value })} className="h-11 md:h-8" /></td>
-        <td className="py-1 pr-2"><Input value={d.dte} onChange={e => setDia(d.dia, { dte: e.target.value })} placeholder="Ej.: 8 a 12" className="h-11 md:h-8" /></td>
-        <td className="py-1"><Input value={d.externo ?? ''} onChange={e => setDia(d.dia, { externo: e.target.value })} placeholder="Ej.: EP 5 de 13 a 17" className="h-11 md:h-8" /></td>
+        <td data-label="Desde" className="py-1 pr-2"><Input type="time" value={d.dte_desde ?? ''} onChange={e => setDia(d.dia, { dte_desde: e.target.value })} className="h-11 md:h-8" /></td>
+        <td data-label="Hasta" className="py-1 pr-2"><Input type="time" value={d.dte_hasta ?? ''} onChange={e => setDia(d.dia, { dte_hasta: e.target.value })} className="h-11 md:h-8" /></td>
+        <td data-label="Horario DTE (texto)" className="py-1 pr-2"><Input value={d.dte} onChange={e => setDia(d.dia, { dte: e.target.value })} placeholder="Ej.: 8 a 12" className="h-11 md:h-8" /></td>
+        <td data-label="Otro cargo" className="py-1"><Input value={d.externo ?? ''} onChange={e => setDia(d.dia, { externo: e.target.value })} placeholder="Ej.: EP 5 de 13 a 17" className="h-11 md:h-8" /></td>
       </tr>)}</tbody>
     </table></div>
     {error && <ErrorBox message={error} />}
