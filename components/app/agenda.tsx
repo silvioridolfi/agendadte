@@ -26,7 +26,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
   const [anchor, setAnchor] = useState(() => toWeekday(new Date()))
   const [from, to] = calBounds(anchor, view)
   const { items, error, retry, desdeCache } = useItems(() => getFedItems(fed.id, iso(from), iso(to)), [fed.id, iso(from), iso(to), reloadKey], `${fed.id}:${iso(from)}:${iso(to)}`)
-  const feriados = useFeriados(iso(from), iso(to), fed.distritos_a_cargo)
+  const feriados = useFeriados(iso(from), iso(to), fed.rol === 'coordinacion' ? null : fed.distritos_a_cargo)
   const today = iso(new Date())
   const byDay = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of items ?? []) m.set(i.fecha, [...(m.get(i.fecha) ?? []), i]); return m }, [items])
   const weekendItems = useMemo(() => (items ?? []).filter(i => !isWeekday(parse(i.fecha))), [items])
