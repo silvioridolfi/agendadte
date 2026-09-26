@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react'
 import { titleCase } from '@/lib/format'
 import { CLUB_MAX_PARTICIPANTES, CLUB_MIN_ENCUENTROS, CLUB_DIAS_SIN_ACTIVIDAD, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEstado, ultimaActividad, type Club, type ClubEstado, type Fed, type Trayecto } from '@/lib/agenda'
 import { DrillDialog, HBar, Kpi, Panel, type DrillRow } from '@/components/metrics'
+import { Confirmar } from '@/components/ui/confirmar'
+import { Loader2 } from 'lucide-react'
 
 const nf = new Intl.NumberFormat('es-AR')
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -117,9 +119,13 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
   const verParticipacion = () => setDrill({ title: 'Participación real', subtitle: `Promedio de participantes por encuentro vs. inscriptos · ${periodo}`, rows: conIns.map(r => ({ key: r.c.id, title: nombre(r.c), sub: `${nf.format(Math.round(r.promedio * 10) / 10)} participantes promedio de ${r.inscriptos} inscriptos`, right: `${pct(r.promedio, r.inscriptos)}%` })) })
 
   async function cierre(club: Club, fecha: string | null) { setBusy(club.id); try { await onCierre(club, fecha) } finally { setBusy('') } }
+  const [aFinalizar, setAFinalizar] = useState<{ c: Club, fecha: string } | null>(null)
 
   return <div className="flex flex-col gap-4">
     <DrillDialog drill={drill} onClose={() => setDrill(null)} />
+    <Confirmar abierto={!!aFinalizar} titulo={`¿Finalizar ${tipo === 'CLUB DE TECNOLOGÍA' ? 'este club' : 'esta práctica'}?`} accion="Finalizar"
+      descripcion={aFinalizar ? <><b>{nombre(aFinalizar.c)}</b> se cierra con fecha {corta(aFinalizar.fecha)} (último encuentro). Podés reactivarlo después.</> : ''}
+      onConfirmar={() => aFinalizar && cierre(aFinalizar.c, aFinalizar.fecha)} onCerrar={() => setAFinalizar(null)} />
     <div className={`relative overflow-hidden rounded-2xl px-5 py-4 text-white shadow-xs ${marca.degradado}`}>
       <div className="flex flex-wrap items-center gap-4">
         <img src={marca.logo} alt={marca.nombre} className="h-14 w-auto drop-shadow" />
@@ -183,8 +189,8 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
               <td data-label="Inscriptos" className="en-linea py-2.5 pr-3 text-right tabular-nums"><span>{inscriptos || '—'}{inscriptos > CLUB_MAX_PARTICIPANTES && <span className="ml-1 text-xs text-aviso-fuerte" title={`Supera los ${CLUB_MAX_PARTICIPANTES} sugeridos`}>▲</span>}</span></td>
               <td data-label="Prom. reales" className="en-linea py-2.5 pr-3 text-right tabular-nums">{promedio ? nf.format(Math.round(promedio * 10) / 10) : '—'}</td>
               <td data-label="Estado" className="en-linea py-2.5"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.badge}`}>{st.label}</span>
-                {estado === 'finalizado' ? <button disabled={busy === c.id} onClick={() => cierre(c, null)} className="rounded-full border border-dte-linea px-2.5 py-0.5 text-xs font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte disabled:opacity-50">Reactivar</button>
-                  : <button disabled={busy === c.id} onClick={() => cierre(c, ultima)} title={`Finalizar con fecha ${corta(ultima)} (último encuentro)`} className="rounded-full border border-dte-linea px-2.5 py-0.5 text-xs font-semibold text-club-violeta transition hover:border-club-violeta hover:bg-club-violeta-fondo disabled:opacity-50">Finalizar</button>}
+                {estado === 'finalizado' ? <button disabled={busy === c.id} onClick={() => cierre(c, null)} className="inline-flex min-h-10 items-center gap-1 rounded-full border border-dte-linea px-3 text-xs font-semibold text-dte-petroleo transition md:min-h-7 hover:border-dte-petroleo hover:bg-dte-tinte disabled:opacity-50">{busy === c.id && <Loader2 className="size-3 animate-spin" />}Reactivar</button>
+                  : <button disabled={busy === c.id} onClick={() => setAFinalizar({ c, fecha: ultima })} title={`Finalizar con fecha ${corta(ultima)} (último encuentro)`} className="inline-flex min-h-10 items-center gap-1 rounded-full border border-dte-linea px-3 text-xs font-semibold text-club-violeta transition md:min-h-7 hover:border-club-violeta hover:bg-club-violeta-fondo disabled:opacity-50">{busy === c.id && <Loader2 className="size-3 animate-spin" />}Finalizar</button>}
               </div></td>
             </tr>
           })}</tbody>
