@@ -335,7 +335,7 @@ function AgendaView({ fed, reloadKey, onNew, onSelect }: { fed: Fed, reloadKey: 
               </section>
             })}
           </div>
-        : view === 'month' ? <MonthGrid month={from} byDay={byDay} feriados={feriados} today={today} onDay={goDay} onSelect={onSelect} />
+        : view === 'month' ? <MonthGrid month={from} byDay={byDay} feriados={feriados} today={today} onDay={goDay} onSelect={onSelect} onNew={onNew} />
         : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }, (_, i) => monthStart(from, i)).map(m => <MiniMonth key={iso(m)} month={m} byDay={byDay} feriados={feriados} today={today} onDay={goDay} />)}</div>}
     </div>
 
@@ -350,15 +350,16 @@ function AgendaView({ fed, reloadKey, onNew, onSelect }: { fed: Fed, reloadKey: 
   </main>
 }
 
-function MonthGrid({ month, byDay, feriados, today, onDay, onSelect }: { month: Date, byDay: Map<string, AgendaItem[]>, feriados: Map<string, Feriado[]>, today: string, onDay: (d: Date) => void, onSelect: (i: AgendaItem) => void }) {
+function MonthGrid({ month, byDay, feriados, today, onDay, onSelect, onNew }: { month: Date, byDay: Map<string, AgendaItem[]>, feriados: Map<string, Feriado[]>, today: string, onDay: (d: Date) => void, onSelect: (i: AgendaItem) => void, onNew: (fecha: string) => void }) {
   return <div className="overflow-hidden rounded-2xl border border-dte-linea bg-white">
     <div className="grid grid-cols-5 border-b border-dte-linea bg-dte-fondo text-center text-xs font-bold uppercase tracking-wider text-dte-gris">{DIAS_HABILES.map(d => <div key={d} className="py-2">{d}</div>)}</div>
     {monthWeeks(month).map((week, wi) => <div key={wi} className="grid grid-cols-5 border-b border-dte-linea last:border-b-0">
       {week.map((d, di) => {
         if (!d) return <div key={di} className="min-h-24 border-r border-dte-linea bg-dte-fondo/60 last:border-r-0 sm:min-h-32" />
         const key = iso(d), list = byDay.get(key) ?? [], fer = feriados.get(key) ?? []
-        return <div key={di} className={`flex min-h-24 flex-col gap-1 border-r border-dte-linea p-1.5 last:border-r-0 sm:min-h-32 ${fer.some(f => f.tipo !== 'distrital') ? 'bg-[#fff7fa]' : fer.length ? 'bg-[#f8f6fd]' : ''}`}>
+        return <div key={di} className={`group relative flex min-h-24 flex-col gap-1 border-r border-dte-linea p-1.5 last:border-r-0 sm:min-h-32 ${fer.some(f => f.tipo !== 'distrital') ? 'bg-[#fff7fa]' : fer.length ? 'bg-[#f8f6fd]' : ''}`}>
           <button onClick={() => onDay(d)} aria-label={cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))} className={`flex size-7 items-center justify-center self-start rounded-full text-sm font-bold hover:bg-dte-tinte ${key === today ? 'bg-pba-celeste text-white hover:bg-pba-celeste' : ''}`}>{d.getDate()}</button>
+          <button onClick={() => onNew(key)} aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })}`} title="Agregar acción" className="absolute right-1.5 top-1.5 flex size-7 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-magenta hover:text-white focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"><Plus className="size-4" /></button>
           {fer.map(f => <span key={f.nombre} className="hidden sm:block"><FeriadoTag f={f} /></span>)}
           {fer.length > 0 && <span className="sm:hidden"><FeriadoTag f={fer[0]} compact /></span>}
           {list.slice(0, 3).map(i => <button key={i.id} onClick={() => onSelect(i)} title={itemTitle(i)} className={`hidden items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] hover:bg-dte-tinte sm:flex ${i.estado === 'cancelada' ? 'opacity-60 line-through' : ''}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[i.accion]?.dot}`} /><span className="truncate">{i.hora_inicio ? `${hhmm(i.hora_inicio)} ` : ''}{i.school ? shortSchoolName(i.school) : itemTitle(i)}</span></button>)}
