@@ -208,7 +208,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
 
     {!esParo && !esLicencia && companeros.length > 0 && <fieldset>
       <legend className="mb-1.5 flex w-full items-center justify-between text-sm font-semibold"><span>Acompañado por <span className="font-normal text-dte-gris">(opcional)</span></span>
-        <button type="button" onClick={() => setParticipantes(participantes.length === companeros.length ? [] : companeros.map(c => c.id))} className="text-xs font-semibold text-dte-petroleo hover:opacity-80">{participantes.length === companeros.length ? 'Quitar a todos' : 'Todo el equipo'}</button></legend>
+        <button type="button" onClick={() => setParticipantes(participantes.length === companeros.length ? [] : companeros.map(c => c.id))} className="-my-2 min-h-10 px-1 text-xs font-semibold text-dte-petroleo hover:opacity-80 md:my-0 md:min-h-0">{participantes.length === companeros.length ? 'Quitar a todos' : 'Todo el equipo'}</button></legend>
       <div className="flex flex-wrap gap-1.5">{companeros.map(c => { const on = participantes.includes(c.id); return <Pill key={c.id} on={on} onClick={() => togglePart(c.id)}>{c.nombre_completo}</Pill> })}</div>
       {participantes.length > 0 && <p className="mt-1.5 text-xs text-dte-gris">La acción va a aparecer en el calendario de {participantes.length === 1 ? 'esa persona' : `esas ${participantes.length} personas`} y les llega una notificación. Sólo vos podés editarla.</p>}
     </fieldset>}
