@@ -5,6 +5,7 @@ import { exportarPlanilla } from '@/lib/exportar'
 import { useMemo, useState } from 'react'
 import { Clock, Plus, Users, WifiOff, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ESTADOS, type AgendaItem, type Feriado, type Estado, type Fed } from '@/lib/agenda'
 import { actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, shortSchoolName, schoolPlace, ddjjFor, itemTitle, firstName, getFedItems, storage, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
 
@@ -103,24 +104,39 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
 }
 
 export function MonthGrid({ month, byDay, feriados, today, onDay, onSelect, onNew }: { month: Date, byDay: Map<string, AgendaItem[]>, feriados: Map<string, Feriado[]>, today: string, onDay: (d: Date) => void, onSelect: (i: AgendaItem) => void, onNew: (fecha: string) => void }) {
-  return <div className="overflow-hidden rounded-2xl border border-dte-linea bg-white">
+  // En móvil, tocar un día abre una hoja con sus acciones y el atajo para agregar.
+  const [dia, setDia] = useState<Date | null>(null)
+  const diaKey = dia ? iso(dia) : '', diaList = dia ? byDay.get(diaKey) ?? [] : [], diaFer = dia ? feriados.get(diaKey) ?? [] : []
+  return <><div className="overflow-hidden rounded-2xl border border-dte-linea bg-white">
     <div className="grid grid-cols-5 border-b border-dte-linea bg-dte-fondo text-center text-xs font-bold uppercase tracking-wider text-dte-gris">{DIAS_HABILES.map(d => <div key={d} className="py-2">{d}</div>)}</div>
     {monthWeeks(month).map((week, wi) => <div key={wi} className="grid grid-cols-5 border-b border-dte-linea last:border-b-0">
       {week.map((d, di) => {
         if (!d) return <div key={di} className="min-h-24 border-r border-dte-linea bg-dte-fondo/60 last:border-r-0 sm:min-h-32" />
         const key = iso(d), list = byDay.get(key) ?? [], fer = feriados.get(key) ?? []
         return <div key={di} className={`group relative flex min-h-24 flex-col gap-1 border-r border-dte-linea p-1.5 last:border-r-0 sm:min-h-32 ${fer.some(f => f.tipo !== 'distrital') ? 'bg-feriado-fondo' : fer.length ? 'bg-aniversario-fondo' : ''}`}>
-          <button onClick={() => onDay(d)} aria-label={cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))} className={`flex size-7 items-center justify-center self-start rounded-full text-sm font-bold hover:bg-dte-tinte ${key === today ? 'bg-pba-celeste text-white hover:bg-pba-celeste' : ''}`}>{d.getDate()}</button>
-          <button onClick={() => onNew(key)} aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })}`} title="Agregar acción" className="absolute right-1.5 top-1.5 flex size-7 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-magenta hover:text-white focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"><Plus className="size-4" /></button>
+          <button onClick={() => onDay(d)} aria-label={cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))} className={`flex size-7 items-center justify-center self-start rounded-full text-sm font-bold hover:bg-dte-tinte ${key === today ? 'bg-pba-celeste text-white ring-2 ring-pba-celeste/30 ring-offset-1 hover:bg-pba-celeste' : ''}`}>{d.getDate()}</button>
+          <button onClick={() => onNew(key)} aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })}`} title="Agregar acción" className="absolute right-1.5 top-1.5 hidden size-7 sm:flex items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-magenta hover:text-white focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"><Plus className="size-4" /></button>
           {fer.map(f => <span key={f.nombre} className="hidden sm:block"><FeriadoTag f={f} /></span>)}
           {fer.length > 0 && <span className="sm:hidden"><FeriadoTag f={fer[0]} compact /></span>}
           {list.slice(0, 3).map(i => <button key={i.id} onClick={() => onSelect(i)} title={itemTitle(i)} className={`hidden items-center gap-1 truncate rounded px-1 py-0.5 text-left text-xs hover:bg-dte-tinte sm:flex ${i.estado === 'cancelada' ? 'opacity-60 line-through' : ''}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[i.accion]?.dot}`} /><span className="truncate">{i.hora_inicio ? `${hhmm(i.hora_inicio)} ` : ''}{i.school ? shortSchoolName(i.school) : itemTitle(i)}</span></button>)}
           {list.length > 3 && <button onClick={() => onDay(d)} className="hidden px-1 text-left text-xs font-semibold text-dte-petroleo sm:block">+{list.length - 3} más</button>}
-          {list.length > 0 && <button onClick={() => onDay(d)} className="flex flex-wrap gap-0.5 sm:hidden" aria-label={`${list.length} acciones`}>{list.slice(0, 6).map(i => <span key={i.id} className={`size-2 rounded-full ${actionStyle[i.accion]?.dot}`} />)}</button>}
+          {list.length > 0 && <span className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden>{list.slice(0, 6).map(i => <span key={i.id} className={`size-2 rounded-full ${actionStyle[i.accion]?.dot}`} />)}</span>}
+          <button onClick={() => setDia(d)} className="absolute inset-0 sm:hidden" aria-label={`${cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))}: ${list.length ? `${list.length} ${list.length === 1 ? 'acción' : 'acciones'}` : 'sin acciones'}`} />
         </div>
       })}
     </div>)}
   </div>
+  <Dialog open={!!dia} onOpenChange={o => !o && setDia(null)}>
+    <DialogContent className="bg-white">
+      <DialogHeader><DialogTitle className="text-lg">{dia ? cap(fmt(dia, { weekday: 'long', day: 'numeric', month: 'long' })) : ''}</DialogTitle><DialogDescription>{diaList.length ? `${diaList.length} ${diaList.length === 1 ? 'acción' : 'acciones'}` : 'Sin acciones cargadas.'}</DialogDescription></DialogHeader>
+      {diaFer.length > 0 && <div className="flex flex-wrap gap-1">{diaFer.map(f => <FeriadoTag key={f.nombre} f={f} />)}</div>}
+      {diaList.length > 0 && <ul className="flex flex-col gap-2">{diaList.map(i => <li key={i.id}><ItemCard item={i} onClick={() => { setDia(null); onSelect(i) }} /></li>)}</ul>}
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <Button variant="outline" onClick={() => { const d = dia; setDia(null); if (d) onDay(d) }}>Ver día completo</Button>
+        <Button variant="marca" onClick={() => { setDia(null); onNew(diaKey) }}><Plus />Agregar acción</Button>
+      </div>
+    </DialogContent>
+  </Dialog></>
 }
 
 export function MiniMonth({ month, byDay, feriados, today, onDay }: { month: Date, byDay: Map<string, AgendaItem[]>, feriados: Map<string, Feriado[]>, today: string, onDay: (d: Date) => void }) {
