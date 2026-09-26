@@ -8,9 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import * as api from '@/app/actions'
+import { ClubesView } from '@/components/clubes'
 import { MetricsView, CAT_COLOR } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
-import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Feriado, type Estado, type Fed, type School } from '@/lib/agenda'
+import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Feriado, type Estado, type Fed, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, CLUB_MAX_PARTICIPANTES, clubEstado, clubEncuentrosRealizados } from '@/lib/agenda'
 
 // ---- estilos por categoría ----
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
@@ -76,7 +77,7 @@ const districtsLabel = (f: Fed) => (f.distritos_a_cargo.length ? f.distritos_a_c
 
 // Desenvuelve el Result de las server actions: lanza con el mensaje real del servidor.
 const call = <A extends unknown[], T>(fn: (...a: A) => Promise<api.Result<T>>) => async (...a: A): Promise<T> => { const r = await fn(...a); if (!r.ok) throw new Error(r.error); return r.data }
-const getFeds = call(api.getFeds), searchSchools = call(api.searchSchools), getFedItems = call(api.getFedItems), getAllItems = call(api.getAllItems), getEncuentros = call(api.getEncuentros), getFeriados = call(api.getFeriados)
+const getFeds = call(api.getFeds), searchSchools = call(api.searchSchools), getFedItems = call(api.getFedItems), getAllItems = call(api.getAllItems), getEncuentros = call(api.getEncuentros), getFeriados = call(api.getFeriados), getClubes = call(api.getClubes), setClubCierre = call(api.setClubCierre)
 const saveItem = call(api.saveItem), setItemStatus = call(api.setItemStatus), deleteItem = call(api.deleteItem)
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : 'Error inesperado')
 
@@ -474,7 +475,7 @@ function shift(anchor: Date, range: Range, dir: number) {
 const rangeNames: Record<Range, [string, string, string]> = { day: ['Día', 'día', 'este día'], week: ['Semana', 'semana', 'esta semana'], month: ['Mes', 'mes', 'este mes'], year: ['Año', 'año', 'este año'] }
 
 function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void }) {
-  const [tab, setTab] = useState<'resumen' | 'acciones'>('resumen')
+  const [tab, setTab] = useState<'resumen' | 'clubes' | 'acciones'>('resumen')
   const [range, setRange] = useState<Range>('month')
   const [anchor, setAnchor] = useState(() => new Date())
   const [search, setSearch] = useState('')
@@ -494,6 +495,10 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [iso(from), iso(to), reloadKey])
 
+  // Clubes del ciclo (no dependen del período elegido).
+  const [clubes, setClubesState] = useState<Club[] | null>(null)
+  const [clubKey, setClubKey] = useState(0)
+  useEffect(() => { let alive = true; getClubes().then(r => alive && setClubesState(r)).catch(() => alive && setClubesState([])); return () => { alive = false } }, [reloadKey, clubKey])
   const fedName = useCallback((id: string) => feds.find(f => f.id === id)?.nombre_completo ?? 'FED desconocido', [feds])
   const distritos = useMemo(() => [...new Set([...feds.flatMap(f => f.distritos_a_cargo), ...(items ?? []).map(i => i.school?.distrito).filter((d): d is string => !!d)])].sort((a, b) => a.localeCompare(b, 'es')), [feds, items])
   const q = search.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
@@ -505,6 +510,8 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
   const encBase = useMemo(() => (encs ?? []).filter(e =>
     (!distrito || e.school?.distrito === distrito) && (!fedId || e.fed_id === fedId) && (!accion || e.tipo === accion) &&
     (!q || `${fedName(e.fed_id)} ${e.school?.nombre ?? ''} ${e.school?.ciudad ?? ''} ${e.school?.cue ?? ''} ${e.propuesta ?? ''} ${e.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [encs, distrito, fedId, accion, q, fedName])
+  const clubBase = useMemo(() => (clubes ?? []).filter(c => (!distrito || c.school?.distrito === distrito) && (!fedId || c.fed_id === fedId) &&
+    (!q || `${fedName(c.fed_id)} ${c.school?.nombre ?? ''} ${c.school?.ciudad ?? ''} ${c.school?.cue ?? ''} ${c.propuesta} ${c.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [clubes, distrito, fedId, q, fedName])
   const counts = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, base.filter(i => i.estado === e).length])) as Record<Estado, number>, [base])
   const groups = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName])
   const anyFilter = !!(search || distrito || fedId || accion || estado)
@@ -522,7 +529,7 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
     </div>
 
     <div role="tablist" aria-label="Vista del tablero" className="mt-6 flex gap-1 border-b border-dte-linea">
-      {([['resumen', 'Resumen y métricas'], ['acciones', 'Acciones del equipo']] as const).map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 pb-2.5 pt-1 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
+      {([['resumen', 'Resumen y métricas'], ['clubes', 'Clubes de Tecnología'], ['acciones', 'Acciones del equipo']] as const).map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 pb-2.5 pt-1 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
     </div>
 
     {tab === 'acciones' && <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -540,7 +547,8 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
       {anyFilter && <Button variant="ghost" onClick={clear} className="text-dte-magenta hover:text-dte-magenta"><X data-icon="inline-start" />Limpiar</Button>}
     </div>
 
-    {tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} />}</div>
+    {tab === 'clubes' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView clubes={clubBase} feds={feds} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) }} />}</div>
+    : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} />}</div>
     : <div className="mt-6 flex flex-col gap-6">
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? [0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)
@@ -622,7 +630,21 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
   const [school, setSchool] = useState<School | null>(item?.school ?? null)
   // Encuentro editable desde la app: el propio (origen app) o, si no hay, el primero importado.
   const enc0 = item?.encuentros?.find(e => e.origen === 'app') ?? item?.encuentros?.[0]
-  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as 'Presencial' | 'Virtual'), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '' })
+  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', club_id: enc0?.club_id ?? '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
+  const esClub = form.accion === 'CLUB DE TECNOLOGÍA'
+  // Clubes del FED (para elegir a cuál corresponde el encuentro). Los finalizados sólo si es el del encuentro que se edita.
+  const [clubes, setClubes] = useState<Club[] | null>(null)
+  useEffect(() => { if (esClub && !clubes) getClubes(fed.id).then(setClubes).catch(() => setClubes([])) }, [esClub, clubes, fed.id])
+  const hoy = iso(new Date())
+  const clubOpts = (clubes ?? []).filter(c => c.id === form.club_id || clubEstado(c, hoy) !== 'finalizado')
+  const club = clubes?.find(c => c.id === form.club_id) ?? null
+  const clubLabel = (c: Club) => `${c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar'} · desde ${fmt(parse(c.fecha_inicio), { day: 'numeric', month: 'short' })}${clubEstado(c, hoy) === 'sin_actividad' ? ' (sin actividad)' : ''}`
+  function pickClub(id: string) {
+    const c = clubes?.find(x => x.id === id)
+    setForm(f => ({ ...f, club_id: id, encuentros_previstos: c?.encuentros_previstos?.toString() ?? f.encuentros_previstos, propuesta: c?.propuesta ?? f.propuesta,
+      encuentro_n: !item && c ? String(clubEncuentrosRealizados(c) + 1) : f.encuentro_n }))
+    if (c?.school) setSchool(c.school)
+  }
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm(f => ({ ...f, [k]: v }))
@@ -638,12 +660,14 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
     e.preventDefault()
     if (!form.accion) { setError('Elegí el tipo de acción.'); return }
     if (timeError) { setError(timeError); return }
+    if (esClub && !form.club_id) { setError('Elegí a qué club corresponde el encuentro, o iniciá uno nuevo.'); return }
     setSaving(true); setError('')
     const input: AgendaItemInput = {
       fed_id: fed.id, school_id: school?.id ?? null, lugar: school ? null : form.lugar || null, fecha: form.fecha, accion: form.accion, estado: form.estado,
       hora_inicio: form.hora_inicio || null, hora_fin: form.hora_fin || null, sub_accion: form.sub_accion, detalle: form.detalle,
       cantidad: cat === 'tecnica' ? toNum(form.cantidad) : null,
-      encuentro: conEncuentro ? { id: enc0?.id, propuesta: form.propuesta, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: form.destinatarios, inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes) } : null,
+      encuentro: conEncuentro ? { id: enc0?.id, propuesta: form.propuesta, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: form.destinatarios, inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes),
+        ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
     }
     try { await saveItem(input, item?.id); onSaved() } catch (err) { setError(errMsg(err)); setSaving(false) }
   }
@@ -679,12 +703,32 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
     <datalist id="sub-acciones">{(form.accion ? SUB_ACCIONES[form.accion] ?? [] : []).map(o => <option key={o} value={o} />)}</datalist>
     {form.accion && SUB_ACCIONES[form.accion] && <div className="-mt-3 flex flex-wrap gap-1.5">{SUB_ACCIONES[form.accion]!.map(o => { const on = form.sub_accion.split(',').map(x => x.trim()).includes(o); return <button key={o} type="button" aria-pressed={on} onClick={() => { const cur = form.sub_accion.split(',').map(x => x.trim()).filter(Boolean); set('sub_accion', (on ? cur.filter(x => x !== o) : [...cur, o]).join(', ')) }} className={`rounded-full border px-2.5 py-1 text-xs transition ${on ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{o}</button> })}</div>}
 
-    {conEncuentro && <fieldset className="grid gap-4 rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
+    {esClub && <fieldset className="grid gap-4 overflow-hidden rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
+      <legend className="sr-only">Registro del Club de Tecnología</legend>
+      <div className="-m-3 mb-0 flex items-center gap-3 bg-club-degradado-h px-3 py-2.5 sm:col-span-6"><img src="/clubes/club-logo.png" alt="Club de Tecnología" className="h-9 w-auto" /><span className="text-xs font-semibold text-white/95">Línea prioritaria DTE 2025–2027 · mínimo {CLUB_MIN_ENCUENTROS} encuentros, hasta {CLUB_MAX_PARTICIPANTES} participantes</span></div>
+      <Field label="¿A qué club corresponde?" required className="sm:col-span-6"><select className={`${selectClass} h-10`} value={form.club_id} onChange={e => pickClub(e.target.value)} disabled={!clubes}>
+        <option value="">{clubes ? 'Elegí un club…' : 'Cargando clubes…'}</option>
+        {clubOpts.map(c => <option key={c.id} value={c.id}>{clubLabel(c)}</option>)}
+        <option value="nuevo">+ Iniciar un club nuevo (comienza en esta fecha)</option>
+      </select></Field>
+      {club && <p className="-mt-2 text-xs text-dte-gris sm:col-span-6">{clubEncuentrosRealizados(club)} encuentros registrados{club.encuentros_previstos ? ` de ${club.encuentros_previstos} previstos` : ''}. El lugar del encuentro es el del club{club.school ? '' : ' (arriba)'}.</p>}
+      <Field label="Propuesta dictada" className="sm:col-span-4"><Input placeholder="Club de Tecnología" value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
+      <Field label="Encuentros de la propuesta" hint="(previstos)" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={form.encuentros_previstos} onChange={e => set('encuentros_previstos', e.target.value)} className="h-10 bg-white" /></Field>
+      <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
+      <Field label="Tipo de jornada" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.tipo_jornada} onChange={e => set('tipo_jornada', e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{TIPOS_JORNADA.map(t => <option key={t} value={t}>{t === 'Otro' ? 'Otro (aclarar en la descripción)' : t}</option>)}</select></Field>
+      <Field label="Formato de participación" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{MODALIDADES.map(m => <option key={m}>{m}</option>)}</select></Field>
+      <Field label="Destinatarios" className="sm:col-span-6"><Input placeholder="Ej.: estudiantes de 5° y 6°, familias" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" /></Field>
+      <Field label="Cantidad de inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
+      <Field label="Participantes reales" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>
+      <Field label="Breve descripción de lo realizado" className="sm:col-span-6"><Textarea rows={3} placeholder="Qué se trabajó, con qué recursos, cómo participó el grupo…" value={form.descripcion} onChange={e => set('descripcion', e.target.value)} className="bg-white" /></Field>
+      <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-white p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={form.es_cierre} onChange={e => set('es_cierre', e.target.checked)} className="mt-0.5 size-4 accent-[#5a2583]" /><span><b>Este es el encuentro de cierre del club</b><span className="block text-xs text-dte-gris">El club queda finalizado con esta fecha y deja de figurar entre los activos.</span></span></label>
+    </fieldset>}
+    {conEncuentro && !esClub && <fieldset className="grid gap-4 rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
       <legend className="px-1 text-sm font-semibold">Datos del encuentro <span className="font-normal text-dte-gris">(para las métricas de participación)</span></legend>
       <Field label="Propuesta" className="sm:col-span-4"><Input placeholder={form.accion === 'CLUB DE TECNOLOGÍA' ? 'Club de Tecnología' : 'Ej.: Ciudadanía digital en el aula'} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Destinatarios" className="sm:col-span-4"><Input placeholder="Ej.: estudiantes de 6° A, docentes" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" /></Field>
-      <Field label="Modalidad" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as 'Presencial' | 'Virtual')}><option>Presencial</option><option>Virtual</option></select></Field>
+      <Field label="Modalidad" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{MODALIDADES.map(m => <option key={m}>{m}</option>)}</select></Field>
       <Field label="Inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Asistentes" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>
     </fieldset>}

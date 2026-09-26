@@ -45,7 +45,10 @@ export type Encuentro = {
   tipo: Accion
   propuesta: string | null
   encuentro_n: number | null
-  modalidad: 'Presencial' | 'Virtual' | null
+  modalidad: Modalidad | null
+  tipo_jornada: TipoJornada | null
+  club_id: string | null
+  es_cierre: boolean
   destinatarios: string | null
   inscriptos: number | null
   asistentes: number | null
@@ -55,7 +58,8 @@ export type Encuentro = {
   school: School | null
 }
 // `id`: encuentro existente que se está editando (si no viene, se crea uno nuevo).
-export type EncuentroInput = Pick<Encuentro, 'propuesta' | 'encuentro_n' | 'modalidad' | 'destinatarios' | 'inscriptos' | 'asistentes'> & { id?: string }
+// Club: `club_id` de uno existente, o `nuevo_club` para iniciarlo con esta fecha. `es_cierre` finaliza el club.
+export type EncuentroInput = Pick<Encuentro, 'propuesta' | 'encuentro_n' | 'modalidad' | 'destinatarios' | 'inscriptos' | 'asistentes'> & Partial<Pick<Encuentro, 'tipo_jornada' | 'descripcion' | 'club_id' | 'es_cierre'>> & { id?: string, nuevo_club?: boolean, encuentros_previstos?: number | null }
 // Fila de public.establecimientos (misma fuente que el buscador DTE).
 export type School = { id: string; cue: number | null; nombre: string | null; distrito: string | null; ciudad: string | null }
 export type AgendaItem = {
@@ -96,3 +100,47 @@ export type AgendaItemInput = {
 // Feriados nacionales, días con fines turísticos y aniversarios distritales (tabla public.feriados).
 // distrito null = aplica a todos; si no, sólo a quienes tienen ese distrito a cargo.
 export type Feriado = { fecha: string; nombre: string; tipo: 'nacional' | 'turistico' | 'distrital'; distrito: string | null; confirmado: boolean }
+
+export const MODALIDADES = ['Presencial', 'Virtual', 'Híbrido'] as const
+export type Modalidad = (typeof MODALIDADES)[number]
+export const TIPOS_JORNADA = ['Sensibilización', 'Formación', 'Presentación', 'Taller', 'Acompañamiento', 'Otro'] as const
+export type TipoJornada = (typeof TIPOS_JORNADA)[number]
+
+// Clubes de Tecnología (tabla public.clubes). Documento marco 2026: mínimo 8 encuentros, hasta 20 participantes.
+export const CLUB_MIN_ENCUENTROS = 8
+export const CLUB_MAX_PARTICIPANTES = 20
+export const CLUB_DIAS_SIN_ACTIVIDAD = 30
+export type ClubEncuentro = Pick<Encuentro, 'id' | 'fecha' | 'encuentro_n' | 'inscriptos' | 'asistentes' | 'tipo_jornada' | 'modalidad' | 'destinatarios' | 'es_cierre'>
+export type Club = {
+  id: string
+  fed_id: string
+  school_id: string | null
+  lugar: string | null
+  propuesta: string
+  fecha_inicio: string
+  fecha_cierre: string | null
+  encuentros_previstos: number | null
+  school: School | null
+  encuentros: ClubEncuentro[]
+}
+export type ClubEstado = 'activo' | 'sin_actividad' | 'finalizado'
+
+// Receso invernal 2026 (PBA): no cuenta para "sin actividad".
+const RECESO = [['2026-07-20', '2026-07-31']]
+export function diasHabilesEntre(desde: string, hasta: string) {
+  const d = new Date(`${desde}T12:00:00`), end = new Date(`${hasta}T12:00:00`)
+  let n = 0
+  while (d < end) {
+    d.setDate(d.getDate() + 1)
+    const s = d.toISOString().slice(0, 10), w = d.getDay()
+    if (w !== 0 && w !== 6 && !RECESO.some(([a, b]) => s >= a && s <= b)) n++
+  }
+  return n
+}
+export function ultimaActividad(c: Club) { return c.encuentros.reduce((m, e) => (e.fecha > m ? e.fecha : m), c.fecha_inicio) }
+export function clubEstado(c: Club, hoy: string): ClubEstado {
+  if (c.fecha_cierre) return 'finalizado'
+  return diasHabilesEntre(ultimaActividad(c), hoy) > CLUB_DIAS_SIN_ACTIVIDAD ? 'sin_actividad' : 'activo'
+}
+// Encuentros distintos del club (varios registros el mismo día con distintos grupos cuentan como uno).
+export function clubEncuentrosRealizados(c: Club) { return new Set(c.encuentros.map(e => e.fecha)).size }

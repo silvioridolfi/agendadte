@@ -121,3 +121,6 @@
 
 /* Degradado de la marca: petróleo → violeta → magenta */
 .bg-dte-degradado { background-image: linear-gradient(160deg, #05476e 0%, #683a74 55%, #d41c6c 100%); }
+/* Identidad Clubes de Tecnología (recursos gráficos DTE 2026) */
+.bg-club-degradado { background-image: linear-gradient(180deg, #e6217a 0%, #7d5a95 50%, #06adc3 100%); }
+.bg-club-degradado-h { background-image: linear-gradient(100deg, #e6217a 0%, #7d5a95 50%, #06adc3 100%); }

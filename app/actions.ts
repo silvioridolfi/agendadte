@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseServer } from '@/lib/supabase-server'
-import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School } from '@/lib/agenda'
+import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, MODALIDADES, TIPOS_JORNADA } from '@/lib/agenda'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
 // así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
@@ -74,9 +74,10 @@ function cleanEncuentro(e: EncuentroInput): EncuentroInput | null {
   const out: EncuentroInput = {
     id: e.id,
     propuesta: opt(e.propuesta), encuentro_n: num(e.encuentro_n) || null, destinatarios: opt(e.destinatarios),
-    modalidad: e.modalidad === 'Presencial' || e.modalidad === 'Virtual' ? e.modalidad : null, inscriptos: num(e.inscriptos), asistentes: num(e.asistentes),
+    modalidad: e.modalidad && MODALIDADES.includes(e.modalidad) ? e.modalidad : null, inscriptos: num(e.inscriptos), asistentes: num(e.asistentes),
+    tipo_jornada: e.tipo_jornada && TIPOS_JORNADA.includes(e.tipo_jornada) ? e.tipo_jornada : null, descripcion: opt(e.descripcion),
   }
-  return out.propuesta || out.encuentro_n || out.destinatarios || out.inscriptos != null || out.asistentes != null ? out : null
+  return out.propuesta || out.encuentro_n || out.destinatarios || out.inscriptos != null || out.asistentes != null || out.tipo_jornada || out.descripcion ? out : null
 }
 
 async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<void> {
@@ -90,16 +91,62 @@ async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<void> 
 
   // Encuentro: se edita el que se mostró en el formulario (puede ser uno importado) o se crea uno nuevo.
   // Si la acción deja de ser club/taller/prácticas, sólo se borra el encuentro creado desde la app; los importados se conservan.
-  const enc = CON_ENCUENTRO.includes(row.accion) && input.encuentro ? cleanEncuentro(input.encuentro) : null
+  const esClub = row.accion === 'CLUB DE TECNOLOGÍA'
+  const enc = CON_ENCUENTRO.includes(row.accion) && input.encuentro ? (cleanEncuentro(input.encuentro) ?? (esClub ? { propuesta: null, encuentro_n: null, modalidad: null, destinatarios: null, inscriptos: null, asistentes: null } : null)) : null
   const encId = input.encuentro?.id
   if (enc) {
-    const encRow = { ...enc, agenda_item_id: itemId, fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, fecha: row.fecha, tipo: row.accion }
+    const clubId = esClub ? await upsertClub(input, row) : null
+    const encRow = { ...enc, id: undefined, agenda_item_id: itemId, fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, fecha: row.fecha, tipo: row.accion, club_id: clubId, es_cierre: esClub && !!input.encuentro?.es_cierre }
     const { error } = encId ? await db.from('agenda_encuentros').update(encRow).eq('id', encId).eq('agenda_item_id', itemId) : await db.from('agenda_encuentros').insert(encRow)
     if (error) throw new Error(error.message)
   } else if (id) {
     const { error } = await db.from('agenda_encuentros').delete().eq('agenda_item_id', itemId).eq('origen', 'app')
     if (error) throw new Error(error.message)
   }
+}
+
+// Club del encuentro: crea uno nuevo (inicia en esta fecha) o actualiza el elegido; marcar cierre lo finaliza.
+async function upsertClub(input: AgendaItemInput, row: ReturnType<typeof clean>): Promise<string | null> {
+  const e = input.encuentro!
+  const db = supabaseServer()
+  const previstos = num(e.encuentros_previstos) || null
+  if (e.nuevo_club || !e.club_id) {
+    if (!e.nuevo_club) return null
+    const { data, error } = await db.from('clubes').insert({
+      fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, propuesta: opt(e.propuesta) ?? 'Club de Tecnología',
+      fecha_inicio: row.fecha, fecha_cierre: e.es_cierre ? row.fecha : null, encuentros_previstos: previstos,
+    }).select('id').single()
+    if (error) throw new Error(error.message)
+    return data.id as string
+  }
+  const { data: club, error } = await db.from('clubes').select('id, fecha_inicio, fecha_cierre').eq('id', e.club_id).eq('fed_id', row.fed_id).single()
+  if (error) throw new Error('El club elegido no existe o no es de este FED')
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (previstos) patch.encuentros_previstos = previstos
+  if (opt(e.propuesta)) patch.propuesta = opt(e.propuesta)
+  if (row.fecha < club.fecha_inicio) patch.fecha_inicio = row.fecha
+  if (e.es_cierre) patch.fecha_cierre = row.fecha
+  else if (club.fecha_cierre === row.fecha) patch.fecha_cierre = null
+  const up = await db.from('clubes').update(patch).eq('id', club.id)
+  if (up.error) throw new Error(up.error.message)
+  return club.id
+}
+
+async function getClubesImpl(fedId?: string): Promise<Club[]> {
+  let q = supabaseServer().from('clubes').select(`*, school:establecimientos(${SCHOOL_COLS}), encuentros:agenda_encuentros(id, fecha, encuentro_n, inscriptos, asistentes, tipo_jornada, modalidad, destinatarios, es_cierre)`).order('fecha_inicio')
+  if (fedId) q = q.eq('fed_id', fedId)
+  const { data, error } = await q
+  if (error) throw new Error(error.message)
+  return (data ?? []) as Club[]
+}
+
+// Finalizar (fecha) o reactivar (null) un club desde el tablero.
+async function setClubCierreImpl(id: string, fecha: string | null): Promise<void> {
+  if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) throw new Error('Fecha inválida')
+  const db = supabaseServer()
+  const { error } = await db.from('clubes').update({ fecha_cierre: fecha, updated_at: new Date().toISOString() }).eq('id', id)
+  if (error) throw new Error(error.message)
+  if (!fecha) await db.from('agenda_encuentros').update({ es_cierre: false }).eq('club_id', id)
 }
 
 // Cambio rápido de estado desde el detalle; sólo sobre items del propio FED.
@@ -129,3 +176,5 @@ export const saveItem = async (input: AgendaItemInput, id?: string) => run(() =>
 export const setItemStatus = async (id: string, fedId: string, estado: AgendaItemInput['estado']) => run(() => setItemStatusImpl(id, fedId, estado))
 export const deleteItem = async (id: string, fedId: string) => run(() => deleteItemImpl(id, fedId))
 export const getFeriados = async (from: string, to: string) => run(() => getFeriadosImpl(from, to))
+export const getClubes = async (fedId?: string) => run(() => getClubesImpl(fedId))
+export const setClubCierre = async (id: string, fecha: string | null) => run(() => setClubCierreImpl(id, fecha))

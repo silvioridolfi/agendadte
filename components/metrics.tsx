@@ -19,14 +19,14 @@ function Legend() {
   </ul>
 }
 
-function Panel({ title, subtitle, children, action }: { title: string, subtitle?: string, children: React.ReactNode, action?: React.ReactNode }) {
+export function Panel({ title, subtitle, children, action }: { title: string, subtitle?: string, children: React.ReactNode, action?: React.ReactNode }) {
   return <section className="rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5">
     <div className="mb-4 flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-bold">{title}</h3>{subtitle && <p className="text-xs text-dte-gris">{subtitle}</p>}</div>{action}</div>
     {children}
   </section>
 }
 
-function Kpi({ label, value, hint, color }: { label: string, value: string, hint?: string, color?: string }) {
+export function Kpi({ label, value, hint, color }: { label: string, value: string, hint?: string, color?: string }) {
   return <div className="rounded-2xl border border-dte-linea bg-white px-4 py-3">
     <p className="flex items-center gap-1.5 text-xs font-semibold text-dte-gris">{color && <span className="size-2.5 rounded-sm" style={{ background: color }} />}{label}</p>
     <p className="mt-1 text-2xl font-bold tabular-nums sm:text-3xl">{value}</p>
@@ -43,7 +43,7 @@ function StackedBar({ counts, max }: { counts: Counts, max: number }) {
   </div>
 }
 
-function HBar({ label, value, max, sub, color = CAT_COLOR.tecnica }: { label: string, value: number, max: number, sub?: string, color?: string }) {
+export function HBar({ label, value, max, sub, color = CAT_COLOR.tecnica }: { label: string, value: number, max: number, sub?: string, color?: string }) {
   return <li className="grid grid-cols-[minmax(0,10rem)_1fr_auto] items-center gap-3 text-sm sm:grid-cols-[minmax(0,14rem)_1fr_auto]" title={`${label}: ${value}${sub ? ` · ${sub}` : ''}`}>
     <span className="truncate text-dte-tinta">{label}</span>
     <span className="h-2.5 rounded-r bg-dte-fondo"><span className="block h-full rounded-r" style={{ width: `${(value / Math.max(max, 1)) * 100}%`, background: color }} /></span>
