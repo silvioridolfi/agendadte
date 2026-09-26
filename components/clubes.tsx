@@ -49,6 +49,8 @@ export function ClubesView({ clubes, feds, onCierre, schoolLabel }: { clubes: Cl
   const jornadas = TIPOS_JORNADA.map(t => [t, encs.filter(e => e.tipo_jornada === t).length] as const)
   const formatos = MODALIDADES.map(m => [m, encs.filter(e => e.modalidad === m).length] as const)
   const sinJornada = encs.filter(e => !e.tipo_jornada).length
+  // Propuestas dictadas dentro de los clubes (encuentros por propuesta).
+  const propuestas = [...encs.reduce((m, e) => { const k = (e.propuesta ?? 'Club de Tecnología').trim(); return m.set(k, (m.get(k) ?? 0) + 1) }, new Map<string, number>())].sort((a, b) => b[1] - a[1])
   const porFed = feds.map(f => ({ f, r: rows.filter(r => r.c.fed_id === f.id) })).filter(x => x.r.length).sort((a, b) => b.r.length - a.r.length)
   const maxFed = Math.max(1, ...porFed.map(x => x.r.length))
 
@@ -69,7 +71,7 @@ export function ClubesView({ clubes, feds, onCierre, schoolLabel }: { clubes: Cl
     </div>
 
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-      <Kpi label="Clubes activos" value={nf.format(n('activo'))} hint={`de ${rows.length} iniciados`} color={ESTADO_CLUB.activo.color} />
+      <Kpi label="Clubes activos" value={nf.format(n('activo'))} hint={`de ${rows.length} iniciados · cada grado es un club`} color={ESTADO_CLUB.activo.color} />
       <Kpi label="Sin actividad" value={nf.format(n('sin_actividad'))} hint="a confirmar cierre" color={ESTADO_CLUB.sin_actividad.color} />
       <Kpi label="Finalizados" value={nf.format(n('finalizado'))} color={ESTADO_CLUB.finalizado.color} />
       <Kpi label="Encuentros realizados" value={nf.format(encuentros)} hint={`${cumplen} clubes con ${CLUB_MIN_ENCUENTROS} o más`} />
@@ -112,7 +114,7 @@ export function ClubesView({ clubes, feds, onCierre, schoolLabel }: { clubes: Cl
       </div>
     </Panel>
 
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid gap-4 lg:grid-cols-2">
       <Panel title="Clubes por FED" subtitle="Activos, sin actividad y finalizados">
         <ul className="flex flex-col gap-2.5">{porFed.map(({ f, r }) => <li key={f.id} className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 text-sm">
           <span className="truncate">{f.nombre_completo}</span>
@@ -120,6 +122,9 @@ export function ClubesView({ clubes, feds, onCierre, schoolLabel }: { clubes: Cl
           <span className="tabular-nums font-semibold">{r.length}</span>
         </li>)}</ul>
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-dte-gris">{ORDEN.map(e => <li key={e} className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm" style={{ background: ESTADO_CLUB[e].color }} />{ESTADO_CLUB[e].label}</li>)}</ul>
+      </Panel>
+      <Panel title="Propuestas dictadas en los clubes" subtitle="Registros por propuesta (talleres y actividades dentro del club)">
+        <ul className="flex flex-col gap-2">{propuestas.map(([k, v]) => <HBar key={k} label={k} value={v} max={Math.max(1, ...propuestas.map(x => x[1]))} color="#c21d6a" />)}</ul>
       </Panel>
       <Panel title="Tipo de jornada" subtitle={sinJornada ? `${sinJornada} registros previos sin este dato` : 'Registros de encuentros'}>
         <ul className="flex flex-col gap-2">{jornadas.map(([t, k]) => <HBar key={t} label={t} value={k} max={Math.max(1, ...jornadas.map(x => x[1]))} color="#7d5a95" />)}</ul>

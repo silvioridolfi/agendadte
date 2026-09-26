@@ -113,7 +113,7 @@ async function upsertClub(input: AgendaItemInput, row: ReturnType<typeof clean>)
   if (e.nuevo_club || !e.club_id) {
     if (!e.nuevo_club) return null
     const { data, error } = await db.from('clubes').insert({
-      fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, propuesta: opt(e.propuesta) ?? 'Club de Tecnología',
+      fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, grupo: opt(e.grupo),
       fecha_inicio: row.fecha, fecha_cierre: e.es_cierre ? row.fecha : null, encuentros_previstos: previstos,
     }).select('id').single()
     if (error) throw new Error(error.message)
@@ -123,7 +123,6 @@ async function upsertClub(input: AgendaItemInput, row: ReturnType<typeof clean>)
   if (error) throw new Error('El club elegido no existe o no es de este FED')
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (previstos) patch.encuentros_previstos = previstos
-  if (opt(e.propuesta)) patch.propuesta = opt(e.propuesta)
   if (row.fecha < club.fecha_inicio) patch.fecha_inicio = row.fecha
   if (e.es_cierre) patch.fecha_cierre = row.fecha
   else if (club.fecha_cierre === row.fecha) patch.fecha_cierre = null
@@ -133,7 +132,7 @@ async function upsertClub(input: AgendaItemInput, row: ReturnType<typeof clean>)
 }
 
 async function getClubesImpl(fedId?: string): Promise<Club[]> {
-  let q = supabaseServer().from('clubes').select(`*, school:establecimientos(${SCHOOL_COLS}), encuentros:agenda_encuentros(id, fecha, encuentro_n, inscriptos, asistentes, tipo_jornada, modalidad, destinatarios, es_cierre)`).order('fecha_inicio')
+  let q = supabaseServer().from('clubes').select(`*, school:establecimientos(${SCHOOL_COLS}), encuentros:agenda_encuentros(id, fecha, propuesta, encuentro_n, inscriptos, asistentes, tipo_jornada, modalidad, destinatarios, es_cierre)`).order('fecha_inicio')
   if (fedId) q = q.eq('fed_id', fedId)
   const { data, error } = await q
   if (error) throw new Error(error.message)
