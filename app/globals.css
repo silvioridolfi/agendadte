@@ -16,7 +16,7 @@
   --color-dte-rosa-suave: #d576ab;
   --color-dte-tinta: #1f2a3a;
   --color-dte-gris: #5b6474;
-  --color-dte-gris-claro: #8d95a3;
+  --color-dte-gris-claro: #687080; /* 4.98:1 sobre blanco, 4.59:1 sobre fondo (AA) */
   --color-dte-linea: #e3e1ea;
   --color-dte-fondo: #f6f5f9;
   --color-dte-tinte: #f7eef4;
@@ -26,7 +26,81 @@
   --color-pba-azul: #417099;
   --color-pba-celeste: #00aec3;
   --color-pba-celeste-texto: #00808f; /* celeste oscurecido para texto sobre fondo claro (contraste AA) */
+  --color-dte-magenta-oscuro: #b8155c; /* hover del botón primario magenta */
+
+  /* Estados (todos los pares texto/fondo cumplen AA ≥ 4.5:1) */
+  --color-peligro: #a3164f;         /* texto e íconos de error / destructivo */
+  --color-peligro-fondo: #fff1f6;
+  --color-peligro-suave: #fbe3ee;
+  --color-peligro-borde: #f1b8cd;
+  --color-aviso: #6b5210;           /* texto de avisos sobre aviso-fondo */
+  --color-aviso-fuerte: #7a5a0c;    /* texto de aviso sobre blanco */
+  --color-aviso-fondo: #fdf6e3;
+  --color-aviso-fondo-fuerte: #fdf1d8;
+  --color-aviso-borde: #e9d8a6;
+  --color-exito: #00606c;
+  --color-exito-fondo: #e0f4f6;
+  --color-info-fondo: #f3f9fc;      /* resaltado suave (ej.: notificación sin leer) */
+
+  /* Calendario: feriados nacionales y aniversarios distritales */
+  --color-feriado-fondo: #fff7fa;
+  --color-feriado-marca: #fbe3ee;
+  --color-feriado-borde: #f1c6d8;
+  --color-aniversario-fondo: #f8f6fd;
+  --color-aniversario-marca: #efeafa;
+  --color-aniversario-texto: #4e4390;
+
+  /* Identidades de línea: Clubes de Tecnología y Prácticas (PEAT) */
+  --color-club-violeta: #5a2583;
+  --color-club-violeta-fondo: #efe7f5;
+  --color-club-lila: #7d5a95;
+  --color-peat-magenta: #c21d6a;
+  --color-estado-sin-actividad: #b07400;
+
+  /* Categorías de acción (paleta validada para gráficos, CVD y contraste) */
+  --color-cat-tecnica: #2a6fb0;
+  --color-cat-pedagogica: #d41c6c;
+  --color-cat-institucional: #6f5fc2;
+
+  /* Escala tipográfica: el mínimo legible es text-xs (12px); text-2xs sólo para micro-rótulos en mayúsculas. */
+  --text-2xs: 0.75rem;
+  --text-2xs--line-height: 1rem;
+
+  /* Radios semánticos */
+  --radius-control: 0.625rem;  /* inputs, selects, botones */
+  --radius-card: 1rem;         /* tarjetas y paneles */
+  --radius-pill: 9999px;       /* chips y badges */
+
+  /* Elevación (3 niveles) */
+  --shadow-e1: 0 1px 2px rgb(31 42 58 / 0.06);
+  --shadow-e2: 0 4px 12px rgb(31 42 58 / 0.10);
+  --shadow-e3: 0 12px 32px rgb(31 42 58 / 0.18);
+
+  /* Movimiento */
+  --ease-estandar: cubic-bezier(0.2, 0, 0, 1);
 }
+
+/* Capas (z-index) y duraciones: una sola fuente de verdad. */
+:root {
+  --z-base: 0;
+  --z-fab: 30;
+  --z-header: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+  --duracion-rapida: 150ms;
+  --duracion-base: 200ms;
+  --duracion-lenta: 250ms;
+}
+@utility z-fab { z-index: var(--z-fab); }
+@utility z-header { z-index: var(--z-header); }
+@utility z-modal { z-index: var(--z-modal); }
+@utility z-toast { z-index: var(--z-toast); }
+
+/* Zonas seguras (notch / barra de gestos) */
+@utility pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+@utility pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+@utility bottom-safe-5 { bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); }
+@utility bottom-safe-24 { bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); }
 
 @theme inline {
   --font-sans: var(--font-encode-sans), 'Encode Sans', Arial, sans-serif;
@@ -114,8 +188,29 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html { -webkit-text-size-adjust: 100%; }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Foco visible consistente para todo lo interactivo (petróleo: 9.8:1 sobre blanco). Los controles con anillo propio lo conservan. */
+  :where(button, a, summary, [role='tab'], [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible {
+    outline: 2px solid var(--color-dte-petroleo);
+    outline-offset: 2px;
+  }
+  /* Transiciones por defecto dentro del rango 150–250 ms. */
+  :where(.transition, .transition-all, .transition-colors, .transition-transform, .transition-opacity, .transition-shadow) {
+    transition-duration: var(--duracion-rapida);
+    transition-timing-function: var(--ease-estandar);
+  }
+}
+
+/* Respeto de "reducir movimiento". */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
