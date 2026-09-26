@@ -71,3 +71,6 @@ where id in ('daf96660-ff3c-44cf-a908-2786df49507a', '7ea3d784-66bd-4c3c-92b2-35
 update public.agenda_items i set accion = 'CLUB DE TECNOLOGÍA'
 where i.id in ('c9b73c9a-5ed3-4812-8e09-17fd6abf6514', '9bee4286-db73-4bf7-ab70-267d76bf5e90')
   and not exists (select 1 from public.agenda_encuentros e where e.agenda_item_id = i.id and e.tipo <> 'CLUB DE TECNOLOGÍA');
+
+-- 9) Las prácticas (PEAT) son jornadas de formación, no de acompañamiento.
+update public.agenda_encuentros set tipo_jornada = 'Formación' where tipo = 'PRÁCTICAS PROFESIONALIZANTES' and tipo_jornada = 'Acompañamiento';
