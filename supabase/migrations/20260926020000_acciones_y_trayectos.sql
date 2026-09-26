@@ -64,3 +64,10 @@ where e.tipo = 'TALLER/CAPACITACIÓN' and e.propuesta = 'Club de Tecnología' an
 update public.agenda_items i set accion = 'CLUB DE TECNOLOGÍA'
 where i.accion = 'TALLER/CAPACITACIÓN' and exists (select 1 from public.agenda_encuentros e where e.agenda_item_id = i.id and e.tipo = 'CLUB DE TECNOLOGÍA')
   and not exists (select 1 from public.agenda_encuentros e where e.agenda_item_id = i.id and e.tipo <> 'CLUB DE TECNOLOGÍA');
+
+-- 8) CEPT 18 (Brandsen): dos talleres del 7/7 y 25/8 con propuesta "Club de Tecnología" son encuentros del club (confirmado por coordinación).
+update public.agenda_encuentros set tipo = 'CLUB DE TECNOLOGÍA', tipo_jornada = coalesce(tipo_jornada, 'Taller'), club_id = '69aeaaba-d815-43a0-a618-b180811d83c8'
+where id in ('daf96660-ff3c-44cf-a908-2786df49507a', '7ea3d784-66bd-4c3c-92b2-35a9acdfba8b');
+update public.agenda_items i set accion = 'CLUB DE TECNOLOGÍA'
+where i.id in ('c9b73c9a-5ed3-4812-8e09-17fd6abf6514', '9bee4286-db73-4bf7-ab70-267d76bf5e90')
+  and not exists (select 1 from public.agenda_encuentros e where e.agenda_item_id = i.id and e.tipo <> 'CLUB DE TECNOLOGÍA');
