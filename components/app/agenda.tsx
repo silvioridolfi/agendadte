@@ -130,7 +130,7 @@ export function MonthGrid({ month, byDay, feriados, today, onDay, onSelect, onNe
     <DialogContent className="bg-white">
       <DialogHeader><DialogTitle className="text-lg">{dia ? cap(fmt(dia, { weekday: 'long', day: 'numeric', month: 'long' })) : ''}</DialogTitle><DialogDescription>{diaList.length ? `${diaList.length} ${diaList.length === 1 ? 'acción' : 'acciones'}` : 'Sin acciones cargadas.'}</DialogDescription></DialogHeader>
       {diaFer.length > 0 && <div className="flex flex-wrap gap-1">{diaFer.map(f => <FeriadoTag key={f.nombre} f={f} />)}</div>}
-      {diaList.length > 0 && <ul className="flex flex-col gap-2">{diaList.map(i => <li key={i.id}><ItemCard item={i} onClick={() => { setDia(null); onSelect(i) }} /></li>)}</ul>}
+      {diaList.length > 0 && <ul className="flex flex-col gap-2">{[...diaList].sort((a, b) => (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? '')).map(i => <li key={i.id}><ItemCard item={i} onClick={() => { setDia(null); onSelect(i) }} /></li>)}</ul>}
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
         <Button variant="outline" onClick={() => { const d = dia; setDia(null); if (d) onDay(d) }}>Ver día completo</Button>
         <Button variant="marca" onClick={() => { setDia(null); onNew(diaKey) }}><Plus />Agregar acción</Button>
