@@ -1,6 +1,6 @@
 export const ACCIONES = [
   'VISITA TÉCNICA', 'VISITA PEDAGÓGICA', 'REUNIÓN', 'CLUB DE TECNOLOGÍA', 'PRÁCTICAS PROFESIONALIZANTES', 'TALLER/CAPACITACIÓN',
-  'ASISTENCIA REMOTA', 'CONECTIVIDAD', 'ENTREGA DE TABLETS', 'CHECKLIST', 'ADMINISTRATIVO', 'PLANIFICACIÓN', 'OFICINA R1',
+  'ASISTENCIA REMOTA', 'CONECTIVIDAD', 'ENTREGA DE EQUIPAMIENTO', 'ADMINISTRATIVO', 'PLANIFICACIÓN', 'OFICINA R1',
   'LICENCIA', 'PARO',
 ] as const
 export const ESTADOS = ['planificada', 'realizada', 'reprogramada', 'cancelada'] as const
@@ -14,7 +14,7 @@ export const CATEGORIAS = ['tecnica', 'pedagogica', 'institucional'] as const
 export type Categoria = (typeof CATEGORIAS)[number]
 export const CATEGORIA_LABEL: Record<Categoria, string> = { tecnica: 'Técnicas', pedagogica: 'Pedagógicas', institucional: 'Institucionales' }
 export const CATEGORIA: Record<Accion, Categoria> = {
-  'VISITA TÉCNICA': 'tecnica', 'ASISTENCIA REMOTA': 'tecnica', 'CONECTIVIDAD': 'tecnica', 'CHECKLIST': 'tecnica', 'ENTREGA DE TABLETS': 'tecnica',
+  'VISITA TÉCNICA': 'tecnica', 'ASISTENCIA REMOTA': 'tecnica', 'CONECTIVIDAD': 'tecnica', 'ENTREGA DE EQUIPAMIENTO': 'tecnica',
   'VISITA PEDAGÓGICA': 'pedagogica', 'CLUB DE TECNOLOGÍA': 'pedagogica', 'PRÁCTICAS PROFESIONALIZANTES': 'pedagogica', 'TALLER/CAPACITACIÓN': 'pedagogica',
   'REUNIÓN': 'institucional', 'ADMINISTRATIVO': 'institucional', 'OFICINA R1': 'institucional', 'PLANIFICACIÓN': 'institucional', 'PARO': 'institucional', 'LICENCIA': 'institucional',
 }
@@ -24,11 +24,12 @@ export const CON_ENCUENTRO: Accion[] = ['CLUB DE TECNOLOGÍA', 'TALLER/CAPACITAC
 export const SUB_ACCIONES: Partial<Record<Accion, string[]>> = {
   'VISITA TÉCNICA': ['Desbloqueos', 'Actualización de S.O.', 'Cambio de pilas', 'Chequeo de enlaces', 'Pisos tecnológicos', 'Demanda escolar', 'Soporte técnico en territorio', 'Mantenimiento de equipamiento', 'Gestión de accesos y blanqueos'],
   'ASISTENCIA REMOTA': ['Desbloqueos', 'Gestión de accesos y blanqueos', 'Soporte técnico', 'Instalación de imágenes'],
-  'CONECTIVIDAD': ['Relevamiento de conectividad', 'Gestión y seguimiento de incidencias', 'Ampliación u obra nueva', 'Gestión de reclamos institucionales'],
+  'CONECTIVIDAD': ['Checklist', 'Relevamiento de conectividad', 'Gestión y seguimiento de incidencias', 'Ampliación u obra nueva', 'Gestión de reclamos institucionales'],
   'VISITA PEDAGÓGICA': ['Presentación', 'Relevamiento de autoridades', 'Propuestas de intervención', 'Planificación de actividades institucionales', 'Gestión administrativa de clubes', 'Acompañamiento a experiencias (JED)', 'Elaboración de materiales pedagógicos'],
   'TALLER/CAPACITACIÓN': ['Ciudadanía digital', 'Introducción a la programación', 'Plataforma ABC'],
   'ADMINISTRATIVO': ['Atención de consultas', 'Planificación de agenda', 'Elaboración de informes', 'Carga de bases de datos'],
-  'REUNIÓN': ['Reunión institucional', 'Reunión técnica', 'Trabajo interregional'],
+  'ENTREGA DE EQUIPAMIENTO': ['Tablets', 'Netbooks', 'Kits de robótica', 'Pisos tecnológicos', 'Otro equipamiento'],
+  'REUNIÓN': ['Reunión de equipo (CED/FED)', 'Reunión entre FEDs', 'Reunión institucional', 'Reunión técnica', 'Trabajo interregional'],
 }
 
 // DD.JJ. de horarios: un registro por día hábil (1 = lunes ... 5 = viernes).
@@ -118,6 +119,8 @@ export type Club = {
   lugar: string | null
   // Grado o grado + sección (ej.: "5° A"): cada grado es un club en sí mismo.
   grupo: string | null
+  // Club de Tecnología o Prácticas Educativas en Ambientes de Trabajo (mismo registro por grupo).
+  tipo: Accion
   propuesta: string
   fecha_inicio: string
   fecha_cierre: string | null
@@ -173,3 +176,16 @@ export function nivelDeEscuela(nombre: string | null | undefined): string {
   if (/PRIMARIA/.test(n)) return 'primaria'
   return 'fp'
 }
+
+// Trayectos por grupo con inicio y cierre: clubes y prácticas comparten registro, cada uno con su identidad visual.
+export const TRAYECTOS = ['CLUB DE TECNOLOGÍA', 'PRÁCTICAS PROFESIONALIZANTES'] as const satisfies readonly Accion[]
+export type Trayecto = (typeof TRAYECTOS)[number]
+export const esTrayecto = (a: Accion | null | undefined): a is Trayecto => !!a && (TRAYECTOS as readonly string[]).includes(a)
+export const TRAYECTO_MARCA: Record<Trayecto, { nombre: string, corto: string, plural: string, logo: string, degradado: string, acento: string, propuesta: string, nota: string }> = {
+  'CLUB DE TECNOLOGÍA': { nombre: 'Club de Tecnología', corto: 'club', plural: 'clubes', logo: '/clubes/club-logo.png', degradado: 'bg-club-degradado-h', acento: '#5a2583', propuesta: 'Club de Tecnología', nota: 'Línea prioritaria DTE 2025–2027 · mínimo 8 encuentros, hasta 20 participantes' },
+  'PRÁCTICAS PROFESIONALIZANTES': { nombre: 'Prácticas Educativas en Ambientes de Trabajo', corto: 'práctica', plural: 'prácticas', logo: '/practicas/peat-logo.png', degradado: 'bg-peat-degradado-h', acento: '#d81b72', propuesta: 'Prácticas Educativas en Ambientes de Trabajo', nota: 'PEAT · cada grupo de estudiantes es un trayecto con inicio y cierre' },
+}
+// Recordatorio del Instructivo Planillas Visita a Escuelas (apartado Ausencias).
+export const RECORDATORIO_LICENCIA = 'En el caso de ausencias, especificá el motivo. El aviso se realiza en el momento en que se produce y dentro de las 48 hs posteriores se debe enviar la constancia de justificación.'
+// Establecimiento DTE (lugar de trabajo): los paros se registran ahí.
+export const CUE_DTE = 60000000

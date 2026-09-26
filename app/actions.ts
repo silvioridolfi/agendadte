@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseServer } from '@/lib/supabase-server'
-import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, MODALIDADES, TIPOS_JORNADA } from '@/lib/agenda'
+import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, MODALIDADES, TIPOS_JORNADA, CUE_DTE, esTrayecto } from '@/lib/agenda'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
 // así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
@@ -83,6 +83,12 @@ function cleanEncuentro(e: EncuentroInput): EncuentroInput | null {
 async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<void> {
   const row = clean(input)
   const db = supabaseServer()
+  // Paro: se registra en el lugar de trabajo (DTE). Licencia: sin escuela ni lugar.
+  if (row.accion === 'PARO') {
+    const { data } = await db.from('establecimientos').select('id').eq('cue', CUE_DTE).limit(1).maybeSingle()
+    Object.assign(row, { school_id: data?.id ?? null, lugar: data ? null : 'Dirección de Tecnología Educativa', sub_accion: null })
+  }
+  if (row.accion === 'LICENCIA') Object.assign(row, { school_id: null, lugar: null })
   // Al editar, el item debe pertenecer al FED que lo edita.
   const res = id ? await db.from('agenda_items').update(row).eq('id', id).eq('fed_id', row.fed_id).select('id').single()
     : await db.from('agenda_items').insert(row).select('id').single()
@@ -91,7 +97,7 @@ async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<void> 
 
   // Encuentro: se edita el que se mostró en el formulario (puede ser uno importado) o se crea uno nuevo.
   // Si la acción deja de ser club/taller/prácticas, sólo se borra el encuentro creado desde la app; los importados se conservan.
-  const esClub = row.accion === 'CLUB DE TECNOLOGÍA'
+  const esClub = esTrayecto(row.accion)
   const enc = CON_ENCUENTRO.includes(row.accion) && input.encuentro ? (cleanEncuentro(input.encuentro) ?? (esClub ? { propuesta: null, encuentro_n: null, modalidad: null, destinatarios: null, inscriptos: null, asistentes: null } : null)) : null
   const encId = input.encuentro?.id
   if (enc) {
@@ -113,7 +119,7 @@ async function upsertClub(input: AgendaItemInput, row: ReturnType<typeof clean>)
   if (e.nuevo_club || !e.club_id) {
     if (!e.nuevo_club) return null
     const { data, error } = await db.from('clubes').insert({
-      fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, grupo: opt(e.grupo),
+      fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, grupo: opt(e.grupo), tipo: row.accion, propuesta: row.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Prácticas Educativas en Ambientes de Trabajo' : 'Club de Tecnología',
       fecha_inicio: row.fecha, fecha_cierre: e.es_cierre ? row.fecha : null, encuentros_previstos: previstos,
     }).select('id').single()
     if (error) throw new Error(error.message)

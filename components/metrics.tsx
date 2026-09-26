@@ -1,6 +1,8 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { ChevronRight } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { titleCase } from '@/lib/format'
 import { CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, type Accion, type AgendaItem, type Categoria, type Encuentro, type Fed } from '@/lib/agenda'
 
@@ -26,12 +28,29 @@ export function Panel({ title, subtitle, children, action }: { title: string, su
   </section>
 }
 
-export function Kpi({ label, value, hint, color }: { label: string, value: string, hint?: string, color?: string }) {
-  return <div className="rounded-2xl border border-dte-linea bg-white px-4 py-3">
-    <p className="flex items-center gap-1.5 text-xs font-semibold text-dte-gris">{color && <span className="size-2.5 rounded-sm" style={{ background: color }} />}{label}</p>
+// Indicador. Con `onClick` se puede tocar para ver el listado de lo que cuenta.
+export function Kpi({ label, value, hint, color, onClick, active }: { label: string, value: string, hint?: string, color?: string, onClick?: () => void, active?: boolean }) {
+  const body = <>
+    <p className="flex items-center gap-1.5 text-xs font-semibold text-dte-gris">{color && <span className="size-2.5 rounded-sm" style={{ background: color }} />}{label}{onClick && <ChevronRight className="ml-auto size-3.5 text-dte-gris-claro transition group-hover:translate-x-0.5 group-hover:text-dte-petroleo" />}</p>
     <p className="mt-1 text-2xl font-bold tabular-nums sm:text-3xl">{value}</p>
     {hint && <p className="text-xs text-dte-gris">{hint}</p>}
-  </div>
+  </>
+  if (!onClick) return <div className="rounded-2xl border border-dte-linea bg-white px-4 py-3">{body}</div>
+  return <button type="button" onClick={onClick} aria-pressed={active} title="Ver el listado" className={`group rounded-2xl border bg-white px-4 py-3 text-left transition hover:-translate-y-0.5 hover:border-dte-petroleo/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dte-petroleo/30 ${active ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>{body}</button>
+}
+
+// Listado de detalle que abre un indicador.
+export type DrillRow = { key: string, title: string, sub?: string, right?: string, onClick?: () => void }
+export function DrillDialog({ drill, onClose }: { drill: { title: string, subtitle?: string, rows: DrillRow[] } | null, onClose: () => void }) {
+  return <Dialog open={!!drill} onOpenChange={o => !o && onClose()}>
+    <DialogContent className="max-h-[85vh] overflow-y-auto bg-white sm:max-w-xl">
+      <DialogHeader><DialogTitle className="text-lg">{drill?.title}</DialogTitle><DialogDescription>{drill?.subtitle ?? `${drill?.rows.length ?? 0} en total`}</DialogDescription></DialogHeader>
+      {drill && (drill.rows.length ? <ul className="divide-y divide-dte-linea rounded-xl border border-dte-linea">{drill.rows.map(r => {
+        const inner = <><span className="min-w-0"><span className="block truncate font-semibold">{r.title}</span>{r.sub && <span className="block truncate text-xs text-dte-gris">{r.sub}</span>}</span>{r.right && <span className="shrink-0 text-xs tabular-nums text-dte-gris">{r.right}</span>}</>
+        return <li key={r.key}>{r.onClick ? <button type="button" onClick={r.onClick} className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition hover:bg-dte-tinte">{inner}</button> : <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">{inner}</div>}</li>
+      })}</ul> : <p className="py-6 text-center text-sm text-dte-gris">No hay elementos para mostrar.</p>)}
+    </DialogContent>
+  </Dialog>
 }
 
 // Barra apilada técnica / pedagógica / institucional, con separación de 2px entre segmentos.
@@ -71,7 +90,16 @@ export function DdjjPanel({ feds }: { feds: Fed[] }) {
 }
 
 // `encuentros` llega ya filtrado con los mismos criterios que las acciones (FED, distrito, búsqueda).
-export function MetricsView({ items, encuentros, feds }: { items: AgendaItem[], encuentros: Encuentro[], feds: Fed[] }) {
+export function MetricsView({ items, encuentros, feds, onSelect }: { items: AgendaItem[], encuentros: Encuentro[], feds: Fed[], onSelect?: (item: AgendaItem) => void }) {
+  const [drill, setDrill] = useState<{ title: string, subtitle?: string, rows: DrillRow[] } | null>(null)
+  const fedName = (id: string) => feds.find(f => f.id === id)?.nombre_completo ?? ''
+  const fecha = (s: string) => { const [y, mo, d] = s.split('-').map(Number); return new Date(y, mo - 1, d).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }).replace('.', '') }
+  const itemRows = (list: AgendaItem[]): DrillRow[] => [...list].sort((a, b) => b.fecha.localeCompare(a.fecha)).map(i => ({
+    key: i.id, title: i.school?.nombre ? titleCase(i.school.nombre) : i.lugar || titleCase(i.accion), right: fecha(i.fecha),
+    sub: [titleCase(i.accion), i.sub_accion, fedName(i.fed_id), i.cantidad ? `${i.cantidad} equipos` : null].filter(Boolean).join(' · '),
+    onClick: onSelect ? () => { setDrill(null); onSelect(i) } : undefined,
+  }))
+  const openItems = (title: string, list: AgendaItem[]) => setDrill({ title, subtitle: `${list.length} acciones realizadas`, rows: itemRows(list) })
   // Las métricas cuentan trabajo hecho: sólo acciones realizadas.
   const done = useMemo(() => items.filter(i => i.estado === 'realizada'), [items])
   const planned = items.filter(i => i.estado === 'planificada').length
@@ -137,11 +165,16 @@ export function MetricsView({ items, encuentros, feds }: { items: AgendaItem[], 
   </div><DdjjPanel feds={feds} /></div>
 
   return <div className="flex flex-col gap-4">
+    <DrillDialog drill={drill} onClose={() => setDrill(null)} />
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-      <Kpi label="Acciones realizadas" value={nf.format(totalDone)} hint={planned ? `+${planned} planificadas` : undefined} />
-      {CATEGORIAS.map(c => <Kpi key={c} label={CATEGORIA_LABEL[c]} value={nf.format(m.total[c])} hint={`${pct(m.total[c], totalDone)}% del total`} color={CAT_COLOR[c]} />)}
-      <Kpi label="Escuelas alcanzadas" value={nf.format(m.schools)} />
-      <Kpi label="Equipos intervenidos" value={nf.format(m.equipos)} hint="según la cantidad cargada" />
+      <Kpi label="Acciones realizadas" value={nf.format(totalDone)} hint={planned ? `+${planned} planificadas` : undefined} onClick={() => openItems('Acciones realizadas', done)} />
+      {CATEGORIAS.map(c => <Kpi key={c} label={CATEGORIA_LABEL[c]} value={nf.format(m.total[c])} hint={`${pct(m.total[c], totalDone)}% del total`} color={CAT_COLOR[c]} onClick={() => openItems(`Acciones ${CATEGORIA_LABEL[c].toLowerCase()}`, done.filter(i => CATEGORIA[i.accion] === c))} />)}
+      <Kpi label="Escuelas alcanzadas" value={nf.format(m.schools)} onClick={() => {
+        const by = new Map<string, { name: string, sub: string, n: number }>()
+        for (const i of done) if (i.school) { const e = by.get(i.school.id) ?? { name: titleCase(i.school.nombre ?? ''), sub: titleCase(i.school.distrito ?? ''), n: 0 }; e.n++; by.set(i.school.id, e) }
+        setDrill({ title: 'Escuelas alcanzadas', subtitle: `${by.size} escuelas con acciones realizadas`, rows: [...by.entries()].sort((a, b) => b[1].n - a[1].n).map(([k, e]) => ({ key: k, title: e.name, sub: e.sub, right: `${e.n} ${e.n === 1 ? 'acción' : 'acciones'}` })) })
+      }} />
+      <Kpi label="Equipos intervenidos" value={nf.format(m.equipos)} hint="según la cantidad cargada" onClick={() => openItems('Equipos intervenidos', done.filter(i => (i.cantidad ?? 0) > 0))} />
     </div>
 
     <Panel title="Acciones por FED" subtitle="Técnicas y pedagógicas realizadas por cada integrante del equipo" action={<Legend />}>

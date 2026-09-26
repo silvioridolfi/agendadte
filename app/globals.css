@@ -124,3 +124,10 @@
 /* Identidad Clubes de Tecnología (recursos gráficos DTE 2026) */
 .bg-club-degradado { background-image: linear-gradient(180deg, #e6217a 0%, #7d5a95 50%, #06adc3 100%); }
 .bg-club-degradado-h { background-image: linear-gradient(100deg, #e6217a 0%, #7d5a95 50%, #06adc3 100%); }
+/* Identidad Prácticas Educativas en Ambientes de Trabajo (PEAT) */
+.bg-peat-degradado-h { background-image: linear-gradient(105deg, #0e4870 0%, #6a3b78 55%, #d42a78 100%); }
+
+/* Todo lo que se puede tocar muestra la manito. */
+@layer base {
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), [role="tab"], select:not(:disabled), summary, label:has(> input[type="checkbox"]), input[type="checkbox"], input[type="date"], input[type="time"] { cursor: pointer; }
+}

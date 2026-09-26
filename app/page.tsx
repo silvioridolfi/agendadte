@@ -11,7 +11,7 @@ import * as api from '@/app/actions'
 import { ClubesView } from '@/components/clubes'
 import { MetricsView, CAT_COLOR } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
-import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Feriado, type Estado, type Fed, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, CLUB_MAX_PARTICIPANTES, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela } from '@/lib/agenda'
+import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Feriado, type Estado, type Fed, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, CLUB_MAX_PARTICIPANTES, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA } from '@/lib/agenda'
 
 // ---- estilos por categoría ----
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
@@ -25,10 +25,9 @@ const actionStyle: Record<Accion, { chip: string, dot: string }> = {
   'ASISTENCIA REMOTA': { chip: 'bg-[#d9f1f5] text-[#0d6573]', dot: 'bg-[#00aec3]' },
   'CONECTIVIDAD': { chip: 'bg-[#e7ebcb] text-[#5a661b]', dot: 'bg-[#99a832]' },
   'ADMINISTRATIVO': { chip: 'bg-[#eaeaee] text-[#4f5461]', dot: 'bg-[#8d95a3]' },
-  'CHECKLIST': { chip: 'bg-[#e4e2f0] text-[#57507e]', dot: 'bg-[#8a82b8]' },
   'OFICINA R1': { chip: 'bg-[#e1e9f1] text-[#2f5577]', dot: 'bg-[#417099]' },
   'PARO': { chip: 'bg-[#fbdde8] text-[#a3164f]', dot: 'bg-[#e81f76]' },
-  'ENTREGA DE TABLETS': { chip: 'bg-[#dbe6f4] text-[#244f86]', dot: 'bg-[#2a6fb0]' },
+  'ENTREGA DE EQUIPAMIENTO': { chip: 'bg-[#dbe6f4] text-[#244f86]', dot: 'bg-[#2a6fb0]' },
   'PLANIFICACIÓN': { chip: 'bg-[#ece9f7] text-[#4e4390]', dot: 'bg-[#6f5fc2]' },
   'LICENCIA': { chip: 'bg-[#eeeaee] text-[#5c5160]', dot: 'bg-[#9a8f9d]' },
 }
@@ -363,7 +362,7 @@ function MonthGrid({ month, byDay, feriados, today, onDay, onSelect }: { month: 
           {fer.map(f => <span key={f.nombre} className="hidden sm:block"><FeriadoTag f={f} /></span>)}
           {fer.length > 0 && <span className="sm:hidden"><FeriadoTag f={fer[0]} compact /></span>}
           {list.slice(0, 3).map(i => <button key={i.id} onClick={() => onSelect(i)} title={itemTitle(i)} className={`hidden items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] hover:bg-dte-tinte sm:flex ${i.estado === 'cancelada' ? 'opacity-60 line-through' : ''}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[i.accion]?.dot}`} /><span className="truncate">{i.hora_inicio ? `${hhmm(i.hora_inicio)} ` : ''}{i.school ? shortSchoolName(i.school) : itemTitle(i)}</span></button>)}
-          {list.length > 3 && <button onClick={() => onDay(d)} className="hidden px-1 text-left text-[11px] font-semibold text-dte-petroleo hover:underline sm:block">+{list.length - 3} más</button>}
+          {list.length > 3 && <button onClick={() => onDay(d)} className="hidden px-1 text-left text-[11px] font-semibold text-dte-petroleo sm:block">+{list.length - 3} más</button>}
           {list.length > 0 && <button onClick={() => onDay(d)} className="flex flex-wrap gap-0.5 sm:hidden" aria-label={`${list.length} acciones`}>{list.slice(0, 6).map(i => <span key={i.id} className={`size-2 rounded-full ${actionStyle[i.accion]?.dot}`} />)}</button>}
         </div>
       })}
@@ -475,7 +474,7 @@ function shift(anchor: Date, range: Range, dir: number) {
 const rangeNames: Record<Range, [string, string, string]> = { day: ['Día', 'día', 'este día'], week: ['Semana', 'semana', 'esta semana'], month: ['Mes', 'mes', 'este mes'], year: ['Año', 'año', 'este año'] }
 
 function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void }) {
-  const [tab, setTab] = useState<'resumen' | 'clubes' | 'acciones'>('resumen')
+  const [tab, setTab] = useState<'resumen' | 'clubes' | 'practicas' | 'acciones'>('resumen')
   const [range, setRange] = useState<Range>('month')
   const [anchor, setAnchor] = useState(() => new Date())
   const [search, setSearch] = useState('')
@@ -529,7 +528,7 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
     </div>
 
     <div role="tablist" aria-label="Vista del tablero" className="mt-6 flex gap-1 border-b border-dte-linea">
-      {([['resumen', 'Resumen y métricas'], ['clubes', 'Clubes de Tecnología'], ['acciones', 'Acciones del equipo']] as const).map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 pb-2.5 pt-1 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
+      {([['resumen', 'Resumen y métricas'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo']] as const).map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`-mb-px border-b-2 px-3 pb-2.5 pt-1 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
     </div>
 
     {tab === 'acciones' && <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -547,8 +546,8 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
       {anyFilter && <Button variant="ghost" onClick={clear} className="text-dte-magenta hover:text-dte-magenta"><X data-icon="inline-start" />Limpiar</Button>}
     </div>
 
-    {tab === 'clubes' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView clubes={clubBase} feds={feds} schoolLabel={c => `${c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar'}${c.grupo ? ` · ${c.grupo}` : ''}`} onCierre={async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) }} />}</div>
-    : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} />}</div>
+    {tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) }} />}</div>
+    : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} />}</div>
     : <div className="mt-6 flex flex-col gap-6">
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? [0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)
@@ -631,13 +630,17 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
   // Encuentro editable desde la app: el propio (origen app) o, si no hay, el primero importado.
   const enc0 = item?.encuentros?.find(e => e.origen === 'app') ?? item?.encuentros?.[0]
   const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', club_id: enc0?.club_id ?? '', nivel: '', curso: '', seccion: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
-  const esClub = form.accion === 'CLUB DE TECNOLOGÍA'
+  // Clubes y prácticas: registro por grupo con inicio y cierre (cada uno con su identidad visual).
+  const esClub = esTrayecto(form.accion)
+  const marca = esClub ? TRAYECTO_MARCA[form.accion as keyof typeof TRAYECTO_MARCA] : TRAYECTO_MARCA['CLUB DE TECNOLOGÍA']
+  const esParo = form.accion === 'PARO', esLicencia = form.accion === 'LICENCIA'
+  const conSubAccion = !!form.accion && !esClub && !esParo && !esLicencia
   // Clubes del FED (para elegir a cuál corresponde el encuentro). Los finalizados sólo si es el del encuentro que se edita.
   const [clubes, setClubes] = useState<Club[] | null>(null)
   useEffect(() => { if (esClub && !clubes) getClubes(fed.id).then(setClubes).catch(() => setClubes([])) }, [esClub, clubes, fed.id])
   const hoy = iso(new Date())
-  const clubOpts = (clubes ?? []).filter(c => c.id === form.club_id || clubEstado(c, hoy) !== 'finalizado')
-  const club = clubes?.find(c => c.id === form.club_id) ?? null
+  const clubOpts = (clubes ?? []).filter(c => c.tipo === form.accion && (c.id === form.club_id || clubEstado(c, hoy) !== 'finalizado'))
+  const club = clubOpts.find(c => c.id === form.club_id) ?? null
   const clubLabel = (c: Club) => `${c.grupo ? `${c.grupo} · ` : ''}${c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar'} · desde ${fmt(parse(c.fecha_inicio), { day: 'numeric', month: 'short' })}${clubEstado(c, hoy) === 'sin_actividad' ? ' (sin actividad)' : ''}`
   // Grado/curso del club nuevo: nivel sugerido por el nombre de la escuela, editable (cualquier nivel o modalidad).
   const nivelId = form.nivel || nivelDeEscuela(school?.nombre)
@@ -664,12 +667,12 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
     e.preventDefault()
     if (!form.accion) { setError('Elegí el tipo de acción.'); return }
     if (timeError) { setError(timeError); return }
-    if (esClub && !form.club_id) { setError('Elegí a qué club corresponde el encuentro, o iniciá uno nuevo.'); return }
-    if (esClub && form.club_id === 'nuevo' && !form.curso) { setError('Indicá el grado (y sección) del club nuevo: cada grado es un club.'); return }
+    if (esClub && !form.club_id) { setError(`Elegí a qué ${marca.corto} corresponde el encuentro, o iniciá uno nuevo.`); return }
+    if (esClub && form.club_id === 'nuevo' && !form.curso) { setError(`Indicá el grado o curso (y sección): cada grupo es un ${marca.corto}.`); return }
     setSaving(true); setError('')
     const input: AgendaItemInput = {
-      fed_id: fed.id, school_id: school?.id ?? null, lugar: school ? null : form.lugar || null, fecha: form.fecha, accion: form.accion, estado: form.estado,
-      hora_inicio: form.hora_inicio || null, hora_fin: form.hora_fin || null, sub_accion: form.sub_accion, detalle: form.detalle,
+      fed_id: fed.id, school_id: esLicencia || esParo ? null : school?.id ?? null, lugar: school || esLicencia || esParo ? null : form.lugar || null, fecha: form.fecha, accion: form.accion, estado: form.estado,
+      hora_inicio: esParo ? null : form.hora_inicio || null, hora_fin: esParo ? null : form.hora_fin || null, sub_accion: conSubAccion ? form.sub_accion : null, detalle: form.detalle,
       cantidad: cat === 'tecnica' ? toNum(form.cantidad) : null,
       encuentro: conEncuentro ? { id: enc0?.id, propuesta: form.propuesta, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: form.destinatarios, inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes),
         ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', grupo: grupo, encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
@@ -684,7 +687,7 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
         <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-dte-gris"><span className="size-2 rounded-sm" style={{ background: CAT_COLOR[c] }} />{CATEGORIA_LABEL[c]}</p>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c).map(name => {
           const on = form.accion === name
-          return <button key={name} type="button" aria-pressed={on} onClick={() => set('accion', name)} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-[11px] font-bold uppercase leading-tight transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
+          return <button key={name} type="button" aria-pressed={on} onClick={() => setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '' }))} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-[11px] font-bold uppercase leading-tight transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
             <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span>{name}
           </button>
         })}</div>
@@ -693,38 +696,40 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
 
     <div className="grid gap-4 sm:grid-cols-3">
       <Field label="Fecha" required><Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} className="h-10" /></Field>
-      <Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="h-10" /></Field>
-      <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="h-10" /></Field>
+      {!esParo && <><Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="h-10" /></Field>
+      <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="h-10" /></Field></>}
     </div>
+    {esParo && <p className="-mt-2 rounded-lg border border-dte-linea bg-dte-fondo px-3 py-2 text-sm text-dte-gris">Adhesión a paro gremial/docente. Se registra en la <b className="text-dte-tinta">Dirección de Tecnología Educativa</b> (lugar de trabajo); no hace falta completar nada más.</p>}
+    {esLicencia && <p className="-mt-2 rounded-lg border border-[#e9d8a6] bg-[#fdf6e3] px-3 py-2 text-sm text-[#6b5210]"><b>Recordatorio:</b> {RECORDATORIO_LICENCIA}</p>}
     {timeError && <p className="-mt-3 text-xs text-[#a3164f]">{timeError}</p>}
-    {ddjjDia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-[#7a5a0c]' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{ddjjDia.dte}</b>{ddjjDia.externo ? ` · Otro cargo: ${ddjjDia.externo}` : ''}{fueraDeHorario ? '. La acción queda fuera de ese horario.' : ''}</span></p>}
+    {ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-[#7a5a0c]' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{ddjjDia.dte}</b>{ddjjDia.externo ? ` · Otro cargo: ${ddjjDia.externo}` : ''}{fueraDeHorario ? '. La acción queda fuera de ese horario.' : ''}</span></p>}
 
-    <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">Escuela <span className="font-normal text-dte-gris">(opcional)</span></span><SchoolPicker value={school} onChange={setSchool} />{!school && <Input placeholder="…o lugar, si no es una escuela (ej.: Jefatura Distrital, Feria de Ciencias)" value={form.lugar} onChange={e => set('lugar', e.target.value)} className="h-10" aria-label="Lugar" />}</div>
+    {!esParo && !esLicencia && <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">Escuela <span className="font-normal text-dte-gris">(opcional)</span></span><SchoolPicker value={school} onChange={setSchool} />{!school && <Input placeholder="…o lugar, si no es una escuela (ej.: Jefatura Distrital, Feria de Ciencias)" value={form.lugar} onChange={e => set('lugar', e.target.value)} className="h-10" aria-label="Lugar" />}</div>}
 
-    <div className={`grid gap-4 ${cat === 'tecnica' ? 'sm:grid-cols-[1fr_9rem]' : ''}`}>
+    {conSubAccion && <div className={`grid gap-4 ${cat === 'tecnica' ? 'sm:grid-cols-[1fr_9rem]' : ''}`}>
       <Field label="Sub-acción" hint="(opcional)"><Input list="sub-acciones" placeholder={form.accion && SUB_ACCIONES[form.accion] ? `Ej.: ${SUB_ACCIONES[form.accion]!.slice(0, 2).join(', ')}` : 'Ej.: revisión de equipamiento'} value={form.sub_accion} onChange={e => set('sub_accion', e.target.value)} className="h-10" /></Field>
       {cat === 'tecnica' && <Field label="Cantidad" hint="(equipos)"><Input type="number" min={0} inputMode="numeric" placeholder="0" value={form.cantidad} onChange={e => set('cantidad', e.target.value)} className="h-10" /></Field>}
-    </div>
+    </div>}
     <datalist id="sub-acciones">{(form.accion ? SUB_ACCIONES[form.accion] ?? [] : []).map(o => <option key={o} value={o} />)}</datalist>
-    {form.accion && SUB_ACCIONES[form.accion] && <div className="-mt-3 flex flex-wrap gap-1.5">{SUB_ACCIONES[form.accion]!.map(o => { const on = form.sub_accion.split(',').map(x => x.trim()).includes(o); return <button key={o} type="button" aria-pressed={on} onClick={() => { const cur = form.sub_accion.split(',').map(x => x.trim()).filter(Boolean); set('sub_accion', (on ? cur.filter(x => x !== o) : [...cur, o]).join(', ')) }} className={`rounded-full border px-2.5 py-1 text-xs transition ${on ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{o}</button> })}</div>}
+    {conSubAccion && form.accion && SUB_ACCIONES[form.accion] && <div className="-mt-3 flex flex-wrap gap-1.5">{SUB_ACCIONES[form.accion]!.map(o => { const on = form.sub_accion.split(',').map(x => x.trim()).includes(o); return <button key={o} type="button" aria-pressed={on} onClick={() => { const cur = form.sub_accion.split(',').map(x => x.trim()).filter(Boolean); set('sub_accion', (on ? cur.filter(x => x !== o) : [...cur, o]).join(', ')) }} className={`rounded-full border px-2.5 py-1 text-xs transition ${on ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{o}</button> })}</div>}
 
     {esClub && <fieldset className="grid gap-4 overflow-hidden rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
-      <legend className="sr-only">Registro del Club de Tecnología</legend>
-      <div className="-m-3 mb-0 flex items-center gap-3 bg-club-degradado-h px-3 py-2.5 sm:col-span-6"><img src="/clubes/club-logo.png" alt="Club de Tecnología" className="h-9 w-auto" /><span className="text-xs font-semibold text-white/95">Línea prioritaria DTE 2025–2027 · mínimo {CLUB_MIN_ENCUENTROS} encuentros, hasta {CLUB_MAX_PARTICIPANTES} participantes</span></div>
-      <Field label="¿A qué club corresponde?" required className="sm:col-span-6"><select className={`${selectClass} h-10`} value={form.club_id} onChange={e => pickClub(e.target.value)} disabled={!clubes}>
-        <option value="">{clubes ? 'Elegí un club…' : 'Cargando clubes…'}</option>
+      <legend className="sr-only">Registro: {marca.nombre}</legend>
+      <div className={`-m-3 mb-0 flex items-center gap-3 px-3 py-2.5 sm:col-span-6 ${marca.degradado}`}><img src={marca.logo} alt={marca.nombre} className="h-10 w-auto" /><span className="text-xs font-semibold text-white/95">{marca.nota}</span></div>
+      <Field label={`¿A qué ${marca.corto} corresponde?`} required className="sm:col-span-6"><select className={`${selectClass} h-10`} value={form.club_id} onChange={e => pickClub(e.target.value)} disabled={!clubes}>
+        <option value="">{clubes ? `Elegí ${marca.corto === 'club' ? 'un club' : 'una práctica'}…` : 'Cargando…'}</option>
         {clubOpts.map(c => <option key={c.id} value={c.id}>{clubLabel(c)}</option>)}
-        <option value="nuevo">+ Iniciar un club nuevo (comienza en esta fecha)</option>
+        <option value="nuevo">{marca.corto === 'club' ? '+ Iniciar un club nuevo' : '+ Iniciar una práctica nueva'} (comienza en esta fecha)</option>
       </select></Field>
       {form.club_id === 'nuevo' && <div className="grid gap-3 rounded-lg border border-dashed border-[#7d5a95]/50 bg-white p-3 sm:col-span-6 sm:grid-cols-6">
-        <p className="text-xs text-dte-gris sm:col-span-6">Cada grado o curso es un club en sí mismo. {school ? 'El nivel se sugiere según la escuela; podés cambiarlo.' : 'Elegí primero la escuela para sugerir el nivel.'}</p>
+        <p className="text-xs text-dte-gris sm:col-span-6">Cada grado o curso es {marca.corto === 'club' ? 'un club' : 'una práctica'} en sí mismo. {school ? 'El nivel se sugiere según la escuela; podés cambiarlo.' : 'Elegí primero la escuela para sugerir el nivel.'}</p>
         <Field label="Nivel / modalidad" className="sm:col-span-3"><select className={`${selectClass} h-10`} value={nivel.id} onChange={e => setForm(f => ({ ...f, nivel: e.target.value, curso: '' }))}>{NIVELES.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select></Field>
         <Field label={nivel.cursoLabel} required className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.curso} onChange={e => set('curso', e.target.value)}><option value="">Elegí…</option>{nivel.cursos.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
         <Field label="Sección" className="sm:col-span-1"><select className={`${selectClass} h-10`} value={form.seccion} onChange={e => set('seccion', e.target.value)}><option value="">—</option>{SECCIONES.map(x => <option key={x}>{x}</option>)}</select></Field>
-        {grupo && <p className="text-xs sm:col-span-6">El club se va a registrar como <b>{grupo}</b>{school ? ` · ${shortSchoolName(school)}` : ''}.</p>}
+        {grupo && <p className="text-xs sm:col-span-6">Se va a registrar como <b>{grupo}</b>{school ? ` · ${shortSchoolName(school)}` : ''}.</p>}
       </div>}
       {club && <p className="-mt-2 text-xs text-dte-gris sm:col-span-6">{clubEncuentrosRealizados(club)} encuentros registrados{club.encuentros_previstos ? ` de ${club.encuentros_previstos} previstos` : ''}. El lugar del encuentro es el del club{club.school ? '' : ' (arriba)'}.</p>}
-      <Field label="Propuesta dictada" hint="(ej.: taller de redes dentro del club)" className="sm:col-span-4"><Input placeholder="Club de Tecnología" value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
+      <Field label="Propuesta dictada" hint={marca.corto === 'club' ? '(ej.: taller de redes dentro del club)' : undefined} className="sm:col-span-4"><Input placeholder={marca.propuesta} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentros de la propuesta" hint="(previstos)" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={form.encuentros_previstos} onChange={e => set('encuentros_previstos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Tipo de jornada" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.tipo_jornada} onChange={e => set('tipo_jornada', e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{TIPOS_JORNADA.map(t => <option key={t} value={t}>{t === 'Otro' ? 'Otro (aclarar en la descripción)' : t}</option>)}</select></Field>
@@ -733,7 +738,7 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
       <Field label="Cantidad de inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Participantes reales" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Breve descripción de lo realizado" className="sm:col-span-6"><Textarea rows={3} placeholder="Qué se trabajó, con qué recursos, cómo participó el grupo…" value={form.descripcion} onChange={e => set('descripcion', e.target.value)} className="bg-white" /></Field>
-      <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-white p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={form.es_cierre} onChange={e => set('es_cierre', e.target.checked)} className="mt-0.5 size-4 accent-[#5a2583]" /><span><b>Este es el encuentro de cierre del club</b><span className="block text-xs text-dte-gris">El club queda finalizado con esta fecha y deja de figurar entre los activos.</span></span></label>
+      <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-white p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={form.es_cierre} onChange={e => set('es_cierre', e.target.checked)} className="mt-0.5 size-4" style={{ accentColor: marca.acento }} /><span><b>Este es el encuentro de cierre {marca.corto === 'club' ? 'del club' : 'de la práctica'}</b><span className="block text-xs text-dte-gris">{marca.corto === 'club' ? 'El club queda finalizado' : 'La práctica queda finalizada'} con esta fecha y deja de figurar entre los activos.</span></span></label>
     </fieldset>}
     {conEncuentro && !esClub && <fieldset className="grid gap-4 rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
       <legend className="px-1 text-sm font-semibold">Datos del encuentro <span className="font-normal text-dte-gris">(para las métricas de participación)</span></legend>
@@ -744,7 +749,7 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
       <Field label="Inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Asistentes" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>
     </fieldset>}
-    <Field label="Detalle" hint="(opcional)"><Textarea placeholder="Información útil para el seguimiento: con quién, qué se acordó, pendientes…" rows={3} value={form.detalle} onChange={e => set('detalle', e.target.value)} /></Field>
+    {!esParo && <Field label={esLicencia ? 'Motivo' : 'Detalle'} hint="(opcional)"><Textarea placeholder={esLicencia ? 'Ej.: enfermedad, razones particulares (sin datos sensibles)' : 'Información útil para el seguimiento: con quién, qué se acordó, pendientes…'} rows={3} value={form.detalle} onChange={e => set('detalle', e.target.value)} /></Field>}
 
     {item && <fieldset><legend className="mb-2 text-sm font-semibold">Estado</legend><div className="flex flex-wrap gap-2">{ESTADOS.map(e => <button key={e} type="button" aria-pressed={form.estado === e} onClick={() => set('estado', e)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${form.estado === e ? statusStyle[e].badge : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{form.estado === e && <Check className="size-3" />}{statusStyle[e].label}</button>)}</div></fieldset>}
 
