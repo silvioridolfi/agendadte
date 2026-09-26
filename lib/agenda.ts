@@ -34,7 +34,8 @@ export const SUB_ACCIONES: Partial<Record<Accion, string[]>> = {
 
 // DD.JJ. de horarios: un registro por día hábil (1 = lunes ... 5 = viernes).
 export type DdjjDia = { dia: number; dte: string; dte_desde?: string; dte_hasta?: string; externo?: string }
-export type Fed = { id: string; nombre_completo: string; distritos_a_cargo: string[]; carga_horaria: string | null; ddjj: DdjjDia[] }
+// rol 'coordinacion': perfil de coordinación (crea reuniones de equipo, no suma a las métricas por FED).
+export type Fed = { id: string; nombre_completo: string; distritos_a_cargo: string[]; carga_horaria: string | null; ddjj: DdjjDia[]; rol: 'fed' | 'coordinacion' }
 // Participación en clubes, talleres y prácticas (hoja CAPACITACIONES del master). 0..N por acción.
 export type Encuentro = {
   id: string
@@ -83,6 +84,8 @@ export type AgendaItem = {
   updated_at: string
   school: School | null
   encuentros: Encuentro[]
+  // Compañeros etiquetados ("acompañado por"): la acción también aparece en su calendario.
+  participantes: { fed_id: string }[]
 }
 export type AgendaItemInput = {
   fed_id: string
@@ -98,7 +101,11 @@ export type AgendaItemInput = {
   lugar: string | null
   // Datos del encuentro (sólo clubes, talleres y prácticas); se guardan en agenda_encuentros.
   encuentro: EncuentroInput | null
+  // FEDs etiquetados (sin incluir a quien la crea).
+  participantes?: string[]
 }
+
+export type Notificacion = { id: string; tipo: 'etiqueta' | 'modificacion'; leida: boolean; created_at: string; autor_id: string | null; item: AgendaItem | null }
 
 // Feriados nacionales, días con fines turísticos y aniversarios distritales (tabla public.feriados).
 // distrito null = aplica a todos; si no, sólo a quienes tienen ese distrito a cargo.

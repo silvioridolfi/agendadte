@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Clock, LayoutDashboard, Loader2, MapPin, PartyPopper, Pencil, Plus, School as SchoolIcon, Search, Trash2, UserRound, X } from 'lucide-react'
+import { Bell, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Clock, LayoutDashboard, Loader2, MapPin, PartyPopper, Pencil, Plus, School as SchoolIcon, Search, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -11,7 +11,7 @@ import * as api from '@/app/actions'
 import { ClubesView } from '@/components/clubes'
 import { MetricsView, CAT_COLOR } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
-import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Feriado, type Estado, type Fed, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, CLUB_MAX_PARTICIPANTES, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA } from '@/lib/agenda'
+import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Feriado, type Estado, type Fed, type School, type Club, type Notificacion, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, CLUB_MAX_PARTICIPANTES, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA } from '@/lib/agenda'
 
 // ---- estilos por categoría ----
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
@@ -79,7 +79,7 @@ const districtsLabel = (f: Fed) => (f.distritos_a_cargo.length ? f.distritos_a_c
 
 // Desenvuelve el Result de las server actions: lanza con el mensaje real del servidor.
 const call = <A extends unknown[], T>(fn: (...a: A) => Promise<api.Result<T>>) => async (...a: A): Promise<T> => { const r = await fn(...a); if (!r.ok) throw new Error(r.error); return r.data }
-const getFeds = call(api.getFeds), searchSchools = call(api.searchSchools), getFedItems = call(api.getFedItems), getAllItems = call(api.getAllItems), getEncuentros = call(api.getEncuentros), getFeriados = call(api.getFeriados), getClubes = call(api.getClubes), setClubCierre = call(api.setClubCierre)
+const getFeds = call(api.getFeds), searchSchools = call(api.searchSchools), getFedItems = call(api.getFedItems), getAllItems = call(api.getAllItems), getEncuentros = call(api.getEncuentros), getFeriados = call(api.getFeriados), getClubes = call(api.getClubes), getNotificaciones = call(api.getNotificaciones), marcarLeidas = call(api.marcarLeidas), setClubCierre = call(api.setClubCierre)
 const saveItem = call(api.saveItem), setItemStatus = call(api.setItemStatus), deleteItem = call(api.deleteItem)
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : 'Error inesperado')
 
@@ -118,12 +118,45 @@ function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[]) {
 
 // =====================================================================
 
+type ItemPreset = { accion?: Accion, sub_accion?: string, participantes?: string[] }
+
+// Notificaciones del perfil: etiquetas en acciones de compañeros o de coordinación. Se revisan cada minuto.
+function NotificacionesBell({ profile, feds, reloadKey, onOpen }: { profile: Fed, feds: Fed[], reloadKey: number, onOpen: (item: AgendaItem) => void }) {
+  const [list, setList] = useState<Notificacion[]>([])
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const load = useCallback(() => { getNotificaciones(profile.id).then(setList).catch(() => {}) }, [profile.id])
+  useEffect(() => { load(); const t = setInterval(load, 60_000); return () => clearInterval(t) }, [load, reloadKey])
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', close); return () => document.removeEventListener('mousedown', close)
+  }, [open])
+  const unread = list.filter(n => !n.leida).length
+  const autor = (id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Un compañero'
+  const leer = (ids?: string[]) => { setList(l => l.map(n => (!ids || ids.includes(n.id) ? { ...n, leida: true } : n))); marcarLeidas(profile.id, ids).catch(() => {}) }
+  return <div ref={ref} className="relative">
+    <button onClick={() => setOpen(o => !o)} aria-label={`Notificaciones${unread ? ` (${unread} sin leer)` : ''}`} aria-expanded={open} className="relative flex size-10 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-fondo hover:text-dte-tinta">
+      <Bell className="size-5" />{unread > 0 && <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-dte-magenta px-1 text-[10px] font-bold text-white">{unread}</span>}
+    </button>
+    {open && <div className="absolute right-0 top-12 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xl">
+      <div className="flex items-center justify-between border-b border-dte-linea px-4 py-2.5"><p className="text-sm font-bold">Notificaciones</p>{unread > 0 && <button onClick={() => leer()} className="text-xs font-semibold text-dte-petroleo hover:opacity-80">Marcar todas como leídas</button>}</div>
+      {list.length ? <ul className="max-h-96 divide-y divide-dte-linea overflow-y-auto">{list.map(n => <li key={n.id}><button disabled={!n.item} onClick={() => { leer([n.id]); setOpen(false); if (n.item) onOpen(n.item) }} className={`flex w-full gap-3 px-4 py-3 text-left text-sm transition hover:bg-dte-tinte ${n.leida ? '' : 'bg-[#f3f9fc]'}`}>
+        <span className={`mt-1.5 size-2 shrink-0 rounded-full ${n.leida ? 'bg-transparent' : 'bg-dte-magenta'}`} />
+        <span className="min-w-0"><span className="block"><b>{autor(n.autor_id)}</b> te sumó a {n.item ? <b>{cap(n.item.accion.toLowerCase())}</b> : 'una acción que ya no existe'}</span>
+          {n.item && <span className="block truncate text-xs text-dte-gris">{cap(fmt(parse(n.item.fecha), { weekday: 'long', day: 'numeric', month: 'long' }))} · {itemTitle(n.item)}</span>}</span>
+      </button></li>)}</ul> : <p className="px-4 py-6 text-center text-sm text-dte-gris">No tenés notificaciones.</p>}
+    </div>}
+  </div>
+}
+
 export default function Page() {
   const [feds, setFeds] = useState<Fed[] | null>(null)
   const [fedsError, setFedsError] = useState('')
   const [profile, setProfile] = useState<Fed | null>(null)
   const [section, setSection] = useState<'agenda' | 'board'>('agenda')
-  const [editing, setEditing] = useState<{ item: AgendaItem | null, fecha?: string } | null>(null)
+  // `preset`: valores iniciales (ej.: reunión de equipo con todo el equipo invitado).
+  const [editing, setEditing] = useState<{ item: AgendaItem | null, fecha?: string, preset?: ItemPreset } | null>(null)
   const [selected, setSelected] = useState<AgendaItem | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [toast, setToast] = useState('')
@@ -161,17 +194,21 @@ export default function Page() {
           {([['agenda', 'Mi agenda', CalendarDays], ['board', 'Tablero', LayoutDashboard]] as const).map(([key, label, Icon]) =>
             <button key={key} onClick={() => setSection(key)} aria-current={section === key ? 'page' : undefined} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition ${section === key ? 'bg-dte-petroleo text-white shadow-sm' : 'text-dte-gris hover:text-dte-tinta'}`}><Icon className="size-4" />{label}</button>)}
         </nav>
+        <div className="flex items-center gap-1">
+        <NotificacionesBell profile={profile} feds={feds ?? []} reloadKey={reloadKey} onOpen={setSelected} />
         <button onClick={() => choose(null)} className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-left transition hover:bg-dte-fondo" aria-label={`Perfil: ${profile.nombre_completo}. Cambiar de perfil`}>
           <Avatar className="size-9"><AvatarFallback className={`${fedColor(feds ?? [], profile.id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(profile.nombre_completo)}</AvatarFallback></Avatar>
-          <span className="hidden md:block"><span className="block text-sm font-semibold leading-tight">{profile.nombre_completo}</span><span className="block text-[11px] text-dte-gris">Cambiar de perfil</span></span>
+          <span className="hidden md:block"><span className="block text-sm font-semibold leading-tight">{profile.nombre_completo}</span><span className="block text-[11px] text-dte-gris">{profile.rol === 'coordinacion' ? 'Coordinación · cambiar' : 'Cambiar de perfil'}</span></span>
           <ChevronDown className="hidden size-4 text-dte-gris md:block" />
         </button>
+        </div>
       </div>
     </header>
 
     {section === 'agenda'
       ? <AgendaView fed={profile} reloadKey={reloadKey} onNew={fecha => setEditing({ item: null, fecha })} onSelect={setSelected} />
-      : <CoordinatorView feds={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} />}
+      : <CoordinatorView feds={(feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected}
+          onNuevaReunion={profile.rol !== 'coordinacion' ? undefined : () => setEditing({ item: null, fecha: iso(toWeekday(new Date())), preset: { accion: 'REUNIÓN', sub_accion: 'Reunión de equipo (CED/FED)', participantes: (feds ?? []).filter(f => f.id !== profile.id).map(f => f.id) } })} />}
 
     <DetailDialog item={selected} feds={feds ?? []} profile={profile} onClose={() => setSelected(null)}
       onEdit={item => { setSelected(null); setEditing({ item }) }}
@@ -180,7 +217,7 @@ export default function Page() {
     <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
       <DialogContent className="max-h-[92vh] overflow-y-auto bg-white sm:max-w-2xl">
         <DialogHeader><DialogTitle className="text-lg">{editing?.item ? 'Editar acción' : 'Nueva acción'}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>
-        {editing && <ItemForm key={editing.item?.id ?? `new-${editing.fecha}`} fed={profile} item={editing.item} defaultFecha={editing.fecha} onCancel={() => setEditing(null)} onSaved={() => { changed(editing.item ? 'Acción actualizada' : 'Acción agregada a tu agenda'); setEditing(null) }} />}
+        {editing && <ItemForm key={editing.item?.id ?? `new-${editing.fecha}`} fed={profile} feds={feds ?? []} item={editing.item} defaultFecha={editing.fecha} preset={editing.preset} onCancel={() => setEditing(null)} onSaved={() => { changed(editing.item ? 'Acción actualizada' : editing.preset?.participantes?.length ? 'Reunión creada y notificada al equipo' : 'Acción agregada a tu agenda'); setEditing(null) }} />}
       </DialogContent>
     </Dialog>
 
@@ -201,12 +238,17 @@ function ProfileSelect({ feds, error, onRetry, onSelect }: { feds: Fed[] | null,
       {error ? <ErrorBox message={error} onRetry={onRetry} />
         : !feds ? <div className="grid gap-4 sm:grid-cols-2">{[0, 1, 2, 3].map(i => <div key={i} className="h-[88px] animate-pulse rounded-2xl bg-white/15" />)}</div>
         : !feds.length ? <p className="rounded-2xl border border-dashed border-white/40 p-8 text-center text-sm text-white/90">Todavía no hay FEDs cargados en la tabla <code>feds</code>.</p>
-        : <div className="grid gap-3 sm:grid-cols-2">{feds.map((fed, i) =>
+        : <><div className="grid gap-3 sm:grid-cols-2">{feds.filter(f => f.rol !== 'coordinacion').map((fed, i) =>
           <button key={fed.id} onClick={() => onSelect(fed)} className="group flex items-center gap-4 rounded-2xl bg-white p-4 text-left text-dte-tinta shadow-sm ring-2 ring-transparent transition hover:-translate-y-0.5 hover:shadow-lg hover:ring-pba-celeste focus-visible:ring-pba-celeste focus-visible:outline-none">
             <Avatar className="size-12"><AvatarFallback className={`${avatarColors[i % avatarColors.length]} font-bold text-dte-petroleo-oscuro`}>{initials(fed.nombre_completo)}</AvatarFallback></Avatar>
             <div className="min-w-0 flex-1"><p className="truncate font-semibold">{fed.nombre_completo}</p><p className="mt-0.5 flex items-center gap-1 truncate text-sm text-dte-gris"><MapPin className="size-3.5 shrink-0" />{districtsLabel(fed)}</p></div>
             <ChevronRight className="text-dte-gris-claro transition group-hover:translate-x-1 group-hover:text-dte-magenta" />
-          </button>)}</div>}
+          </button>)}</div>
+          {feds.filter(f => f.rol === 'coordinacion').map(c => <button key={c.id} onClick={() => onSelect(c)} className="group mt-4 flex w-full items-center gap-4 rounded-2xl border border-white/40 bg-white/10 p-4 text-left text-white backdrop-blur transition hover:bg-white/20">
+            <div className="flex size-12 items-center justify-center rounded-full bg-white/20"><LayoutDashboard /></div>
+            <div className="min-w-0 flex-1"><p className="truncate font-semibold">{c.nombre_completo}</p><p className="text-sm text-white/80">Coordinación: tablero del equipo y reuniones</p></div>
+            <ChevronRight className="text-white/70 transition group-hover:translate-x-1" />
+          </button>)}</>}
     </div>
   </main>
 }
@@ -222,8 +264,8 @@ function WeekNav({ onPrev, onToday, onNext, prevLabel, nextLabel }: { onPrev: ()
 }
 
 // ---- calendario: sólo días hábiles (lunes a viernes) ----
-type CalView = 'day' | 'week' | 'month' | 'semester'
-const CAL_VIEWS: [CalView, string][] = [['day', 'Día'], ['week', 'Semana'], ['month', 'Mes'], ['semester', '6 meses']]
+type CalView = 'day' | 'week' | 'month' | 'semester' | 'list'
+const CAL_VIEWS: [CalView, string][] = [['day', 'Día'], ['week', 'Semana'], ['month', 'Mes'], ['semester', '6 meses'], ['list', 'Lista']]
 const CAL_KEY = 'agenda-territorial:vista'
 const DIAS_HABILES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 const isWeekday = (d: Date) => d.getDay() >= 1 && d.getDay() <= 5
@@ -234,11 +276,13 @@ function calBounds(anchor: Date, view: CalView): [Date, Date] {
   if (view === 'day') return [anchor, anchor]
   if (view === 'week') { const s = startOfWeek(anchor); return [s, addDays(s, 4)] }
   if (view === 'month') return [monthStart(anchor), monthEnd(anchor)]
+  if (view === 'list') return [new Date(anchor.getFullYear(), 0, 1), new Date(anchor.getFullYear(), 11, 31)]
   return [monthStart(anchor), monthEnd(anchor, 5)]
 }
 function calShift(anchor: Date, view: CalView, dir: number) {
   if (view === 'day') return toWeekday(addDays(anchor, dir), dir)
   if (view === 'week') return addDays(anchor, 7 * dir)
+  if (view === 'list') return new Date(anchor.getFullYear() + dir, 0, 1)
   return monthStart(anchor, view === 'month' ? dir : 6 * dir)
 }
 // Semanas (lunes a viernes) que cubren un mes; los días de otros meses quedan en null.
@@ -285,12 +329,13 @@ function AgendaView({ fed, reloadKey, onNew, onSelect }: { fed: Fed, reloadKey: 
   const weekendItems = useMemo(() => (items ?? []).filter(i => !isWeekday(parse(i.fecha))), [items])
   const counts = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, (items ?? []).filter(i => i.estado === e).length])) as Record<Estado, number>, [items])
   const inRange = today >= iso(from) && today <= iso(to)
-  const suggested = view === 'day' ? iso(anchor) : inRange && isWeekday(new Date()) ? today : iso(toWeekday(from))
+  const suggested = view === 'day' ? iso(anchor) : inRange ? iso(toWeekday(new Date())) : iso(toWeekday(from))
   const goDay = (d: Date) => { setAnchor(d); setView('day') }
-  const periodo = { day: 'este día', week: 'esta semana', month: 'este mes', semester: 'estos 6 meses' }[view]
+  const periodo = { day: 'este día', week: 'esta semana', month: 'este mes', semester: 'estos 6 meses', list: 'este año' }[view]
   const title = view === 'day' ? cap(fmt(anchor, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
     : view === 'week' ? weekTitle(from, addDays(from, 4))
     : view === 'month' ? cap(fmt(from, { month: 'long', year: 'numeric' }))
+    : view === 'list' ? `Mis acciones ${from.getFullYear()}`
     : `${cap(fmt(from, { month: 'long' }))} – ${fmt(to, { month: 'long', year: 'numeric' })}`
 
   const dayHeader = (d: Date, big = false) => {
@@ -322,7 +367,7 @@ function AgendaView({ fed, reloadKey, onNew, onSelect }: { fed: Fed, reloadKey: 
         : view === 'day' ? <section className="rounded-2xl border border-dte-linea bg-white p-4">
             <header className="mb-3 flex flex-wrap items-center justify-between gap-2">{dayHeader(anchor, true)}<div className="flex flex-wrap gap-1.5">{(feriados.get(iso(anchor)) ?? []).map(f => <FeriadoTag key={f.nombre} f={f} />)}</div></header>
             {(byDay.get(iso(anchor)) ?? []).length
-              ? <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{(byDay.get(iso(anchor)) ?? []).map(item => <ItemCard key={item.id} item={item} onClick={() => onSelect(item)} />)}</div>
+              ? <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{(byDay.get(iso(anchor)) ?? []).map(item => <ItemCard key={item.id} item={item} viewer={fed.id} onClick={() => onSelect(item)} />)}</div>
               : <button onClick={() => onNew(iso(anchor))} className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed border-dte-linea py-10 text-sm text-dte-gris hover:border-dte-magenta hover:text-dte-magenta"><Plus />Sin acciones · agregar una</button>}
           </section>
         : view === 'week' ? <div className="grid gap-3 lg:grid-cols-5">
@@ -332,19 +377,20 @@ function AgendaView({ fed, reloadKey, onNew, onSelect }: { fed: Fed, reloadKey: 
                 <header className="mb-2 flex items-center justify-between px-1">{dayHeader(d)}<Button variant="ghost" size="icon-sm" aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric' })}`} onClick={() => onNew(key)} className="text-dte-gris hover:text-dte-magenta lg:opacity-0 lg:group-hover/day:opacity-100 lg:focus-visible:opacity-100"><Plus /></Button></header>
                 {fer.length > 0 && <div className="mb-2 flex flex-col gap-1 px-1">{fer.map(f => <FeriadoTag key={f.nombre} f={f} />)}</div>}
                 <div className="flex flex-1 flex-col gap-2">
-                  {list.map(item => <ItemCard key={item.id} item={item} onClick={() => onSelect(item)} />)}
+                  {list.map(item => <ItemCard key={item.id} item={item} viewer={fed.id} onClick={() => onSelect(item)} />)}
                   {!list.length && <p className="px-1 pb-1 text-xs text-dte-gris-claro">{fer.length ? 'No laborable' : 'Sin acciones'}</p>}
                 </div>
               </section>
             })}
           </div>
         : view === 'month' ? <MonthGrid month={from} byDay={byDay} feriados={feriados} today={today} onDay={goDay} onSelect={onSelect} onNew={onNew} />
+        : view === 'list' ? <ListaAcciones items={items} viewer={fed.id} onSelect={onSelect} />
         : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }, (_, i) => monthStart(from, i)).map(m => <MiniMonth key={iso(m)} month={m} byDay={byDay} feriados={feriados} today={today} onDay={goDay} />)}</div>}
     </div>
 
-    {items && weekendItems.length > 0 && view !== 'semester' && <details className="mt-4 rounded-2xl border border-dte-linea bg-white p-3">
+    {items && weekendItems.length > 0 && view !== 'semester' && view !== 'list' && <details className="mt-4 rounded-2xl border border-dte-linea bg-white p-3">
       <summary className="cursor-pointer text-sm font-semibold text-dte-gris">{weekendItems.length} {weekendItems.length === 1 ? 'acción cargada' : 'acciones cargadas'} en fin de semana</summary>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{weekendItems.map(item => <ItemCard key={item.id} item={item} onClick={() => onSelect(item)} />)}</div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{weekendItems.map(item => <ItemCard key={item.id} item={item} viewer={fed.id} onClick={() => onSelect(item)} />)}</div>
     </details>}
 
     {(view === 'month' || view === 'semester') && <p className="mt-3 flex flex-wrap items-center gap-3 text-xs text-dte-gris"><span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-[#fbe3ee] ring-1 ring-[#e81f76]/40" />Feriado nacional</span><span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-[#efeafa] ring-1 ring-[#6f5fc2]/40" />Aniversario distrital</span><span>* fecha a confirmar</span><span>Tocá un día para verlo en detalle.</span></p>}
@@ -394,14 +440,30 @@ function MiniMonth({ month, byDay, feriados, today, onDay }: { month: Date, byDa
   </section>
 }
 
-function ItemCard({ item, onClick }: { item: AgendaItem, onClick: () => void }) {
+// Vista Lista de Mi agenda: de la acción más nueva a la más antigua, de a 20.
+function ListaAcciones({ items, viewer, onSelect }: { items: AgendaItem[], viewer: string, onSelect: (i: AgendaItem) => void }) {
+  const [n, setN] = useState(20)
+  const orden = useMemo(() => [...items].sort((a, b) => b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)), [items])
+  if (!orden.length) return <p className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-10 text-center text-sm text-dte-gris">No hay acciones cargadas en este año.</p>
+  return <div className="flex flex-col gap-3">
+    <ul className="divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xs">{orden.slice(0, n).map(item =>
+      <li key={item.id}><button onClick={() => onSelect(item)} className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte sm:grid-cols-[6.5rem_1fr_auto] sm:items-center">
+        <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize">{fmt(parse(item.fecha), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')}</span><span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span></span>
+        <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemTitle(item)}</span><span className="block truncate text-xs text-dte-gris">{[schoolPlace(item.school), item.sub_accion].filter(Boolean).join(' · ') || ' '}</span></span>
+        <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ActionChip label={item.accion} /><StatusBadge status={item.estado} />{item.fed_id !== viewer && <span className="inline-flex items-center gap-0.5 rounded-full bg-dte-tinte px-1.5 py-0.5 text-[10px] font-semibold text-dte-petroleo"><Users className="size-3" />Compartida</span>}</span>
+      </button></li>)}</ul>
+    {orden.length > n && <div className="flex items-center justify-center gap-2"><Button variant="outline" size="sm" onClick={() => setN(n + 20)}>Ver {Math.min(20, orden.length - n)} más</Button><span className="text-xs text-dte-gris">Mostrando {n} de {orden.length}</span></div>}
+  </div>
+}
+
+function ItemCard({ item, onClick, viewer }: { item: AgendaItem, onClick: () => void, viewer?: string }) {
   const muted = item.estado === 'cancelada'
   return <button onClick={onClick} title={item.school ? schoolName(item.school) : undefined} className={`relative w-full overflow-hidden rounded-xl border border-dte-linea bg-white p-2.5 pl-3.5 text-left transition hover:border-pba-celeste hover:shadow-md focus-visible:border-pba-celeste focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-pba-celeste/30 ${muted ? 'opacity-65' : ''}`}>
     <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${actionStyle[item.accion]?.dot}`} />
     <span className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-dte-gris"><Clock className="size-3 shrink-0" />{timeRange(item)}</span>
     <p className={`mt-1 line-clamp-3 text-sm font-semibold leading-snug ${muted ? 'line-through decoration-1' : ''}`}>{item.school ? shortSchoolName(item.school) : itemTitle(item)}</p>
     {item.school && <p className="mt-0.5 truncate text-xs text-dte-gris">{schoolPlace(item.school)}</p>}
-    <div className="mt-2 flex flex-wrap items-center gap-1.5"><ActionChip label={item.accion} /><StatusBadge status={item.estado} /></div>
+    <div className="mt-2 flex flex-wrap items-center gap-1.5"><ActionChip label={item.accion} /><StatusBadge status={item.estado} />{(item.participantes?.length > 0 || (viewer && item.fed_id !== viewer)) && <span title={viewer && item.fed_id !== viewer ? 'Te etiquetaron en esta acción' : 'Con compañeros'} className="inline-flex items-center gap-0.5 rounded-full bg-dte-tinte px-1.5 py-0.5 text-[10px] font-semibold text-dte-petroleo"><Users className="size-3" />{viewer && item.fed_id !== viewer ? 'Compartida' : `+${item.participantes.length}`}</span>}</div>
   </button>
 }
 
@@ -442,7 +504,8 @@ function DetailDialog({ item, feds, profile, onClose, onEdit, onChanged }: { ite
         {row(ClipboardList, 'Sub-acción', item.sub_accion && <>{item.sub_accion}{item.cantidad ? <span className="text-dte-gris"> · {item.cantidad} equipos</span> : null}</>)}
         {row(UserRound, item.encuentros?.length > 1 ? `Encuentros (${item.encuentros.length})` : 'Encuentro', item.encuentros?.length ? <ul className="flex flex-col gap-1.5">{item.encuentros.map(e => <li key={e.id}>{[e.propuesta, e.encuentro_n ? `Encuentro N° ${e.encuentro_n}` : null, e.modalidad].filter(Boolean).join(' · ')}<span className="block text-xs text-dte-gris">{[e.destinatarios, e.inscriptos != null ? `${e.inscriptos} inscriptos` : null, e.asistentes != null ? `${e.asistentes} asistentes` : null].filter(Boolean).join(' · ')}{e.fotos_url && <> · <a href={e.fotos_url} target="_blank" rel="noreferrer" className="text-dte-petroleo underline">fotos</a></>}</span></li>)}</ul> : null)}
         {row(Pencil, 'Detalle', item.detalle && <span className="whitespace-pre-wrap">{item.detalle}</span>)}
-        {row(UserRound, 'FED responsable', fed?.nombre_completo ?? '—')}
+        {row(UserRound, 'Creada por', fed?.nombre_completo ?? '—')}
+        {row(Users, 'Acompañado por', item.participantes?.length ? item.participantes.map(p => feds.find(f => f.id === p.fed_id)?.nombre_completo ?? '—').join(', ') : null)}
       </dl>
       {own && <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-dte-gris">Cambiar estado</p>
@@ -479,7 +542,7 @@ const rangeNames: Record<Range, [string, string, string]> = { day: ['Día', 'dí
 
 const LISTA_INICIAL = 5, LISTA_PASO = 20
 
-function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void }) {
+function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void }) {
   const [tab, setTab] = useState<'resumen' | 'clubes' | 'practicas' | 'acciones'>('resumen')
   const [range, setRange] = useState<Range>('month')
   const [anchor, setAnchor] = useState(() => new Date())
@@ -507,7 +570,7 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
   const [clubes, setClubesState] = useState<Club[] | null>(null)
   const [clubKey, setClubKey] = useState(0)
   useEffect(() => { let alive = true; getClubes().then(r => alive && setClubesState(r)).catch(() => alive && setClubesState([])); return () => { alive = false } }, [reloadKey, clubKey])
-  const fedName = useCallback((id: string) => feds.find(f => f.id === id)?.nombre_completo ?? 'FED desconocido', [feds])
+  const fedName = useCallback((id: string) => todos.find(f => f.id === id)?.nombre_completo ?? 'FED desconocido', [todos])
   const distritos = useMemo(() => [...new Set([...feds.flatMap(f => f.distritos_a_cargo), ...(items ?? []).map(i => i.school?.distrito).filter((d): d is string => !!d)])].sort((a, b) => a.localeCompare(b, 'es')), [feds, items])
   const q = search.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
   // Todos los filtros menos el de estado: así los contadores muestran cuántas hay de cada estado.
@@ -531,7 +594,7 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
 
   return <main className="mx-auto max-w-[1440px] px-4 pb-16 pt-6 lg:px-10">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div><p className={eyebrow}>Tablero del coordinador</p><h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2><p className="mt-1.5 text-sm text-dte-gris">Seguimiento territorial de todo el equipo.</p></div>
+      <div><p className={eyebrow}>Tablero del coordinador</p><h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2><p className="mt-1.5 text-sm text-dte-gris">Seguimiento territorial de todo el equipo.</p>{onNuevaReunion && <Button onClick={onNuevaReunion} className="mt-3 bg-dte-magenta font-semibold text-white hover:bg-[#b8155c]"><Users data-icon="inline-start" />Nueva reunión de equipo</Button>}</div>
       <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label="Período" className="flex rounded-lg border border-dte-linea bg-white p-1 shadow-xs">{(Object.keys(rangeNames) as Range[]).map(v => <button key={v} onClick={() => setRange(v)} aria-pressed={range === v} className={`rounded-md px-3 py-1 text-sm font-semibold transition ${range === v ? 'bg-dte-petroleo text-white' : 'text-dte-gris hover:text-dte-tinta'}`}>{rangeNames[v][0]}</button>)}</div>
         <WeekNav prevLabel={`${cap(rangeNames[range][1])} anterior`} nextLabel={`${cap(rangeNames[range][1])} siguiente`} onPrev={() => setAnchor(shift(anchor, range, -1))} onToday={() => setAnchor(new Date())} onNext={() => setAnchor(shift(anchor, range, 1))} />
@@ -558,7 +621,7 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
     </div>
 
     {tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) }} />}</div>
-    : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} />}</div>
+    : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base.filter(i => feds.some(f => f.id === i.fed_id))} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} />}</div>
     : <div className="mt-6 flex flex-col gap-6">
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? [0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)
@@ -643,11 +706,15 @@ function Field({ label, hint, required, children, className = '' }: { label: str
   return <label className={`flex flex-col gap-1.5 ${className}`}><span className="text-sm font-semibold text-dte-tinta">{label}{required && <span className="text-dte-magenta"> *</span>}{hint && <span className="ml-1 font-normal text-dte-gris">{hint}</span>}</span>{children}</label>
 }
 
-function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, item: AgendaItem | null, defaultFecha?: string, onCancel: () => void, onSaved: () => void }) {
+function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSaved }: { fed: Fed, feds: Fed[], item: AgendaItem | null, defaultFecha?: string, preset?: ItemPreset, onCancel: () => void, onSaved: () => void }) {
+  // Compañeros etiquetados: la acción aparece también en su calendario y reciben una notificación.
+  const [participantes, setParticipantes] = useState<string[]>(() => item?.participantes?.map(p => p.fed_id) ?? preset?.participantes ?? [])
+  const companeros = useMemo(() => feds.filter(f => f.id !== fed.id).sort((a, b) => (a.rol === b.rol ? az(a.nombre_completo, b.nombre_completo) : a.rol === 'coordinacion' ? 1 : -1)), [feds, fed.id])
+  const togglePart = (id: string) => setParticipantes(l => (l.includes(id) ? l.filter(x => x !== id) : [...l, id]))
   const [school, setSchool] = useState<School | null>(item?.school ?? null)
   // Encuentro editable desde la app: el propio (origen app) o, si no hay, el primero importado.
   const enc0 = item?.encuentros?.find(e => e.origen === 'app') ?? item?.encuentros?.[0]
-  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', club_id: enc0?.club_id ?? '', nivel: '', curso: '', seccion: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
+  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? preset?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? preset?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', club_id: enc0?.club_id ?? '', nivel: '', curso: '', seccion: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
   // Clubes y prácticas: registro por grupo con inicio y cierre (cada uno con su identidad visual).
   const esClub = esTrayecto(form.accion)
   const marca = esClub ? TRAYECTO_MARCA[form.accion as keyof typeof TRAYECTO_MARCA] : TRAYECTO_MARCA['CLUB DE TECNOLOGÍA']
@@ -696,6 +763,7 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
       fed_id: fed.id, school_id: esLicencia || esParo ? null : school?.id ?? null, lugar: school || esLicencia || esParo ? null : form.lugar || null, fecha: form.fecha, accion: form.accion, estado: form.estado,
       hora_inicio: esParo ? null : form.hora_inicio || null, hora_fin: esParo ? null : form.hora_fin || null, sub_accion: conSubAccion ? form.sub_accion : null, detalle: form.detalle,
       cantidad: cat === 'tecnica' ? toNum(form.cantidad) : null,
+      participantes: esParo || esLicencia ? [] : participantes,
       encuentro: conEncuentro ? { id: enc0?.id, propuesta: form.propuesta, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: form.destinatarios, inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes),
         ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', grupo: grupo, escuela_origen_id: otroOrigen ? origen?.id ?? null : null, encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
     }
@@ -727,6 +795,13 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
     {ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-[#7a5a0c]' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{ddjjDia.dte}</b>{ddjjDia.externo ? ` · Otro cargo: ${ddjjDia.externo}` : ''}{fueraDeHorario ? '. La acción queda fuera de ese horario.' : ''}</span></p>}
 
     {!esParo && !esLicencia && <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">Escuela <span className="font-normal text-dte-gris">(opcional)</span></span><SchoolPicker value={school} onChange={setSchool} />{!school && <Input placeholder="…o lugar, si no es una escuela (ej.: Jefatura Distrital, Feria de Ciencias)" value={form.lugar} onChange={e => set('lugar', e.target.value)} className="h-10" aria-label="Lugar" />}</div>}
+
+    {!esParo && !esLicencia && companeros.length > 0 && <fieldset>
+      <legend className="mb-1.5 flex w-full items-center justify-between text-sm font-semibold"><span>Acompañado por <span className="font-normal text-dte-gris">(opcional)</span></span>
+        <button type="button" onClick={() => setParticipantes(participantes.length === companeros.length ? [] : companeros.map(c => c.id))} className="text-xs font-semibold text-dte-petroleo hover:opacity-80">{participantes.length === companeros.length ? 'Quitar a todos' : 'Todo el equipo'}</button></legend>
+      <div className="flex flex-wrap gap-1.5">{companeros.map(c => { const on = participantes.includes(c.id); return <button key={c.id} type="button" aria-pressed={on} onClick={() => togglePart(c.id)} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition ${on ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-petroleo/20 bg-dte-petroleo/[0.06] text-dte-petroleo hover:bg-dte-petroleo/[0.12]'}`}>{on ? <Check className="size-3" /> : <Plus className="size-3 opacity-70" />}{c.nombre_completo}</button> })}</div>
+      {participantes.length > 0 && <p className="mt-1.5 text-xs text-dte-gris">La acción va a aparecer en el calendario de {participantes.length === 1 ? 'esa persona' : `esas ${participantes.length} personas`} y les llega una notificación. Sólo vos podés editarla.</p>}
+    </fieldset>}
 
     {conSubAccion && <div className={`grid gap-4 ${cat === 'tecnica' ? 'sm:grid-cols-[1fr_9rem]' : ''}`}>
       <Field label="Sub-acción" hint="(opcional)"><Input list="sub-acciones" placeholder={form.accion && SUB_ACCIONES[form.accion] ? `Ej.: ${SUB_ACCIONES[form.accion]!.slice(0, 2).join(', ')}` : 'Ej.: revisión de equipamiento'} value={form.sub_accion} onChange={e => set('sub_accion', e.target.value)} className="h-10" /></Field>

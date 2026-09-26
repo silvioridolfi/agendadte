@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseServer } from '@/lib/supabase-server'
-import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, MODALIDADES, TIPOS_JORNADA, CUE_DTE, esTrayecto } from '@/lib/agenda'
+import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, MODALIDADES, TIPOS_JORNADA, CUE_DTE, esTrayecto } from '@/lib/agenda'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
 // así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
@@ -13,7 +13,7 @@ async function run<T>(fn: () => Promise<T>): Promise<Result<T>> {
 const SCHOOL_COLS = 'id, cue, nombre, distrito, ciudad'
 
 async function getFedsImpl(): Promise<Fed[]> {
-  const { data, error } = await supabaseServer().from('feds').select('id, nombre_completo, distritos_a_cargo, carga_horaria, ddjj').order('nombre_completo')
+  const { data, error } = await supabaseServer().from('feds').select('id, nombre_completo, distritos_a_cargo, carga_horaria, ddjj, rol').order('nombre_completo')
   if (error) throw new Error(error.message)
   return data ?? []
 }
@@ -39,11 +39,26 @@ async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ dat
   }
 }
 
-const ITEM_COLS = `*, school:establecimientos(${SCHOOL_COLS}), encuentros:agenda_encuentros(*)`
+const ITEM_COLS = `*, school:establecimientos(${SCHOOL_COLS}), encuentros:agenda_encuentros(*), participantes:agenda_participantes(fed_id)`
 
+// Agenda de un FED: sus acciones y aquellas en las que fue etiquetado.
 async function getFedItemsImpl(fedId: string, from: string, to: string): Promise<AgendaItem[]> {
-  return fetchAll<AgendaItem>((a, b) => supabaseServer().from('agenda_items').select(ITEM_COLS).eq('fed_id', fedId)
+  const db = supabaseServer()
+  const propias = await fetchAll<AgendaItem>((a, b) => db.from('agenda_items').select(ITEM_COLS).eq('fed_id', fedId)
     .gte('fecha', from).lte('fecha', to).order('fecha').order('hora_inicio', { nullsFirst: true }).order('id').range(a, b))
+  const { data: part, error } = await db.from('agenda_participantes').select('item_id').eq('fed_id', fedId)
+  if (error) throw new Error(error.message)
+  const ids = (part ?? []).map(p => p.item_id as string)
+  if (!ids.length) return propias
+  const compartidas: AgendaItem[] = []
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data, error: e2 } = await db.from('agenda_items').select(ITEM_COLS).in('id', ids.slice(i, i + 200)).gte('fecha', from).lte('fecha', to)
+    if (e2) throw new Error(e2.message)
+    compartidas.push(...((data ?? []) as AgendaItem[]))
+  }
+  const vistos = new Set(propias.map(i => i.id))
+  return [...propias, ...compartidas.filter(i => !vistos.has(i.id))]
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))
 }
 
 async function getAllItemsImpl(from: string, to: string): Promise<AgendaItem[]> {
@@ -63,7 +78,7 @@ const num = (v: number | null | undefined) => (v == null || Number.isNaN(v) ? nu
 function clean(input: AgendaItemInput) {
   if (!input.fed_id || !/^\d{4}-\d{2}-\d{2}$/.test(input.fecha)) throw new Error('FED y fecha son obligatorios')
   if (!ACCIONES.includes(input.accion) || !ESTADOS.includes(input.estado)) throw new Error('Acción o estado inválido')
-  const { encuentro: _encuentro, ...row } = input
+  const { encuentro: _encuentro, participantes: _participantes, ...row } = input
   return {
     ...row, school_id: opt(input.school_id), hora_inicio: opt(input.hora_inicio), hora_fin: opt(input.hora_fin), sub_accion: opt(input.sub_accion),
     detalle: opt(input.detalle), cantidad: num(input.cantidad), lugar: opt(input.lugar),
@@ -94,6 +109,7 @@ async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<void> 
     : await db.from('agenda_items').insert(row).select('id').single()
   if (res.error) throw new Error(res.error.message)
   const itemId = res.data.id as string
+  if (input.participantes) await syncParticipantes(itemId, row.fed_id, input.participantes)
 
   // Encuentro: se edita el que se mostró en el formulario (puede ser uno importado) o se crea uno nuevo.
   // Si la acción deja de ser club/taller/prácticas, sólo se borra el encuentro creado desde la app; los importados se conservan.
@@ -109,6 +125,37 @@ async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<void> 
     const { error } = await db.from('agenda_encuentros').delete().eq('agenda_item_id', itemId).eq('origen', 'app')
     if (error) throw new Error(error.message)
   }
+}
+
+// Compañeros etiquetados: se reemplaza la lista y se notifica a quienes se suman.
+async function syncParticipantes(itemId: string, autorId: string, fedIds: string[]) {
+  const db = supabaseServer()
+  const quiero = [...new Set(fedIds.filter(f => f && f !== autorId))]
+  const { data: actuales, error } = await db.from('agenda_participantes').select('fed_id').eq('item_id', itemId)
+  if (error) throw new Error(error.message)
+  const ya = new Set((actuales ?? []).map(p => p.fed_id as string))
+  const quitar = [...ya].filter(f => !quiero.includes(f)), sumar = quiero.filter(f => !ya.has(f))
+  if (quitar.length) { const r = await db.from('agenda_participantes').delete().eq('item_id', itemId).in('fed_id', quitar); if (r.error) throw new Error(r.error.message) }
+  if (sumar.length) {
+    const r = await db.from('agenda_participantes').insert(sumar.map(fed_id => ({ item_id: itemId, fed_id })))
+    if (r.error) throw new Error(r.error.message)
+    const n = await db.from('notificaciones').insert(sumar.map(fed_id => ({ fed_id, item_id: itemId, autor_id: autorId, tipo: 'etiqueta' })))
+    if (n.error) throw new Error(n.error.message)
+  }
+}
+
+async function getNotificacionesImpl(fedId: string): Promise<Notificacion[]> {
+  const { data, error } = await supabaseServer().from('notificaciones').select(`id, tipo, leida, created_at, autor_id, item:agenda_items(${ITEM_COLS})`)
+    .eq('fed_id', fedId).order('created_at', { ascending: false }).limit(30)
+  if (error) throw new Error(error.message)
+  return (data ?? []) as unknown as Notificacion[]
+}
+
+async function marcarLeidasImpl(fedId: string, ids?: string[]): Promise<void> {
+  let q = supabaseServer().from('notificaciones').update({ leida: true }).eq('fed_id', fedId).eq('leida', false)
+  if (ids?.length) q = q.in('id', ids)
+  const { error } = await q
+  if (error) throw new Error(error.message)
 }
 
 // Club del encuentro: crea uno nuevo (inicia en esta fecha) o actualiza el elegido; marcar cierre lo finaliza.
@@ -183,3 +230,5 @@ export const deleteItem = async (id: string, fedId: string) => run(() => deleteI
 export const getFeriados = async (from: string, to: string) => run(() => getFeriadosImpl(from, to))
 export const getClubes = async (fedId?: string) => run(() => getClubesImpl(fedId))
 export const setClubCierre = async (id: string, fecha: string | null) => run(() => setClubCierreImpl(id, fecha))
+export const getNotificaciones = async (fedId: string) => run(() => getNotificacionesImpl(fedId))
+export const marcarLeidas = async (fedId: string, ids?: string[]) => run(() => marcarLeidasImpl(fedId, ids))
