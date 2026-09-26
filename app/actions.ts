@@ -119,7 +119,7 @@ async function upsertClub(input: AgendaItemInput, row: ReturnType<typeof clean>)
   if (e.nuevo_club || !e.club_id) {
     if (!e.nuevo_club) return null
     const { data, error } = await db.from('clubes').insert({
-      fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, grupo: opt(e.grupo), tipo: row.accion, propuesta: row.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Prácticas Educativas en Ambientes de Trabajo' : 'Club de Tecnología',
+      fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, grupo: opt(e.grupo), escuela_origen_id: opt(e.escuela_origen_id), tipo: row.accion, propuesta: row.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Prácticas Educativas en Ambientes de Trabajo' : 'Club de Tecnología',
       fecha_inicio: row.fecha, fecha_cierre: e.es_cierre ? row.fecha : null, encuentros_previstos: previstos,
     }).select('id').single()
     if (error) throw new Error(error.message)
@@ -138,7 +138,7 @@ async function upsertClub(input: AgendaItemInput, row: ReturnType<typeof clean>)
 }
 
 async function getClubesImpl(fedId?: string): Promise<Club[]> {
-  let q = supabaseServer().from('clubes').select(`*, school:establecimientos(${SCHOOL_COLS}), encuentros:agenda_encuentros(id, fecha, propuesta, encuentro_n, inscriptos, asistentes, tipo_jornada, modalidad, destinatarios, es_cierre)`).order('fecha_inicio')
+  let q = supabaseServer().from('clubes').select(`*, school:establecimientos!clubes_school_id_fkey(${SCHOOL_COLS}), escuela_origen:establecimientos!clubes_escuela_origen_id_fkey(${SCHOOL_COLS}), encuentros:agenda_encuentros(id, fecha, propuesta, school_id, lugar, school:establecimientos(${SCHOOL_COLS}), encuentro_n, inscriptos, asistentes, tipo_jornada, modalidad, destinatarios, es_cierre)`).order('fecha_inicio')
   if (fedId) q = q.eq('fed_id', fedId)
   const { data, error } = await q
   if (error) throw new Error(error.message)

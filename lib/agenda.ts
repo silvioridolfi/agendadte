@@ -44,6 +44,8 @@ export type Encuentro = {
   lugar: string | null
   fecha: string
   tipo: Accion
+  // Escuela de origen de los estudiantes, si difiere de la sede (ej.: prácticas en otra escuela).
+  escuela_origen: School | null
   propuesta: string | null
   encuentro_n: number | null
   modalidad: Modalidad | null
@@ -60,7 +62,7 @@ export type Encuentro = {
 }
 // `id`: encuentro existente que se está editando (si no viene, se crea uno nuevo).
 // Club: `club_id` de uno existente, o `nuevo_club` para iniciarlo con esta fecha. `es_cierre` finaliza el club.
-export type EncuentroInput = Pick<Encuentro, 'propuesta' | 'encuentro_n' | 'modalidad' | 'destinatarios' | 'inscriptos' | 'asistentes'> & Partial<Pick<Encuentro, 'tipo_jornada' | 'descripcion' | 'club_id' | 'es_cierre'>> & { id?: string, nuevo_club?: boolean, grupo?: string | null, encuentros_previstos?: number | null }
+export type EncuentroInput = Pick<Encuentro, 'propuesta' | 'encuentro_n' | 'modalidad' | 'destinatarios' | 'inscriptos' | 'asistentes'> & Partial<Pick<Encuentro, 'tipo_jornada' | 'descripcion' | 'club_id' | 'es_cierre'>> & { id?: string, nuevo_club?: boolean, grupo?: string | null, escuela_origen_id?: string | null, encuentros_previstos?: number | null }
 // Fila de public.establecimientos (misma fuente que el buscador DTE).
 export type School = { id: string; cue: number | null; nombre: string | null; distrito: string | null; ciudad: string | null }
 export type AgendaItem = {
@@ -111,7 +113,7 @@ export type TipoJornada = (typeof TIPOS_JORNADA)[number]
 export const CLUB_MIN_ENCUENTROS = 8
 export const CLUB_MAX_PARTICIPANTES = 20
 export const CLUB_DIAS_SIN_ACTIVIDAD = 30
-export type ClubEncuentro = Pick<Encuentro, 'id' | 'fecha' | 'propuesta' | 'encuentro_n' | 'inscriptos' | 'asistentes' | 'tipo_jornada' | 'modalidad' | 'destinatarios' | 'es_cierre'>
+export type ClubEncuentro = Pick<Encuentro, 'id' | 'fecha' | 'propuesta' | 'school_id' | 'lugar' | 'school' | 'encuentro_n' | 'inscriptos' | 'asistentes' | 'tipo_jornada' | 'modalidad' | 'destinatarios' | 'es_cierre'>
 export type Club = {
   id: string
   fed_id: string
@@ -121,6 +123,8 @@ export type Club = {
   grupo: string | null
   // Club de Tecnología o Prácticas Educativas en Ambientes de Trabajo (mismo registro por grupo).
   tipo: Accion
+  // Escuela de origen de los estudiantes, si difiere de la sede (ej.: prácticas en otra escuela).
+  escuela_origen: School | null
   propuesta: string
   fecha_inicio: string
   fecha_cierre: string | null

@@ -511,7 +511,7 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
     (!distrito || e.school?.distrito === distrito) && (!fedId || e.fed_id === fedId) && (!accion || e.tipo === accion) &&
     (!q || `${fedName(e.fed_id)} ${e.school?.nombre ?? ''} ${e.school?.ciudad ?? ''} ${e.school?.cue ?? ''} ${e.propuesta ?? ''} ${e.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [encs, distrito, fedId, accion, q, fedName])
   const clubBase = useMemo(() => (clubes ?? []).filter(c => (!distrito || c.school?.distrito === distrito) && (!fedId || c.fed_id === fedId) &&
-    (!q || `${fedName(c.fed_id)} ${c.school?.nombre ?? ''} ${c.school?.ciudad ?? ''} ${c.school?.cue ?? ''} ${c.grupo ?? ''} ${c.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [clubes, distrito, fedId, q, fedName])
+    (!q || `${fedName(c.fed_id)} ${c.school?.nombre ?? ''} ${c.school?.ciudad ?? ''} ${c.school?.cue ?? ''} ${c.escuela_origen?.nombre ?? ''} ${c.escuela_origen?.cue ?? ''} ${c.grupo ?? ''} ${c.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [clubes, distrito, fedId, q, fedName])
   const counts = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, base.filter(i => i.estado === e).length])) as Record<Estado, number>, [base])
   const groups = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName])
   const anyFilter = !!(search || distrito || fedId || accion || estado)
@@ -642,7 +642,7 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
   const hoy = iso(new Date())
   const clubOpts = (clubes ?? []).filter(c => c.tipo === form.accion && (c.id === form.club_id || clubEstado(c, hoy) !== 'finalizado'))
   const club = clubOpts.find(c => c.id === form.club_id) ?? null
-  const clubLabel = (c: Club) => `${c.grupo ? `${c.grupo} · ` : ''}${c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar'} · desde ${fmt(parse(c.fecha_inicio), { day: 'numeric', month: 'short' })}${clubEstado(c, hoy) === 'sin_actividad' ? ' (sin actividad)' : ''}`
+  const clubLabel = (c: Club) => `${c.grupo ? `${c.grupo} · ` : ''}${c.escuela_origen ? `${shortSchoolName(c.escuela_origen)} en ` : ''}${c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar'} · desde ${fmt(parse(c.fecha_inicio), { day: 'numeric', month: 'short' })}${clubEstado(c, hoy) === 'sin_actividad' ? ' (sin actividad)' : ''}`
   // Grado/curso del club nuevo: nivel sugerido por el nombre de la escuela, editable (cualquier nivel o modalidad).
   const nivelId = form.nivel || nivelDeEscuela(school?.nombre)
   const nivel = NIVELES.find(n => n.id === nivelId) ?? NIVELES[0]
@@ -651,8 +651,12 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
     const c = clubes?.find(x => x.id === id)
     setForm(f => ({ ...f, club_id: id, encuentros_previstos: c?.encuentros_previstos?.toString() ?? f.encuentros_previstos,
       encuentro_n: !item && c ? String(clubEncuentrosRealizados(c) + 1) : f.encuentro_n }))
-    if (c?.school) setSchool(c.school)
+    // La sede del club se sugiere sólo si todavía no se eligió escuela (las prácticas pueden hacerse en otras sedes).
+    if (c?.school && !school) setSchool(c.school)
   }
+  // Escuela de origen de los estudiantes, cuando el trayecto se desarrolla en otra sede (ej.: prácticas).
+  const [origen, setOrigen] = useState<School | null>(null)
+  const [otroOrigen, setOtroOrigen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm(f => ({ ...f, [k]: v }))
@@ -676,7 +680,7 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
       hora_inicio: esParo ? null : form.hora_inicio || null, hora_fin: esParo ? null : form.hora_fin || null, sub_accion: conSubAccion ? form.sub_accion : null, detalle: form.detalle,
       cantidad: cat === 'tecnica' ? toNum(form.cantidad) : null,
       encuentro: conEncuentro ? { id: enc0?.id, propuesta: form.propuesta, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: form.destinatarios, inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes),
-        ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', grupo: grupo, encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
+        ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', grupo: grupo, escuela_origen_id: otroOrigen ? origen?.id ?? null : null, encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
     }
     try { await saveItem(input, item?.id); onSaved() } catch (err) { setError(errMsg(err)); setSaving(false) }
   }
@@ -727,9 +731,11 @@ function ItemForm({ fed, item, defaultFecha, onCancel, onSaved }: { fed: Fed, it
         <Field label="Nivel / modalidad" className="sm:col-span-3"><select className={`${selectClass} h-10`} value={nivel.id} onChange={e => setForm(f => ({ ...f, nivel: e.target.value, curso: '' }))}>{NIVELES.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select></Field>
         <Field label={nivel.cursoLabel} required className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.curso} onChange={e => set('curso', e.target.value)}><option value="">Elegí…</option>{nivel.cursos.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
         <Field label="Sección" className="sm:col-span-1"><select className={`${selectClass} h-10`} value={form.seccion} onChange={e => set('seccion', e.target.value)}><option value="">—</option>{SECCIONES.map(x => <option key={x}>{x}</option>)}</select></Field>
-        {grupo && <p className="text-xs sm:col-span-6">Se va a registrar como <b>{grupo}</b>{school ? ` · ${shortSchoolName(school)}` : ''}.</p>}
+        <label className="flex items-center gap-2 text-sm sm:col-span-6"><input type="checkbox" checked={otroOrigen} onChange={e => setOtroOrigen(e.target.checked)} className="size-4" style={{ accentColor: marca.acento }} />Los estudiantes son de otra escuela (se desarrolla en esta sede o en territorio)</label>
+        {otroOrigen && <div className="flex flex-col gap-1.5 sm:col-span-6"><span className="text-sm font-semibold">Escuela de origen de los estudiantes</span><SchoolPicker value={origen} onChange={setOrigen} /></div>}
+        {grupo && <p className="text-xs sm:col-span-6">Se va a registrar como <b>{grupo}</b>{school ? ` · ${shortSchoolName(school)}` : ''}{otroOrigen && origen ? ` · estudiantes de ${shortSchoolName(origen)}` : ''}.</p>}
       </div>}
-      {club && <p className="-mt-2 text-xs text-dte-gris sm:col-span-6">{clubEncuentrosRealizados(club)} encuentros registrados{club.encuentros_previstos ? ` de ${club.encuentros_previstos} previstos` : ''}. El lugar del encuentro es el del club{club.school ? '' : ' (arriba)'}.</p>}
+      {club && <p className="-mt-2 text-xs text-dte-gris sm:col-span-6">{clubEncuentrosRealizados(club)} encuentros registrados{club.encuentros_previstos ? ` de ${club.encuentros_previstos} previstos` : ''}{club.escuela_origen ? ` · Estudiantes de ${shortSchoolName(club.escuela_origen)}` : ''}. La escuela o lugar de arriba es donde se hizo este encuentro.</p>}
       <Field label="Propuesta dictada" hint={marca.corto === 'club' ? '(ej.: taller de redes dentro del club)' : undefined} className="sm:col-span-4"><Input placeholder={marca.propuesta} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentros de la propuesta" hint="(previstos)" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={form.encuentros_previstos} onChange={e => set('encuentros_previstos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>

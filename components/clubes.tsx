@@ -61,6 +61,8 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
   const sinJornada = encs.filter(e => !e.tipo_jornada).length
   // Propuestas dictadas dentro de los clubes (encuentros por propuesta).
   const propuestas = [...encs.reduce((m, e) => { const k = (e.propuesta ?? marca.propuesta).trim(); return m.set(k, (m.get(k) ?? 0) + 1) }, new Map<string, number>())].sort((a, b) => b[1] - a[1])
+  // Escuelas y sedes donde se desarrollaron los encuentros (clubes y prácticas pueden hacerse fuera de la sede principal).
+  const sedes = [...encs.reduce((m, e) => { const k = e.school?.nombre ? schoolLabel({ school: e.school, lugar: null } as Club) : e.lugar ?? 'Sin escuela'; return m.set(k, (m.get(k) ?? 0) + 1) }, new Map<string, number>())].sort((a, b) => b[1] - a[1])
   const porFed = feds.map(f => ({ f, r: rows.filter(r => r.c.fed_id === f.id) })).filter(x => x.r.length).sort((a, b) => b.r.length - a.r.length)
   const maxFed = Math.max(1, ...porFed.map(x => x.r.length))
 
@@ -113,7 +115,7 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
             const st = ESTADO_CLUB[estado], prev = c.encuentros_previstos ?? CLUB_MIN_ENCUENTROS
             const fin = c.fecha_cierre ?? ultima
             return <tr key={c.id} className="align-middle">
-              <td className="py-2.5 pr-3"><p className="flex max-w-[20rem] items-center gap-1.5 font-semibold" title={c.school?.nombre ?? c.lugar ?? ''}>{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate">{schoolLabel(c)}</span></p><p className="text-xs text-dte-gris">{[c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id)].filter(Boolean).join(' · ')}</p></td>
+              <td className="py-2.5 pr-3"><p className="flex max-w-[20rem] items-center gap-1.5 font-semibold" title={c.school?.nombre ?? c.lugar ?? ''}>{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate">{schoolLabel(c)}</span></p><p className="text-xs text-dte-gris">{[c.escuela_origen ? `Estudiantes de ${schoolLabel({ school: c.escuela_origen, lugar: null } as Club)}` : null, c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id)].filter(Boolean).join(' · ')}</p>{(() => { const n = new Set(completos.get(c.id)!.encuentros.map(e => e.school_id ?? e.lugar)).size; return n > 1 ? <p className="text-[11px] font-semibold" style={{ color: marca.acento }}>{n} sedes</p> : null })()}</td>
               <td className="py-2.5 pr-3"><div className="relative h-5" role="img" aria-label={`Del ${corta(c.fecha_inicio)} al ${corta(fin)}`}>
                 <div className="absolute inset-y-[7px] left-0 right-0 rounded bg-dte-fondo" />
                 <div className="absolute inset-y-[5px] rounded" style={{ left: `${pos(c.fecha_inicio)}%`, width: `${Math.max(0.8, pos(fin) - pos(c.fecha_inicio))}%`, background: st.color, opacity: estado === 'finalizado' ? 0.55 : 0.85 }} title={`${corta(c.fecha_inicio)} → ${c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : `último ${corta(ultima)}`}`} />
@@ -145,6 +147,9 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
       </Panel>
       <Panel title={`Propuestas dictadas en ${tipo === 'CLUB DE TECNOLOGÍA' ? 'los clubes' : 'las prácticas'}`} subtitle="Registros por propuesta (talleres y actividades dentro del trayecto)">
         <ul className="flex flex-col gap-2">{propuestas.map(([k, v]) => <HBar key={k} label={k} value={v} max={Math.max(1, ...propuestas.map(x => x[1]))} color="#c21d6a" />)}</ul>
+      </Panel>
+      <Panel title="Escuelas y sedes" subtitle={`Dónde se desarrollaron los encuentros de ${tipo === 'CLUB DE TECNOLOGÍA' ? 'los clubes' : 'las prácticas'} (registros)`}>
+        <ul className="flex flex-col gap-2">{sedes.map(([k, v]) => <HBar key={k} label={k} value={v} max={Math.max(1, ...sedes.map(x => x[1]))} color="#0e4870" />)}</ul>
       </Panel>
       <Panel title="Tipo de jornada" subtitle={sinJornada ? `${sinJornada} registros previos sin este dato` : 'Registros de encuentros'}>
         <ul className="flex flex-col gap-2">{jornadas.map(([t, k]) => <HBar key={t} label={t} value={k} max={Math.max(1, ...jornadas.map(x => x[1]))} color="#7d5a95" />)}</ul>
