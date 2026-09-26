@@ -521,7 +521,9 @@ function CoordinatorView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey
   const clubBase = useMemo(() => (clubes ?? []).filter(c => (!distrito || c.school?.distrito === distrito) && (!fedId || c.fed_id === fedId) &&
     (!q || `${fedName(c.fed_id)} ${c.school?.nombre ?? ''} ${c.school?.ciudad ?? ''} ${c.school?.cue ?? ''} ${c.escuela_origen?.nombre ?? ''} ${c.escuela_origen?.cue ?? ''} ${c.grupo ?? ''} ${c.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [clubes, distrito, fedId, q, fedName])
   const counts = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, base.filter(i => i.estado === e).length])) as Record<Estado, number>, [base])
-  const groups = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName])
+  // FEDs en orden alfabético; dentro de cada uno, las acciones de la más nueva a la más antigua (fecha, hora y carga).
+  const recientePrimero = (a: AgendaItem, b: AgendaItem) => b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)
+  const groups = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].map(([id, l]) => [id, l.sort(recientePrimero)] as [string, AgendaItem[]]).sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName])
   const anyFilter = !!(search || distrito || fedId || accion || estado)
   const fedsSinAcciones = useMemo(() => (items && !anyFilter ? feds.filter(f => !items.some(i => i.fed_id === f.id)) : []), [items, feds, anyFilter])
   const clear = () => { setSearch(''); setDistrito(''); setFedId(''); setAccion(''); setEstado('') }
