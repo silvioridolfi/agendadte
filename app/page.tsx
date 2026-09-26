@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { CalendarDays, ChevronDown, CloudUpload, LayoutDashboard } from 'lucide-react'
+import { CalendarDays, ChevronDown, CloudUpload, LayoutDashboard, Plus, type LucideIcon } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { type AgendaItem, type Fed } from '@/lib/agenda'
@@ -13,6 +13,13 @@ import { CoordinatorView } from '@/components/app/tablero'
 import { ItemForm } from '@/components/app/formulario'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
 import { PROFILE_KEY, iso, initials, firstName, fedColor, getFeds, errMsg, storage, Toast, PieInstitucional, ItemPreset, toWeekday } from '@/components/app/comun'
+
+// Botón de la barra inferior mobile (área táctil de 56px de alto).
+function BarraBoton({ activo, onClick, icono: Icono, label }: { activo: boolean, onClick: () => void, icono: LucideIcon, label: string }) {
+  return <button type="button" onClick={onClick} aria-current={activo ? 'page' : undefined} className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-semibold transition ${activo ? 'text-dte-petroleo' : 'text-dte-gris hover:text-dte-tinta'}`}>
+    <span className={`flex h-7 w-12 items-center justify-center rounded-full transition ${activo ? 'bg-dte-petroleo/10' : ''}`}><Icono className="size-5" /></span>{label}
+  </button>
+}
 
 export default function Page() {
   const [feds, setFeds] = useState<Fed[] | null>(null)
@@ -66,16 +73,17 @@ export default function Page() {
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 lg:px-10">
         <div className="flex min-w-0 items-center gap-3">
           <img src="/brand/dte1-160.png" alt="DTE Región 1" width={40} height={40} className="size-10 shrink-0" />
-          <div className="hidden min-w-0 sm:block"><p className="text-xs font-bold uppercase tracking-[0.2em] text-dte-magenta">Equipo FED · DTE</p><h1 className="truncate text-base font-bold leading-tight">Agenda Territorial</h1></div>
+          <div className="min-w-0"><p className="hidden text-xs font-bold uppercase tracking-[0.2em] text-dte-magenta sm:block">Equipo FED · DTE</p><h1 className="truncate text-base font-bold leading-tight">Agenda Territorial</h1></div>
         </div>
-        <nav aria-label="Secciones" className="flex rounded-full border border-dte-linea bg-dte-fondo p-1">
+        {/* Navegación principal en desktop; en mobile va en la barra inferior. */}
+        <nav aria-label="Secciones" className="hidden rounded-full border border-dte-linea bg-dte-fondo p-1 md:flex">
           {([['agenda', 'Mi agenda', CalendarDays], ['board', 'Tablero', LayoutDashboard]] as const).map(([key, label, Icon]) =>
-            <button key={key} onClick={() => setSection(key)} aria-current={section === key ? 'page' : undefined} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition ${section === key ? 'bg-dte-petroleo text-white shadow-sm' : 'text-dte-gris hover:text-dte-tinta'}`}><Icon className="size-4" />{label}</button>)}
+            <button key={key} onClick={() => setSection(key)} aria-current={section === key ? 'page' : undefined} className={`flex min-h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition ${section === key ? 'bg-dte-petroleo text-white shadow-sm' : 'text-dte-gris hover:text-dte-tinta'}`}><Icon className="size-4" />{label}</button>)}
         </nav>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <NotificacionesBell profile={profile} feds={feds ?? []} reloadKey={reloadKey} onOpen={setSelected} />
-        <button onClick={() => choose(null)} className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-left transition hover:bg-dte-fondo" aria-label={`Perfil: ${profile.nombre_completo}. Cambiar de perfil`}>
+        <button onClick={() => choose(null)} className="flex min-h-11 min-w-11 items-center gap-2 rounded-full py-1 pl-1 pr-1 text-left transition hover:bg-dte-fondo md:pr-2" aria-label={`Perfil: ${profile.nombre_completo}. Cambiar de perfil`}>
           <Avatar className="size-9"><AvatarFallback className={`${fedColor(feds ?? [], profile.id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(profile.nombre_completo)}</AvatarFallback></Avatar>
           <span className="hidden md:block"><span className="block text-sm font-semibold leading-tight">{profile.nombre_completo}</span><span className="block text-xs text-dte-gris">{profile.rol === 'coordinacion' ? 'Coordinación · cambiar' : 'Cambiar de perfil'}</span></span>
           <ChevronDown className="hidden size-4 text-dte-gris md:block" />
@@ -102,6 +110,15 @@ export default function Page() {
     </Dialog>
 
     <PieInstitucional />
+    {/* Barra inferior (mobile): navegación a una mano y acceso directo a Nueva acción. */}
+    <nav aria-label="Secciones" className="fixed inset-x-0 bottom-0 z-header border-t border-dte-linea bg-white/95 pb-safe backdrop-blur md:hidden">
+      <div className="mx-auto grid max-w-md grid-cols-3 items-center">
+        <BarraBoton activo={section === 'agenda'} onClick={() => setSection('agenda')} icono={CalendarDays} label="Mi agenda" />
+        <div className="flex justify-center"><button type="button" onClick={() => setEditing({ item: null, fecha: iso(toWeekday(new Date())) })} aria-label="Nueva acción" className="-mt-5 flex size-14 items-center justify-center rounded-full bg-dte-magenta text-white shadow-lg ring-4 ring-white transition active:scale-95 hover:bg-dte-magenta-oscuro"><Plus className="size-6" /></button></div>
+        <BarraBoton activo={section === 'board'} onClick={() => setSection('board')} icono={LayoutDashboard} label="Tablero" />
+      </div>
+    </nav>
+
     {toast && <Toast message={toast} onDone={hideToast} />}
   </div>
 }

@@ -204,7 +204,7 @@ export function FeriadoTag({ f, compact = false }: { f: Feriado, compact?: boole
 
 // Pie institucional (mismo texto que el resto de los proyectos DTE). `oscuro`: sobre fondo degradado.
 export function PieInstitucional({ oscuro = false }: { oscuro?: boolean }) {
-  return <footer className={`px-4 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-center text-xs ${oscuro ? 'text-white/85' : 'mt-auto border-t border-dte-linea bg-white text-dte-gris'}`}>
+  return <footer className={`px-4 pt-8 text-center text-xs ${oscuro ? 'pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-white/85' : 'mt-auto border-t border-dte-linea bg-white pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] text-dte-gris md:pb-8'}`}>
     <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center gap-3">
       <img src={oscuro ? '/brand/oficial-blanco.png' : '/brand/oficial-color.png'} alt="Dirección de Tecnología Educativa · Dirección General de Cultura y Educación · Gobierno de la Provincia de Buenos Aires" className="h-12 w-auto max-w-full sm:h-16 lg:h-[72px]" />
       <p>© {new Date().getFullYear()} Dirección de Tecnología Educativa (DTE), Región 1 · Desarrollado por Silvio Ridolfi, Facilitador de Educación Digital</p>
