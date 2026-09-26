@@ -48,7 +48,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
     </div>
   }
 
-  return <main className="mx-auto max-w-[1440px] px-4 pb-28 pt-6 lg:px-10 lg:pb-10">
+  return <main className="mx-auto w-full min-w-0 max-w-[1440px] px-4 pb-28 pt-6 lg:px-10 lg:pb-10">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
         <p className={eyebrow}>Mi agenda · {CAL_VIEWS.find(v => v[0] === view)?.[1]}</p>

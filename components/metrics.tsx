@@ -22,7 +22,7 @@ function Legend() {
 }
 
 export function Panel({ title, subtitle, children, action }: { title: string, subtitle?: string, children: React.ReactNode, action?: React.ReactNode }) {
-  return <section className="rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5">
+  return <section className="min-w-0 rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5">
     <div className="mb-4 flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-bold">{title}</h3>{subtitle && <p className="text-xs text-dte-gris">{subtitle}</p>}</div>{action}</div>
     {children}
   </section>

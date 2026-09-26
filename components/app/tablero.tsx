@@ -95,7 +95,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   const clear = () => { setSearch(''); setDistrito(''); setFedId(''); setAccion(''); setEstado('') }
   const title = range === 'day' ? cap(fmt(from, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) : range === 'week' ? weekTitle(from, to) : range === 'year' ? `Año ${from.getFullYear()}` : cap(fmt(from, { month: 'long', year: 'numeric' }))
 
-  return <main className="mx-auto max-w-[1440px] px-4 pb-16 pt-6 lg:px-10">
+  return <main className="mx-auto w-full min-w-0 max-w-[1440px] px-4 pb-16 pt-6 lg:px-10">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div><p className={eyebrow}>Tablero del coordinador</p><h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2><p className="mt-1.5 text-sm text-dte-gris">Seguimiento territorial de todo el equipo.</p>{onNuevaReunion && <Button onClick={onNuevaReunion} className="mt-3 bg-dte-magenta font-semibold text-white hover:bg-dte-magenta-oscuro"><Users data-icon="inline-start" />Nueva reunión de equipo</Button>}</div>
       <div className="flex flex-wrap items-center gap-2">
