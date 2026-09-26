@@ -1,5 +1,6 @@
 'use client'
 
+import { Pill } from '@/components/ui/segmented'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Clock, Loader2, Plus, School as SchoolIcon, Search, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -41,7 +42,7 @@ export function SchoolPicker({ value, onChange }: { value: School | null, onChan
   const showList = open && query.trim().length >= 2
   return <div className="relative">
     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" />
-    <Input role="combobox" aria-expanded={showList} aria-controls="school-results" aria-autocomplete="list" className="h-10 pl-9 font-normal" placeholder="Nombre, localidad o CUE…" value={query}
+    <Input role="combobox" aria-expanded={showList} aria-controls="school-results" aria-autocomplete="list" className="h-11 md:h-10 pl-9 font-normal" placeholder="Nombre, localidad o CUE…" value={query}
       onChange={e => { setQuery(e.target.value); setOpen(true) }} onFocus={e => { setOpen(true); e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' }) }} onBlur={() => setTimeout(() => setOpen(false), 150)}
       onKeyDown={e => {
         if (!showList || !results.length) return
@@ -62,8 +63,10 @@ export function SchoolPicker({ value, onChange }: { value: School | null, onChan
   </div>
 }
 
-export function Field({ label, hint, required, children, className = '' }: { label: string, hint?: string, required?: boolean, children: React.ReactNode, className?: string }) {
-  return <label className={`flex flex-col gap-1.5 ${className}`}><span className="text-sm font-semibold text-dte-tinta">{label}{required && <span className="text-dte-magenta"> *</span>}{hint && <span className="ml-1 font-normal text-dte-gris">{hint}</span>}</span>{children}</label>
+// Campo con label visible y mensaje de error debajo (vinculado por aria-describedby desde el control).
+export function Field({ label, hint, required, children, className = '', error, errorId, id }: { label: string, hint?: string, required?: boolean, children: React.ReactNode, className?: string, error?: string, errorId?: string, id?: string }) {
+  return <label id={id} className={`flex flex-col gap-1.5 ${className}`}><span className="text-sm font-semibold text-dte-tinta">{label}{required && <span className="text-dte-magenta" aria-hidden> *</span>}{hint && <span className="ml-1 font-normal text-dte-gris">{hint}</span>}</span>{children}
+    {error && <span id={errorId} role="alert" className="text-sm font-medium text-peligro">{error}</span>}</label>
 }
 
 export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSaved }: { fed: Fed, feds: Fed[], item: AgendaItem | null, defaultFecha?: string, preset?: ItemPreset, onCancel: () => void, onSaved: (r: { creadas: number, offline?: boolean }) => void }) {
@@ -103,6 +106,8 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const [otroOrigen, setOtroOrigen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [errores, setErrores] = useState<Partial<Record<'establecimiento' | 'accion' | 'hora' | 'club' | 'curso' | 'serie', string>>>({})
+  const limpiar = (k: keyof typeof errores) => setErrores(e => (e[k] ? { ...e, [k]: undefined } : e))
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm(f => ({ ...f, [k]: v }))
   const toNum = (v: string) => (v.trim() === '' ? null : Number(v))
   const cat = form.accion ? CATEGORIA[form.accion] : null
@@ -144,12 +149,17 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!esParo && !esLicencia && !school && !form.lugar.trim()) { setError('Indicá el establecimiento (o el lugar, si no es una escuela).'); return }
-    if (!form.accion) { setError('Elegí el tipo de acción.'); return }
-    if (timeError) { setError(timeError); return }
-    if (esClub && !form.club_id) { setError(`Elegí a qué ${marca.corto} corresponde el encuentro, o iniciá uno nuevo.`); return }
-    if (esClub && form.club_id === 'nuevo' && !form.curso) { setError(`Indicá el grado o curso (y sección): cada grupo es un ${marca.corto}.`); return }
-    if (repetir && !item && (!diasSerie.length || hastaSerie <= form.fecha)) { setError('Para repetir, elegí al menos un día y una fecha de fin posterior.'); return }
+    // Validación: mensaje debajo de cada campo y foco/scroll al primero con error.
+    const errs: typeof errores = {}
+    if (!esParo && !esLicencia && !school && !form.lugar.trim()) errs.establecimiento = 'Indicá el establecimiento (o el lugar, si no es una escuela).'
+    if (!form.accion) errs.accion = 'Elegí el tipo de acción.'
+    if (timeError) errs.hora = timeError
+    if (esClub && !form.club_id) errs.club = `Elegí a qué ${marca.corto} corresponde el encuentro, o iniciá uno nuevo.`
+    if (esClub && form.club_id === 'nuevo' && !form.curso) errs.curso = `Indicá el grado o curso: cada grupo es un ${marca.corto}.`
+    if (repetir && !item && (!diasSerie.length || hastaSerie <= form.fecha)) errs.serie = 'Elegí al menos un día y una fecha de fin posterior.'
+    setErrores(errs)
+    const primero = (['establecimiento', 'hora', 'accion', 'club', 'curso', 'serie'] as const).find(k => errs[k])
+    if (primero || !form.accion) { document.getElementById(`campo-${primero ?? 'accion'}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setError(''); return }
     setSaving(true); setError('')
     const input: AgendaItemInput = {
       repeticion: repetir && !item ? { dias: diasSerie, hasta: hastaSerie } : null,
@@ -169,23 +179,24 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   }
 
   return <form onSubmit={submit} className="flex flex-col gap-5">
-    {!esParo && !esLicencia && <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">Establecimiento <span className="text-dte-magenta">*</span> <span className="font-normal text-dte-gris">(escuela o lugar; no hace falta para Licencia ni Paro)</span></span><SchoolPicker value={school} onChange={setSchool} />{!school && <Input placeholder="…o lugar, si no es una escuela (ej.: Jefatura Distrital, Feria de Ciencias)" value={form.lugar} onChange={e => set('lugar', e.target.value)} className="h-10" aria-label="Lugar" />}</div>}
+    {!esParo && !esLicencia && <div id="campo-establecimiento" className="flex scroll-mt-24 flex-col gap-1.5"><span className="text-sm font-semibold">Establecimiento <span className="text-dte-magenta">*</span> <span className="font-normal text-dte-gris">(escuela o lugar; no hace falta para Licencia ni Paro)</span></span><SchoolPicker value={school} onChange={v => { setSchool(v); limpiar('establecimiento') }} />{!school && <Input placeholder="…o lugar, si no es una escuela (ej.: Jefatura Distrital, Feria de Ciencias)" value={form.lugar} onChange={e => { set('lugar', e.target.value); limpiar('establecimiento') }} aria-invalid={!!errores.establecimiento || undefined} aria-describedby={errores.establecimiento ? 'err-establecimiento' : undefined} className="h-10" aria-label="Lugar" />}{errores.establecimiento && <p id="err-establecimiento" role="alert" className="text-sm font-medium text-peligro">{errores.establecimiento}</p>}</div>}
 
     <div className="grid gap-4 sm:grid-cols-3">
       <Field label="Fecha" required><Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} className="h-10" /></Field>
       {!esParo && <><Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="h-10" /></Field>
       <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="h-10" /></Field></>}
     </div>
-    {timeError && <p className="-mt-3 text-xs text-peligro">{timeError}</p>}
+    {timeError && <p id="campo-hora" role="alert" className="-mt-3 scroll-mt-24 text-sm font-medium text-peligro">{timeError}</p>}
     {ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-aviso-fuerte' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{ddjjDia.dte}</b>{ddjjDia.externo ? ` · Otro cargo: ${ddjjDia.externo}` : ''}{fueraDeHorario ? '. La acción queda fuera de ese horario.' : ''}</span></p>}
 
-    <fieldset>
-      <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta">*</span></legend>
+    <fieldset id="campo-accion" className="scroll-mt-24" aria-describedby={errores.accion ? 'err-accion' : undefined}>
+      <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta" aria-hidden>*</span></legend>
+      {errores.accion && <p id="err-accion" role="alert" className="-mt-1 mb-2 text-sm font-medium text-peligro">{errores.accion}</p>}
       <div className="flex flex-col gap-3">{CATEGORIAS.map(c => <div key={c}>
         <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris"><span className="size-2 rounded-sm" style={{ background: CAT_COLOR[c] }} />{CATEGORIA_LABEL[c]}</p>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c).sort(az).map(name => {
           const on = form.accion === name
-          return <button key={name} type="button" aria-pressed={on} onClick={() => setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '', tipo_jornada: f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada }))} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs font-bold uppercase leading-tight transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
+          return <button key={name} type="button" aria-pressed={on} onClick={() => { limpiar('accion'); setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '', tipo_jornada: f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada })) }} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs font-bold uppercase leading-tight transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
             <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span>{name}
           </button>
         })}</div>
@@ -198,7 +209,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     {!esParo && !esLicencia && companeros.length > 0 && <fieldset>
       <legend className="mb-1.5 flex w-full items-center justify-between text-sm font-semibold"><span>Acompañado por <span className="font-normal text-dte-gris">(opcional)</span></span>
         <button type="button" onClick={() => setParticipantes(participantes.length === companeros.length ? [] : companeros.map(c => c.id))} className="text-xs font-semibold text-dte-petroleo hover:opacity-80">{participantes.length === companeros.length ? 'Quitar a todos' : 'Todo el equipo'}</button></legend>
-      <div className="flex flex-wrap gap-1.5">{companeros.map(c => { const on = participantes.includes(c.id); return <button key={c.id} type="button" aria-pressed={on} onClick={() => togglePart(c.id)} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition ${on ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-petroleo/20 bg-dte-petroleo/[0.06] text-dte-petroleo hover:bg-dte-petroleo/[0.12]'}`}>{on ? <Check className="size-3" /> : <Plus className="size-3 opacity-70" />}{c.nombre_completo}</button> })}</div>
+      <div className="flex flex-wrap gap-1.5">{companeros.map(c => { const on = participantes.includes(c.id); return <Pill key={c.id} on={on} onClick={() => togglePart(c.id)}>{c.nombre_completo}</Pill> })}</div>
       {participantes.length > 0 && <p className="mt-1.5 text-xs text-dte-gris">La acción va a aparecer en el calendario de {participantes.length === 1 ? 'esa persona' : `esas ${participantes.length} personas`} y les llega una notificación. Sólo vos podés editarla.</p>}
     </fieldset>}
 
@@ -207,21 +218,21 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       {cat === 'tecnica' && <Field label="Cantidad" hint="(equipos)"><Input type="number" min={0} inputMode="numeric" placeholder="0" value={form.cantidad} onChange={e => set('cantidad', e.target.value)} className="h-10" /></Field>}
     </div>}
     <datalist id="sub-acciones">{[...(form.accion ? SUB_ACCIONES[form.accion] ?? [] : [])].sort(az).map(o => <option key={o} value={o} />)}</datalist>
-    {conSubAccion && form.accion && SUB_ACCIONES[form.accion] && <div className="-mt-3 flex flex-wrap items-center gap-1.5"><span className="mr-0.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Sugerencias</span>{[...SUB_ACCIONES[form.accion]!].sort(az).map(o => { const on = form.sub_accion.split(',').map(x => x.trim()).includes(o); return <button key={o} type="button" aria-pressed={on} onClick={() => { const cur = form.sub_accion.split(',').map(x => x.trim()).filter(Boolean); set('sub_accion', (on ? cur.filter(x => x !== o) : [...cur, o]).join(', ')) }} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition ${on ? 'border-dte-petroleo bg-dte-petroleo text-white shadow-xs' : 'border-dte-petroleo/20 bg-dte-petroleo/[0.06] text-dte-petroleo hover:border-dte-petroleo/40 hover:bg-dte-petroleo/[0.12]'}`}>{on ? <Check className="size-3" /> : <Plus className="size-3 opacity-70" />}{o}</button> })}</div>}
+    {conSubAccion && form.accion && SUB_ACCIONES[form.accion] && <div className="-mt-3 flex flex-wrap items-center gap-1.5"><span className="mr-0.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Sugerencias</span>{[...SUB_ACCIONES[form.accion]!].sort(az).map(o => { const on = form.sub_accion.split(',').map(x => x.trim()).includes(o); return <Pill key={o} on={on} onClick={() => { const cur = form.sub_accion.split(',').map(x => x.trim()).filter(Boolean); set('sub_accion', (on ? cur.filter(x => x !== o) : [...cur, o]).join(', ')) }}>{o}</Pill> })}</div>}
 
     {esClub && <fieldset className="grid gap-4 overflow-hidden rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
       <legend className="sr-only">Registro: {marca.nombre}</legend>
       <div className={`-m-3 mb-0 flex items-center gap-3 px-3 py-2.5 sm:col-span-6 ${marca.degradado}`}><img src={marca.logo} alt={marca.nombre} className="h-10 w-auto" /><span className="text-xs font-semibold text-white/95">{marca.nota}</span></div>
-      <Field label={`¿A qué ${marca.corto} corresponde?`} required className="sm:col-span-6"><select className={`${selectClass} h-10`} value={form.club_id} onChange={e => pickClub(e.target.value)} disabled={!clubes}>
+      <Field id="campo-club" label={`¿A qué ${marca.corto} corresponde?`} required className="scroll-mt-24 sm:col-span-6" error={errores.club} errorId="err-club"><select className={`${selectClass} h-11 md:h-10`} value={form.club_id} onChange={e => { pickClub(e.target.value); limpiar('club') }} aria-invalid={!!errores.club || undefined} aria-describedby={errores.club ? 'err-club' : undefined} disabled={!clubes}>
         <option value="">{clubes ? `Elegí ${marca.corto === 'club' ? 'un club' : 'una práctica'}…` : 'Cargando…'}</option>
         {[...clubOpts].sort((a, b) => az(a.school ? shortSchoolName(a.school) : a.lugar ?? '', b.school ? shortSchoolName(b.school) : b.lugar ?? '') || az(a.grupo ?? '', b.grupo ?? '')).map(c => <option key={c.id} value={c.id}>{clubLabel(c)}</option>)}
         <option value="nuevo">{marca.corto === 'club' ? '+ Iniciar un club nuevo' : '+ Iniciar una práctica nueva'} (comienza en esta fecha)</option>
       </select></Field>
       {form.club_id === 'nuevo' && <div className="grid gap-3 rounded-lg border border-dashed border-club-lila/50 bg-white p-3 sm:col-span-6 sm:grid-cols-6">
         <p className="text-xs text-dte-gris sm:col-span-6">Cada grado o curso es {marca.corto === 'club' ? 'un club' : 'una práctica'} en sí mismo. {school ? 'El nivel se sugiere según la escuela; podés cambiarlo.' : 'Elegí primero la escuela para sugerir el nivel.'}</p>
-        <Field label="Nivel / modalidad" className="sm:col-span-3"><select className={`${selectClass} h-10`} value={nivel.id} onChange={e => setForm(f => ({ ...f, nivel: e.target.value, curso: '' }))}>{[...NIVELES].sort((a, b) => az(a.label, b.label)).map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select></Field>
-        <Field label={nivel.cursoLabel} required className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.curso} onChange={e => set('curso', e.target.value)}><option value="">Elegí…</option>{nivel.cursos.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
-        <Field label="Sección" className="sm:col-span-1"><select className={`${selectClass} h-10`} value={form.seccion} onChange={e => set('seccion', e.target.value)}><option value="">—</option>{SECCIONES.map(x => <option key={x}>{x}</option>)}</select></Field>
+        <Field label="Nivel / modalidad" className="sm:col-span-3"><select className={`${selectClass} h-11 md:h-10`} value={nivel.id} onChange={e => setForm(f => ({ ...f, nivel: e.target.value, curso: '' }))}>{[...NIVELES].sort((a, b) => az(a.label, b.label)).map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select></Field>
+        <Field id="campo-curso" label={nivel.cursoLabel} required className="scroll-mt-24 sm:col-span-2" error={errores.curso} errorId="err-curso"><select className={`${selectClass} h-11 md:h-10`} value={form.curso} onChange={e => { set('curso', e.target.value); limpiar('curso') }} aria-invalid={!!errores.curso || undefined} aria-describedby={errores.curso ? 'err-curso' : undefined}><option value="">Elegí…</option>{nivel.cursos.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
+        <Field label="Sección" className="sm:col-span-1"><select className={`${selectClass} h-11 md:h-10`} value={form.seccion} onChange={e => set('seccion', e.target.value)}><option value="">—</option>{SECCIONES.map(x => <option key={x}>{x}</option>)}</select></Field>
         <label className="flex items-center gap-2 text-sm sm:col-span-6"><input type="checkbox" checked={otroOrigen} onChange={e => setOtroOrigen(e.target.checked)} className="size-4" style={{ accentColor: marca.acento }} />Los estudiantes son de otra escuela (se desarrolla en esta sede o en territorio)</label>
         {otroOrigen && <div className="flex flex-col gap-1.5 sm:col-span-6"><span className="text-sm font-semibold">Escuela de origen de los estudiantes</span><SchoolPicker value={origen} onChange={setOrigen} /></div>}
         {grupo && <p className="text-xs sm:col-span-6">Se va a registrar como <b>{grupo}</b>{school ? ` · ${shortSchoolName(school)}` : ''}{otroOrigen && origen ? ` · estudiantes de ${shortSchoolName(origen)}` : ''}.</p>}
@@ -230,33 +241,34 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       <Field label="Propuesta dictada" hint={marca.corto === 'club' ? '(ej.: taller de redes dentro del club)' : undefined} className="sm:col-span-4"><Input placeholder={marca.propuesta} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentros de la propuesta" hint="(previstos)" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={form.encuentros_previstos} onChange={e => set('encuentros_previstos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
-      <Field label="Tipo de jornada" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.tipo_jornada} onChange={e => set('tipo_jornada', e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{[...TIPOS_JORNADA].sort(azOtroAlFinal).map(t => <option key={t} value={t}>{t === 'Otro' ? 'Otro (aclarar en la descripción)' : t}</option>)}</select></Field>
-      <Field label="Formato de participación" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>
+      <Field label="Tipo de jornada" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={form.tipo_jornada} onChange={e => set('tipo_jornada', e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{[...TIPOS_JORNADA].sort(azOtroAlFinal).map(t => <option key={t} value={t}>{t === 'Otro' ? 'Otro (aclarar en la descripción)' : t}</option>)}</select></Field>
+      <Field label="Formato de participación" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>
       <Field label="Destinatarios" className="sm:col-span-6"><Input placeholder="Ej.: estudiantes de 5° y 6°, familias" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Cantidad de inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Participantes reales" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Breve descripción de lo realizado" className="sm:col-span-6"><Textarea rows={3} placeholder="Qué se trabajó, con qué recursos, cómo participó el grupo…" value={form.descripcion} onChange={e => set('descripcion', e.target.value)} className="bg-white" /></Field>
-      <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-white p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={form.es_cierre} onChange={e => set('es_cierre', e.target.checked)} className="mt-0.5 size-4" style={{ accentColor: marca.acento }} /><span><b>Este es el encuentro de cierre {marca.corto === 'club' ? 'del club' : 'de la práctica'}</b><span className="block text-xs text-dte-gris">{marca.corto === 'club' ? 'El club queda finalizado' : 'La práctica queda finalizada'} con esta fecha y deja de figurar entre los activos.</span></span></label>
+      <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-white p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={form.es_cierre} onChange={e => set('es_cierre', e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Este es el encuentro de cierre {marca.corto === 'club' ? 'del club' : 'de la práctica'}</b><span className="block text-xs text-dte-gris">{marca.corto === 'club' ? 'El club queda finalizado' : 'La práctica queda finalizada'} con esta fecha y deja de figurar entre los activos.</span></span></label>
     </fieldset>}
     {conEncuentro && !esClub && <fieldset className="grid gap-4 rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
       <legend className="px-1 text-sm font-semibold">Datos del encuentro <span className="font-normal text-dte-gris">(para las métricas de participación)</span></legend>
       <Field label="Propuesta" className="sm:col-span-4"><Input placeholder={form.accion === 'CLUB DE TECNOLOGÍA' ? 'Club de Tecnología' : 'Ej.: Ciudadanía digital en el aula'} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Destinatarios" className="sm:col-span-4"><Input placeholder="Ej.: estudiantes de 6° A, docentes" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" /></Field>
-      <Field label="Modalidad" className="sm:col-span-2"><select className={`${selectClass} h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>
+      <Field label="Modalidad" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>
       <Field label="Inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Asistentes" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>
     </fieldset>}
     {!esParo && <Field label={esLicencia ? 'Motivo' : 'Detalle'} hint="(opcional)"><Textarea placeholder={esLicencia ? 'Ej.: enfermedad, razones particulares (sin datos sensibles)' : 'Información útil para el seguimiento: con quién, qué se acordó, pendientes…'} rows={3} value={form.detalle} onChange={e => set('detalle', e.target.value)} /></Field>}
 
-    {item && <fieldset><legend className="mb-2 text-sm font-semibold">Estado</legend><div className="flex flex-wrap gap-2">{ESTADOS.map(e => <button key={e} type="button" aria-pressed={form.estado === e} onClick={() => set('estado', e)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${form.estado === e ? statusStyle[e].badge : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{form.estado === e && <Check className="size-3" />}{statusStyle[e].label}</button>)}</div></fieldset>}
+    {item && <fieldset><legend className="mb-2 text-sm font-semibold">Estado</legend><div className="flex flex-wrap gap-2">{ESTADOS.map(e => <button key={e} type="button" aria-pressed={form.estado === e} onClick={() => set('estado', e)} className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition md:min-h-8 md:text-xs ${form.estado === e ? statusStyle[e].badge : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{form.estado === e && <Check className="size-3" />}{statusStyle[e].label}</button>)}</div></fieldset>}
 
-    {!item && !esParo && !esLicencia && form.accion && <fieldset className="rounded-xl border border-dte-linea p-3">
-      <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={repetir} onChange={e => setRepetir(e.target.checked)} className="size-4" />Se repite cada semana <span className="font-normal text-dte-gris">(ej.: el club todos los miércoles)</span></label>
+    {!item && !esParo && !esLicencia && form.accion && <fieldset id="campo-serie" className="scroll-mt-24 rounded-xl border border-dte-linea p-3">
+      <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={repetir} onChange={e => { setRepetir(e.target.checked); limpiar('serie') }} className="size-5" />Se repite cada semana <span className="font-normal text-dte-gris">(ej.: el club todos los miércoles)</span></label>
       {repetir && <div className="mt-3 flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-1.5"><span className="mr-1 text-xs font-semibold uppercase tracking-wider text-dte-gris">Días</span>{DIAS_HABILES.map((d, i) => { const n = i + 1, on = diasSerie.includes(n); return <button key={d} type="button" aria-pressed={on} onClick={() => setDias((on ? diasSerie.filter(x => x !== n) : [...diasSerie, n]).sort())} className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${on ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-petroleo/20 bg-dte-petroleo/[0.06] text-dte-petroleo hover:bg-dte-petroleo/[0.12]'}`}>{d}</button> })}</div>
+        <div className="flex flex-wrap items-center gap-1.5"><span className="mr-1 text-xs font-semibold uppercase tracking-wider text-dte-gris">Días</span>{DIAS_HABILES.map((d, i) => { const n = i + 1, on = diasSerie.includes(n); return <Pill key={d} on={on} conIcono={false} className="min-w-11 justify-center font-semibold" onClick={() => setDias((on ? diasSerie.filter(x => x !== n) : [...diasSerie, n]).sort())}>{d}</Pill> })}</div>
         <Field label="Hasta" className="max-w-48"><Input type="date" min={form.fecha} value={hastaSerie} onChange={e => setHasta(e.target.value)} className="h-10" /></Field>
         <p className="text-xs text-dte-gris">Se crean como <b>planificadas</b> con los mismos datos, salteando feriados y recesos. Después completás cada encuentro{esClub ? ` y queda asociado al ${marca.corto}` : ''}. Máximo 60 fechas.</p>
+        {errores.serie && <p role="alert" className="text-sm font-medium text-peligro">{errores.serie}</p>}
       </div>}
     </fieldset>}
 
@@ -265,7 +277,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       <ul className="list-disc pl-5 text-sm">{avisos.map(a => <li key={a}>{a}</li>)}</ul>
     </div>}
     {error && <ErrorBox message={error} />}
-    <div className="sticky bottom-0 -mx-4 -mb-4 flex gap-2 border-t border-dte-linea bg-white px-4 py-3 sm:justify-end">
+    <div className="sticky -bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] -mx-4 -mb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex gap-2 border-t border-dte-linea bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:-bottom-4 sm:-mb-4 sm:justify-end sm:pb-3">
       <Button variant="outline" type="button" size="lg" className="flex-1 sm:flex-none" onClick={onCancel}>Cancelar</Button>
       <Button type="submit" size="lg" disabled={saving} className="flex-1 bg-dte-petroleo px-4 sm:flex-none font-semibold hover:bg-dte-petroleo-oscuro">{saving && <Loader2 className="animate-spin" data-icon="inline-start" />}{item ? 'Guardar cambios' : 'Agregar a mi agenda'}</Button>
     </div>

@@ -21,7 +21,7 @@ export function NotificacionesBell({ profile, feds, reloadKey, onOpen }: { profi
   const autor = (id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Un compañero'
   const leer = (ids?: string[]) => { setList(l => l.map(n => (!ids || ids.includes(n.id) ? { ...n, leida: true } : n))); marcarLeidas(profile.id, ids).catch(() => {}) }
   return <div ref={ref} className="relative">
-    <button onClick={() => setOpen(o => !o)} aria-label={`Notificaciones${unread ? ` (${unread} sin leer)` : ''}`} aria-expanded={open} className="relative flex size-10 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-fondo hover:text-dte-tinta">
+    <button onClick={() => setOpen(o => !o)} aria-label={`Notificaciones${unread ? ` (${unread} sin leer)` : ''}`} aria-expanded={open} className="relative flex size-11 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-fondo hover:text-dte-tinta">
       <Bell className="size-5" />{unread > 0 && <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-dte-magenta px-1 text-xs font-bold text-white">{unread}</span>}
     </button>
     {open && <div className="absolute right-0 top-12 z-modal w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xl">
