@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Panel } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
 import type { DdjjDia, Fed, Feriado } from '@/lib/agenda'
-import { az, cap, errMsg, fmt, parse, selectClass, getFeriados, updateFed, addFeriado, deleteFeriado, DIAS_HABILES, ErrorBox } from '@/components/app/comun'
+import { az, cap, errMsg, fmt, parse, selectClass, getFeriados, updateFed, addFeriado, deleteFeriado, DIAS_HABILES, ErrorBox, Skeleton } from '@/components/app/comun'
 
 const DIAS_LARGOS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
 const TIPO_FERIADO: Record<Feriado['tipo'], string> = { nacional: 'Nacional', turistico: 'No laborable turístico', distrital: 'Aniversario distrital', receso: 'Receso escolar' }
@@ -83,7 +83,7 @@ function Feriados({ autorId, distritos, onSaved }: { autorId: string, distritos:
     </div>
     <p className="mb-3 text-xs text-dte-gris">Para un receso de varios días, cargá cada día hábil (los fines de semana ya no cuentan).</p>
     {error && <div className="mb-3"><ErrorBox message={error} /></div>}
-    {!list ? <p className="text-sm text-dte-gris">Cargando…</p> : !list.length ? <p className="text-sm text-dte-gris">No hay feriados cargados en {year}.</p>
+    {!list ? <div className="flex flex-col gap-2" aria-busy="true" aria-label="Cargando feriados"><Skeleton className="h-11" /><Skeleton className="h-11" /><Skeleton className="h-11" /></div> : !list.length ? <p className="text-sm text-dte-gris">No hay feriados cargados en {year}.</p>
       : <ul className="divide-y divide-dte-linea rounded-xl border border-dte-linea">{list.map(f => <li key={f.id ?? f.fecha + f.nombre} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
         <span className="min-w-0"><b className="tabular-nums">{cap(fmt(parse(f.fecha), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))}</b> · {f.nombre}{!f.confirmado && <span className="text-dte-gris"> (a confirmar)</span>}
           <span className="block text-xs text-dte-gris">{TIPO_FERIADO[f.tipo]}{f.distrito ? ` · ${titleCase(f.distrito)}` : ''}</span></span>

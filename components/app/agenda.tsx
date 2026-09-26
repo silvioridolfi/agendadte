@@ -3,11 +3,11 @@
 import { Segmented } from '@/components/ui/segmented'
 import { exportarPlanilla } from '@/lib/exportar'
 import { useMemo, useState } from 'react'
-import { Clock, Plus, Users, WifiOff, FileSpreadsheet } from 'lucide-react'
+import { CalendarX2, Clock, Loader2, Plus, Users, WifiOff, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ESTADOS, type AgendaItem, type Feriado, type Estado, type Fed } from '@/lib/agenda'
-import { actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, shortSchoolName, schoolPlace, ddjjFor, itemTitle, firstName, getFedItems, storage, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
+import { actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, shortSchoolName, schoolPlace, ddjjFor, itemTitle, firstName, getFedItems, storage, ActionChip, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
 
 export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed, feds: Fed[], reloadKey: number, onNew: (fecha?: string) => void, onSelect: (item: AgendaItem) => void }) {
   const [exportando, setExportando] = useState(false)
@@ -60,7 +60,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
       <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
         <Segmented label="Vista" value={view} options={CAL_VIEWS} onChange={setView} />
         <WeekNav prevLabel="Anterior" nextLabel="Siguiente" onPrev={() => setAnchor(calShift(anchor, view, -1))} onToday={() => setAnchor(toWeekday(new Date()))} onNext={() => setAnchor(calShift(anchor, view, 1))} />
-        <Button size="lg" variant="outline" disabled={!items?.length || exportando} onClick={exportar} title="Descargar la planilla del período en Excel" aria-label="Exportar la planilla del período a Excel" className="h-10 px-3"><FileSpreadsheet />{exportando && <span className="text-xs">…</span>}</Button>
+        <Button size="lg" variant="outline" disabled={!items?.length || exportando} onClick={exportar} title="Descargar la planilla del período en Excel" aria-label="Exportar la planilla del período a Excel" className="h-10 px-3"><FileSpreadsheet />{exportando && <Loader2 className="animate-spin" />}</Button>
         <Button size="lg" variant="marca" onClick={() => onNew(suggested)} className="hidden px-4 md:inline-flex"><Plus data-icon="inline-start" />Nueva acción</Button>
       </div>
     </div>
@@ -163,7 +163,7 @@ export function MiniMonth({ month, byDay, feriados, today, onDay }: { month: Dat
 export function ListaAcciones({ items, viewer, onSelect }: { items: AgendaItem[], viewer: string, onSelect: (i: AgendaItem) => void }) {
   const [n, setN] = useState(20)
   const orden = useMemo(() => [...items].sort((a, b) => b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)), [items])
-  if (!orden.length) return <p className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-10 text-center text-sm text-dte-gris">No hay acciones cargadas en este año.</p>
+  if (!orden.length) return <Vacio icono={CalendarX2} titulo="No hay acciones cargadas en este año" texto="Las acciones que agregues van a aparecer acá, de la más nueva a la más antigua." />
   return <div className="flex flex-col gap-3">
     <ul className="divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xs">{orden.slice(0, n).map(item =>
       <li key={item.id}><button onClick={() => onSelect(item)} className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte sm:grid-cols-[6.5rem_1fr_auto] sm:items-center">

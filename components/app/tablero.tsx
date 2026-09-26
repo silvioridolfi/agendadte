@@ -4,7 +4,7 @@ import { Segmented } from '@/components/ui/segmented'
 import { exportarPlanilla } from '@/lib/exportar'
 import { ConfiguracionView } from '@/components/app/configuracion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, Users, X, FileSpreadsheet, SlidersHorizontal } from 'lucide-react'
+import { CalendarX2, Loader2, Search, SearchX, Users, X, FileSpreadsheet, SlidersHorizontal } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,7 @@ import { ClubesView } from '@/components/clubes'
 import { MetricsView } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
 import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed, type Club } from '@/lib/agenda'
-import { getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, schoolPlace, itemTitle, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav } from '@/components/app/comun'
+import { Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, schoolPlace, itemTitle, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav } from '@/components/app/comun'
 
 // =====================================================================
 
@@ -104,7 +104,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
       <div><p className={eyebrow}>Tablero del coordinador</p><h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2><p className="mt-1.5 text-sm text-dte-gris">Seguimiento territorial de todo el equipo.</p>{onNuevaReunion && <Button variant="marca" onClick={onNuevaReunion} className="mt-3"><Users data-icon="inline-start" />Nueva reunión de equipo</Button>}</div>
       <div className="flex flex-wrap items-center gap-2">
         <Segmented label="Período" value={range} options={(Object.keys(rangeNames) as Range[]).map(v => [v, rangeNames[v][0]] as const)} onChange={setRange} />
-        <Button variant="outline" disabled={!items || exportando} onClick={exportar} title="Descargar planilla regional con los filtros aplicados"><FileSpreadsheet data-icon="inline-start" />{exportando ? 'Generando…' : 'Exportar Excel'}</Button>
+        <Button variant="outline" disabled={!items || exportando} onClick={exportar} title="Descargar planilla regional con los filtros aplicados">{exportando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}{exportando ? 'Generando…' : 'Exportar Excel'}</Button>
         <WeekNav prevLabel={`${cap(rangeNames[range][1])} anterior`} nextLabel={`${cap(rangeNames[range][1])} siguiente`} onPrev={() => setAnchor(shift(anchor, range, -1))} onToday={() => setAnchor(new Date())} onNext={() => setAnchor(shift(anchor, range, 1))} />
       </div>
     </div>
@@ -140,7 +140,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     : <div className="mt-6 flex flex-col gap-6">
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? [0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)
-        : !groups.length ? <div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-10 text-center"><p className="font-semibold">{anyFilter ? 'Ninguna acción coincide con los filtros' : `No hay acciones cargadas en ${rangeNames[range][2]}`}</p>{anyFilter && <Button variant="link" onClick={clear} className="mt-1 text-dte-magenta">Limpiar filtros</Button>}</div>
+        : !groups.length ? <Vacio icono={anyFilter ? SearchX : CalendarX2} titulo={anyFilter ? 'Ninguna acción coincide con los filtros' : `No hay acciones cargadas en ${rangeNames[range][2]}`} texto={anyFilter ? 'Probá quitar algún filtro o ampliar el período.' : undefined}>{anyFilter && <Button variant="outline" onClick={clear}>Limpiar filtros</Button>}</Vacio>
         : groups.map(([id, group]) => <section key={id} aria-label={fedName(id)}>
           <div className="mb-2 flex items-center gap-3">
             <Avatar className="size-9"><AvatarFallback className={`${fedColor(feds, id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(fedName(id))}</AvatarFallback></Avatar>
