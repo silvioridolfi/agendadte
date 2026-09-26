@@ -32,18 +32,18 @@ function FedEditor({ fed, autorId, onSaved }: { fed: Fed, autorId: string, onSav
   }
   return <div className="flex flex-col gap-3 border-t border-dte-linea pt-3">
     <div className="grid gap-3 sm:grid-cols-3">
-      <label className="flex flex-col gap-1 text-sm font-semibold">Nombre<Input value={nombre} onChange={e => setNombre(e.target.value)} className="h-9" /></label>
-      <label className="flex flex-col gap-1 text-sm font-semibold">Distritos a cargo <span className="text-xs font-normal text-dte-gris">(separados por coma)</span><Input value={distritos} onChange={e => setDistritos(e.target.value)} className="h-9" /></label>
-      <label className="flex flex-col gap-1 text-sm font-semibold">Carga horaria<Input value={carga} onChange={e => setCarga(e.target.value)} placeholder="Ej.: 20 hs" className="h-9" /></label>
+      <label className="flex flex-col gap-1 text-sm font-semibold">Nombre<Input value={nombre} onChange={e => setNombre(e.target.value)} className="h-11 md:h-9" /></label>
+      <label className="flex flex-col gap-1 text-sm font-semibold">Distritos a cargo <span className="text-xs font-normal text-dte-gris">(separados por coma)</span><Input value={distritos} onChange={e => setDistritos(e.target.value)} className="h-11 md:h-9" /></label>
+      <label className="flex flex-col gap-1 text-sm font-semibold">Carga horaria<Input value={carga} onChange={e => setCarga(e.target.value)} placeholder="Ej.: 20 hs" className="h-11 md:h-9" /></label>
     </div>
     <div className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm">
       <thead><tr className="text-left text-xs text-dte-gris"><th className="pb-1 font-semibold">DD.JJ.</th><th className="pb-1 font-semibold">Desde</th><th className="pb-1 font-semibold">Hasta</th><th className="pb-1 font-semibold">Horario DTE (texto)</th><th className="pb-1 font-semibold">Otro cargo</th></tr></thead>
       <tbody>{ddjj.map((d, i) => <tr key={d.dia}>
         <td className="py-1 pr-2 font-semibold">{DIAS_LARGOS[i]}</td>
-        <td className="py-1 pr-2"><Input type="time" value={d.dte_desde ?? ''} onChange={e => setDia(d.dia, { dte_desde: e.target.value })} className="h-8" /></td>
-        <td className="py-1 pr-2"><Input type="time" value={d.dte_hasta ?? ''} onChange={e => setDia(d.dia, { dte_hasta: e.target.value })} className="h-8" /></td>
-        <td className="py-1 pr-2"><Input value={d.dte} onChange={e => setDia(d.dia, { dte: e.target.value })} placeholder="Ej.: 8 a 12" className="h-8" /></td>
-        <td className="py-1"><Input value={d.externo ?? ''} onChange={e => setDia(d.dia, { externo: e.target.value })} placeholder="Ej.: EP 5 de 13 a 17" className="h-8" /></td>
+        <td className="py-1 pr-2"><Input type="time" value={d.dte_desde ?? ''} onChange={e => setDia(d.dia, { dte_desde: e.target.value })} className="h-11 md:h-8" /></td>
+        <td className="py-1 pr-2"><Input type="time" value={d.dte_hasta ?? ''} onChange={e => setDia(d.dia, { dte_hasta: e.target.value })} className="h-11 md:h-8" /></td>
+        <td className="py-1 pr-2"><Input value={d.dte} onChange={e => setDia(d.dia, { dte: e.target.value })} placeholder="Ej.: 8 a 12" className="h-11 md:h-8" /></td>
+        <td className="py-1"><Input value={d.externo ?? ''} onChange={e => setDia(d.dia, { externo: e.target.value })} placeholder="Ej.: EP 5 de 13 a 17" className="h-11 md:h-8" /></td>
       </tr>)}</tbody>
     </table></div>
     {error && <ErrorBox message={error} />}
@@ -72,12 +72,12 @@ function Feriados({ autorId, distritos, onSaved }: { autorId: string, distritos:
   return <Panel title="Feriados, aniversarios y recesos" subtitle="Se muestran en los calendarios, se saltean en las series y no cuentan para “sin actividad” de clubes y prácticas."
     action={<div className="flex items-center gap-1"><Button variant="outline" size="sm" onClick={() => setYear(y => y - 1)}>‹</Button><span className="px-2 text-sm font-bold tabular-nums">{year}</span><Button variant="outline" size="sm" onClick={() => setYear(y => y + 1)}>›</Button></div>}>
     <div className="mb-4 grid gap-2 rounded-xl bg-dte-fondo p-3 sm:grid-cols-[9rem_1fr_12rem_10rem_auto_auto] sm:items-end">
-      <label className="flex flex-col gap-1 text-xs font-semibold">Fecha<Input type="date" value={nuevo.fecha} onChange={e => setNuevo(n => ({ ...n, fecha: e.target.value }))} className="h-9 bg-white" /></label>
-      <label className="flex flex-col gap-1 text-xs font-semibold">Nombre<Input value={nuevo.nombre} onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))} placeholder="Ej.: Receso invernal" className="h-9 bg-white" /></label>
+      <label className="flex flex-col gap-1 text-xs font-semibold">Fecha<Input type="date" value={nuevo.fecha} onChange={e => setNuevo(n => ({ ...n, fecha: e.target.value }))} className="h-11 bg-white md:h-9" /></label>
+      <label className="flex flex-col gap-1 text-xs font-semibold">Nombre<Input value={nuevo.nombre} onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))} placeholder="Ej.: Receso invernal" className="h-11 bg-white md:h-9" /></label>
       <label className="flex flex-col gap-1 text-xs font-semibold">Tipo<select className={selectClass} value={nuevo.tipo} onChange={e => setNuevo(n => ({ ...n, tipo: e.target.value as Feriado['tipo'] }))}>{(Object.keys(TIPO_FERIADO) as Feriado['tipo'][]).sort((a, b) => az(TIPO_FERIADO[a], TIPO_FERIADO[b])).map(t => <option key={t} value={t}>{TIPO_FERIADO[t]}</option>)}</select></label>
       <label className="flex flex-col gap-1 text-xs font-semibold">Distrito<select className={selectClass} disabled={nuevo.tipo !== 'distrital'} value={nuevo.distrito ?? ''} onChange={e => setNuevo(n => ({ ...n, distrito: e.target.value || null }))}><option value="">—</option>{distritos.map(d => <option key={d} value={d}>{titleCase(d)}</option>)}</select></label>
       <label className="flex items-center gap-1.5 pb-2 text-xs font-semibold"><input type="checkbox" checked={nuevo.confirmado} onChange={e => setNuevo(n => ({ ...n, confirmado: e.target.checked }))} className="size-4" />Confirmado</label>
-      <Button size="sm" disabled={busy === 'add' || !nuevo.fecha || !nuevo.nombre.trim() || (nuevo.tipo === 'distrital' && !nuevo.distrito)} onClick={agregar} className="h-9 bg-dte-magenta hover:bg-dte-magenta-oscuro">{busy === 'add' ? <Loader2 className="animate-spin" /> : <Plus data-icon="inline-start" />}Agregar</Button>
+      <Button size="sm" disabled={busy === 'add' || !nuevo.fecha || !nuevo.nombre.trim() || (nuevo.tipo === 'distrital' && !nuevo.distrito)} onClick={agregar} variant="marca" className="md:h-9">{busy === 'add' ? <Loader2 className="animate-spin" /> : <Plus data-icon="inline-start" />}Agregar</Button>
     </div>
     <p className="mb-3 text-xs text-dte-gris">Para un receso de varios días, cargá cada día hábil (los fines de semana ya no cuentan).</p>
     {error && <div className="mb-3"><ErrorBox message={error} /></div>}
