@@ -1,12 +1,24 @@
 'use client'
 
+import { exportarPlanilla } from '@/lib/exportar'
 import { useMemo, useState } from 'react'
-import { Clock, Plus, Users, WifiOff } from 'lucide-react'
+import { Clock, Plus, Users, WifiOff, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ESTADOS, type AgendaItem, type Feriado, type Estado, type Fed } from '@/lib/agenda'
 import { actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, shortSchoolName, schoolPlace, ddjjFor, itemTitle, firstName, getFedItems, storage, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
 
-export function AgendaView({ fed, reloadKey, onNew, onSelect }: { fed: Fed, reloadKey: number, onNew: (fecha?: string) => void, onSelect: (item: AgendaItem) => void }) {
+export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed, feds: Fed[], reloadKey: number, onNew: (fecha?: string) => void, onSelect: (item: AgendaItem) => void }) {
+  const [exportando, setExportando] = useState(false)
+  // Planilla del período visible: las acciones propias (las compartidas figuran en la planilla de quien las creó).
+  async function exportar() {
+    if (!items) return
+    setExportando(true)
+    try {
+      const propias = items.filter(i => i.fed_id === fed.id)
+      await exportarPlanilla({ titulo: `Planilla ${fed.nombre_completo}`, desde: iso(from), hasta: iso(to), items: propias, feds, porFed: false,
+        encuentros: propias.flatMap(i => (i.encuentros ?? []).map(e => ({ ...e, school: e.school ?? i.school }))) })
+    } finally { setExportando(false) }
+  }
   const [view, setViewState] = useState<CalView>(() => (storage(() => localStorage.getItem(CAL_KEY)) as CalView) || 'week')
   const setView = (v: CalView) => { setViewState(v); storage(() => localStorage.setItem(CAL_KEY, v)) }
   const [anchor, setAnchor] = useState(() => toWeekday(new Date()))
@@ -46,6 +58,7 @@ export function AgendaView({ fed, reloadKey, onNew, onSelect }: { fed: Fed, relo
       <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label="Vista" className="flex rounded-lg border border-dte-linea bg-white p-1 shadow-xs">{CAL_VIEWS.map(([v, l]) => <button key={v} onClick={() => setView(v)} aria-pressed={view === v} className={`rounded-md px-3 py-1 text-sm font-semibold transition ${view === v ? 'bg-dte-petroleo text-white' : 'text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}</div>
         <WeekNav prevLabel="Anterior" nextLabel="Siguiente" onPrev={() => setAnchor(calShift(anchor, view, -1))} onToday={() => setAnchor(toWeekday(new Date()))} onNext={() => setAnchor(calShift(anchor, view, 1))} />
+        <Button size="lg" variant="outline" disabled={!items?.length || exportando} onClick={exportar} title="Descargar la planilla del período en Excel" className="h-10"><FileSpreadsheet data-icon="inline-start" />{exportando ? 'Generando…' : 'Exportar'}</Button>
         <Button size="lg" onClick={() => onNew(suggested)} className="hidden h-10 bg-dte-magenta px-4 font-semibold text-white hover:bg-[#b8155c] sm:inline-flex"><Plus data-icon="inline-start" />Nueva acción</Button>
       </div>
     </div>

@@ -2,35 +2,24 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Encode_Sans } from 'next/font/google'
 import './globals.css'
+import { RegistrarPWA } from '@/components/app/pwa'
 
 const encodeSans = Encode_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-encode-sans' })
 
 export const metadata: Metadata = {
   title: 'Agenda Territorial · Equipo FED',
   description: 'Agenda de trabajo territorial para Facilitadores de Educación Digital.',
-  generator: 'v0.app',
+  applicationName: 'Agenda FED',
+  appleWebApp: { capable: true, title: 'Agenda FED', statusBarStyle: 'default' },
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
+    icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { url: '/icon-light-32x32.png', sizes: '32x32', type: 'image/png' }],
     apple: '/apple-icon.png',
   },
 }
 
 export const viewport: Viewport = {
   colorScheme: 'light',
-  themeColor: '#417099',
+  themeColor: '#05476e',
 }
 
 export default function RootLayout({
@@ -42,6 +31,7 @@ export default function RootLayout({
     <html lang="es" className={encodeSans.variable}>
       <body className="font-sans antialiased">
         {children}
+        <RegistrarPWA />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

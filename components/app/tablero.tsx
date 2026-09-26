@@ -1,8 +1,9 @@
 'use client'
 
+import { exportarPlanilla } from '@/lib/exportar'
 import { ConfiguracionView } from '@/components/app/configuracion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, Users, X } from 'lucide-react'
+import { Search, Users, X, FileSpreadsheet } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -63,6 +64,15 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   // Feriados y recesos del año: no cuentan para "sin actividad" de clubes y prácticas.
   const [noHabiles, setNoHabiles] = useState<Set<string>>(new Set())
   useEffect(() => { const y = new Date().getFullYear(); getFeriados(`${y}-01-01`, `${y}-12-31`).then(l => setNoHabiles(new Set(l.filter(f => f.tipo !== 'distrital').map(f => f.fecha)))).catch(() => {}) }, [reloadKey])
+  const [exportando, setExportando] = useState(false)
+  async function exportar() {
+    if (!items) return
+    setExportando(true)
+    try {
+      await exportarPlanilla({ titulo: 'Agenda Territorial Región 1', desde: iso(from), hasta: iso(to), items: base.filter(i => feds.some(f => f.id === i.fed_id) && (!estado || i.estado === estado)),
+        encuentros: encBase, feds: todos, clubes: clubes ? clubBase : undefined })
+    } finally { setExportando(false) }
+  }
   const fedName = useCallback((id: string) => todos.find(f => f.id === id)?.nombre_completo ?? 'FED desconocido', [todos])
   const distritos = useMemo(() => [...new Set([...feds.flatMap(f => f.distritos_a_cargo), ...(items ?? []).map(i => i.school?.distrito).filter((d): d is string => !!d)])].sort((a, b) => a.localeCompare(b, 'es')), [feds, items])
   const q = search.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
@@ -90,6 +100,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
       <div><p className={eyebrow}>Tablero del coordinador</p><h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2><p className="mt-1.5 text-sm text-dte-gris">Seguimiento territorial de todo el equipo.</p>{onNuevaReunion && <Button onClick={onNuevaReunion} className="mt-3 bg-dte-magenta font-semibold text-white hover:bg-[#b8155c]"><Users data-icon="inline-start" />Nueva reunión de equipo</Button>}</div>
       <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label="Período" className="flex rounded-lg border border-dte-linea bg-white p-1 shadow-xs">{(Object.keys(rangeNames) as Range[]).map(v => <button key={v} onClick={() => setRange(v)} aria-pressed={range === v} className={`rounded-md px-3 py-1 text-sm font-semibold transition ${range === v ? 'bg-dte-petroleo text-white' : 'text-dte-gris hover:text-dte-tinta'}`}>{rangeNames[v][0]}</button>)}</div>
+        <Button variant="outline" disabled={!items || exportando} onClick={exportar} title="Descargar planilla regional con los filtros aplicados"><FileSpreadsheet data-icon="inline-start" />{exportando ? 'Generando…' : 'Exportar Excel'}</Button>
         <WeekNav prevLabel={`${cap(rangeNames[range][1])} anterior`} nextLabel={`${cap(rangeNames[range][1])} siguiente`} onPrev={() => setAnchor(shift(anchor, range, -1))} onToday={() => setAnchor(new Date())} onNext={() => setAnchor(shift(anchor, range, 1))} />
       </div>
     </div>
