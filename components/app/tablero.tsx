@@ -36,6 +36,14 @@ export const LISTA_INICIAL = 5, LISTA_PASO = 20
 // `autorId`: perfil de coordinación que usa el tablero (habilita Configuración); `onChanged`: aviso tras editar equipo o feriados.
 export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion, autorId, onChanged }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void, autorId?: string, onChanged?: (msg: string) => void }) {
   const [tab, setTab] = useState<'resumen' | 'clubes' | 'practicas' | 'acciones' | 'config'>('resumen')
+  // Pestañas accesibles: flechas izquierda/derecha, Inicio y Fin mueven el foco y activan la pestaña.
+  function teclaPestana(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
+    const tabs = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('[role=tab]')]
+    const i = tabs.findIndex(t => t.dataset.tab === tab)
+    const j = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length
+    e.preventDefault(); tabs[j].focus(); tabs[j].click()
+  }
   const [range, setRange] = useState<Range>('month')
   const [anchor, setAnchor] = useState(() => new Date())
   const [search, setSearch] = useState('')
@@ -110,10 +118,11 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     </div>
 
     {/* Pestañas: en mobile se desplazan horizontalmente en una sola línea. */}
-    <div role="tablist" aria-label="Vista del tablero" className="-mx-4 mt-6 flex snap-x gap-1 overflow-x-auto border-b border-dte-linea px-4 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
-      {([['resumen', 'Resumen y métricas'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo'], ...(autorId ? [['config', 'Configuración']] as const : [])] as const).map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={e => { setTab(k); e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }} className={`-mb-px flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
+    <div role="tablist" aria-label="Vista del tablero" onKeyDown={teclaPestana} className="-mx-4 mt-6 flex snap-x gap-1 overflow-x-auto border-b border-dte-linea px-4 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
+      {([['resumen', 'Resumen y métricas'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo'], ...(autorId ? [['config', 'Configuración']] as const : [])] as const).map(([k, l]) => <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="panel-tablero" tabIndex={tab === k ? 0 : -1} data-tab={k} onClick={e => { setTab(k); e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }} className={`-mb-px flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
     </div>
 
+    <div id="panel-tablero" role="tabpanel" aria-labelledby={`tab-${tab}`}>
     {tab === 'acciones' && <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
       {ESTADOS.map(e => <button key={e} onClick={() => setEstado(estado === e ? '' : e)} aria-pressed={estado === e} className={`rounded-2xl border bg-white px-4 py-3 text-left transition hover:shadow-md ${estado === e ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>
         <span className="text-xs font-semibold text-dte-gris">{statusStyle[e].label}s</span>
@@ -162,5 +171,6 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
         </section>)}
       {fedsSinAcciones.length > 0 && <div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-dte-gris">Sin acciones cargadas en {rangeNames[range][2]}</p><div className="mt-2 flex flex-wrap gap-2">{fedsSinAcciones.map(f => <span key={f.id} className="rounded-full bg-white px-3 py-1 text-sm ring-1 ring-dte-linea">{f.nombre_completo}</span>)}</div></div>}
     </div>}
+    </div>
   </main>
 }
