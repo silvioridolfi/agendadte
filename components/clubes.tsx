@@ -6,6 +6,7 @@ import { CLUB_MAX_PARTICIPANTES, CLUB_MIN_ENCUENTROS, CLUB_DIAS_SIN_ACTIVIDAD, M
 import { DrillDialog, HBar, Kpi, Panel, type DrillRow } from '@/components/metrics'
 import { Confirmar } from '@/components/ui/confirmar'
 import { Loader2 } from 'lucide-react'
+import { ErrorBox, errMsg } from '@/components/app/comun'
 
 const nf = new Intl.NumberFormat('es-AR')
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -118,11 +119,13 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
   }
   const verParticipacion = () => setDrill({ title: 'Participación real', subtitle: `Promedio de participantes por encuentro vs. inscriptos · ${periodo}`, rows: conIns.map(r => ({ key: r.c.id, title: nombre(r.c), sub: `${nf.format(Math.round(r.promedio * 10) / 10)} participantes promedio de ${r.inscriptos} inscriptos`, right: `${pct(r.promedio, r.inscriptos)}%` })) })
 
-  async function cierre(club: Club, fecha: string | null) { setBusy(club.id); try { await onCierre(club, fecha) } finally { setBusy('') } }
+  const [errorCierre, setErrorCierre] = useState('')
+  async function cierre(club: Club, fecha: string | null) { setBusy(club.id); setErrorCierre(''); try { await onCierre(club, fecha) } catch (e) { setErrorCierre(errMsg(e)) } finally { setBusy('') } }
   const [aFinalizar, setAFinalizar] = useState<{ c: Club, fecha: string } | null>(null)
 
   return <div className="flex flex-col gap-4">
     <DrillDialog drill={drill} onClose={() => setDrill(null)} />
+    {errorCierre && <ErrorBox message={errorCierre} />}
     <Confirmar abierto={!!aFinalizar} titulo={`¿Finalizar ${tipo === 'CLUB DE TECNOLOGÍA' ? 'este club' : 'esta práctica'}?`} accion="Finalizar"
       descripcion={aFinalizar ? <><b>{nombre(aFinalizar.c)}</b> se cierra con fecha {corta(aFinalizar.fecha)} (último encuentro). Podés reactivarlo después.</> : ''}
       onConfirmar={() => aFinalizar && cierre(aFinalizar.c, aFinalizar.fecha)} onCerrar={() => setAFinalizar(null)} />
