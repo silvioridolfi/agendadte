@@ -61,8 +61,43 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
   const sinJornada = encs.filter(e => !e.tipo_jornada).length
   // Propuestas dictadas dentro de los clubes (encuentros por propuesta).
   const propuestas = [...encs.reduce((m, e) => { const k = (e.propuesta ?? marca.propuesta).trim(); return m.set(k, (m.get(k) ?? 0) + 1) }, new Map<string, number>())].sort((a, b) => b[1] - a[1])
-  // Escuelas y sedes donde se desarrollaron los encuentros (clubes y prácticas pueden hacerse fuera de la sede principal).
-  const sedes = [...encs.reduce((m, e) => { const k = e.school?.nombre ? schoolLabel({ school: e.school, lugar: null } as Club) : e.lugar ?? 'Sin escuela'; return m.set(k, (m.get(k) ?? 0) + 1) }, new Map<string, number>())].sort((a, b) => b[1] - a[1])
+  // Encuentros por escuela o sede donde se desarrollaron (clubes y prácticas pueden hacerse fuera de la sede principal).
+  // Un encuentro = un día de trabajo de un grupo; varias escuelas pueden recibir al mismo grupo.
+  const porEscuela = useMemo(() => {
+    const m = new Map<string, { nombre: string, distrito: string, grupos: Set<string>, encuentros: Set<string> }>()
+    for (const c of clubes) for (const e of c.encuentros) {
+      const k = e.school_id ?? `lugar:${e.lugar ?? '-'}`
+      const x = m.get(k) ?? { nombre: e.school ? schoolLabel({ school: e.school, lugar: null } as Club) : e.lugar ?? 'Sin escuela', distrito: e.school?.distrito ? titleCase(e.school.distrito) : '', grupos: new Set(), encuentros: new Set() }
+      x.grupos.add(c.id); x.encuentros.add(`${c.id}|${e.fecha}`); m.set(k, x)
+    }
+    return [...m.entries()].map(([k, x]) => ({ k, ...x, nGrupos: x.grupos.size, nEnc: x.encuentros.size })).sort((a, b) => b.nEnc - a.nEnc)
+  }, [clubes, schoolLabel])
+
+  // Ciclo lectivo: totales por semestre (1.º hasta el receso invernal, 2.º desde agosto), independientes del período elegido.
+  const cicloYear = Number(hoy.slice(0, 4))
+  const tramos = [
+    { k: 's1', label: '1.er semestre', desde: `${cicloYear}-01-01`, hasta: `${cicloYear}-07-31` },
+    { k: 's2', label: '2.º semestre', desde: `${cicloYear}-08-01`, hasta: `${cicloYear}-12-31` },
+    { k: 'ciclo', label: `Ciclo ${cicloYear}`, desde: `${cicloYear}-01-01`, hasta: `${cicloYear}-12-31` },
+  ]
+  const ciclo = useMemo(() => {
+    const delTipo = todos.filter(c => c.tipo === tipo)
+    return tramos.map(t => {
+      const enRango = (f: string | null) => !!f && f >= t.desde && f <= t.hasta
+      const activos = delTipo.filter(c => c.encuentros.some(e => enRango(e.fecha)))
+      const iniciados = delTipo.filter(c => enRango(c.fecha_inicio))
+      const finalizados = delTipo.filter(c => enRango(c.fecha_cierre))
+      const encuentros = activos.reduce((a, c) => a + new Set(c.encuentros.filter(e => enRango(e.fecha)).map(e => e.fecha)).size, 0)
+      const inscriptos = activos.reduce((a, c) => a + participacion({ ...c, encuentros: c.encuentros.filter(e => enRango(e.fecha)) }).inscriptos, 0)
+      const escuelas = new Set(activos.flatMap(c => c.encuentros.filter(e => enRango(e.fecha)).map(e => e.school_id ?? e.lugar))).size
+      return { ...t, activos, iniciados, finalizados, encuentros, inscriptos, escuelas }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todos, tipo, cicloYear])
+  const verCiclo = (titulo: string, t: string, list: Club[]) => setDrill({ title: `${titulo} · ${t}`, subtitle: `${list.length} ${clubesTxt}`, rows: list.map(c => {
+    const full = completos.get(c.id) ?? c
+    return { key: c.id, title: nombre(c), sub: [fedName(c.fed_id), `inicio ${corta(c.fecha_inicio)}`, c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : null].filter(Boolean).join(' · '), right: ESTADO_CLUB[clubEstado(full, hoy)].label }
+  }) })
   const porFed = feds.map(f => ({ f, r: rows.filter(r => r.c.fed_id === f.id) })).filter(x => x.r.length).sort((a, b) => b.r.length - a.r.length)
   const maxFed = Math.max(1, ...porFed.map(x => x.r.length))
 
@@ -91,6 +126,28 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
         <div><p className="text-xs font-semibold uppercase tracking-wider text-white/85">{tipo === 'CLUB DE TECNOLOGÍA' ? 'Línea prioritaria DTE 2025–2027' : marca.nombre} · {periodo}</p><p className="mt-0.5 text-sm text-white/95">{tipo === 'CLUB DE TECNOLOGÍA' ? `Mínimo ${CLUB_MIN_ENCUENTROS} encuentros por club y hasta ${CLUB_MAX_PARTICIPANTES} participantes. Cada grado es un club. ` : 'Cada grupo de estudiantes es una práctica con inicio y cierre. '}Pasa a “sin actividad” tras {CLUB_DIAS_SIN_ACTIVIDAD} días hábiles sin encuentros (sin contar el receso invernal).</p></div>
       </div>
     </div>
+
+    <Panel title={`Registro del ciclo lectivo ${cicloYear}`} subtitle={`Totales de ${clubesTxt} por semestre (1.º hasta el receso invernal, 2.º desde agosto), con los filtros de FED, distrito y búsqueda. Tocá un número para ver el listado.`}>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] text-sm">
+          <thead><tr className="text-left text-xs text-dte-gris"><th className="pb-2 pr-3 font-semibold" />{ciclo.map(t => <th key={t.k} className={`pb-2 pr-3 text-right font-semibold ${t.k === 'ciclo' ? 'text-dte-tinta' : ''}`}>{t.label}</th>)}</tr></thead>
+          <tbody className="divide-y divide-dte-linea">
+            {([
+              [`${cap(clubesTxt)} llevad${tipo === 'CLUB DE TECNOLOGÍA' ? 'os' : 'as'} a cabo`, 'activos', 'con al menos un encuentro'],
+              [tipo === 'CLUB DE TECNOLOGÍA' ? 'Iniciados' : 'Iniciadas', 'iniciados', 'primer encuentro en el tramo'],
+              [tipo === 'CLUB DE TECNOLOGÍA' ? 'Finalizados' : 'Finalizadas', 'finalizados', 'con cierre registrado'],
+            ] as const).map(([label, key, hint]) => <tr key={key}>
+              <td className="py-2 pr-3"><span className="font-semibold">{label}</span><span className="block text-xs text-dte-gris">{hint}</span></td>
+              {ciclo.map(t => <td key={t.k} className="py-2 pr-3 text-right"><button type="button" onClick={() => verCiclo(label, t.label, t[key])} className={`rounded-lg px-2 py-1 tabular-nums transition hover:bg-dte-tinte ${t.k === 'ciclo' ? 'text-lg font-bold' : 'font-semibold'}`}>{nf.format(t[key].length)}</button></td>)}
+            </tr>)}
+            {([['Encuentros realizados', 'encuentros'], ['Estudiantes inscriptos', 'inscriptos'], ['Escuelas y sedes', 'escuelas']] as const).map(([label, key]) => <tr key={key}>
+              <td className="py-2 pr-3 font-semibold">{label}</td>
+              {ciclo.map(t => <td key={t.k} className={`px-2 py-2 pr-5 text-right tabular-nums ${t.k === 'ciclo' ? 'text-lg font-bold' : 'font-semibold'}`}>{nf.format(t[key])}</td>)}
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
 
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
       <Kpi label={`${cap(clubesTxt)} activ${tipo === 'CLUB DE TECNOLOGÍA' ? 'os' : 'as'}`} value={nf.format(n('activo'))} hint={`de ${rows.length} con actividad en el período`} color={ESTADO_CLUB.activo.color} onClick={() => verEstado('activo', `${cap(clubesTxt)} activ${tipo === 'CLUB DE TECNOLOGÍA' ? 'os' : 'as'}`)} />
@@ -136,6 +193,17 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
       </div>
     </Panel>
 
+    <Panel title="Encuentros por escuela" subtitle={`Dónde se desarrollaron los encuentros de ${tipo === 'CLUB DE TECNOLOGÍA' ? 'los clubes' : 'las prácticas'} · ${periodo}`}>
+      {porEscuela.length ? <div className="overflow-x-auto"><table className="w-full min-w-[520px] text-sm">
+        <thead><tr className="text-left text-xs text-dte-gris"><th className="pb-2 pr-3 font-semibold">Escuela o sede</th><th className="pb-2 pr-3 text-right font-semibold">{tipo === 'CLUB DE TECNOLOGÍA' ? 'Clubes (grupos)' : 'Grupos'}</th><th className="w-[40%] pb-2 font-semibold">Encuentros</th></tr></thead>
+        <tbody className="divide-y divide-dte-linea">{porEscuela.map(x => <tr key={x.k}>
+          <td className="py-2 pr-3"><p className="font-semibold">{x.nombre}</p>{x.distrito && <p className="text-xs text-dte-gris">{x.distrito}</p>}</td>
+          <td className="py-2 pr-3 text-right tabular-nums">{x.nGrupos}</td>
+          <td className="py-2"><div className="flex items-center gap-2"><div className="h-2.5 flex-1 rounded-r bg-dte-fondo"><div className="h-full rounded-r" style={{ width: `${(x.nEnc / Math.max(1, porEscuela[0].nEnc)) * 100}%`, background: marca.acento }} /></div><span className="w-8 text-right font-semibold tabular-nums">{x.nEnc}</span></div></td>
+        </tr>)}</tbody>
+      </table></div> : <p className="py-6 text-center text-sm text-dte-gris">Sin encuentros en este período.</p>}
+    </Panel>
+
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel title={`${cap(clubesTxt)} por FED`} subtitle="Activos, sin actividad y finalizados">
         <ul className="flex flex-col gap-2.5">{porFed.map(({ f, r }) => <li key={f.id} className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 text-sm">
@@ -147,9 +215,6 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
       </Panel>
       <Panel title={`Propuestas dictadas en ${tipo === 'CLUB DE TECNOLOGÍA' ? 'los clubes' : 'las prácticas'}`} subtitle="Registros por propuesta (talleres y actividades dentro del trayecto)">
         <ul className="flex flex-col gap-2">{propuestas.map(([k, v]) => <HBar key={k} label={k} value={v} max={Math.max(1, ...propuestas.map(x => x[1]))} color="#c21d6a" />)}</ul>
-      </Panel>
-      <Panel title="Escuelas y sedes" subtitle={`Dónde se desarrollaron los encuentros de ${tipo === 'CLUB DE TECNOLOGÍA' ? 'los clubes' : 'las prácticas'} (registros)`}>
-        <ul className="flex flex-col gap-2">{sedes.map(([k, v]) => <HBar key={k} label={k} value={v} max={Math.max(1, ...sedes.map(x => x[1]))} color="#0e4870" />)}</ul>
       </Panel>
       <Panel title="Tipo de jornada" subtitle={sinJornada ? `${sinJornada} registros previos sin este dato` : 'Registros de encuentros'}>
         <ul className="flex flex-col gap-2">{jornadas.map(([t, k]) => <HBar key={t} label={t} value={k} max={Math.max(1, ...jornadas.map(x => x[1]))} color="#7d5a95" />)}</ul>
