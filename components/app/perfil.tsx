@@ -8,7 +8,7 @@ import { avatarColors, initials, districtsLabel, ErrorBox, PieInstitucional } fr
 // =====================================================================
 
 export function ProfileSelect({ feds, error, onRetry, onSelect }: { feds: Fed[] | null, error: string, onRetry: () => void, onSelect: (fed: Fed) => void }) {
-  return <main className="bg-dte-degradado relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-5 pt-12 text-white">
+  return <main className="bg-dte-degradado relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-5 pt-[calc(3rem+env(safe-area-inset-top,0px))] text-white">
     <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-44 rotate-45 rounded-[2.5rem] border-[22px] border-dte-rosa" />
     <span aria-hidden className="pointer-events-none absolute right-40 top-4 size-10 rounded-full bg-dte-celeste" />
     <span aria-hidden className="pointer-events-none absolute right-8 top-40 size-8 rounded-full bg-dte-lila" />

@@ -60,8 +60,8 @@ export default function Page() {
 
   if (!profile) return <ProfileSelect feds={feds} error={fedsError} onRetry={loadFeds} onSelect={choose} />
 
-  return <div className="flex min-h-screen flex-col bg-dte-fondo text-dte-tinta">
-    <header className="sticky top-0 z-40 border-b border-dte-linea bg-white/95 backdrop-blur">
+  return <div className="flex min-h-dvh flex-col bg-dte-fondo text-dte-tinta">
+    <header className="sticky top-0 z-header pt-safe border-b border-dte-linea bg-white/95 backdrop-blur">
       <div className="bg-dte-degradado h-1" />
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 lg:px-10">
         <div className="flex min-w-0 items-center gap-3">

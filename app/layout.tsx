@@ -20,6 +20,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: 'light',
+  // Permite usar env(safe-area-inset-*) en celulares con notch o barra de gestos.
+  viewportFit: 'cover',
   themeColor: '#05476e',
 }
 

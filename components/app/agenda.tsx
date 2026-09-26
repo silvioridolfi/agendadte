@@ -98,7 +98,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
 
     {(view === 'month' || view === 'semester') && <p className="mt-3 flex flex-wrap items-center gap-3 text-xs text-dte-gris"><span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-feriado-marca ring-1 ring-pba-fucsia/40" />Feriado nacional</span><span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-aniversario-marca ring-1 ring-cat-institucional/40" />Aniversario distrital</span><span>* fecha a confirmar</span><span>Tocá un día para verlo en detalle.</span></p>}
 
-    <Button onClick={() => onNew(suggested)} aria-label="Nueva acción" className="fixed bottom-5 right-4 z-30 h-14 gap-2 rounded-full bg-dte-magenta px-5 text-base font-semibold text-white shadow-lg hover:bg-dte-magenta-oscuro sm:hidden"><Plus className="size-5" />Nueva</Button>
+    <Button onClick={() => onNew(suggested)} aria-label="Nueva acción" className="fixed bottom-safe-5 right-4 z-fab h-14 gap-2 rounded-full bg-dte-magenta px-5 text-base font-semibold text-white shadow-lg hover:bg-dte-magenta-oscuro sm:hidden"><Plus className="size-5" />Nueva</Button>
   </main>
 }
 

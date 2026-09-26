@@ -111,7 +111,7 @@ export function Skeleton({ className = '' }: { className?: string }) { return <d
 
 export function Toast({ message, onDone }: { message: string, onDone: () => void }) {
   useEffect(() => { const t = setTimeout(onDone, 3200); return () => clearTimeout(t) }, [message, onDone])
-  return <div role="status" aria-live="polite" className="fixed inset-x-0 bottom-24 z-[60] flex justify-center px-4 sm:bottom-8"><div className="flex items-center gap-2 rounded-full bg-dte-tinta px-4 py-2.5 text-sm font-medium text-white shadow-lg"><Check className="size-4 text-dte-celeste" />{message}</div></div>
+  return <div role="status" aria-live="polite" className="fixed inset-x-0 bottom-safe-24 z-toast flex justify-center px-4 sm:bottom-8"><div className="flex items-center gap-2 rounded-full bg-dte-tinta px-4 py-2.5 text-sm font-medium text-white shadow-lg"><Check className="size-4 text-dte-celeste" />{message}</div></div>
 }
 
 // `cacheKey`: guarda lo cargado en el dispositivo y, si no hay conexión, muestra la última copia.
@@ -204,7 +204,7 @@ export function FeriadoTag({ f, compact = false }: { f: Feriado, compact?: boole
 
 // Pie institucional (mismo texto que el resto de los proyectos DTE). `oscuro`: sobre fondo degradado.
 export function PieInstitucional({ oscuro = false }: { oscuro?: boolean }) {
-  return <footer className={`px-4 py-8 text-center text-xs ${oscuro ? 'text-white/85' : 'mt-auto border-t border-dte-linea bg-white text-dte-gris'}`}>
+  return <footer className={`px-4 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-center text-xs ${oscuro ? 'text-white/85' : 'mt-auto border-t border-dte-linea bg-white text-dte-gris'}`}>
     <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center gap-3">
       <img src={oscuro ? '/brand/oficial-blanco.png' : '/brand/oficial-color.png'} alt="Dirección de Tecnología Educativa · Dirección General de Cultura y Educación · Gobierno de la Provincia de Buenos Aires" className="h-12 w-auto max-w-full sm:h-16 lg:h-[72px]" />
       <p>© {new Date().getFullYear()} Dirección de Tecnología Educativa (DTE), Región 1 · Desarrollado por Silvio Ridolfi, Facilitador de Educación Digital</p>
