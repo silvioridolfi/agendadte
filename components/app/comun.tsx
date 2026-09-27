@@ -28,6 +28,10 @@ export const actionStyle: Record<Accion, { chip: string, dot: string }> = {
   'LICENCIA': { chip: 'bg-[#eeeaee] text-[#5c5160]', dot: 'bg-[#9a8f9d]' },
   'EVENTO DTE': { chip: 'bg-[#f3e1f0] text-[#7a2d6e]', dot: 'bg-[#b8469f]' },
   'FORMACIÓN INTERNA': { chip: 'bg-[#e0eef0] text-[#245e66]', dot: 'bg-[#3b8f99]' },
+  'REUNIÓN CON JEFATURA': { chip: 'bg-[#f5e6d8] text-[#7a4a1c]', dot: 'bg-[#c07a3a]' },
+  'ACOMPAÑAMIENTO A FED': { chip: 'bg-[#e3ecdf] text-[#3d5e2e]', dot: 'bg-[#6a9a52]' },
+  'GESTIÓN INSTITUCIONAL': { chip: 'bg-[#e6e4f0] text-[#44407a]', dot: 'bg-[#6560a8]' },
+  'SEGUIMIENTO DEL EQUIPO': { chip: 'bg-[#f1e4ea] text-[#6e3350]', dot: 'bg-[#a3587c]' },
 }
 export const statusStyle: Record<Estado, { badge: string, label: string }> = {
   planificada: { badge: 'border-pba-azul/40 bg-pba-azul/10 text-pba-azul', label: 'Planificada' },

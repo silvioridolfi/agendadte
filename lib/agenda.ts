@@ -2,6 +2,7 @@ export const ACCIONES = [
   'VISITA TÉCNICA', 'VISITA PEDAGÓGICA', 'REUNIÓN', 'CLUB DE TECNOLOGÍA', 'PRÁCTICAS PROFESIONALIZANTES', 'TALLER/CAPACITACIÓN',
   'ASISTENCIA REMOTA', 'CONECTIVIDAD', 'ENTREGA DE EQUIPAMIENTO', 'ADMINISTRATIVO', 'PLANIFICACIÓN', 'OFICINA R1',
   'LICENCIA', 'PARO', 'EVENTO DTE', 'FORMACIÓN INTERNA',
+  'REUNIÓN CON JEFATURA', 'ACOMPAÑAMIENTO A FED', 'GESTIÓN INSTITUCIONAL', 'SEGUIMIENTO DEL EQUIPO',
 ] as const
 export const ESTADOS = ['planificada', 'realizada', 'reprogramada', 'cancelada'] as const
 
@@ -17,7 +18,11 @@ export const CATEGORIA: Record<Accion, Categoria> = {
   'VISITA TÉCNICA': 'tecnica', 'ASISTENCIA REMOTA': 'tecnica', 'CONECTIVIDAD': 'tecnica', 'ENTREGA DE EQUIPAMIENTO': 'tecnica',
   'VISITA PEDAGÓGICA': 'pedagogica', 'CLUB DE TECNOLOGÍA': 'pedagogica', 'PRÁCTICAS PROFESIONALIZANTES': 'pedagogica', 'TALLER/CAPACITACIÓN': 'pedagogica',
   'REUNIÓN': 'institucional', 'ADMINISTRATIVO': 'institucional', 'OFICINA R1': 'institucional', 'PLANIFICACIÓN': 'institucional', 'PARO': 'institucional', 'LICENCIA': 'institucional', 'EVENTO DTE': 'institucional', 'FORMACIÓN INTERNA': 'institucional',
+  'REUNIÓN CON JEFATURA': 'institucional', 'ACOMPAÑAMIENTO A FED': 'institucional', 'GESTIÓN INSTITUCIONAL': 'institucional', 'SEGUIMIENTO DEL EQUIPO': 'institucional',
 }
+// Tareas propias de la coordinación (CED): el formulario las muestra primero al CED y no se ofrecen a los FED.
+export const ACCIONES_CED: Accion[] = ['REUNIÓN', 'REUNIÓN CON JEFATURA', 'ACOMPAÑAMIENTO A FED', 'SEGUIMIENTO DEL EQUIPO', 'GESTIÓN INSTITUCIONAL']
+export const SOLO_CED: Accion[] = ['REUNIÓN CON JEFATURA', 'ACOMPAÑAMIENTO A FED', 'SEGUIMIENTO DEL EQUIPO', 'GESTIÓN INSTITUCIONAL']
 // Acciones que registran encuentros con participantes (N° de encuentro, destinatarios, inscriptos, asistentes).
 export const CON_ENCUENTRO: Accion[] = ['CLUB DE TECNOLOGÍA', 'TALLER/CAPACITACIÓN', 'PRÁCTICAS PROFESIONALIZANTES']
 // Sugerencias de sub-acción tomadas del instructivo de la DTE y del master regional (se puede escribir otra).

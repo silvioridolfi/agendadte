@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
-import { iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
+import { iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, ACCIONES_CED, SOLO_CED, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
 import type { Organismo } from '@/app/actions'
 import { titleCase } from '@/lib/format'
 import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, saveItem, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
@@ -96,7 +96,9 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const marca = esClub ? TRAYECTO_MARCA[form.accion as keyof typeof TRAYECTO_MARCA] : TRAYECTO_MARCA['CLUB DE TECNOLOGÍA']
   const esParo = form.accion === 'PARO', esLicencia = form.accion === 'LICENCIA'
   // Formación interna y eventos DTE: el lugar es opcional (suelen ser virtuales o en la DTE).
-  const esFormacion = form.accion === 'FORMACIÓN INTERNA', esEvento = form.accion === 'EVENTO DTE', lugarOpcional = esFormacion || esEvento
+  const esFormacion = form.accion === 'FORMACIÓN INTERNA', esEvento = form.accion === 'EVENTO DTE'
+  // Coordinación (CED): sus tareas propias van primero y el lugar es opcional.
+  const esCed = fed.rol === 'coordinacion', lugarOpcional = esFormacion || esEvento || (!!form.accion && SOLO_CED.includes(form.accion))
   const conSubAccion = !!form.accion && !esClub && !esParo && !esLicencia
   // Clubes del FED (para elegir a cuál corresponde el encuentro). Los finalizados sólo si es el del encuentro que se edita.
   const [clubes, setClubes] = useState<Club[] | null>(null)
@@ -238,15 +240,28 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     {!modoT && <fieldset id="campo-accion" className="scroll-mt-24" aria-describedby={errores.accion ? 'err-accion' : undefined}>
       <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta" aria-hidden>*</span></legend>
       {errores.accion && <p id="err-accion" role="alert" className="-mt-1 mb-2 text-sm font-medium text-peligro">{errores.accion}</p>}
-      <div className="flex flex-col gap-3">{CATEGORIAS.map(c => <div key={c}>
-        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris"><span className="size-2 rounded-sm" style={{ background: CAT_COLOR[c] }} />{CATEGORIA_LABEL[c]}</p>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c && (name !== 'EVENTO DTE' || item?.accion === 'EVENTO DTE')).sort(az).map(name => {
+      {(() => {
+        // Botón de cada tipo de acción.
+        const boton = (name: Accion) => {
           const on = form.accion === name
           return <button key={name} type="button" aria-pressed={on} onClick={() => { limpiar('accion'); setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '', tipo_jornada: f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada })) }} className={`flex min-h-11 min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs font-bold uppercase leading-tight break-words hyphens-auto transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
             <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span><span className="min-w-0 [overflow-wrap:anywhere]">{name}</span>
           </button>
-        })}</div>
-      </div>)}</div>
+        }
+        const visible = (name: Accion) => (name !== 'EVENTO DTE' || item?.accion === 'EVENTO DTE') && (esCed || !SOLO_CED.includes(name) || item?.accion === name) && (!esCed || !ACCIONES_CED.includes(name))
+        const grupos = <div className="flex flex-col gap-3">{CATEGORIAS.map(c => <div key={c}>
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris"><span className="size-2 rounded-sm" style={{ background: CAT_COLOR[c] }} />{CATEGORIA_LABEL[c]}</p>
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c && visible(name)).sort(az).map(boton)}</div>
+        </div>)}</div>
+        if (!esCed) return grupos
+        // Coordinación: primero sus tareas; las acciones territoriales, plegadas (abiertas si ya hay una elegida).
+        const territorial = !!form.accion && !ACCIONES_CED.includes(form.accion)
+        return <div className="flex flex-col gap-3">
+          <div><p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Coordinación</p>
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES_CED.map(boton)}</div></div>
+          <details open={territorial} className="rounded-xl border border-dte-linea p-3"><summary className="cursor-pointer text-sm font-semibold text-dte-petroleo">Acciones territoriales (como FED)</summary><div className="mt-3">{grupos}</div></details>
+        </div>
+      })()}
     </fieldset>}
     {esParo && <p className="rounded-lg border border-dte-linea bg-dte-fondo px-3 py-2 text-sm text-dte-gris">Adhesión a paro gremial/docente. Se registra en la <b className="text-dte-tinta">Dirección de Tecnología Educativa</b> (lugar de trabajo); no hace falta completar nada más.</p>}
     {esLicencia && <p className="rounded-lg border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso"><b>Recordatorio:</b> {RECORDATORIO_LICENCIA}</p>}

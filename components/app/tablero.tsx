@@ -156,7 +156,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     : tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} noHabiles={noHabiles} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={propio && !soloLectura ? async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) } : undefined}
       onNuevo={propio && onNuevaAccion ? () => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', modo: 'nuevo' }) : undefined}
       onEncuentro={propio && onNuevaAccion ? c => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', club_id: c?.id, modo: 'encuentro' }) : undefined} />}</div>
-    : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base.filter(i => feds.some(f => f.id === i.fed_id))} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} />}</div>
+    : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <><MetricsView items={base.filter(i => feds.some(f => f.id === i.fed_id))} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} />{!propio && <BloqueCoordinacion items={base} todos={todos} periodo={title} onSelect={onSelect} />}</>}</div>
     : <div className="mt-6 flex flex-col gap-6">
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? [0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)
@@ -184,4 +184,24 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     </div>}
     </div>
   </main>
+}
+
+// Trabajo de la coordinación (CED) en el período: aparte de las métricas de los FED para no mezclarlas.
+function BloqueCoordinacion({ items, todos, periodo, onSelect }: { items: AgendaItem[], todos: Fed[], periodo: string, onSelect: (i: AgendaItem) => void }) {
+  const ced = new Set(todos.filter(f => f.rol === 'coordinacion').map(f => f.id))
+  const hechas = items.filter(i => ced.has(i.fed_id) && i.estado === 'realizada').sort((a, b) => b.fecha.localeCompare(a.fecha))
+  const [abierto, setAbierto] = useState(false)
+  if (!ced.size) return null
+  const porTipo = [...hechas.reduce((m, i) => m.set(i.accion, (m.get(i.accion) ?? 0) + 1), new Map<string, number>())].sort((a, b) => b[1] - a[1])
+  return <section aria-labelledby="t-coord" className="mt-4 rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5">
+    <h3 id="t-coord" className="font-bold">Coordinación</h3>
+    <p className="mb-3 text-sm text-dte-gris">Acciones realizadas por la coordinación en {periodo.toLowerCase()}. No suman a las métricas de los FED.</p>
+    {!hechas.length ? <p className="text-sm text-dte-gris">Sin acciones realizadas en el período.</p> : <>
+      <div className="flex flex-wrap gap-2">{porTipo.map(([a, n]) => <span key={a} className="inline-flex items-center gap-2"><ActionChip label={a as AgendaItem['accion']} /><b className="tabular-nums">{n}</b></span>)}</div>
+      <Button variant="ghost" size="sm" onClick={() => setAbierto(o => !o)} className="mt-2 text-dte-petroleo">{abierto ? 'Ocultar detalle' : `Ver las ${hechas.length} acciones`}</Button>
+      {abierto && <ul className="mt-2 divide-y divide-dte-linea rounded-xl border border-dte-linea">{hechas.map(i => <li key={i.id}><button onClick={() => onSelect(i)} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-dte-tinte">
+        <span className="min-w-0"><span className="block truncate font-semibold">{itemCorto(i)}</span><span className="block text-xs text-dte-gris">{cap(fmt(parse(i.fecha), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))}</span></span><ActionChip label={i.accion} />
+      </button></li>)}</ul>}
+    </>}
+  </section>
 }

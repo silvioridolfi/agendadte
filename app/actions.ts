@@ -373,7 +373,6 @@ async function updateMiPerfilImpl(fedId: string, datos: Pick<Fed, 'distritos_a_c
   const db = supabaseServer()
   const { data: fed } = await db.from('feds').select('rol').eq('id', fedId).maybeSingle()
   if (!fed) throw new Error('No se encontró el perfil')
-  if (fed.rol !== 'fed') throw new Error('Sólo cada FED puede editar su perfil')
   const distritos = [...new Set(datos.distritos_a_cargo.map(d => d.trim().toUpperCase()))].filter(d => DISTRITOS_REGION.includes(d))
   const franjas = Object.fromEntries(datos.ddjj.map(d => [d.dia, franjasDte(d)]))
   const errores = validarDdjj(franjas, cargosDe(datos.ddjj))
@@ -564,7 +563,6 @@ export const miParticipacion = async (eventoId: string) => conUsuario(async yo =
 })
 // Registrar participación: una acción "EVENTO DTE" por fecha elegida; realizada si ya pasó, planificada si es futura.
 export const registrarParticipacion = async (eventoId: string, fechas: string[]) => conUsuario(async yo => {
-  if (yo.fed.rol !== 'fed') throw new Error('Sólo los FED registran participación')
   const db = supabaseServer()
   const { data: ev } = await db.from('eventos_dte').select(EVENTO_COLS).eq('id', eventoId).maybeSingle()
   if (!ev) throw new Error('El evento no existe')
@@ -607,7 +605,6 @@ export const estadoFotos = async () => conUsuario(async (yo): Promise<EstadoFoto
   catch (e) { return { ...base, error: e instanceof DriveError && (e.status === 404 || e.status === 403) ? 'La cuenta técnica todavía no tiene acceso a la carpeta. Compartila como Editor.' : errMsgServer(e) } }
 })
 export const guardarCarpetaFotos = async (url: string) => conUsuario(async yo => {
-  if (yo.fed.rol !== 'fed') throw new Error('Sólo los FED cargan su carpeta de fotos')
   const limpio = url.trim()
   if (!limpio) { await supabaseServer().from('feds').update({ carpeta_fotos_id: null, carpeta_fotos_url: null }).eq('id', yo.fed.id); return }
   if (!/^https:\/\/drive\.google\.com\//.test(limpio)) throw new Error('Pegá el enlace de una carpeta de Google Drive (drive.google.com/…)')

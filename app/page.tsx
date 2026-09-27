@@ -124,7 +124,7 @@ export default function Page() {
     </div>}
     {section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><div className="flex flex-col gap-4"><EventosPanel onSaved={changed} /><FeriadosView autorId={profile.id} onSaved={changed} /></div></main>
       : section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); setSection('agenda') } }} />
-      : section === 'perfil' && profile.rol === 'fed'
+      : section === 'perfil'
       ? <MiPerfilView key={profile.id} fed={profile} feds={feds ?? []} onSaved={f => { setProfile(f); setFeds(l => l && l.map(x => (x.id === f.id ? f : x))); setToast('Se guardó tu perfil'); setSection('agenda') }} />
       : vista?.tipo === 'fed'
       ? (section === 'agenda'

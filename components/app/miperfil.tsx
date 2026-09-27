@@ -35,7 +35,7 @@ export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onFer
       <ChevronDown className={`hidden size-4 text-dte-gris transition md:block ${open ? 'rotate-180' : ''}`} />
     </button>
     {open && <div role="menu" aria-label="Opciones de perfil" className="absolute right-0 top-12 z-modal w-60 overflow-hidden rounded-2xl border border-dte-linea bg-white py-1 shadow-xl">
-      {profile.rol === 'fed' && <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>}
+      <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onFeriados() }} className={item}><CalendarOff className="size-4 text-dte-petroleo" />Feriados y eventos</button>}

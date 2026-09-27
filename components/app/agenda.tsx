@@ -39,7 +39,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
   const { items, error, retry, desdeCache } = useItems(() => getFedItems(fed.id, iso(from), iso(to)), [fed.id, iso(from), iso(to), reloadKey], `${fed.id}:${iso(from)}:${iso(to)}`)
   const feriados = useFeriados(iso(from), iso(to), fed.rol === 'coordinacion' ? null : fed.distritos_a_cargo)
   // Eventos DTE: en la agenda propia de un FED se puede registrar la participación desde la marca del evento.
-  const eventos = useEventos(iso(from), iso(to)), registrar = !!onNew && fed.rol === 'fed'
+  const eventos = useEventos(iso(from), iso(to)), registrar = !!onNew
   const today = iso(new Date())
   const byDay = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of items ?? []) m.set(i.fecha, [...(m.get(i.fecha) ?? []), i]); return m }, [items])
   const weekendItems = useMemo(() => (items ?? []).filter(i => !isWeekday(parse(i.fecha))), [items])
