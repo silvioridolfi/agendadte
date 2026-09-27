@@ -27,7 +27,7 @@ export function SeccionFotos() {
     try {
       const r = await ordenarMisFotos()
       const total = r.ordenadas + r.atajos
-      const rescate = r.rescatadas ? `${r.rescatadas} ${r.rescatadas === 1 ? 'foto volvió' : 'fotos volvieron'} a tu carpeta principal. ` : ''
+      const rescate = r.rescatadas ? `Se reacomodaron ${r.rescatadas} ${r.rescatadas === 1 ? 'foto' : 'fotos'}. ` : ''
       setAviso(rescate + (total ? `Se ordenaron ${total} ${total === 1 ? 'archivo' : 'archivos'}${r.porAccion ? ` (${r.porAccion} en la carpeta de su acción según la hora)` : ' por día'}${r.sinFecha ? ` (${r.sinFecha} sin fecha de captura, en “Sin fecha”)` : ''}${r.pendientes ? `. Quedan ${r.pendientes}: tocá de nuevo para seguir.` : '.'}` : 'No había fotos sueltas para ordenar.'))
     } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
   }
@@ -36,7 +36,7 @@ export function SeccionFotos() {
   const listo = !!estado?.url && !!estado.nombre && estado.puedeEditar
   return <section className="rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5" aria-labelledby="t-fotos">
     <h3 id="t-fotos" className="flex items-center gap-1.5 font-bold"><Camera className="size-4 text-dte-petroleo" />Fotos de las acciones</h3>
-    <p className="mb-3 text-sm text-dte-gris">Subí las fotos sueltas a tu carpeta de Drive. Tus fotos <b>quedan siempre en tu carpeta</b>: la agenda crea carpetas por día y, según la hora en que las sacaste, una por acción, con <b>accesos directos</b> a cada foto. Si borrás una de esas carpetas, tus fotos no se pierden. Conviene cargar el horario de tus acciones. El CED las ve desde la agenda.</p>
+    <p className="mb-3 text-sm text-dte-gris">Subí las fotos sueltas a tu carpeta de Drive: la agenda las <b>mueve a una carpeta por día</b> y, según la hora en que las sacaste, a una subcarpeta por acción. Si la acción la cargás después, en la próxima pasada la foto pasa sola a su carpeta. <b>No borres las carpetas que crea la agenda</b>: si pasa, las fotos vuelven a tu carpeta principal y se ordenan de nuevo. El CED las ve desde la agenda.</p>
 
     {!estado ? <Loader2 className="size-5 animate-spin text-dte-gris" /> : !estado.configurado ? <p className="text-sm text-dte-gris">La conexión con Drive todavía no está configurada.</p> : <>
       <ol className="mb-3 flex list-decimal flex-col gap-1.5 pl-5 text-sm">

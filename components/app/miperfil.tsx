@@ -48,14 +48,18 @@ type CargoForm = Cargo & { key: number }
 
 // Mi perfil: datos del FED y DD.JJ. de horarios (franjas DTE por día y otros cargos).
 export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], onSaved: (fed: Fed) => void }) {
+  const inicial = {
+    franjas: () => Object.fromEntries([1, 2, 3, 4, 5].map(d => { const f = franjasDte(fed.ddjj?.find(x => x.dia === d)); return [d, f.length ? f : [{ desde: '', hasta: '' }]] })) as Record<number, Franja[]>,
+    cargos: () => cargosDe(fed.ddjj).map((c, i) => ({ ...c, key: i })) as CargoForm[],
+    notas: () => Object.fromEntries((fed.ddjj ?? []).filter(d => d.externo).map(d => [d.dia, d.externo!])) as Record<number, string>,
+  }
   const [distritos, setDistritos] = useState(fed.distritos_a_cargo)
   const [carga, setCarga] = useState(fed.carga_horaria ?? '')
-  const [franjas, setFranjas] = useState<Record<number, Franja[]>>(() => Object.fromEntries([1, 2, 3, 4, 5].map(d => {
-    const f = franjasDte(fed.ddjj?.find(x => x.dia === d))
-    return [d, f.length ? f : [{ desde: '', hasta: '' }]]
-  })))
-  const [cargos, setCargos] = useState<CargoForm[]>(() => cargosDe(fed.ddjj).map((c, i) => ({ ...c, key: i })))
-  const [notas, setNotas] = useState<Record<number, string>>(() => Object.fromEntries((fed.ddjj ?? []).filter(d => d.externo).map(d => [d.dia, d.externo!])))
+  const [franjas, setFranjas] = useState<Record<number, Franja[]>>(inicial.franjas)
+  const [cargos, setCargos] = useState<CargoForm[]>(inicial.cargos)
+  const [notas, setNotas] = useState<Record<number, string>>(inicial.notas)
+  // Descartar: vuelve a lo guardado.
+  const descartar = () => { setDistritos(fed.distritos_a_cargo); setCarga(fed.carga_horaria ?? ''); setFranjas(inicial.franjas()); setCargos(inicial.cargos()); setNotas(inicial.notas()); setErrores([]); setError('') }
   const [errores, setErrores] = useState<string[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -156,7 +160,7 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
     </div>
 
     {cambios && <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-fab border-t border-dte-linea bg-white/95 px-4 py-3 backdrop-blur md:bottom-0">
-      <div className="mx-auto flex max-w-3xl justify-end"><Button size="lg" disabled={busy} onClick={guardar} className="w-full bg-dte-petroleo font-semibold hover:bg-dte-petroleo-oscuro sm:w-auto">{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Guardar cambios</Button></div>
+      <div className="mx-auto flex max-w-3xl justify-end gap-2"><Button size="lg" variant="outline" disabled={busy} onClick={descartar} className="min-w-0 flex-1 sm:flex-none"><X data-icon="inline-start" />Descartar<span className="hidden sm:inline">&nbsp;cambios</span></Button><Button size="lg" disabled={busy} onClick={guardar} className="min-w-0 flex-1 bg-dte-petroleo font-semibold hover:bg-dte-petroleo-oscuro sm:flex-none">{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Guardar<span className="hidden sm:inline">&nbsp;cambios</span></Button></div>
     </div>}
   </main>
 }

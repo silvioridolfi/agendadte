@@ -138,7 +138,7 @@ export function StatusBadge({ status }: { status: Estado }) {
   return <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusStyle[status]?.badge ?? ''}`}>{statusStyle[status]?.label ?? status}</span>
 }
 export function ErrorBox({ message, onRetry }: { message: string, onRetry?: () => void }) {
-  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p className="flex items-start gap-2"><CircleAlert className="mt-px size-4 shrink-0" aria-hidden /><span><span className="font-semibold">No se pudo completar la operación.</span> {message}</span></p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>}</div>
+  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p className="flex min-w-0 items-start gap-2"><CircleAlert className="mt-px size-4 shrink-0" aria-hidden /><span className="min-w-0 [overflow-wrap:anywhere]"><span className="font-semibold">No se pudo completar la operación.</span> {message}</span></p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>}</div>
 }
 // Estado vacío común: ícono, mensaje y, si corresponde, una acción para salir de él.
 export function Vacio({ icono: Icono, titulo, texto, children }: { icono: React.ComponentType<{ className?: string }>, titulo: string, texto?: string, children?: React.ReactNode }) {

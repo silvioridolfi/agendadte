@@ -1,12 +1,12 @@
 import 'server-only'
 import { supabaseServer } from '@/lib/supabase-server'
 import { accionPorHora } from '@/lib/horas'
-import { DriveError, atajo, carpetaVigente, datosArchivo, crearCarpeta, esCarpeta, listarTodo, fechaDeCaptura, listar, minutosDeCaptura, mover, renombrar } from '@/lib/drive'
+import { DriveError, borrar, carpetaVigente, crearCarpeta, esAtajo, listarHijos, esCarpeta, listarTodo, fechaDeCaptura, listar, minutosDeCaptura, mover, renombrar } from '@/lib/drive'
 
 // Orden de fotos: las imágenes y videos sueltos en la carpeta del FED pasan a la carpeta de su día
 // ("2026-09-30 · EP N° 4 (5°) · EES N° 31 (7° Informática - Grupo 1)") y, si la hora de captura coincide con el horario
 // de una acción de la agenda, a su subcarpeta ("12:00 · Club EP N° 4 - 4°"). Sin fecha: carpeta "Sin fecha".
-// Las fotos no se mueven: en cada carpeta se crea un acceso directo y el original queda en la carpeta del FED.
+// Las fotos se mueven a su carpeta; si una foto queda en el día y después se carga la acción, pasa a la carpeta de la acción.
 const SIN_FECHA = '1900-01-01'
 const LOTE = 150
 const SIGLAS: [RegExp, string][] = [
@@ -117,40 +117,57 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
   for (const fecha of recientes) {
     const actual = carpetasDia.get(fecha)!
     if (await carpetaVigente(actual.id)) { await carpetaDia(fecha); continue }
-    // Carpeta eliminada por el FED: se rescatan fotos que hubieran quedado adentro (versiones anteriores las movían),
-    // y sus fotos vuelven a ordenarse en la próxima pasada (se recrean los accesos directos). No se recrea vacía.
+    // Carpeta eliminada por el FED: las fotos que tenía vuelven a la carpeta principal y se ordenan de nuevo (no se pierden).
     await rescatar(actual.id)
     await db.from('fotos_dias').delete().eq('fed_id', fedId).eq('fecha', fecha)
     await db.from('fotos_procesadas').delete().eq('fed_id', fedId).eq('fecha', fecha)
     carpetasDia.delete(fecha)
   }
 
-  // Fotos que versiones anteriores movieron a una carpeta de día/acción: vuelven a la carpeta del FED y en su lugar queda un acceso directo.
-  const { data: movidas } = await db.from('fotos_procesadas').select('file_id').eq('fed_id', fedId).eq('modo', 'movida').limit(LOTE)
-  for (const { file_id } of movidas ?? []) {
-    try {
-      const f = await datosArchivo(file_id as string)
-      const padre = f.parents?.find(p => p !== raiz)
-      if (!f.trashed && padre) { await mover(f.id, padre, raiz); await atajo(f.id, f.name, padre); res.rescatadas++ }
-      await db.from('fotos_procesadas').update({ modo: 'atajo' }).eq('fed_id', fedId).eq('file_id', file_id)
-    } catch (e) { if (!(e instanceof DriveError && (e.status === 404 || e.status === 403))) throw e }
-  }
-
-  const enRaiz = await listar(raiz)
-  const sueltos = enRaiz.filter(f => f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))
-  // Fotos borradas de Drive: dejan de contarse (sólo si el listado de la carpeta está completo).
-  if (enRaiz.length < 1000) {
-    const presentes = new Set(sueltos.map(f => f.id)), borradas: string[] = []
-    for (let desde = 0; ; desde += 1000) {
-      const { data } = await db.from('fotos_procesadas').select('file_id').eq('fed_id', fedId).neq('modo', 'movida').order('file_id').range(desde, desde + 999)
-      borradas.push(...(data ?? []).map(r => r.file_id as string).filter(id => !presentes.has(id)))
-      if (!data || data.length < 1000) break
+  // Repaso de los días recientes (cada foto vive dentro de la carpeta de su día o de su acción):
+  // - accesos directos de la versión anterior: la foto original pasa a esa carpeta y el acceso directo se borra;
+  // - fotos que quedaron en el día porque la acción todavía no estaba cargada: pasan a la carpeta de su acción;
+  // - fotos borradas de Drive: dejan de figurar como procesadas.
+  const presentes = new Set<string>()
+  const repasar = [...carpetasDia.entries()].filter(([f]) => f !== SIN_FECHA).sort(([a], [b]) => a.localeCompare(b)).slice(-30)
+  const accionesDe = new Map<string, string>()
+  for (const [itemId, c] of carpetasAccion) accionesDe.set(c.id, itemId)
+  async function repasarCarpeta(carpeta: string, fecha: string, enDia: boolean) {
+    for (const f of await listarHijos(carpeta)) {
+      if (esCarpeta(f)) { if (accionesDe.has(f.id)) await repasarCarpeta(f.id, fecha, false); continue }
+      if (esAtajo(f)) {
+        const destino = f.shortcutDetails?.targetId
+        if (!destino) continue
+        // Si la foto ya no está suelta (se borró o ya se movió), sólo se quita el acceso directo; si sigue suelta, se reordena más abajo.
+        try { await mover(destino, raiz!, carpeta); presentes.add(destino); await db.from('fotos_procesadas').update({ modo: 'movida' }).eq('fed_id', fedId).eq('file_id', destino); res.rescatadas++ }
+        catch (e) { if (!(e instanceof DriveError && (e.status === 404 || e.status === 403 || e.status === 400))) throw e }
+        try { await borrar(f.id) } catch (e) { if (!(e instanceof DriveError)) throw e }
+        continue
+      }
+      if (!f.mimeType.startsWith('image/') && !f.mimeType.startsWith('video/')) continue
+      presentes.add(f.id)
+      if (!enDia || f.mimeType.startsWith('video/')) continue
+      const item = accionPorHora(await items(fecha), minutosDeCaptura(f))
+      if (!item) continue
+      const destino = await carpetaAccion(fecha, item)
+      if (destino === carpeta) continue
+      await mover(f.id, carpeta, destino); res.porAccion++
+      await db.from('fotos_procesadas').update({ item_id: item.id }).eq('fed_id', fedId).eq('file_id', f.id)
     }
+  }
+  for (const [fecha, c] of repasar) await repasarCarpeta(c.id, fecha, true)
+  if (repasar.length) {
+    const fechas = repasar.map(([f]) => f)
+    const { data: filas } = await db.from('fotos_procesadas').select('file_id').eq('fed_id', fedId).in('fecha', fechas)
+    const borradas = (filas ?? []).map(r => r.file_id as string).filter(id => !presentes.has(id))
     for (let i = 0; i < borradas.length; i += 200) await db.from('fotos_procesadas').delete().eq('fed_id', fedId).in('file_id', borradas.slice(i, i + 200))
   }
+
+  const sueltos = (await listar(raiz)).filter(f => f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))
   const { data: hechos } = await db.from('fotos_procesadas').select('file_id').eq('fed_id', fedId).in('file_id', sueltos.map(f => f.id).slice(0, 1000))
   const yaHechos = new Set((hechos ?? []).map(h => h.file_id as string))
-  const nuevos = sueltos.filter(f => !yaHechos.has(f.id))
+  // Una foto suelta que figura como procesada es de una versión anterior (acceso directo): se vuelve a ordenar moviéndola.
+  const nuevos = sueltos.filter(f => !yaHechos.has(f.id) || !presentes.has(f.id))
   const lote = nuevos.slice(0, LOTE)
   res.pendientes = nuevos.length - lote.length
 
@@ -160,13 +177,12 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
     const fecha = fechaDeCaptura(f) ?? (esVideo && f.createdTime ? new Date(f.createdTime).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }) : SIN_FECHA)
     const item = fecha === SIN_FECHA || esVideo ? null : accionPorHora(await items(fecha), minutosDeCaptura(f))
     const destino = item ? await carpetaAccion(fecha, item) : await carpetaDia(fecha)
-    // Nunca se mueve la foto: el original queda en la carpeta del FED y en la del día/acción se deja un acceso directo.
-    // Así, si alguien borra una carpeta creada por la agenda, sólo se pierden accesos directos, nunca fotos.
-    const modo = 'atajo'
-    await atajo(f.id, f.name, destino); res.ordenadas++
+    // La foto se mueve a su carpeta (sigue siendo del FED). Si se borra una carpeta de la agenda, la próxima pasada
+    // devuelve las fotos a la carpeta principal y las vuelve a ordenar.
+    await mover(f.id, raiz, destino); res.ordenadas++
     if (fecha === SIN_FECHA) res.sinFecha++
     if (item) res.porAccion++
-    await db.from('fotos_procesadas').upsert({ fed_id: fedId, file_id: f.id, fecha: fecha === SIN_FECHA ? null : fecha, item_id: item?.id ?? null, modo })
+    await db.from('fotos_procesadas').upsert({ fed_id: fedId, file_id: f.id, fecha: fecha === SIN_FECHA ? null : fecha, item_id: item?.id ?? null, modo: 'movida' })
   }
   return res
 }

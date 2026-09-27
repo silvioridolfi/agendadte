@@ -39,7 +39,7 @@ async function api<T>(path: string, init: RequestInit = {}, params: Record<strin
   return res.status === 204 ? (undefined as T) : res.json() as Promise<T>
 }
 
-export type ArchivoDrive = { id: string, name: string, mimeType: string, createdTime?: string, imageMediaMetadata?: { time?: string } }
+export type ArchivoDrive = { id: string, name: string, mimeType: string, createdTime?: string, imageMediaMetadata?: { time?: string }, shortcutDetails?: { targetId?: string } }
 const CARPETA = 'application/vnd.google-apps.folder'
 
 // Id de carpeta a partir del enlace que pega el FED (…/folders/<id> o ?id=<id>).
@@ -76,7 +76,19 @@ export async function listarTodo(padre: string): Promise<ArchivoDrive[]> {
   return r.files
 }
 export const datosArchivo = (id: string) => api<{ id: string, name: string, parents?: string[], trashed?: boolean }>(`files/${id}`, {}, { fields: 'id,name,parents,trashed' })
-export const esCarpeta =(f: ArchivoDrive) => f.mimeType === CARPETA
+// Todo lo que hay dentro de una carpeta (no en la papelera), incluidos accesos directos y su destino.
+export async function listarHijos(padre: string): Promise<ArchivoDrive[]> {
+  const out: ArchivoDrive[] = []
+  let pageToken = ''
+  do {
+    const r = await api<{ files: ArchivoDrive[], nextPageToken?: string }>('files', {}, { q: `'${padre}' in parents and trashed = false`, pageSize: '500', fields: 'nextPageToken,files(id,name,mimeType,createdTime,imageMediaMetadata(time),shortcutDetails(targetId))', includeItemsFromAllDrives: 'true', ...(pageToken ? { pageToken } : {}) })
+    out.push(...r.files); pageToken = r.nextPageToken ?? ''
+  } while (pageToken && out.length < 2000)
+  return out
+}
+export const esAtajo = (f: ArchivoDrive) => f.mimeType === 'application/vnd.google-apps.shortcut'
+export const borrar = (id: string) => api(`files/${id}`, { method: 'DELETE' })
+export const esCarpeta = (f: ArchivoDrive) => f.mimeType === CARPETA
 export const crearCarpeta = (nombre: string, padre: string) => api<{ id: string }>('files', { method: 'POST', body: JSON.stringify({ name: nombre, mimeType: CARPETA, parents: [padre] }) }, { fields: 'id' })
 export const renombrar = (id: string, nombre: string) => api(`files/${id}`, { method: 'PATCH', body: JSON.stringify({ name: nombre }) }, { fields: 'id' })
 export const mover = (id: string, desde: string, hacia: string) => api(`files/${id}`, { method: 'PATCH', body: '{}' }, { addParents: hacia, removeParents: desde, fields: 'id' })
