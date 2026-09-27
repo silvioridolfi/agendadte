@@ -123,7 +123,7 @@ export type Feriado = { id?: string; fecha: string; nombre: string; tipo: 'nacio
 
 export const MODALIDADES = ['Presencial', 'Virtual', 'Híbrido'] as const
 export type Modalidad = (typeof MODALIDADES)[number]
-export const TIPOS_JORNADA = ['Sensibilización', 'Formación', 'Presentación', 'Taller', 'Acompañamiento', 'Otro'] as const
+export const TIPOS_JORNADA = ['Sensibilización', 'Formación', 'Presentación', 'Taller', 'Acompañamiento'] as const
 export type TipoJornada = (typeof TIPOS_JORNADA)[number]
 
 // Clubes de Tecnología (tabla public.clubes). Documento marco 2026: mínimo 8 encuentros, hasta 20 participantes.
