@@ -39,13 +39,14 @@ export default function Page() {
       // Recordar el último perfil usado en este navegador.
       const saved = storage(() => localStorage.getItem(PROFILE_KEY))
       const fed = saved ? list.find(f => f.id === saved) : undefined
-      if (fed) setProfile(fed)
+      if (fed) { setProfile(fed); if (fed.rol === 'coordinacion') setSection('board') }
     }).catch(e => setFedsError(errMsg(e)))
   }, [])
   useEffect(loadFeds, [loadFeds])
 
   const choose = (fed: Fed | null) => {
-    setProfile(fed); setSection('agenda')
+    // Coordinación entra al Tablero (vistazo general del equipo); cada FED, a su agenda.
+    setProfile(fed); setSection(fed?.rol === 'coordinacion' ? 'board' : 'agenda')
     storage(() => (fed ? localStorage.setItem(PROFILE_KEY, fed.id) : localStorage.removeItem(PROFILE_KEY)))
   }
   const changed = (message: string) => { setReloadKey(k => k + 1); setToast(message) }
@@ -95,7 +96,6 @@ export default function Page() {
     {section === 'agenda'
       ? <AgendaView fed={profile} feds={feds ?? []} reloadKey={reloadKey} onNew={fecha => setEditing({ item: null, fecha })} onSelect={setSelected} />
       : <CoordinatorView feds={(feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected}
-          autorId={profile.rol === 'coordinacion' ? profile.id : undefined} onChanged={msg => { setToast(msg); loadFeds() }}
           onNuevaReunion={profile.rol !== 'coordinacion' ? undefined : () => setEditing({ item: null, fecha: iso(toWeekday(new Date())), preset: { accion: 'REUNIÓN', sub_accion: 'Reunión de equipo (CED/FED)', participantes: (feds ?? []).filter(f => f.id !== profile.id).map(f => f.id) } })} />}
 
     <DetailDialog item={selected} feds={feds ?? []} profile={profile} onClose={() => setSelected(null)}
