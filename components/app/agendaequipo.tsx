@@ -32,7 +32,7 @@ export function AgendaEquipoView({ feds, reloadKey, onSelect }: { feds: Fed[], r
   const hoy = iso(new Date())
   const lunes = startOfWeek(fecha)
   const [desde, hasta] = modo === 'dia' ? [fecha, fecha] : modo === 'semana' ? [lunes, addDays(lunes, 4)] : [new Date(), addDays(new Date(), 7)]
-  const { items, error, retry } = useItems(() => getAllItems(iso(desde), iso(hasta)), [iso(desde), iso(hasta), reloadKey])
+  const { items, error, retry } = useItems(() => getAllItems(iso(desde), iso(hasta)), [iso(desde), iso(hasta), reloadKey], `todos:${iso(desde)}:${iso(hasta)}`)
   const feriados = useFeriados(iso(desde), iso(hasta), null)
 
   const equipo = useMemo(() => feds.filter(f => (!fedId || f.id === fedId) && (!distrito || f.distritos_a_cargo.includes(distrito))), [feds, fedId, distrito])

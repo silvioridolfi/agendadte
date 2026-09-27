@@ -99,6 +99,8 @@ export const generarPasswordTemporal = call(api.generarPasswordTemporal)
 export const getFeds = call(api.getFeds)
 export const searchSchools = call(api.searchSchools)
 export const getFedItems = call(api.getFedItems)
+export const buscarOrganismos = call(api.buscarOrganismos)
+export const ubicacionDe = call(api.ubicacionDe)
 export const getAllItems = call(api.getAllItems)
 export const getEncuentros = call(api.getEncuentros)
 export const getFeriados = call(api.getFeriados)
@@ -160,7 +162,8 @@ export function Toast({ message, onDone }: { message: string, onDone: () => void
   </div>
 }
 
-// `cacheKey`: guarda lo cargado en el dispositivo y, si no hay conexión, muestra la última copia.
+// `cacheKey`: guarda lo cargado en el dispositivo. Al abrir se muestra al instante la última copia y se actualiza
+// en segundo plano; si no hay conexión, queda la copia con el aviso de "sin conexión" (`desdeCache`).
 export function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[], cacheKey?: string) {
   const [items, setItems] = useState<AgendaItem[] | null>(null)
   const [error, setError] = useState('')
@@ -168,10 +171,10 @@ export function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[], cac
   const [desdeCache, setDesdeCache] = useState<number | null>(null)
   useEffect(() => {
     let alive = true
-    setItems(null); setError(''); setDesdeCache(null)
+    const c = cacheKey ? leerCache(cacheKey) : null
+    setItems(c?.items ?? null); setError(''); setDesdeCache(null)
     load().then(r => { if (!alive) return; setItems(r); if (cacheKey) guardarCache(cacheKey, r) }).catch(e => {
       if (!alive) return
-      const c = cacheKey ? leerCache(cacheKey) : null
       if (c) { setItems(c.items); setDesdeCache(c.ts) } else setError(errMsg(e))
     })
     return () => { alive = false }

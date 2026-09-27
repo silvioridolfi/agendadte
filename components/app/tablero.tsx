@@ -63,7 +63,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   const [mostrar, setMostrar] = useState<Record<string, number>>({})
   const visibles = (id: string) => (fedId ? Infinity : mostrar[id] ?? LISTA_INICIAL)
   const [from, to] = rangeBounds(anchor, range)
-  const { items, error, retry } = useItems(() => getAllItems(iso(from), iso(to)), [iso(from), iso(to), reloadKey])
+  const { items, error, retry } = useItems(() => getAllItems(iso(from), iso(to)), [iso(from), iso(to), reloadKey], `todos:${iso(from)}:${iso(to)}`)
   // Encuentros del período (incluye los que no están vinculados a una acción), para las métricas de participación.
   const [encs, setEncs] = useState<Encuentro[] | null>(null)
   useEffect(() => {

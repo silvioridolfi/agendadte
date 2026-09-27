@@ -14,6 +14,7 @@ import { ItemForm } from '@/components/app/formulario'
 import { MenuPerfil, MiPerfilView } from '@/components/app/miperfil'
 import { RegistroEncuentro } from '@/components/app/encuentro'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
+import { limpiarCache } from '@/components/app/offline'
 import { ConteoFotosProvider } from '@/components/app/fotosconteo'
 import { iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday, storage } from '@/components/app/comun'
 
@@ -70,7 +71,7 @@ export default function Page() {
     window.addEventListener('agenda-sesion-vencida', vencida)
     return () => window.removeEventListener('agenda-sesion-vencida', vencida)
   }, [cargarSesion])
-  const cerrarSesion = async () => { try { await salir() } finally { storage(() => sessionStorage.removeItem(SECCION_KEY)); setSesion(null); setVista(null); setFeds(null); setEditing(null); setSelected(null) } }
+  const cerrarSesion = async () => { try { await salir() } finally { storage(() => sessionStorage.removeItem(SECCION_KEY)); limpiarCache(); setSesion(null); setVista(null); setFeds(null); setEditing(null); setSelected(null) } }
   const changed = (message: string) => { setReloadKey(k => k + 1); setToast(message) }
   const hideToast = useCallback(() => setToast(''), [])
 

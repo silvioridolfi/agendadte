@@ -12,8 +12,24 @@ type Pendiente = { input: AgendaItemInput, id?: string, ts: number }
 function leer<T>(key: string, fallback: T): T {
   try { const v = localStorage.getItem(key); return v ? (JSON.parse(v) as T) : fallback } catch { return fallback }
 }
+// Copias guardadas, de la más vieja a la más nueva.
+function copias(): { key: string, ts: number }[] {
+  try {
+    return Object.keys(localStorage).filter(k => k.startsWith(CACHE))
+      .map(key => { try { return { key, ts: (JSON.parse(localStorage.getItem(key) ?? '{}') as { ts?: number }).ts ?? 0 } } catch { return { key, ts: 0 } } })
+      .sort((a, b) => a.ts - b.ts)
+  } catch { return [] }
+}
 function escribir(key: string, value: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* sin espacio o bloqueado: se ignora */ }
+  const texto = JSON.stringify(value)
+  // Si no hay espacio, se liberan las copias más viejas (nunca la cola de pendientes) y se reintenta.
+  for (let intento = 0; intento < 20; intento++) {
+    try { localStorage.setItem(key, texto); return } catch {
+      const vieja = copias().find(c => c.key !== key)
+      if (!vieja) return
+      try { localStorage.removeItem(vieja.key) } catch { return }
+    }
+  }
 }
 
 export function encolarOffline(input: AgendaItemInput, id?: string) {
@@ -41,5 +57,13 @@ export async function sincronizarPendientes(): Promise<{ enviadas: number, falli
   return { enviadas, fallidas }
 }
 
-export function guardarCache(clave: string, items: AgendaItem[]) { escribir(CACHE + clave, { ts: Date.now(), items }) }
+const MAX_COPIAS = 12
+export function guardarCache(clave: string, items: AgendaItem[]) {
+  escribir(CACHE + clave, { ts: Date.now(), items })
+  const todas = copias()
+  for (const c of todas.slice(0, Math.max(0, todas.length - MAX_COPIAS))) try { localStorage.removeItem(c.key) } catch { /* bloqueado */ }
+}
 export function leerCache(clave: string): { ts: number, items: AgendaItem[] } | null { return leer(CACHE + clave, null) }
+
+// Al cerrar sesión se borran las copias (la cola de pendientes queda para no perder cargas sin enviar).
+export function limpiarCache() { for (const c of copias()) try { localStorage.removeItem(c.key) } catch { /* bloqueado */ } }
