@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import * as api from '@/app/actions'
 import { guardarCache, leerCache } from '@/components/app/offline'
 import { titleCase } from '@/lib/format'
-import { type Accion, type AgendaItem, type Feriado, type Estado, type Fed, type School } from '@/lib/agenda'
+import { etiquetaAccion, nombreAccion, type Accion, type AgendaItem, type Feriado, type Estado, type Fed, type School } from '@/lib/agenda'
 
 // ---- estilos por categoría ----
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
@@ -150,7 +150,7 @@ export function storage<T>(fn: () => T): T | null { try { return fn() } catch { 
 
 // ---- piezas chicas ----
 export function ActionChip({ label, className = '' }: { label: Accion, className?: string }) {
-  return <span className={`inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs font-bold uppercase leading-tight tracking-[0.04em] ${actionStyle[label]?.chip ?? 'bg-muted text-muted-foreground'} ${className}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[label]?.dot ?? 'bg-current'}`} />{label}</span>
+  return <span title={nombreAccion(label)} className={`inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs font-bold uppercase leading-tight tracking-[0.04em] ${actionStyle[label]?.chip ?? 'bg-muted text-muted-foreground'} ${className}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[label]?.dot ?? 'bg-current'}`} />{etiquetaAccion(label)}</span>
 }
 export function StatusBadge({ status }: { status: Estado }) {
   return <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusStyle[status]?.badge ?? ''}`}>{statusStyle[status]?.label ?? status}</span>

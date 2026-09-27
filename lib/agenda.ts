@@ -8,6 +8,12 @@ export const ACCIONES = [
 export const ESTADOS = ['planificada', 'realizada', 'reprogramada', 'cancelada'] as const
 
 export type Accion = (typeof ACCIONES)[number]
+// Texto corto de las etiquetas (el valor guardado no cambia).
+const ETIQUETA_ACCION: Partial<Record<Accion, { corto: string, largo: string }>> = {
+  'PRÁCTICAS PROFESIONALIZANTES': { corto: 'PEAT', largo: 'PEAT (Prácticas Educativas en Ambientes de Trabajo)' },
+}
+export const etiquetaAccion = (a: Accion) => ETIQUETA_ACCION[a]?.corto ?? a
+export const nombreAccion = (a: Accion) => ETIQUETA_ACCION[a]?.largo ?? a
 export type Estado = (typeof ESTADOS)[number]
 
 // Clasificación acordada con coordinación (ver "Pautas para la confección de las Planillas de Visita a Escuelas 2026").
