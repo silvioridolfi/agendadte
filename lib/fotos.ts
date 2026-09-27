@@ -1,7 +1,7 @@
 import 'server-only'
 import { supabaseServer } from '@/lib/supabase-server'
 import { accionPorHora } from '@/lib/horas'
-import { DriveError, atajo, carpetaVigente, crearCarpeta, esCarpeta, listarTodo, fechaDeCaptura, listar, minutosDeCaptura, mover, renombrar } from '@/lib/drive'
+import { DriveError, atajo, carpetaVigente, datosArchivo, crearCarpeta, esCarpeta, listarTodo, fechaDeCaptura, listar, minutosDeCaptura, mover, renombrar } from '@/lib/drive'
 
 // Orden de fotos: las imágenes y videos sueltos en la carpeta del FED pasan a la carpeta de su día
 // ("2026-09-30 · EP N° 4 (5°) · EES N° 31 (7° Informática - Grupo 1)") y, si la hora de captura coincide con el horario
@@ -123,6 +123,17 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
     await db.from('fotos_dias').delete().eq('fed_id', fedId).eq('fecha', fecha)
     await db.from('fotos_procesadas').delete().eq('fed_id', fedId).eq('fecha', fecha)
     carpetasDia.delete(fecha)
+  }
+
+  // Fotos que versiones anteriores movieron a una carpeta de día/acción: vuelven a la carpeta del FED y en su lugar queda un acceso directo.
+  const { data: movidas } = await db.from('fotos_procesadas').select('file_id').eq('fed_id', fedId).eq('modo', 'movida').limit(LOTE)
+  for (const { file_id } of movidas ?? []) {
+    try {
+      const f = await datosArchivo(file_id as string)
+      const padre = f.parents?.find(p => p !== raiz)
+      if (!f.trashed && padre) { await mover(f.id, padre, raiz); await atajo(f.id, f.name, padre); res.rescatadas++ }
+      await db.from('fotos_procesadas').update({ modo: 'atajo' }).eq('fed_id', fedId).eq('file_id', file_id)
+    } catch (e) { if (!(e instanceof DriveError && (e.status === 404 || e.status === 403))) throw e }
   }
 
   const sueltos = (await listar(raiz)).filter(f => f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))

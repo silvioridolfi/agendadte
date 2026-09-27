@@ -14,7 +14,7 @@ import { ItemForm } from '@/components/app/formulario'
 import { MenuPerfil, MiPerfilView } from '@/components/app/miperfil'
 import { RegistroEncuentro } from '@/components/app/encuentro'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
-import { iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday } from '@/components/app/comun'
+import { iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday, storage } from '@/components/app/comun'
 
 // Botón de la barra inferior mobile (área táctil de 56px de alto).
 function BarraBoton({ activo, onClick, icono: Icono, label }: { activo: boolean, onClick: () => void, icono: LucideIcon, label: string }) {
@@ -32,13 +32,19 @@ function tituloForm(e: { item: AgendaItem | null, preset?: ItemPreset } | null) 
   return 'Nueva acción'
 }
 
+const SECCIONES = ['agenda', 'board', 'perfil', 'usuarios'] as const
+type Seccion = typeof SECCIONES[number]
+const SECCION_KEY = 'agenda-territorial:seccion'
+
 export default function Page() {
   // Sesión: undefined = verificando; null = sin sesión (pantalla de ingreso).
   const [sesion, setSesion] = useState<Sesion | null | undefined>(undefined)
   const [feds, setFeds] = useState<Fed[] | null>(null)
   const profile = sesion?.fed ?? null
   const setProfile = (f: Fed) => setSesion(s => (s ? { ...s, fed: f } : s))
-  const [section, setSection] = useState<'agenda' | 'board' | 'perfil' | 'usuarios'>('agenda')
+  const [section, setSection] = useState<Seccion>('agenda')
+  // La sección abierta se recuerda en la pestaña del navegador: al recargar se vuelve al mismo lugar.
+  useEffect(() => { if (sesion) storage(() => sessionStorage.setItem(SECCION_KEY, section)) }, [section, sesion])
   const [cambiandoPass, setCambiandoPass] = useState(false)
   // Administración: ver el tablero del equipo completo o la agenda de otro integrante (solo lectura).
   const [vista, setVista] = useState<{ tipo: 'equipo' } | { tipo: 'fed', fed: Fed } | null>(null)
@@ -54,7 +60,7 @@ export default function Page() {
     miSesion().then(s => {
       setSesion(s)
       // Coordinación entra al Tablero (vistazo general del equipo); cada FED, a su agenda.
-      if (s) { setSection(s.fed.rol === 'coordinacion' ? 'board' : 'agenda'); if (!s.debeCambiar) getFeds().then(setFeds).catch(() => setFeds([])) }
+      if (s) { const previa = storage(() => sessionStorage.getItem(SECCION_KEY)) as Seccion | null; setSection(previa && SECCIONES.includes(previa) ? previa : s.fed.rol === 'coordinacion' ? 'board' : 'agenda'); if (!s.debeCambiar) getFeds().then(setFeds).catch(() => setFeds([])) }
     }).catch(() => setSesion(null))
   }, [])
   useEffect(() => {
@@ -63,7 +69,7 @@ export default function Page() {
     window.addEventListener('agenda-sesion-vencida', vencida)
     return () => window.removeEventListener('agenda-sesion-vencida', vencida)
   }, [cargarSesion])
-  const cerrarSesion = async () => { try { await salir() } finally { setSesion(null); setVista(null); setFeds(null); setEditing(null); setSelected(null) } }
+  const cerrarSesion = async () => { try { await salir() } finally { storage(() => sessionStorage.removeItem(SECCION_KEY)); setSesion(null); setVista(null); setFeds(null); setEditing(null); setSelected(null) } }
   const changed = (message: string) => { setReloadKey(k => k + 1); setToast(message) }
   const hideToast = useCallback(() => setToast(''), [])
 

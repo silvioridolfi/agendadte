@@ -13,7 +13,7 @@ import { ClubesView } from '@/components/clubes'
 import { MetricsView } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
 import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed, type Club } from '@/lib/agenda'
-import { type ItemPreset, itemCorto, cueLugar, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, schoolPlace, itemTitle, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav } from '@/components/app/comun'
+import { type ItemPreset, itemCorto, cueLugar, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, schoolPlace, itemTitle, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
 
 // =====================================================================
 
@@ -34,9 +34,14 @@ export const rangeNames: Record<Range, [string, string, string]> = { day: ['Día
 
 export const LISTA_INICIAL = 5, LISTA_PASO = 20
 
+const PESTANAS = ['resumen', 'agenda', 'equipo', 'clubes', 'practicas', 'acciones'] as const
+type Pestana = typeof PESTANAS[number]
+const TAB_KEY = 'agenda-territorial:tablero'
+
 // `propio`: tablero individual de un FED (sólo sus datos; sin Agenda del equipo ni Mi equipo). `onNuevaAccion`: abre el formulario con valores iniciales.
 export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion, propio, onNuevaAccion, soloLectura }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void, propio?: Fed, onNuevaAccion?: (preset: ItemPreset) => void, soloLectura?: boolean }) {
-  const [tab, setTab] = useState<'resumen' | 'agenda' | 'equipo' | 'clubes' | 'practicas' | 'acciones'>('resumen')
+  const [tab, setTab] = useState<Pestana>(() => { const t = storage(() => sessionStorage.getItem(TAB_KEY)) as Pestana | null; return t && PESTANAS.includes(t) && !(propio && (t === 'agenda' || t === 'equipo')) ? t : 'resumen' })
+  useEffect(() => { storage(() => sessionStorage.setItem(TAB_KEY, tab)) }, [tab])
   // Pestañas accesibles: flechas izquierda/derecha, Inicio y Fin mueven el foco y activan la pestaña.
   function teclaPestana(e: React.KeyboardEvent<HTMLDivElement>) {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return

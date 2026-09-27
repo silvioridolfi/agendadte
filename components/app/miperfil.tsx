@@ -60,6 +60,10 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const erroresRef = useRef<HTMLDivElement>(null)
+  // El botón Guardar aparece sólo si algo cambió respecto de lo guardado.
+  const firma = () => JSON.stringify([[...distritos].sort(), carga.trim(), franjas, cargos.map(({ key: _, ...c }) => c), notas])
+  const [base, setBase] = useState(firma)
+  const cambios = firma() !== base
 
   const setFranja = (dia: number, i: number, patch: Partial<Franja>) => setFranjas(f => ({ ...f, [dia]: f[dia].map((x, j) => (j === i ? { ...x, ...patch } : x)) }))
   const copiarLunes = () => setFranjas(f => ({ ...f, 2: f[1].map(x => ({ ...x })), 3: f[1].map(x => ({ ...x })), 4: f[1].map(x => ({ ...x })), 5: f[1].map(x => ({ ...x })) }))
@@ -71,7 +75,7 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
     if (errs.length) { requestAnimationFrame(() => erroresRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })); return }
     const datos = { distritos_a_cargo: distritos, carga_horaria: carga.trim() || null, ddjj: armarDdjj(franjas, cargos, notas) }
     setBusy(true)
-    try { await updateMiPerfil(fed.id, datos); onSaved({ ...fed, ...datos }) } catch (e) { setError(errMsg(e)) } finally { setBusy(false) }
+    try { await updateMiPerfil(fed.id, datos); setBase(firma()); onSaved({ ...fed, ...datos }) } catch (e) { setError(errMsg(e)) } finally { setBusy(false) }
   }
 
   const panel = 'rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5'
@@ -151,8 +155,8 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
       {error && <ErrorBox message={error} />}
     </div>
 
-    <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-fab border-t border-dte-linea bg-white/95 px-4 py-3 backdrop-blur md:bottom-0">
+    {cambios && <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-fab border-t border-dte-linea bg-white/95 px-4 py-3 backdrop-blur md:bottom-0">
       <div className="mx-auto flex max-w-3xl justify-end"><Button size="lg" disabled={busy} onClick={guardar} className="w-full bg-dte-petroleo font-semibold hover:bg-dte-petroleo-oscuro sm:w-auto">{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Guardar cambios</Button></div>
-    </div>
+    </div>}
   </main>
 }

@@ -75,7 +75,8 @@ export async function listarTodo(padre: string): Promise<ArchivoDrive[]> {
   const r = await api<{ files: ArchivoDrive[] }>('files', {}, { q: `'${padre}' in parents`, pageSize: '500', fields: 'files(id,name,mimeType)', includeItemsFromAllDrives: 'true' })
   return r.files
 }
-export const esCarpeta = (f: ArchivoDrive) => f.mimeType === CARPETA
+export const datosArchivo = (id: string) => api<{ id: string, name: string, parents?: string[], trashed?: boolean }>(`files/${id}`, {}, { fields: 'id,name,parents,trashed' })
+export const esCarpeta =(f: ArchivoDrive) => f.mimeType === CARPETA
 export const crearCarpeta = (nombre: string, padre: string) => api<{ id: string }>('files', { method: 'POST', body: JSON.stringify({ name: nombre, mimeType: CARPETA, parents: [padre] }) }, { fields: 'id' })
 export const renombrar = (id: string, nombre: string) => api(`files/${id}`, { method: 'PATCH', body: JSON.stringify({ name: nombre }) }, { fields: 'id' })
 export const mover = (id: string, desde: string, hacia: string) => api(`files/${id}`, { method: 'PATCH', body: '{}' }, { addParents: hacia, removeParents: desde, fields: 'id' })
