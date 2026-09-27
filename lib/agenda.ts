@@ -92,6 +92,8 @@ export type AgendaItem = {
   // Serie de acciones repetidas y club/práctica asociado (para completar cada encuentro).
   serie_id?: string | null
   club_id?: string | null
+  // Grado o grupo del club/práctica (para distinguir varios grupos de una misma escuela).
+  club?: { grupo: string | null } | null
 }
 export type AgendaItemInput = {
   fed_id: string

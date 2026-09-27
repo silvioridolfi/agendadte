@@ -41,7 +41,7 @@ async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ dat
   }
 }
 
-const ITEM_COLS = `*, school:establecimientos(${SCHOOL_COLS}), encuentros:agenda_encuentros(*), participantes:agenda_participantes(fed_id, respuesta)`
+const ITEM_COLS = `*, school:establecimientos(${SCHOOL_COLS}), encuentros:agenda_encuentros(*), participantes:agenda_participantes(fed_id, respuesta), club:clubes(grupo)`
 
 // Agenda de un FED: sus acciones y aquellas en las que fue etiquetado.
 async function getFedItemsImpl(fedId: string, from: string, to: string): Promise<AgendaItem[]> {

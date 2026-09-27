@@ -67,7 +67,10 @@ export const shortSchoolName = (s: School | null) => { const n = schoolName(s); 
 export const schoolPlace = (s: School | null) => (s ? [s.ciudad && s.ciudad !== s.distrito ? titleCase(s.ciudad) : null, s.distrito ? titleCase(s.distrito) : null].filter(Boolean).join(', ') : '')
 
 export const ddjjFor = (fed: Fed, fecha: string) => { const d = parse(fecha).getDay(); return d >= 1 && d <= 5 ? fed.ddjj?.find(x => x.dia === d) : undefined }
-export const itemTitle = (i: AgendaItem) => (i.school ? schoolName(i.school) : i.lugar || i.sub_accion || cap(i.accion.toLowerCase()))
+// Título de la acción; en clubes y prácticas se agrega el grado/grupo (ej.: "EP N° 5 · 4° A").
+export const conGrupo = (i: AgendaItem, t: string) => (i.club?.grupo ? `${t} · ${i.club.grupo}` : t)
+export const itemTitle = (i: AgendaItem) => conGrupo(i, i.school ? schoolName(i.school) : i.lugar || i.sub_accion || cap(i.accion.toLowerCase()))
+export const itemCorto = (i: AgendaItem) => (i.school ? conGrupo(i, shortSchoolName(i.school)) : itemTitle(i))
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 export const firstName = (name: string) => name.split(/\s+/)[0]
 export const fedColor = (feds: Fed[], id: string) => avatarColors[Math.max(0, feds.findIndex(f => f.id === id)) % avatarColors.length]
