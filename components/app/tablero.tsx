@@ -107,7 +107,11 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     (!q || `${fedName(c.fed_id)} ${c.school?.nombre ?? ''} ${c.school?.ciudad ?? ''} ${c.school?.cue ?? ''} ${c.escuela_origen?.nombre ?? ''} ${c.escuela_origen?.cue ?? ''} ${c.grupo ?? ''} ${c.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [clubes, distrito, fedId, q, fedName])
   const counts = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, base.filter(i => i.estado === e).length])) as Record<Estado, number>, [base])
   // FEDs en orden alfabético; dentro de cada uno, las acciones de la más nueva a la más antigua (fecha, hora y carga).
-  const recientePrimero = (a: AgendaItem, b: AgendaItem) => b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)
+  // Primero lo de hoy hacia atrás (lo más reciente arriba); lo planificado a futuro va al final, de lo más próximo a lo más lejano.
+  const hoy = new Date().toLocaleDateString('en-CA')
+  const recientePrimero = (a: AgendaItem, b: AgendaItem) => Number(a.fecha > hoy) - Number(b.fecha > hoy)
+    || (a.fecha > hoy ? a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? '') : 0)
+    || b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)
   const groups = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].map(([id, l]) => [id, l.sort(recientePrimero)] as [string, AgendaItem[]]).sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName])
   const anyFilter = !!(search || distrito || fedIdElegido || accion || estado)
   // Filtros plegables en mobile (buscador siempre visible).
@@ -127,9 +131,9 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
       </div>}
     </div>
 
-    {/* Pestañas: en mobile se desplazan horizontalmente en una sola línea. */}
-    <div role="tablist" aria-label="Vista del tablero" onKeyDown={teclaPestana} className="-mx-4 mt-6 flex snap-x gap-1 overflow-x-auto border-b border-dte-linea px-4 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
-      {((propio ? [['resumen', 'Resumen y métricas'], ['clubes', 'Mis clubes'], ['practicas', 'Mis prácticas (PEAT)'], ['acciones', 'Mis acciones']] as const : [['resumen', 'Resumen y métricas'], ['agenda', 'Agenda del equipo'], ['equipo', 'Mi equipo'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo']] as const)).map(([k, l]) => <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="panel-tablero" tabIndex={tab === k ? 0 : -1} data-tab={k} onClick={e => { setTab(k); e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }} className={`-mb-px flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
+    {/* Pestañas: en mobile, grilla fija de botones (sin desplazamiento lateral); en escritorio, subrayadas. */}
+    <div role="tablist" aria-label="Vista del tablero" onKeyDown={teclaPestana} className="mt-6 grid grid-cols-2 gap-1.5 md:flex md:gap-1 md:border-b md:border-dte-linea">
+      {((propio ? [['resumen', 'Resumen y métricas'], ['clubes', 'Mis clubes'], ['practicas', 'Mis prácticas (PEAT)'], ['acciones', 'Mis acciones']] as const : [['resumen', 'Resumen y métricas'], ['agenda', 'Agenda del equipo'], ['equipo', 'Mi equipo'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo']] as const)).map(([k, l]) => <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="panel-tablero" tabIndex={tab === k ? 0 : -1} data-tab={k} onClick={e => { setTab(k) }} className={`flex min-h-11 min-w-0 items-center justify-center rounded-lg border px-2 text-center text-sm font-semibold leading-tight transition md:-mb-px md:shrink-0 md:justify-start md:whitespace-nowrap md:rounded-none md:border-0 md:border-b-2 md:bg-transparent md:px-3 ${tab === k ? 'border-dte-petroleo bg-dte-petroleo text-white md:border-dte-magenta md:text-dte-tinta' : 'border-dte-linea bg-white text-dte-gris hover:text-dte-tinta md:border-transparent'}`}>{l}</button>)}
     </div>
 
     <div id="panel-tablero" role="tabpanel" aria-labelledby={`tab-${tab}`}>
