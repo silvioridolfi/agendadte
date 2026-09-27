@@ -1,7 +1,7 @@
 import 'server-only'
 import { supabaseServer } from '@/lib/supabase-server'
 import { accionPorHora } from '@/lib/horas'
-import { DriveError, atajo, crearCarpeta, fechaDeCaptura, listar, minutosDeCaptura, mover, renombrar } from '@/lib/drive'
+import { DriveError, atajo, carpetaVigente, crearCarpeta, esCarpeta, listarTodo, fechaDeCaptura, listar, minutosDeCaptura, mover, renombrar } from '@/lib/drive'
 
 // Orden de fotos: las imágenes y videos sueltos en la carpeta del FED pasan a la carpeta de su día
 // ("2026-09-30 · EP N° 4 (5°) · EES N° 31 (7° Informática - Grupo 1)") y, si la hora de captura coincide con el horario
@@ -50,21 +50,15 @@ function nombreDelDia(fecha: string, items: ItemDia[]) {
   return `${fecha} · ${resumen}`.slice(0, 180)
 }
 
-export type ResultadoOrden = { ordenadas: number, atajos: number, sinFecha: number, porAccion: number, pendientes: number }
+export type ResultadoOrden = { ordenadas: number, atajos: number, sinFecha: number, porAccion: number, pendientes: number, rescatadas: number }
 
 export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
   const db = supabaseServer()
   const { data: fed } = await db.from('feds').select('carpeta_fotos_id').eq('id', fedId).maybeSingle()
   const raiz = fed?.carpeta_fotos_id as string | undefined
-  const res: ResultadoOrden = { ordenadas: 0, atajos: 0, sinFecha: 0, porAccion: 0, pendientes: 0 }
+  const res: ResultadoOrden = { ordenadas: 0, atajos: 0, sinFecha: 0, porAccion: 0, pendientes: 0, rescatadas: 0 }
   if (!raiz) return res
 
-  const sueltos = (await listar(raiz)).filter(f => f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))
-  const { data: hechos } = await db.from('fotos_procesadas').select('file_id').eq('fed_id', fedId).in('file_id', sueltos.map(f => f.id).slice(0, 1000))
-  const yaHechos = new Set((hechos ?? []).map(h => h.file_id as string))
-  const nuevos = sueltos.filter(f => !yaHechos.has(f.id))
-  const lote = nuevos.slice(0, LOTE)
-  res.pendientes = nuevos.length - lote.length
 
   const [{ data: dias }, { data: acciones }] = await Promise.all([
     db.from('fotos_dias').select('fecha, folder_id, nombre').eq('fed_id', fedId),
@@ -75,8 +69,20 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
   const itemsCache = new Map<string, ItemDia[]>()
   const items = async (fecha: string) => { if (!itemsCache.has(fecha)) itemsCache.set(fecha, fecha === SIN_FECHA ? [] : await itemsDelDia(fedId, fecha)); return itemsCache.get(fecha)! }
 
+  // Fotos que quedaron dentro de una carpeta eliminada: vuelven a la carpeta del FED para ordenarse de nuevo.
+  async function rescatar(carpeta: string) {
+    try {
+      for (const f of await listarTodo(carpeta)) {
+        if (esCarpeta(f)) { await rescatar(f.id); continue }
+        if (!f.mimeType.startsWith('image/') && !f.mimeType.startsWith('video/')) continue
+        try { await mover(f.id, carpeta, raiz!); await db.from('fotos_procesadas').delete().eq('fed_id', fedId).eq('file_id', f.id); res.rescatadas++ } catch { /* sin permiso sobre ese archivo: queda donde está */ }
+      }
+    } catch { /* carpeta inexistente: nada que rescatar */ }
+  }
   // Crea la carpeta o la renombra si cambió lo cargado en la agenda; si fue borrada en Drive, la vuelve a crear.
   async function asegurar(actual: { id: string, nombre: string | null } | undefined, nombre: string, padre: string, guardar: (id: string) => PromiseLike<unknown>) {
+    // Si la carpeta guardada fue eliminada (papelera) o ya no existe, se crea una nueva; nunca se mueve nada a la papelera.
+    if (actual && !(await carpetaVigente(actual.id))) { await rescatar(actual.id); actual = undefined }
     if (actual) {
       if (actual.nombre === nombre) return actual.id
       try { await renombrar(actual.id, nombre); await guardar(actual.id); actual.nombre = nombre; return actual.id }
@@ -108,7 +114,21 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
 
   // Actualiza el nombre de las carpetas de días recientes aunque no tengan fotos nuevas (por si cambió la agenda).
   const recientes = [...carpetasDia.keys()].filter(f => f !== SIN_FECHA).sort().slice(-60)
-  for (const fecha of recientes) await carpetaDia(fecha)
+  for (const fecha of recientes) {
+    const actual = carpetasDia.get(fecha)!
+    if (await carpetaVigente(actual.id)) { await carpetaDia(fecha); continue }
+    // Carpeta eliminada por el FED: se rescatan sus fotos (vuelven a ordenarse) y no se recrea vacía.
+    await rescatar(actual.id)
+    await db.from('fotos_dias').delete().eq('fed_id', fedId).eq('fecha', fecha)
+    carpetasDia.delete(fecha)
+  }
+
+  const sueltos = (await listar(raiz)).filter(f => f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))
+  const { data: hechos } = await db.from('fotos_procesadas').select('file_id').eq('fed_id', fedId).in('file_id', sueltos.map(f => f.id).slice(0, 1000))
+  const yaHechos = new Set((hechos ?? []).map(h => h.file_id as string))
+  const nuevos = sueltos.filter(f => !yaHechos.has(f.id))
+  const lote = nuevos.slice(0, LOTE)
+  res.pendientes = nuevos.length - lote.length
 
   for (const f of lote) {
     // Videos: Drive no guarda su fecha de grabación; se usa la fecha en que se subieron (hora argentina) y van a la carpeta del día.

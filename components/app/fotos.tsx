@@ -27,7 +27,8 @@ export function SeccionFotos() {
     try {
       const r = await ordenarMisFotos()
       const total = r.ordenadas + r.atajos
-      setAviso(total ? `Se ordenaron ${total} ${total === 1 ? 'archivo' : 'archivos'}${r.porAccion ? ` (${r.porAccion} en la carpeta de su acción según la hora)` : ' por día'}${r.sinFecha ? ` (${r.sinFecha} sin fecha de captura, en “Sin fecha”)` : ''}${r.pendientes ? `. Quedan ${r.pendientes}: tocá de nuevo para seguir.` : '.'}` : 'No había fotos sueltas para ordenar.')
+      const rescate = r.rescatadas ? `Se recuperaron ${r.rescatadas} ${r.rescatadas === 1 ? 'foto que estaba' : 'fotos que estaban'} en carpetas eliminadas. ` : ''
+      setAviso(rescate + (total ? `Se ordenaron ${total} ${total === 1 ? 'archivo' : 'archivos'}${r.porAccion ? ` (${r.porAccion} en la carpeta de su acción según la hora)` : ' por día'}${r.sinFecha ? ` (${r.sinFecha} sin fecha de captura, en “Sin fecha”)` : ''}${r.pendientes ? `. Quedan ${r.pendientes}: tocá de nuevo para seguir.` : '.'}` : 'No había fotos sueltas para ordenar.'))
     } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
   }
   const copiar = async () => { if (!estado) return; try { await navigator.clipboard.writeText(estado.cuentaTecnica); setCopiado(true) } catch { setCopiado(false) } }

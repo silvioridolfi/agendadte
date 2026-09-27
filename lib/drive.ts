@@ -65,6 +65,17 @@ export async function listar(padre: string, soloCarpetas = false): Promise<Archi
   return out
 }
 
+// Carpeta usable: existe y no está en la papelera (si el FED la borró, hay que crear otra).
+export async function carpetaVigente(id: string): Promise<boolean> {
+  try { const f = await api<{ trashed?: boolean }>(`files/${id}`, {}, { fields: 'trashed' }); return !f.trashed }
+  catch (e) { if (e instanceof DriveError && (e.status === 404 || e.status === 403)) return false; throw e }
+}
+// Contenido de una carpeta aunque esté en la papelera (para rescatar fotos de carpetas eliminadas).
+export async function listarTodo(padre: string): Promise<ArchivoDrive[]> {
+  const r = await api<{ files: ArchivoDrive[] }>('files', {}, { q: `'${padre}' in parents`, pageSize: '500', fields: 'files(id,name,mimeType)', includeItemsFromAllDrives: 'true' })
+  return r.files
+}
+export const esCarpeta = (f: ArchivoDrive) => f.mimeType === CARPETA
 export const crearCarpeta = (nombre: string, padre: string) => api<{ id: string }>('files', { method: 'POST', body: JSON.stringify({ name: nombre, mimeType: CARPETA, parents: [padre] }) }, { fields: 'id' })
 export const renombrar = (id: string, nombre: string) => api(`files/${id}`, { method: 'PATCH', body: JSON.stringify({ name: nombre }) }, { fields: 'id' })
 export const mover = (id: string, desde: string, hacia: string) => api(`files/${id}`, { method: 'PATCH', body: '{}' }, { addParents: hacia, removeParents: desde, fields: 'id' })
