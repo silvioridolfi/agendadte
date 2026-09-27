@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Briefcase, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
+import { Briefcase, CalendarOff, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +16,7 @@ const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
 const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 
 // Menú del avatar: Mi perfil (sólo FED) y cambio de perfil. Se cierra con Escape o tocando afuera.
-export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, onPerfil: () => void, onUsuarios: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
+export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onFeriados, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, onPerfil: () => void, onUsuarios: () => void, onFeriados: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null), btnRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
@@ -38,6 +38,7 @@ export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onEqu
       {profile.rol === 'fed' && <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>}
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
+      {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onFeriados() }} className={item}><CalendarOff className="size-4 text-dte-petroleo" />Feriados y recesos</button>}
       <button role="menuitem" onClick={() => { setOpen(false); onPassword() }} className={item}><KeyRound className="size-4 text-dte-petroleo" />Cambiar contraseña</button>
       <button role="menuitem" onClick={() => { setOpen(false); onSalir() }} className={`${item} border-t border-dte-linea text-peligro`}><LogOut className="size-4" />Cerrar sesión</button>
     </div>}

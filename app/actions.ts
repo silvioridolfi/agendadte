@@ -364,17 +364,6 @@ async function esCoordinacion(autorId: string) {
   if (!data?.es_admin) throw new Error('Sólo administración puede hacer este cambio')
 }
 
-async function updateFedImpl(autorId: string, fed: Pick<Fed, 'id' | 'nombre_completo' | 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>): Promise<void> {
-  await esCoordinacion(autorId)
-  if (!fed.nombre_completo.trim()) throw new Error('El nombre es obligatorio')
-  // La carga horaria se calcula del horario DTE declarado (no se escribe a mano).
-  const patch = { nombre_completo: fed.nombre_completo.trim(), distritos_a_cargo: fed.distritos_a_cargo.map(d => d.trim().toUpperCase()).filter(Boolean), carga_horaria: cargaDeDdjj(fed.ddjj), ddjj: fed.ddjj }
-  const { error } = await supabaseServer().from('feds').update(patch).eq('id', fed.id)
-  if (error) throw new Error(error.message)
-  await audit('feds', fed.id, 'modificacion', autorId, patch)
-}
-
-// Mi perfil: cada FED edita sus distritos, carga horaria y DD.JJ. (la coordinación sólo la consulta).
 async function updateMiPerfilImpl(fedId: string, datos: Pick<Fed, 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>): Promise<void> {
   const db = supabaseServer()
   const { data: fed } = await db.from('feds').select('rol').eq('id', fedId).maybeSingle()
@@ -532,7 +521,6 @@ export const responder = async (itemId: string, _fedId: string, respuesta: 'acep
 export const getHistorial = async (itemId: string) => conUsuario(() => getHistorialImpl(itemId))
 export const crearClubPorIniciar = async (c: ClubPorIniciarInput) => conUsuario(yo => crearClubPorIniciarImpl({ ...c, fed_id: yo.fed.id }))
 export const updateMiPerfil = async (_fedId: string, datos: Pick<Fed, 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => conUsuario(yo => updateMiPerfilImpl(yo.fed.id, datos))
-export const updateFed = async (_autorId: string, fed: Pick<Fed, 'id' | 'nombre_completo' | 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => conUsuario(yo => updateFedImpl(yo.fed.id, fed))
 export const addFeriado = async (_autorId: string, f: Omit<Feriado, 'id'>) => conUsuario(yo => addFeriadoImpl(yo.fed.id, f))
 export const deleteFeriado = async (_autorId: string, id: string) => conUsuario(yo => deleteFeriadoImpl(yo.fed.id, id))
 

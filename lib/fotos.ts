@@ -4,7 +4,7 @@ import { accionPorHora } from '@/lib/horas'
 import { DriveError, borrar, carpetaVigente, crearCarpeta, esAtajo, listarHijos, esCarpeta, listarTodo, fechaDeCaptura, listar, minutosDeCaptura, mover, renombrar } from '@/lib/drive'
 
 // Orden de fotos: las imágenes y videos sueltos en la carpeta del FED pasan a la carpeta de su día
-// ("2026-09-30 · EP N° 4 (5°) · EES N° 31 (7° Informática - Grupo 1)") y, si la hora de captura coincide con el horario
+// ("30-09-2026 · EP N° 4 (5°) · EES N° 31 (7° Informática - Grupo 1)") y, si la hora de captura coincide con el horario
 // de una acción de la agenda, a su subcarpeta ("12:00 · Club EP N° 4 - 4°"). Sin fecha: carpeta "Sin fecha".
 // Las fotos se mueven a su carpeta; si una foto queda en el día y después se carga la acción, pasa a la carpeta de la acción.
 const SIN_FECHA = '1900-01-01'
@@ -47,7 +47,9 @@ function nombreDelDia(fecha: string, items: ItemDia[]) {
   for (const i of items) { const l = porLugar.get(lugarDe(i)) ?? []; if (i.club?.grupo && !l.includes(i.club.grupo)) l.push(i.club.grupo); porLugar.set(lugarDe(i), l) }
   const partes = [...porLugar].map(([l, g]) => (g.length ? `${l} (${g.sort((a, b) => a.localeCompare(b, 'es', { numeric: true })).join(', ')})` : l))
   const resumen = partes.length ? partes.slice(0, 4).join(' · ') + (partes.length > 4 ? ` y ${partes.length - 4} más` : '') : 'Sin acciones en la agenda'
-  return `${fecha} · ${resumen}`.slice(0, 180)
+  // Fecha como DD-MM-AAAA (así la leen en Drive).
+  const [y, m, d] = fecha.split('-')
+  return `${d}-${m}-${y} · ${resumen}`.slice(0, 180)
 }
 
 export type ResultadoOrden = { ordenadas: number, atajos: number, sinFecha: number, porAccion: number, pendientes: number, rescatadas: number }
