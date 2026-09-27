@@ -8,6 +8,7 @@ import type { PveFed, PveMes } from '@/app/actions'
 import { cap, errMsg, eyebrow, fmt, parse, misPve, pveEquipo, marcarPveEnviadas, ErrorBox, Skeleton } from '@/components/app/comun'
 
 const fecha = (ts: string) => cap(fmt(new Date(ts), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))
+const fechaCorta = (f: string) => cap(fmt(parse(f), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
 // Mi perfil (FED): una carpeta por mes para subir el PDF de la PVE ya firmada.
@@ -19,13 +20,13 @@ export function SeccionPve() {
   useEffect(() => { cargar() }, [])
   return <section className="rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5" aria-labelledby="t-pve">
     <h3 id="t-pve" className="flex items-center gap-1.5 font-bold"><FileText className="size-4 text-dte-petroleo" />Planillas de Visita (PVE)</h3>
-    <p className="mb-3 text-sm text-dte-gris">Subí tu PVE del mes, <b>firmada y en un solo PDF</b>, a la carpeta de ese mes. La agenda le pone el nombre correcto y se la deja lista a la coordinación.</p>
+    <p className="mb-3 text-sm text-dte-gris">Subí tu PVE del mes, <b>firmada y en un solo PDF</b>, a la carpeta de ese mes. Vence el <b>5.º día hábil del mes siguiente</b>. La agenda le pone el nombre correcto y se la deja lista a la coordinación.</p>
     {!datos ? (error ? <ErrorBox message={error} /> : <Loader2 className="size-5 animate-spin text-dte-gris" />)
       : !datos.conectada ? <p className="rounded-lg border border-dashed border-dte-linea px-3 py-3 text-sm text-dte-gris">Primero conectá tu carpeta de Drive en “Fotos de las acciones”: las PVE usan la misma carpeta.</p>
       : <>
         <ul className="divide-y divide-dte-linea rounded-xl border border-dte-linea">{datos.meses.map(m => <li key={m.mes} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm">
           <span className="min-w-0"><b className="capitalize">{m.nombreMes.toLowerCase()}</b>
-            <span className={`flex items-center gap-1 text-xs ${m.entregada ? 'text-exito' : 'text-dte-gris'}`}>{m.enviada ? <><Send className="size-3" />Enviada a Nivel Central</> : m.entregada ? <><Check className="size-3" />Entregada el {fecha(m.entregada)}</> : 'Pendiente'}</span></span>
+            <span className={`flex items-center gap-1 text-xs ${m.entregada ? 'text-exito' : 'text-dte-gris'}`}>{m.enviada ? <><Send className="size-3" />Enviada a Nivel Central</> : m.entregada ? <><Check className="size-3" />Entregada el {fecha(m.entregada)}</> : <>Pendiente · vence el {fechaCorta(m.vence)}</>}</span></span>
           <span className="flex flex-wrap gap-1.5">
             {m.archivoUrl && <a href={m.archivoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-dte-linea px-2.5 text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><ExternalLink className="size-3.5" />Ver</a>}
             {!m.enviada && <a href={m.carpetaUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-dte-linea px-2.5 text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><FolderOpen className="size-3.5" />{m.entregada ? 'Carpeta' : 'Subir'}</a>}
@@ -67,7 +68,7 @@ export function PveEquipoView() {
     <div className="mt-4 flex items-center gap-1"><Button variant="outline" size="sm" onClick={() => mover(-1)} aria-label="Mes anterior">‹</Button><span className="min-w-36 px-2 text-center text-sm font-bold capitalize">{nombreMes}</span><Button variant="outline" size="sm" onClick={() => mover(1)} aria-label="Mes siguiente">›</Button></div>
     {error && <div className="mt-3"><ErrorBox message={error} /></div>}
     {!lista ? <div className="mt-4 flex flex-col gap-2"><Skeleton className="h-14" /><Skeleton className="h-14" /><Skeleton className="h-14" /></div> : <>
-      <p className="mt-4 text-sm"><b>{entregadas.length}</b> de {lista.length} entregadas{pendientes.length ? <> · faltan: {pendientes.map(f => f.nombre.split(' ')[0]).join(', ')}</> : ''}</p>
+      <p className="mt-4 text-sm">Vence el <b>{lista[0] ? fechaCorta(lista[0].vence) : '—'}</b> (5.º día hábil del mes siguiente) · <b>{entregadas.length}</b> de {lista.length} entregadas{pendientes.length ? <> · faltan: {pendientes.map(f => f.nombre.split(' ')[0]).join(', ')}</> : ''}</p>
       <ul className="mt-2 divide-y divide-dte-linea rounded-2xl border border-dte-linea bg-white shadow-xs">{lista.map(f => <li key={f.fedId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm">
         <span className="min-w-0"><b>{f.nombre}</b>
           <span className={`flex items-center gap-1 text-xs ${f.entregada ? 'text-exito' : 'text-dte-gris'}`}>{f.enviada ? <><Send className="size-3" />Enviada</> : f.entregada ? <><FileCheck2 className="size-3" />Entregada el {fecha(f.entregada)}</> : f.conectada ? 'Pendiente' : 'Sin carpeta de Drive conectada'}</span></span>

@@ -75,9 +75,19 @@ export async function revisarPve(fedId: string): Promise<ResultadoPve> {
   return res
 }
 
-// Último día hábil (lunes a viernes) del mes de la fecha dada.
-export function ultimoHabil(fecha: string) {
-  const d = new Date(`${inicioMes(fecha, 1)}T12:00:00Z`)
-  do d.setUTCDate(d.getUTCDate() - 1); while (d.getUTCDay() === 0 || d.getUTCDay() === 6)
-  return d.toISOString().slice(0, 10)
+// Días hábiles de un mes (sin fines de semana ni los días no laborables indicados).
+export function habilesDelMes(mes: string, noLaborables: Set<string> = new Set()) {
+  const out: string[] = []
+  for (const d = new Date(`${mes}T12:00:00Z`); d.toISOString().slice(0, 7) === mes.slice(0, 7); d.setUTCDate(d.getUTCDate() + 1)) {
+    const f = d.toISOString().slice(0, 10)
+    if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6 && !noLaborables.has(f)) out.push(f)
+  }
+  return out
+}
+// Vencimiento de la PVE de un mes: el 5.º día hábil del mes siguiente.
+export const vencimientoPve = (mes: string, noLaborables: Set<string> = new Set()) => habilesDelMes(inicioMes(mes, 1), noLaborables)[4]
+// Feriados nacionales, turísticos y recesos (los aniversarios distritales no cuentan para todos).
+export async function noLaborables(desde: string, hasta: string) {
+  const { data } = await supabaseServer().from('feriados').select('fecha, tipo').gte('fecha', desde).lte('fecha', hasta).neq('tipo', 'distrital')
+  return new Set((data ?? []).map(f => f.fecha as string))
 }

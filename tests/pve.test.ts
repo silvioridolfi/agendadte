@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/supabase-server', () => ({ supabaseServer: () => ({}) }))
-import { carpetaMes, inicioMes, mesesAbiertos, nombrePve, ultimoHabil } from '@/lib/pve'
+import { carpetaMes, inicioMes, mesesAbiertos, nombrePve, vencimientoPve } from '@/lib/pve'
 
 describe('PVE', () => {
   it('meses y carpetas', () => {
@@ -13,9 +13,9 @@ describe('PVE', () => {
   it('nombre del archivo según el instructivo', () => {
     expect(nombrePve('2026-10-01', 'Silvio Ridolfi')).toBe('R01 - PVE (OCTUBRE 2026) - SILVIO RIDOLFI.pdf')
   })
-  it('último día hábil del mes', () => {
-    expect(ultimoHabil('2026-10-05')).toBe('2026-10-30') // 31/10/2026 es sábado
-    expect(ultimoHabil('2026-09-01')).toBe('2026-09-30')
-    expect(ultimoHabil('2026-05-12')).toBe('2026-05-29') // 30 y 31 caen fin de semana
+  it('vence el 5.º día hábil del mes siguiente', () => {
+    expect(vencimientoPve('2026-09-01')).toBe('2026-10-07') // 1, 2, 5, 6 y 7 de octubre
+    expect(vencimientoPve('2026-10-01')).toBe('2026-11-06')
+    expect(vencimientoPve('2026-10-01', new Set(['2026-11-02']))).toBe('2026-11-09') // con un feriado en el medio
   })
 })
