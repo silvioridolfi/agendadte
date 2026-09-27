@@ -136,3 +136,57 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
   document.body.appendChild(a); a.click(); a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 5000)
 }
+
+// Informe del período (coordinación o un FED): datos de la persona, indicadores y detalle de acciones.
+export type Persona = { nombre: string, rol: string, distritos: string[], carga: string | null }
+export async function exportarInforme({ titulo, persona, desde, hasta, indicadores, items, feds }: { titulo: string, persona: Persona, desde: string, hasta: string, indicadores: { label: string, valor: number, detalle?: string }[], items: AgendaItem[], feds: Fed[] }) {
+  const ExcelJS = (await import('exceljs')).default
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'Agenda Territorial DTE'; wb.created = new Date()
+  const fedName = (id: string) => feds.find(f => f.id === id)?.nombre_completo ?? ''
+  let oficial: number | null = null
+  try { oficial = wb.addImage({ buffer: await (await fetch('/brand/oficial-color.png')).arrayBuffer(), extension: 'png' }) } catch { oficial = null }
+
+  const ws = wb.addWorksheet('Informe')
+  ws.getColumn(1).width = 52; ws.getColumn(2).width = 14; ws.getColumn(3).width = 44
+  if (oficial !== null) { ws.getRow(1).height = 56; ws.addImage(oficial, { tl: { col: 0, row: 0.1 }, ext: { width: 400, height: 56 } }) }
+  const datos: [string, string][] = [
+    [titulo, ''], ['Nombre', persona.nombre], ['Rol', persona.rol], ['Región', 'Región Educativa 1'],
+    ['Distritos a cargo', persona.distritos.map(titleCase).join(', ') || '—'], ['Carga horaria', persona.carga ?? '—'],
+    ['Período', `${fecha(desde)} al ${fecha(hasta)}`], ['Emitido', new Date().toLocaleDateString('es-AR')],
+  ]
+  datos.forEach(([k, v], n) => {
+    const row = ws.getRow(n + 3)
+    row.getCell(1).value = k; row.getCell(2).value = v
+    if (n === 0) row.getCell(1).font = { bold: true, size: 14, color: { argb: PETROLEO } }
+    else { row.getCell(1).font = { bold: true, color: { argb: 'FF5B6472' } }; ws.mergeCells(n + 3, 2, n + 3, 3) }
+  })
+  const ini = datos.length + 4
+  const head = ws.getRow(ini)
+  ;['Indicador', 'Cantidad', 'Aclaración'].forEach((h, i) => { head.getCell(i + 1).value = h })
+  head.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+  head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PETROLEO } }
+  indicadores.forEach((x, n) => {
+    const row = ws.getRow(ini + 1 + n)
+    row.getCell(1).value = x.label; row.getCell(2).value = x.valor; row.getCell(3).value = x.detalle ?? ''
+    row.getCell(2).font = { bold: true }
+    if (n % 2) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } }
+  })
+
+  const wd = wb.addWorksheet('Acciones', { views: [{ state: 'frozen', ySplit: 1 }] })
+  const cols = [['Fecha', 11], ['Horario', 13], ['Responsable', 24], ['Acción', 26], ['Sub-acción / tema', 30], ['Escuela / lugar', 40], ['CUE', 11], ['Distrito', 14], ['Detalle', 50]] as const
+  cols.forEach(([h, w], i) => { wd.getRow(1).getCell(i + 1).value = h; wd.getColumn(i + 1).width = w })
+  wd.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+  wd.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PETROLEO } }
+  const ordenados = [...items].filter(i => i.estado === 'realizada').sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))
+  ordenados.forEach((i, n) => {
+    const row = wd.addRow([fecha(i.fecha), hora(i), fedName(i.fed_id), titleCase(i.accion), i.sub_accion ?? '', escuela(i.school, i.lugar), i.school?.cue ?? '', i.school?.distrito ? titleCase(i.school.distrito) : '', i.detalle ?? ''])
+    row.alignment = { vertical: 'top', wrapText: true }
+    if (n % 2) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } }
+  })
+
+  const buf = await wb.xlsx.writeBuffer()
+  const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
+  const a = document.createElement('a'); a.href = url; a.download = nombreArchivo(`${titulo} ${persona.nombre} ${desde}`); a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+}

@@ -32,6 +32,8 @@ export const actionStyle: Record<Accion, { chip: string, dot: string }> = {
   'ACOMPAÑAMIENTO A FED': { chip: 'bg-[#e3ecdf] text-[#3d5e2e]', dot: 'bg-[#6a9a52]' },
   'GESTIÓN INSTITUCIONAL': { chip: 'bg-[#e6e4f0] text-[#44407a]', dot: 'bg-[#6560a8]' },
   'SEGUIMIENTO DEL EQUIPO': { chip: 'bg-[#f1e4ea] text-[#6e3350]', dot: 'bg-[#a3587c]' },
+  'INFORME TÉCNICO': { chip: 'bg-[#e4eaf0] text-[#35506b]', dot: 'bg-[#5a7a99]' },
+  'REUNIÓN CON INSPECCIÓN': { chip: 'bg-[#f3eadb] text-[#6e5220]', dot: 'bg-[#b08a3e]' },
 }
 export const statusStyle: Record<Estado, { badge: string, label: string }> = {
   planificada: { badge: 'border-pba-azul/40 bg-pba-azul/10 text-pba-azul', label: 'Planificada' },

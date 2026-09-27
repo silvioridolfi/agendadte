@@ -1,7 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Camera, Clock, MapPin } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { InformeBloque, personaDe } from '@/components/app/informes'
+import { informeFed } from '@/lib/informes'
+import { Camera, Clock, FileBarChart, MapPin } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { titleCase } from '@/lib/format'
 import { franjasDte, textoFranjas } from '@/lib/ddjj'
@@ -11,7 +14,9 @@ import { fmt, iso, parse, fedColor, initials, Skeleton } from '@/components/app/
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 
 // Mi equipo (coordinación, solo lectura): perfil, DD.JJ. de horarios y resumen del período de cada FED.
-export function MiEquipoView({ feds, items, clubes, noHabiles, periodo, onVerAcciones }: { feds: Fed[], items: AgendaItem[] | null, clubes: Club[] | null, noHabiles: Set<string>, periodo: string, onVerAcciones: (fedId: string) => void }) {
+export function MiEquipoView({ feds, todos, items, clubes, noHabiles, periodo, desde, hasta, onSelect, onVerAcciones }: { feds: Fed[], todos: Fed[], items: AgendaItem[] | null, clubes: Club[] | null, noHabiles: Set<string>, periodo: string, desde: string, hasta: string, onSelect: (i: AgendaItem) => void, onVerAcciones: (fedId: string) => void }) {
+  // Informe del período de un FED (el mismo que ve en su tablero), con descarga en Excel o PDF.
+  const [informe, setInforme] = useState<Fed | null>(null)
   const hoy = iso(new Date())
   const resumen = useMemo(() => new Map(feds.map(f => {
     const propias = (items ?? []).filter(i => i.fed_id === f.id)
@@ -56,11 +61,18 @@ export function MiEquipoView({ feds, items, clubes, noHabiles, periodo, onVerAcc
         </div>
 
         <div className="mt-auto flex gap-2">
+          <button type="button" onClick={() => setInforme(f)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-dte-linea px-3 text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9"><FileBarChart className="size-4" />Informe</button>
           <button type="button" onClick={() => onVerAcciones(f.id)} className="min-h-11 flex-1 rounded-lg border border-dte-linea text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9">Ver acciones del período</button>
           {f.carpeta_fotos_url ? <a href={f.carpeta_fotos_url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-dte-linea px-3 text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9"><Camera className="size-4" />Fotos</a>
             : <span className="inline-flex min-h-11 items-center px-2 text-xs text-dte-gris md:min-h-9">Sin carpeta de fotos</span>}
         </div>
       </li>
     })}</ul>
+    <Dialog open={!!informe} onOpenChange={o => !o && setInforme(null)}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto bg-white sm:max-w-2xl">
+        <DialogTitle className="sr-only">Informe de {informe?.nombre_completo}</DialogTitle>
+        {informe && <InformeBloque titulo={`Informe de ${informe.nombre_completo}`} subtitulo={`Acciones realizadas en ${periodo.toLowerCase()}.`} persona={personaDe(informe)} desde={desde} hasta={hasta} indicadores={informeFed((items ?? []).filter(i => i.fed_id === informe.id))} items={(items ?? []).filter(i => i.fed_id === informe.id)} feds={todos} onSelect={i => { setInforme(null); onSelect(i) }} />}
+      </DialogContent>
+    </Dialog>
   </div>
 }
