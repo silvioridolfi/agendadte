@@ -6,7 +6,7 @@ import { DriveError, atajo, carpetaVigente, crearCarpeta, esCarpeta, listarTodo,
 // Orden de fotos: las imágenes y videos sueltos en la carpeta del FED pasan a la carpeta de su día
 // ("2026-09-30 · EP N° 4 (5°) · EES N° 31 (7° Informática - Grupo 1)") y, si la hora de captura coincide con el horario
 // de una acción de la agenda, a su subcarpeta ("12:00 · Club EP N° 4 - 4°"). Sin fecha: carpeta "Sin fecha".
-// Si Drive no permite mover el archivo (permisos del dueño), se deja un acceso directo en la carpeta de destino.
+// Las fotos no se mueven: en cada carpeta se crea un acceso directo y el original queda en la carpeta del FED.
 const SIN_FECHA = '1900-01-01'
 const LOTE = 150
 const SIGLAS: [RegExp, string][] = [
@@ -117,9 +117,11 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
   for (const fecha of recientes) {
     const actual = carpetasDia.get(fecha)!
     if (await carpetaVigente(actual.id)) { await carpetaDia(fecha); continue }
-    // Carpeta eliminada por el FED: se rescatan sus fotos (vuelven a ordenarse) y no se recrea vacía.
+    // Carpeta eliminada por el FED: se rescatan fotos que hubieran quedado adentro (versiones anteriores las movían),
+    // y sus fotos vuelven a ordenarse en la próxima pasada (se recrean los accesos directos). No se recrea vacía.
     await rescatar(actual.id)
     await db.from('fotos_dias').delete().eq('fed_id', fedId).eq('fecha', fecha)
+    await db.from('fotos_procesadas').delete().eq('fed_id', fedId).eq('fecha', fecha)
     carpetasDia.delete(fecha)
   }
 
@@ -136,12 +138,10 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
     const fecha = fechaDeCaptura(f) ?? (esVideo && f.createdTime ? new Date(f.createdTime).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }) : SIN_FECHA)
     const item = fecha === SIN_FECHA || esVideo ? null : accionPorHora(await items(fecha), minutosDeCaptura(f))
     const destino = item ? await carpetaAccion(fecha, item) : await carpetaDia(fecha)
-    let modo = 'movida'
-    try { await mover(f.id, raiz, destino); res.ordenadas++ }
-    catch (e) {
-      if (!(e instanceof DriveError) || (e.status !== 403 && e.status !== 400)) throw e
-      await atajo(f.id, f.name, destino); modo = 'atajo'; res.atajos++
-    }
+    // Nunca se mueve la foto: el original queda en la carpeta del FED y en la del día/acción se deja un acceso directo.
+    // Así, si alguien borra una carpeta creada por la agenda, sólo se pierden accesos directos, nunca fotos.
+    const modo = 'atajo'
+    await atajo(f.id, f.name, destino); res.ordenadas++
     if (fecha === SIN_FECHA) res.sinFecha++
     if (item) res.porAccion++
     await db.from('fotos_procesadas').upsert({ fed_id: fedId, file_id: f.id, fecha: fecha === SIN_FECHA ? null : fecha, item_id: item?.id ?? null, modo })
