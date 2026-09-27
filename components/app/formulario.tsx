@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
-import { iniciado, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA } from '@/lib/agenda'
+import { iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA } from '@/lib/agenda'
 import { crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, saveItem, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
 import { encolarOffline } from '@/components/app/offline'
 
@@ -259,7 +259,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       <div className={`-m-3 mb-0 flex items-center gap-3 px-3 py-2.5 sm:col-span-6 ${marca.degradado}`}><img src={marca.logo} alt={marca.nombre} className="h-10 w-auto" /><span className="text-xs font-semibold text-white/95">{marca.nota}</span></div>
       {modoT !== 'nuevo' && <Field id="campo-club" label={`¿A qué ${marca.corto} corresponde?`} required className="scroll-mt-24 sm:col-span-6" error={errores.club} errorId="err-club"><select className={`${selectClass} h-11 md:h-10`} value={form.club_id} onChange={e => { pickClub(e.target.value); limpiar('club') }} aria-invalid={!!errores.club || undefined} aria-describedby={errores.club ? 'err-club' : undefined} disabled={!clubes}>
         <option value="">{!clubes ? 'Cargando…' : modoT === 'encuentro' && !clubOpts.length ? `No tenés ${marca.corto === 'club' ? 'clubes activos' : 'prácticas activas'}` : `Elegí ${marca.corto === 'club' ? 'un club' : 'una práctica'}…`}</option>
-        {[...clubOpts].sort((a, b) => az(a.school ? shortSchoolName(a.school) : a.lugar ?? '', b.school ? shortSchoolName(b.school) : b.lugar ?? '') || az(a.grupo ?? '', b.grupo ?? '')).map(c => <option key={c.id} value={c.id}>{clubLabel(c)}</option>)}
+        {[...clubOpts].sort((a, b) => az(a.school ? shortSchoolName(a.school) : a.lugar ?? '', b.school ? shortSchoolName(b.school) : b.lugar ?? '') || ordenGrupo(a.grupo, b.grupo)).map(c => <option key={c.id} value={c.id}>{clubLabel(c)}</option>)}
         {!modoT && <option value="nuevo">{marca.corto === 'club' ? '+ Iniciar un club nuevo' : '+ Iniciar una práctica nueva'} (comienza en esta fecha)</option>}
       </select></Field>}
       {form.club_id === 'nuevo' && <div className="grid gap-3 rounded-lg border border-dashed border-club-lila/50 bg-white p-3 sm:col-span-6 sm:grid-cols-6">

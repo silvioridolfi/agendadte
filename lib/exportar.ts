@@ -1,5 +1,5 @@
 // Exportación a Excel (planilla mensual por FED y consolidado regional). Se genera en el navegador.
-import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, clubEstado, iniciado, ultimaActividad, type AgendaItem, type Club, type Encuentro, type Fed } from '@/lib/agenda'
+import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, clubEstado, iniciado, ordenGrupo, ultimaActividad, type AgendaItem, type Club, type Encuentro, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
 
 type Datos = { titulo: string, desde: string, hasta: string, items: AgendaItem[], encuentros?: Encuentro[], feds: Fed[], clubes?: Club[], porFed?: boolean }
@@ -110,7 +110,7 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
   if (clubes?.length) {
     const hoy = new Date().toISOString().slice(0, 10)
     for (const [tipo, nombre] of [['CLUB DE TECNOLOGÍA', 'Clubes'], ['PRÁCTICAS PROFESIONALIZANTES', 'Prácticas']] as const) {
-      const l = clubes.filter(c => c.tipo === tipo)
+      const l = clubes.filter(c => c.tipo === tipo).sort((a, b) => escuela(a.school, a.lugar).localeCompare(escuela(b.school, b.lugar), 'es', { numeric: true }) || ordenGrupo(a.grupo, b.grupo))
       if (!l.length) continue
       tabla(nombre, [
         { header: 'FED', key: 'fed', width: 24 }, { header: 'Escuela / sede', key: 'escuela', width: 40 }, { header: 'Grupo', key: 'grupo', width: 22 },

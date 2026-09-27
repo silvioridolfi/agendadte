@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clubEncuentrosRealizados, clubEstado, diasHabilesEntre, esTrayecto, nivelDeEscuela, serieFechas, ultimaActividad, iniciado, type Club, type ClubIniciado } from '@/lib/agenda'
+import { clubEncuentrosRealizados, clubEstado, diasHabilesEntre, esTrayecto, nivelDeEscuela, serieFechas, ultimaActividad, iniciado, ordenGrupo, type Club, type ClubIniciado } from '@/lib/agenda'
 import { nombreArchivo } from '@/lib/exportar'
 
 const club = (over: Partial<Club> = {}): ClubIniciado => ({
@@ -105,5 +105,12 @@ describe('clubes por iniciar', () => {
   it('distingue clubes sin fecha de inicio', () => {
     expect(iniciado(club())).toBe(true)
     expect(iniciado({ ...club(), fecha_inicio: null })).toBe(false)
+  })
+})
+
+describe('orden de grados', () => {
+  it('ordena de menor a mayor comparando números', () => {
+    expect(['10° A', '5°', '4° B', '4° A', '6°'].sort(ordenGrupo)).toEqual(['4° A', '4° B', '5°', '6°', '10° A'])
+    expect(['7° Informática - Grupo 2', '7° Informática - Grupo 1'].sort(ordenGrupo)).toEqual(['7° Informática - Grupo 1', '7° Informática - Grupo 2'])
   })
 })

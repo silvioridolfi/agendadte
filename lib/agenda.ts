@@ -233,3 +233,6 @@ export const CUE_DTE = 60000000
 
 // Distritos de la Región 1 (para elegir los distritos a cargo en Mi perfil).
 export const DISTRITOS_REGION = ['BERISSO', 'BRANDSEN', 'ENSENADA', 'LA PLATA', 'MAGDALENA', 'PUNTA INDIO']
+
+// Orden de grados/grupos de menor a mayor ("4° A" < "5°" < "10°"), comparando los números como números.
+export const ordenGrupo = (a: string | null | undefined, b: string | null | undefined) => (a ?? '').localeCompare(b ?? '', 'es', { numeric: true, sensitivity: 'base' })

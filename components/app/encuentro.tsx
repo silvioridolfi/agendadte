@@ -7,7 +7,7 @@ import { Pill } from '@/components/ui/segmented'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Field, SchoolPicker } from '@/components/app/formulario'
-import { CLUB_MIN_ENCUENTROS, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEncuentrosRealizados, clubEstado, iniciado, type Club, type Fed, type School, type Modalidad, type TipoJornada, type Trayecto } from '@/lib/agenda'
+import { CLUB_MIN_ENCUENTROS, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEncuentrosRealizados, clubEstado, iniciado, ordenGrupo, type Club, type Fed, type School, type Modalidad, type TipoJornada, type Trayecto } from '@/lib/agenda'
 import { az, errMsg, getClubes, iso, saveItem, selectClass, shortSchoolName, ErrorBox } from '@/components/app/comun'
 
 const OTRA = '__otra'
@@ -22,7 +22,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
   useEffect(() => { getClubes(fed.id).then(setClubes).catch(() => setClubes([])) }, [fed.id])
   // Activos (con inicio y sin finalizar); el club elegido desde su fila se incluye aunque esté por iniciar.
   const opciones = (clubes ?? []).filter(c => c.tipo === tipo && (c.id === clubId || (iniciado(c) && clubEstado(c, hoy) !== 'finalizado')))
-    .sort((a, b) => az(etiqueta(a), etiqueta(b)))
+    .sort((a, b) => az(etiqueta({ ...a, grupo: null }), etiqueta({ ...b, grupo: null })) || ordenGrupo(a.grupo, b.grupo))
   const [id, setId] = useState(clubId ?? '')
   const club = opciones.find(c => c.id === id) ?? null
   const [propuesta, setPropuesta] = useState(marca.propuesta)

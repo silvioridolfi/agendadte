@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { titleCase } from '@/lib/format'
-import { CLUB_MAX_PARTICIPANTES, CLUB_MIN_ENCUENTROS, CLUB_DIAS_SIN_ACTIVIDAD, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEstado, iniciado, ultimaActividad, type Club, type ClubIniciado, type ClubEstado, type Fed, type Trayecto } from '@/lib/agenda'
+import { CLUB_MAX_PARTICIPANTES, CLUB_MIN_ENCUENTROS, CLUB_DIAS_SIN_ACTIVIDAD, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEstado, iniciado, ordenGrupo, ultimaActividad, type Club, type ClubIniciado, type ClubEstado, type Fed, type Trayecto } from '@/lib/agenda'
 import { DrillDialog, HBar, Kpi, Panel, type DrillRow } from '@/components/metrics'
 import { Confirmar } from '@/components/ui/confirmar'
 import { CalendarPlus, Loader2, Plus } from 'lucide-react'
@@ -44,7 +44,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
   const hoy = new Date().toISOString().slice(0, 10)
   // Los "por iniciar" (sin fecha) se listan aparte; el resto de las métricas usa sólo los iniciados.
   const todos = useMemo(() => entrada.filter(iniciado), [entrada])
-  const pendientes = useMemo(() => entrada.filter(c => !iniciado(c) && c.tipo === tipo && !c.fecha_cierre), [entrada, tipo])
+  const pendientes = useMemo(() => entrada.filter(c => !iniciado(c) && c.tipo === tipo && !c.fecha_cierre).sort((a, b) => schoolLabel(a).localeCompare(schoolLabel(b), 'es', { numeric: true }) || ordenGrupo(a.grupo, b.grupo)), [entrada, tipo])
   const [busy, setBusy] = useState('')
   const [drill, setDrill] = useState<{ title: string, subtitle?: string, rows: DrillRow[] } | null>(null)
   const marca = TRAYECTO_MARCA[tipo]
@@ -55,7 +55,8 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
   const completos = useMemo(() => new Map(todos.map(c => [c.id, c])), [todos])
   const fedName = (id: string) => feds.find(f => f.id === id)?.nombre_completo ?? '—'
   const rows = useMemo(() => clubes.map(c => { const full = completos.get(c.id)!; return { c, estado: clubEstado(full, hoy, noHabiles), realizados: new Set(c.encuentros.map(e => e.fecha)).size, total: new Set(full.encuentros.map(e => e.fecha)).size, ultima: ultimaActividad(full), fechas: [...new Set(full.encuentros.map(e => e.fecha))], ...participacion(c) } })
-    .sort((a, b) => ORDEN.indexOf(a.estado) - ORDEN.indexOf(b.estado) || a.c.fecha_inicio.localeCompare(b.c.fecha_inicio)), [clubes, completos, hoy])
+    // Por escuela (alfabético) y, dentro de cada una, de menor a mayor grado.
+    .sort((a, b) => schoolLabel(a.c).localeCompare(schoolLabel(b.c), 'es', { numeric: true }) || ordenGrupo(a.c.grupo, b.c.grupo)), [clubes, completos, hoy])
   const n = (e: ClubEstado) => rows.filter(r => r.estado === e).length
   const encuentros = rows.reduce((a, r) => a + r.realizados, 0)
   const cumplen = rows.filter(r => r.total >= CLUB_MIN_ENCUENTROS).length
@@ -101,7 +102,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todos, tipo, cicloYear])
-  const verCiclo = (titulo: string, t: string, list: ClubIniciado[]) => setDrill({ title: `${titulo} · ${t}`, subtitle: `${list.length} ${clubesTxt}`, rows: list.map(c => {
+  const verCiclo = (titulo: string, t: string, list: ClubIniciado[]) => setDrill({ title: `${titulo} · ${t}`, subtitle: `${list.length} ${clubesTxt}`, rows: [...list].sort((a, b) => schoolLabel(a).localeCompare(schoolLabel(b), 'es', { numeric: true }) || ordenGrupo(a.grupo, b.grupo)).map(c => {
     const full = completos.get(c.id) ?? c
     return { key: c.id, title: nombre(c), sub: [fedName(c.fed_id), `inicio ${corta(c.fecha_inicio)}`, c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : null].filter(Boolean).join(' · '), right: ESTADO_CLUB[clubEstado(full, hoy, noHabiles)].label }
   }) })
@@ -114,7 +115,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
   const pos = (s: string) => Math.min(100, Math.max(0, ((parse(s).getTime() - t0) / (t1 - t0)) * 100))
   const meses = Array.from({ length: 10 }, (_, i) => new Date(year, 2 + i, 1))
 
-  const nombre = (c: Club) => `${c.grupo ? `${c.grupo} · ` : ''}${schoolLabel(c)}`
+  const nombre = (c: Club) => `${schoolLabel(c)}${c.grupo ? ` · ${c.grupo}` : ''}`
   const clubRows = (list: typeof rows): DrillRow[] => list.map(r => ({ key: r.c.id, title: nombre(r.c), sub: [fedName(r.c.fed_id), `${r.total} encuentros`, r.c.fecha_cierre ? `cierre ${corta(r.c.fecha_cierre)}` : `último ${corta(r.ultima)}`].join(' · '), right: ESTADO_CLUB[r.estado].label }))
   const verEstado = (e: ClubEstado, titulo: string) => { const l = rows.filter(r => r.estado === e); setDrill({ title: titulo, subtitle: `${l.length} ${clubesTxt} · ${periodo}`, rows: clubRows(l) }) }
   const verEncuentros = () => {
