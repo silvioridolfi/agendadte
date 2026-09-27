@@ -140,6 +140,8 @@ async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<{ id: 
   let clubId: string | null = null
   if (enc) {
     clubId = esClub ? await upsertClub(input, row) : null
+    // N° de encuentro automático: el siguiente al último registrado del club hasta esa fecha (los números cargados se respetan).
+    if (clubId && !enc.encuentro_n) enc.encuentro_n = await siguienteEncuentro(clubId, row.fecha, itemId)
     const encRow = { ...enc, id: undefined, agenda_item_id: itemId, fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, fecha: row.fecha, tipo: row.accion, club_id: clubId, es_cierre: esClub && !!input.encuentro?.es_cierre }
     const { error } = encId ? await db.from('agenda_encuentros').update(encRow).eq('id', encId).eq('agenda_item_id', itemId) : await db.from('agenda_encuentros').insert(encRow)
     if (error) throw new Error(error.message)
@@ -217,6 +219,13 @@ async function marcarLeidasImpl(fedId: string, ids?: string[]): Promise<void> {
   if (ids?.length) q = q.in('id', ids)
   const { error } = await q
   if (error) throw new Error(error.message)
+}
+
+async function siguienteEncuentro(clubId: string, fecha: string, excluirItem: string): Promise<number> {
+  const { data } = await supabaseServer().from('agenda_encuentros').select('fecha, encuentro_n, agenda_item_id').eq('club_id', clubId).lte('fecha', fecha)
+  const previos = (data ?? []).filter(e => e.agenda_item_id !== excluirItem)
+  const max = previos.reduce((m, e) => Math.max(m, e.encuentro_n ?? 0), 0)
+  return Math.max(max, new Set(previos.map(e => e.fecha)).size) + 1
 }
 
 // Club del encuentro: crea uno nuevo (inicia en esta fecha) o actualiza el elegido; marcar cierre lo finaliza.
