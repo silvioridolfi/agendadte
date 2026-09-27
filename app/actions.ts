@@ -196,16 +196,17 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
       creadas += fechas.length
     }
   }
-  // Edición de una serie: "este y los siguientes" aplica horario y datos de la propuesta a las fechas planificadas que siguen
+  // Edición de una serie: "este y los siguientes" aplica horario, club/grupo y datos de la propuesta a las fechas planificadas que siguen
   // (no cambia la fecha de cada una ni los datos de participación, que son propios de cada encuentro).
   if (id && alcance === 'siguientes' && antes?.serie_id) {
     const { data: sig } = await db.from('agenda_items').select('id').eq('serie_id', antes.serie_id).eq('fed_id', row.fed_id).eq('estado', 'planificada').gt('fecha', row.fecha)
     const ids = (sig ?? []).map(x => x.id as string)
     if (ids.length) {
-      const up = await db.from('agenda_items').update({ hora_inicio: row.hora_inicio, hora_fin: row.hora_fin, school_id: row.school_id, lugar: row.lugar, sub_accion: row.sub_accion }).in('id', ids).eq('fed_id', row.fed_id)
+      // El club/grupo también se aplica a las siguientes (p. ej., corregir 4° → 5° en toda la serie).
+      const up = await db.from('agenda_items').update({ hora_inicio: row.hora_inicio, hora_fin: row.hora_fin, school_id: row.school_id, lugar: row.lugar, sub_accion: row.sub_accion, ...(clubId ? { club_id: clubId } : {}) }).in('id', ids).eq('fed_id', row.fed_id)
       if (up.error) throw new Error(up.error.message)
       if (enc) {
-        const e = await db.from('agenda_encuentros').update({ propuesta: enc.propuesta, tipo_jornada: enc.tipo_jornada ?? null, modalidad: enc.modalidad, destinatarios: enc.destinatarios, school_id: row.school_id, lugar: row.lugar }).in('agenda_item_id', ids)
+        const e = await db.from('agenda_encuentros').update({ propuesta: enc.propuesta, tipo_jornada: enc.tipo_jornada ?? null, modalidad: enc.modalidad, destinatarios: enc.destinatarios, school_id: row.school_id, lugar: row.lugar, ...(clubId ? { club_id: clubId } : {}) }).in('agenda_item_id', ids)
         if (e.error) throw new Error(e.error.message)
       }
       creadas += ids.length
