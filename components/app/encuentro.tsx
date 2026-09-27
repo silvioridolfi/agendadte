@@ -118,7 +118,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
     </Field>
     {propuesta === OTRA && <Input aria-label="Otra propuesta" placeholder="Ej.: Taller de robótica" value={otraPropuesta} onChange={e => setOtraPropuesta(e.target.value)} className="-mt-2" />}
 
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
       <Field label="Fecha" required><Input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} /></Field>
       <Field label="Cantidad de encuentros de la propuesta"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={previstos} onChange={e => setPrevistos(e.target.value)} /></Field>
       <Field label="Tipo de jornada"><select className={selectClass} value={jornada} onChange={e => setJornada(e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{[...TIPOS_JORNADA].sort(az).map(t => <option key={t}>{t}</option>)}</select></Field>
