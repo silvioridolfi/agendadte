@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { chequearHorario, franjasDte, textoFranjas } from '@/lib/ddjj'
 import { Check, Clock, Loader2, Plus, School as SchoolIcon, Search, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
@@ -116,6 +117,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const [origen, setOrigen] = useState<School | null>(null)
   const [otroOrigen, setOtroOrigen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [preguntarSerie, setPreguntarSerie] = useState(false)
   // Club o práctica nueva sin fecha: queda "por iniciar" y no se agrega a la agenda hasta programar el primer encuentro.
   const [aDefinirMarcado, setADefinir] = useState(false)
   const aDefinir = aDefinirMarcado && !item && esClub && form.club_id === 'nuevo'
@@ -175,6 +177,14 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     setErrores(errs)
     const primero = (['establecimiento', 'hora', 'accion', 'club', 'curso', 'serie'] as const).find(k => errs[k])
     if (primero || !form.accion) { document.getElementById(`campo-${primero ?? 'accion'}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setError(''); return }
+    // Encuentro de una serie: preguntar si el cambio es sólo para esta fecha o también para las siguientes.
+    if (item?.serie_id && !repetir) { setError(''); setPreguntarSerie(true); return }
+    await guardar('uno')
+  }
+
+  async function guardar(alcance: 'uno' | 'siguientes') {
+    if (!form.accion) return
+    setPreguntarSerie(false)
     setSaving(true); setError('')
     if (aDefinir) {
       try {
@@ -194,7 +204,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     }
     // Sin conexión: queda en cola en este dispositivo y se envía al volver la señal.
     if (typeof navigator !== 'undefined' && !navigator.onLine) { encolarOffline(input, item?.id); onSaved({ creadas: 1, offline: true }); return }
-    try { const r = await saveItem(input, item?.id); onSaved({ creadas: r.creadas }) } catch (err) {
+    try { const r = await saveItem(input, item?.id, alcance); onSaved({ creadas: r.creadas, mensaje: alcance === 'siguientes' && r.creadas > 1 ? `Se actualizaron este encuentro y ${r.creadas - 1} ${r.creadas === 2 ? 'fecha siguiente' : 'fechas siguientes'} de la serie` : undefined }) } catch (err) {
       if (typeof navigator !== 'undefined' && !navigator.onLine) { encolarOffline(input, item?.id); onSaved({ creadas: 1, offline: true }); return }
       setError(errMsg(err)); setSaving(false)
     }
@@ -306,5 +316,14 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       <Button variant="outline" type="button" size="lg" className="flex-1 sm:flex-none" onClick={onCancel}>Cancelar</Button>
       <Button type="submit" size="lg" disabled={saving} className="flex-1 bg-dte-petroleo px-4 sm:flex-none font-semibold hover:bg-dte-petroleo-oscuro">{saving && <Loader2 className="animate-spin" data-icon="inline-start" />}{item ? 'Guardar cambios' : aDefinir ? 'Guardar como “por iniciar”' : 'Agregar a mi agenda'}</Button>
     </div>
+    <Dialog open={preguntarSerie} onOpenChange={setPreguntarSerie}>
+      <DialogContent className="bg-white sm:max-w-md">
+        <DialogHeader><DialogTitle className="text-lg">Esta acción es parte de una serie</DialogTitle><DialogDescription>¿Aplicás el cambio sólo a esta fecha o también a las fechas planificadas que siguen? En las siguientes se actualizan horario, lugar y datos de la propuesta; no se cambia la fecha de cada una ni los datos de participación.</DialogDescription></DialogHeader>
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={() => guardar('uno')}>Sólo este encuentro</Button>
+          <Button type="button" onClick={() => guardar('siguientes')} className="bg-dte-petroleo hover:bg-dte-petroleo-oscuro">Este y los siguientes</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   </form>
 }
