@@ -85,7 +85,7 @@ const ESTADO: Record<UsuarioEquipo['estado'], { label: string, clase: string }> 
 }
 
 // Usuarios (administración): alta de cuentas y contraseñas temporales para todo el equipo.
-export function UsuariosView({ miEmail }: { miEmail: string }) {
+export function UsuariosView({ miEmail, onVer }: { miEmail: string, onVer: (fedId: string) => void }) {
   const [lista, setLista] = useState<UsuarioEquipo[] | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
@@ -118,9 +118,12 @@ export function UsuariosView({ miEmail }: { miEmail: string }) {
             <p className="truncate text-sm text-dte-gris">{u.email ?? 'Sin correo cargado'}</p>
             <p className="mt-1 flex flex-wrap items-center gap-2 text-xs"><span className={`rounded-full px-2 py-0.5 font-semibold ${ESTADO[u.estado].clase}`}>{ESTADO[u.estado].label}</span>{u.ultimoIngreso && <span className="text-dte-gris">Último ingreso: {new Date(u.ultimoIngreso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}</p>
           </div>
+          <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+          {!yo && <Button variant="ghost" size="sm" onClick={() => onVer(u.fedId)} className="text-dte-petroleo"><Eye data-icon="inline-start" />Ver su agenda</Button>}
           {yo ? <span className="text-xs text-dte-gris sm:text-right">Tu cuenta: cambiala desde<br className="hidden sm:block" /> el menú del avatar</span>
             : u.email && <Button variant="outline" size="sm" disabled={busy === u.fedId} onClick={() => (u.estado === 'sin_cuenta' ? generar(u) : setConfirmar(u))} className="shrink-0">
               {busy === u.fedId ? <Loader2 className="animate-spin" data-icon="inline-start" /> : u.estado === 'sin_cuenta' ? <UserPlus data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}{u.estado === 'sin_cuenta' ? 'Crear cuenta' : 'Resetear contraseña'}</Button>}
+          </div>
         </li>
       })}</ul>}
 

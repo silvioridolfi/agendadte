@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { CalendarDays, CloudUpload, LayoutDashboard, Loader2, Plus, type LucideIcon } from 'lucide-react'
+import { CalendarDays, CloudUpload, Eye, LayoutDashboard, Loader2, Plus, type LucideIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { esTrayecto, type AgendaItem, type Fed, type Trayecto } from '@/lib/agenda'
 import { NotificacionesBell } from '@/components/app/notificaciones'
@@ -40,6 +40,10 @@ export default function Page() {
   const setProfile = (f: Fed) => setSesion(s => (s ? { ...s, fed: f } : s))
   const [section, setSection] = useState<'agenda' | 'board' | 'perfil' | 'usuarios'>('agenda')
   const [cambiandoPass, setCambiandoPass] = useState(false)
+  // Administración: ver el tablero del equipo completo o la agenda de otro integrante (solo lectura).
+  const [vista, setVista] = useState<{ tipo: 'equipo' } | { tipo: 'fed', fed: Fed } | null>(null)
+  // La vista del equipo completo es sólo el Tablero: al ir a otra sección se vuelve a los datos propios.
+  useEffect(() => { if (vista?.tipo === 'equipo' && section !== 'board') setVista(null) }, [vista, section])
   // `preset`: valores iniciales (ej.: reunión de equipo con todo el equipo invitado).
   const [editing, setEditing] = useState<{ item: AgendaItem | null, fecha?: string, preset?: ItemPreset } | null>(null)
   const [selected, setSelected] = useState<AgendaItem | null>(null)
@@ -59,7 +63,7 @@ export default function Page() {
     window.addEventListener('agenda-sesion-vencida', vencida)
     return () => window.removeEventListener('agenda-sesion-vencida', vencida)
   }, [cargarSesion])
-  const cerrarSesion = async () => { try { await salir() } finally { setSesion(null); setFeds(null); setEditing(null); setSelected(null) } }
+  const cerrarSesion = async () => { try { await salir() } finally { setSesion(null); setVista(null); setFeds(null); setEditing(null); setSelected(null) } }
   const changed = (message: string) => { setReloadKey(k => k + 1); setToast(message) }
   const hideToast = useCallback(() => setToast(''), [])
 
@@ -97,14 +101,24 @@ export default function Page() {
         <div className="flex shrink-0 items-center gap-1">
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <NotificacionesBell profile={profile} feds={feds ?? []} reloadKey={reloadKey} onOpen={setSelected} />
-        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} onPerfil={() => setSection('perfil')} onUsuarios={() => setSection('usuarios')} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
+        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} onPerfil={() => { setVista(null); setSection('perfil') }} onUsuarios={() => { setVista(null); setSection('usuarios') }} onEquipo={() => { setVista({ tipo: 'equipo' }); setSection('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
         </div>
       </div>
     </header>
 
-    {section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} />
+    {vista && <div role="status" className="sticky top-[calc(4.25rem+env(safe-area-inset-top,0px))] z-fab border-b border-aviso-borde bg-aviso-fondo-fuerte px-4 py-2 text-sm text-aviso-fuerte">
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 lg:px-6"><span className="flex items-center gap-1.5"><Eye className="size-4 shrink-0" aria-hidden /><span>{vista.tipo === 'equipo' ? <>Estás viendo el <b>tablero del equipo completo</b></> : <>Estás viendo la agenda de <b>{vista.fed.nombre_completo}</b></>} · Solo lectura</span></span>
+        <button type="button" onClick={() => { setVista(null); setSection('agenda') }} className="min-h-10 rounded-full bg-white px-3 text-xs font-semibold text-dte-petroleo shadow-xs hover:bg-dte-tinte md:min-h-8">Volver a mi agenda</button></div>
+    </div>}
+    {section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); setSection('agenda') } }} />
       : section === 'perfil' && profile.rol === 'fed'
       ? <MiPerfilView key={profile.id} fed={profile} feds={feds ?? []} onSaved={f => { setProfile(f); setFeds(l => l && l.map(x => (x.id === f.id ? f : x))); setToast('Se guardó tu perfil'); setSection('agenda') }} />
+      : vista?.tipo === 'fed'
+      ? (section === 'agenda'
+        ? <AgendaView key={vista.fed.id} fed={vista.fed} feds={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} />
+        : <CoordinatorView key={`ver-${vista.fed.id}`} feds={[vista.fed]} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} propio={vista.fed.rol === 'fed' ? vista.fed : undefined} soloLectura />)
+      : vista?.tipo === 'equipo' && section === 'board'
+      ? <CoordinatorView key="equipo" feds={(feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} soloLectura />
       : section === 'agenda'
       ? <AgendaView fed={profile} feds={feds ?? []} reloadKey={reloadKey} onNew={fecha => setEditing({ item: null, fecha })} onSelect={setSelected} />
       : <CoordinatorView key={profile.id} feds={profile.rol === 'fed' ? [profile] : (feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected}
@@ -129,7 +143,7 @@ export default function Page() {
     <nav aria-label="Secciones" className="fixed inset-x-0 bottom-0 z-header border-t border-dte-linea bg-white/95 pb-safe backdrop-blur md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-3 items-center">
         <BarraBoton activo={section === 'agenda'} onClick={() => setSection('agenda')} icono={CalendarDays} label="Mi agenda" />
-        <div className="flex justify-center"><button type="button" onClick={() => setEditing({ item: null, fecha: iso(toWeekday(new Date())) })} aria-label="Nueva acción" className="-mt-5 flex size-14 items-center justify-center rounded-full bg-dte-magenta text-white shadow-lg ring-4 ring-white transition active:scale-95 hover:bg-dte-magenta-oscuro"><Plus className="size-6" /></button></div>
+        <div className="flex justify-center">{vista ? <span /> : <button type="button" onClick={() => setEditing({ item: null, fecha: iso(toWeekday(new Date())) })} aria-label="Nueva acción" className="-mt-5 flex size-14 items-center justify-center rounded-full bg-dte-magenta text-white shadow-lg ring-4 ring-white transition active:scale-95 hover:bg-dte-magenta-oscuro"><Plus className="size-6" /></button>}</div>
         <BarraBoton activo={section === 'board'} onClick={() => setSection('board')} icono={LayoutDashboard} label="Tablero" />
       </div>
     </nav>
