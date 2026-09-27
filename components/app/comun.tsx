@@ -154,7 +154,8 @@ export function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[], cac
 
 // =====================================================================
 
-export type ItemPreset = { accion?: Accion, sub_accion?: string, participantes?: string[], club_id?: string }
+// `modo`: formulario exclusivo de clubes/prácticas ('nuevo' = alta; 'encuentro' = cargar un encuentro de uno activo).
+export type ItemPreset = { accion?: Accion, sub_accion?: string, participantes?: string[], club_id?: string, modo?: 'nuevo' | 'encuentro' }
 
 // =====================================================================
 
