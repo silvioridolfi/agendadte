@@ -135,7 +135,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const [aDefinirMarcado, setADefinir] = useState(false)
   const aDefinir = aDefinirMarcado && !item && esClub && form.club_id === 'nuevo'
   const [error, setError] = useState('')
-  const [errores, setErrores] = useState<Partial<Record<'establecimiento' | 'accion' | 'hora' | 'club' | 'curso' | 'serie', string>>>({})
+  const [errores, setErrores] = useState<Partial<Record<'fecha' | 'establecimiento' | 'accion' | 'hora' | 'club' | 'curso' | 'serie', string>>>({})
   const limpiar = (k: keyof typeof errores) => setErrores(e => (e[k] ? { ...e, [k]: undefined } : e))
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm(f => ({ ...f, [k]: v }))
   const toNum = (v: string) => (v.trim() === '' ? null : Number(v))
@@ -164,8 +164,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     const out: string[] = []
     if (!form.accion || esLicencia) return out
     const d = parse(form.fecha).getDay()
-    if (d === 0 || d === 6) out.push('La fecha cae en fin de semana.')
-    for (const f of delDia.feriados) out.push(`${cap(fmt(parse(f.fecha), { weekday: 'long', day: 'numeric', month: 'long' }))} es ${f.tipo === 'receso' ? 'receso escolar' : 'feriado'}: ${f.nombre}${f.confirmado ? '' : ' (a confirmar)'}.`)
+    for (const f of delDia.feriados.filter(f => f.tipo === 'distrital')) out.push(`${cap(fmt(parse(f.fecha), { weekday: 'long', day: 'numeric', month: 'long' }))} es ${f.tipo === 'receso' ? 'receso escolar' : 'feriado'}: ${f.nombre}${f.confirmado ? '' : ' (a confirmar)'}.`)
     if (!esParo && d >= 1 && d <= 5 && fed.ddjj?.length && !franjasDte(ddjjFor(fed, form.fecha)).length && !ddjjFor(fed, form.fecha)?.dte) out.push('No tenés horario DTE declarado ese día en la DD.JJ.')
     const solapa = delDia.items.filter(i => i.estado !== 'cancelada' && (
       (form.hora_inicio && i.hora_inicio && (form.hora_inicio < (hhmm(i.hora_fin) || hhmm(i.hora_inicio)) || form.hora_inicio === hhmm(i.hora_inicio)) && (hhmm(i.hora_inicio) < (form.hora_fin || form.hora_inicio) || form.hora_inicio === hhmm(i.hora_inicio)))
@@ -174,6 +173,11 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     if (form.estado === 'realizada' && form.fecha > iso(new Date())) out.push('Está marcada como realizada pero la fecha todavía no llegó.')
     return out
   }, [form.accion, form.fecha, form.hora_inicio, form.hora_fin, form.estado, delDia, fed, school, esLicencia, esParo])
+  // Sólo días hábiles: ni fines de semana ni feriados o recesos (al editar sin cambiar la fecha, se respeta lo cargado).
+  const diaSemana = parse(form.fecha).getDay(), noHabil = delDia.feriados.find(f => f.tipo !== 'distrital')
+  const fechaError = aDefinir || item?.fecha === form.fecha ? ''
+    : diaSemana === 0 || diaSemana === 6 ? 'Es fin de semana: sólo se pueden cargar acciones de lunes a viernes.'
+    : noHabil ? `Es ${noHabil.tipo === 'receso' ? 'receso escolar' : 'feriado'} (${noHabil.nombre}): elegí un día hábil.` : ''
   const horario = chequearHorario(ddjjDia, form.hora_inicio, form.hora_fin)
   const fueraDeHorario = horario.fuera || horario.choques.length > 0
 
@@ -182,13 +186,14 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     // Validación: mensaje debajo de cada campo y foco/scroll al primero con error.
     const errs: typeof errores = {}
     if (!esParo && !esLicencia && !lugarOpcional && !school && !form.lugar.trim()) errs.establecimiento = 'Indicá el establecimiento (o el lugar, si no es una escuela).'
+    if (fechaError) errs.fecha = fechaError
     if (!form.accion) errs.accion = 'Elegí el tipo de acción.'
     if (timeError) errs.hora = timeError
     if (esClub && !form.club_id) errs.club = `Elegí a qué ${marca.corto} corresponde el encuentro, o iniciá uno nuevo.`
     if (esClub && form.club_id === 'nuevo' && !form.curso) errs.curso = `Indicá el grado o curso: cada grupo es un ${marca.corto}.`
     if (repetir && !item && (!diasSerie.length || hastaSerie <= form.fecha)) errs.serie = 'Elegí al menos un día y una fecha de fin posterior.'
     setErrores(errs)
-    const primero = (['establecimiento', 'hora', 'accion', 'club', 'curso', 'serie'] as const).find(k => errs[k])
+    const primero = (['fecha', 'establecimiento', 'hora', 'accion', 'club', 'curso', 'serie'] as const).find(k => errs[k])
     if (primero || !form.accion) { document.getElementById(`campo-${primero ?? 'accion'}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setError(''); return }
     // Encuentro de una serie: preguntar si el cambio es sólo para esta fecha o también para las siguientes.
     if (item?.serie_id && !repetir) { setError(''); setPreguntarSerie(true); return }
@@ -229,7 +234,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
 
     {modoT === 'nuevo' && <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-dte-fondo p-2.5 text-sm"><input type="checkbox" checked={aDefinirMarcado} onChange={e => setADefinir(e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Fecha a definir.</b> {marca.corto === 'club' ? 'El club queda' : 'La práctica queda'} “por iniciar” y no se agrega a tu agenda hasta que programes el primer encuentro.</span></label>}
     {!aDefinir && <div className="grid gap-4 sm:grid-cols-3">
-      <Field label={modoT === 'nuevo' ? 'Fecha del primer encuentro' : 'Fecha'} required><Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} className="h-10" /></Field>
+      <Field id="campo-fecha" label={modoT === 'nuevo' ? 'Fecha del primer encuentro' : 'Fecha'} required className="scroll-mt-24" error={fechaError} errorId="err-fecha"><Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} aria-invalid={!!fechaError || undefined} aria-describedby={fechaError ? 'err-fecha' : undefined} className="h-10" /></Field>
       {!esParo && <><Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="h-10" /></Field>
       <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="h-10" /></Field></>}
     </div>}

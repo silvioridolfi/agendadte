@@ -113,6 +113,16 @@ function cleanEncuentro(e: EncuentroInput): EncuentroInput | null {
 
 const fechaCorta = (f: string) => { const [y, m, d] = f.split('-'); return `${d}/${m}/${y}` }
 
+// Sólo se trabaja de lunes a viernes en días hábiles: sin fines de semana, feriados nacionales, turísticos ni recesos.
+async function exigirDiasHabiles(fechas: string[]) {
+  const finde = fechas.find(f => [0, 6].includes(new Date(`${f}T12:00:00Z`).getUTCDay()))
+  if (finde) throw new Error(`El ${fechaCorta(finde)} es fin de semana: sólo se pueden cargar acciones de lunes a viernes.`)
+  if (!fechas.length) return
+  const { data } = await supabaseServer().from('feriados').select('fecha, nombre, tipo').in('fecha', fechas).neq('tipo', 'distrital').limit(1)
+  const f = data?.[0]
+  if (f) throw new Error(`El ${fechaCorta(f.fecha as string)} es ${f.tipo === 'receso' ? 'receso escolar' : 'feriado'} (${f.nombre}): sólo se pueden cargar acciones en días hábiles.`)
+}
+
 // Historial de cambios (quién hizo qué y cuándo). No interrumpe la operación si falla.
 async function audit(tabla: string, registroId: string | null, operacion: 'alta' | 'modificacion' | 'baja' | 'estado', autorId: string | null, datos?: unknown) {
   await supabaseServer().from('auditoria').insert({ tabla, registro_id: registroId, operacion, autor_id: autorId, datos: datos ?? null })
@@ -138,6 +148,8 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
   // Estado anterior, para avisar a los compañeros qué cambió.
   const antes = id ? (await db.from('agenda_items').select('serie_id, fecha, hora_inicio, hora_fin, school_id, lugar, estado, accion').eq('id', id).eq('fed_id', row.fed_id).maybeSingle()).data : null
   if (id && !antes) throw new Error('La acción no existe o no es tuya')
+  // Al editar sin cambiar la fecha se respeta lo ya cargado (acciones previas a esta regla).
+  if (!antes || antes.fecha !== row.fecha) await exigirDiasHabiles([row.fecha])
   const rowSinSerie = row
   // Al editar, el item debe pertenecer al FED que lo edita.
   const res = id ? await db.from('agenda_items').update(rowSinSerie).eq('id', id).eq('fed_id', row.fed_id).select('id').single()
@@ -453,16 +465,21 @@ async function eliminarVariasImpl(ids: string[], fedId: string) {
   await audit('agenda_items', null, 'baja', fedId, { ids: borrar, fechas: lista.map(i => i.fecha) })
   return borrar.length
 }
-// Acciones cargadas en fin de semana: pasan al viernes anterior o al lunes siguiente (también su encuentro, si tiene).
+// Acciones cargadas en fin de semana (antes de exigir días hábiles): pasan al día hábil anterior o siguiente (también su encuentro, si tiene).
 async function moverFinDeSemanaImpl(ids: string[], fedId: string, destino: 'viernes' | 'lunes') {
   const lista = await propias(ids, fedId)
   const db = supabaseServer()
+  const { data: fer } = await db.from('feriados').select('fecha').neq('tipo', 'distrital')
+  const noHabiles = new Set((fer ?? []).map(f => f.fecha as string))
   let movidas = 0
   for (const i of lista) {
     const d = new Date(`${i.fecha}T12:00:00`), dia = d.getDay()
     if (dia !== 0 && dia !== 6) continue
-    d.setDate(d.getDate() + (destino === 'viernes' ? (dia === 6 ? -1 : -2) : (dia === 6 ? 2 : 1)))
-    const nueva = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    // Al día hábil anterior o siguiente (si el viernes o el lunes es feriado, sigue de largo).
+    const ymd = () => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    do d.setDate(d.getDate() + (destino === 'viernes' ? -1 : 1))
+    while (d.getDay() === 0 || d.getDay() === 6 || noHabiles.has(ymd()))
+    const nueva = ymd()
     const up = await db.from('agenda_items').update({ fecha: nueva }).eq('id', i.id).eq('fed_id', fedId)
     if (up.error) throw new Error(up.error.message)
     await db.from('agenda_encuentros').update({ fecha: nueva }).eq('agenda_item_id', i.id)
@@ -533,6 +550,7 @@ export const guardarEvento = async (ev: EventoInput, id?: string) => conUsuario(
   const fechas = [...new Set(ev.fechas.filter(f => fechaIso.test(f)))].sort()
   if (!opt(ev.nombre) || !fechas.length) throw new Error('Nombre y al menos una fecha son obligatorios')
   if (fechas.length > 10) throw new Error('Un evento puede tener hasta 10 fechas')
+  await exigirDiasHabiles(fechas)
   if (!MODALIDADES_EVENTO.includes(ev.modalidad)) throw new Error('Elegí la modalidad')
   const hora = (h: string | null) => (h && /^\d{2}:\d{2}/.test(h) ? h.slice(0, 5) : null)
   const row = { nombre: opt(ev.nombre)!, fechas, hora_inicio: hora(ev.hora_inicio), hora_fin: hora(ev.hora_fin), modalidad: ev.modalidad, lugar: opt(ev.lugar), enlace: opt(ev.enlace), descripcion: opt(ev.descripcion) }
