@@ -6,7 +6,7 @@ import { Segmented, Pill } from '@/components/ui/segmented'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { CATEGORIA, DISTRITOS_REGION, type AgendaItem, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
-import { actionStyle, addDays, cap, fmt, hhmm, iso, parse, selectClass, shortSchoolName, conGrupo, startOfWeek, toWeekday, firstName, getAllItems, useItems, useFeriados, ActionChip, ErrorBox, FeriadoTag, Skeleton, Vacio, WeekNav } from '@/components/app/comun'
+import { actionStyle, addDays, cap, fmt, hhmm, iso, parse, selectClass, siglaEscuela, conGrupo, startOfWeek, toWeekday, firstName, getAllItems, useItems, useFeriados, ActionChip, ErrorBox, FeriadoTag, Skeleton, Vacio, WeekNav } from '@/components/app/comun'
 import { ItemCard } from '@/components/app/agenda'
 
 type Modo = 'dia' | 'semana' | 'proximas'
@@ -17,7 +17,7 @@ const pos = (t: string) => Math.min(100, Math.max(0, ((minutos(t) - H_INICIO * 6
 const ausencia = (i: AgendaItem) => i.accion === 'LICENCIA' || i.accion === 'PARO'
 // "En territorio": acciones en una escuela o sede, fuera de las tareas institucionales (reuniones, oficina, planificación).
 const enTerritorio = (i: AgendaItem) => (!!i.school_id || !!i.lugar) && CATEGORIA[i.accion] !== 'institucional'
-const lugar = (i: AgendaItem) => (i.school ? conGrupo(i, shortSchoolName(i.school)) : i.lugar || titleCase(i.accion))
+const lugar = (i: AgendaItem) => (i.school ? conGrupo(i, siglaEscuela(i.school)) : i.lugar || titleCase(i.accion))
 const horario = (i: AgendaItem) => (i.hora_inicio ? `${hhmm(i.hora_inicio)}${i.hora_fin ? `–${hhmm(i.hora_fin)}` : ''}` : 'Sin horario')
 
 // Agenda del equipo (coordinación): qué hace cada FED en el día, la semana y las próximas visitas a escuelas.
