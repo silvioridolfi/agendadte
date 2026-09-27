@@ -33,7 +33,10 @@ export const SUB_ACCIONES: Partial<Record<Accion, string[]>> = {
 }
 
 // DD.JJ. de horarios: un registro por día hábil (1 = lunes ... 5 = viernes).
-export type DdjjDia = { dia: number; dte: string; dte_desde?: string; dte_hasta?: string; externo?: string }
+// DD.JJ. de horarios por día hábil (1 = lunes). `dte` es el texto legible del horario DTE (se arma a partir de las franjas);
+// `dte2_*` es una segunda franja opcional; `cargos`, los otros cargos de ese día; `externo`, nota de texto heredada de la planilla.
+export type CargoDia = { nombre: string; desde: string; hasta: string }
+export type DdjjDia = { dia: number; dte: string; dte_desde?: string; dte_hasta?: string; dte2_desde?: string; dte2_hasta?: string; cargos?: CargoDia[]; externo?: string }
 // rol 'coordinacion': perfil de coordinación (crea reuniones de equipo, no suma a las métricas por FED).
 export type Fed = { id: string; nombre_completo: string; distritos_a_cargo: string[]; carga_horaria: string | null; ddjj: DdjjDia[]; rol: 'fed' | 'coordinacion' }
 // Participación en clubes, talleres y prácticas (hoja CAPACITACIONES del master). 0..N por acción.
@@ -220,3 +223,6 @@ export const TRAYECTO_MARCA: Record<Trayecto, { nombre: string, corto: string, p
 export const RECORDATORIO_LICENCIA = 'En el caso de ausencias, especificá el motivo. El aviso se realiza en el momento en que se produce y dentro de las 48 hs posteriores se debe enviar la constancia de justificación.'
 // Establecimiento DTE (lugar de trabajo): los paros se registran ahí.
 export const CUE_DTE = 60000000
+
+// Distritos de la Región 1 (para elegir los distritos a cargo en Mi perfil).
+export const DISTRITOS_REGION = ['BERISSO', 'BRANDSEN', 'ENSENADA', 'LA PLATA', 'MAGDALENA', 'PUNTA INDIO']

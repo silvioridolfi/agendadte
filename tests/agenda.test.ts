@@ -72,3 +72,31 @@ describe('otros', () => {
     expect(nombreArchivo('Planilla Andrés Guzmán 2026-09-01 a 2026-09-30')).toBe('Planilla_Andres_Guzman_2026-09-01_a_2026-09-30.xlsx')
   })
 })
+
+import { armarDdjj, cargosDe, chequearHorario, franjasDte, validarDdjj } from '@/lib/ddjj'
+
+describe('DD.JJ. de horarios', () => {
+  const cargos = [{ nombre: 'EP 5', dias: [1, 3], desde: '13:00', hasta: '17:00' }]
+  const ddjj = armarDdjj({ 1: [{ desde: '08:00', hasta: '12:00' }], 2: [{ desde: '08:00', hasta: '10:00' }, { desde: '14:00', hasta: '16:00' }] }, cargos, { 4: 'nota vieja' })
+  it('arma los días con franjas, cargos y notas', () => {
+    expect(ddjj.map(d => d.dia)).toEqual([1, 2, 3, 4])
+    expect(ddjj[1].dte).toBe('08:00 a 10:00 y 14:00 a 16:00')
+    expect(franjasDte(ddjj[1])).toHaveLength(2)
+    expect(ddjj[3]).toEqual({ dia: 4, dte: '', externo: 'nota vieja' })
+  })
+  it('reagrupa los cargos por día', () => {
+    expect(cargosDe(ddjj)).toEqual(cargos)
+  })
+  it('valida horarios y superposiciones', () => {
+    expect(validarDdjj({ 1: [{ desde: '12:00', hasta: '08:00' }] }, [])).toEqual(['El horario DTE del lunes termina antes de empezar.'])
+    expect(validarDdjj({ 2: [{ desde: '08:00', hasta: '12:00' }, { desde: '11:00', hasta: '13:00' }] }, [])).toEqual(['Las dos franjas DTE del martes se superponen.'])
+    expect(validarDdjj({}, [{ nombre: '', dias: [], desde: '', hasta: '' }])).toHaveLength(3)
+    expect(validarDdjj({ 1: [{ desde: '08:00', hasta: '12:00' }] }, cargos)).toEqual([])
+  })
+  it('detecta acciones fuera de horario o superpuestas con otro cargo', () => {
+    expect(chequearHorario(ddjj[0], '09:00', '11:00')).toMatchObject({ fuera: false, choques: [] })
+    expect(chequearHorario(ddjj[0], '11:00', '14:00').fuera).toBe(true)
+    expect(chequearHorario(ddjj[0], '11:00', '14:00').choques).toHaveLength(1)
+    expect(chequearHorario(ddjj[1], '14:30', '').fuera).toBe(false)
+  })
+})
