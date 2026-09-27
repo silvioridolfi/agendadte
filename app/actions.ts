@@ -5,7 +5,7 @@ import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput
 import { borrarSesion, guardarSesion, passwordTemporal, requerirUsuario, usuarioActual, usuarioDeSesion, validarPassword, type Usuario } from '@/lib/sesion'
 import { DriveError, cuentaTecnica, driveConfigurado, idDeCarpeta, urlCarpeta, verificarCarpeta } from '@/lib/drive'
 import { ordenarFotos } from '@/lib/fotos'
-import { PRIMER_MES, inicioMes, hoyAR as hoyPve, nombreMes, noLaborables, revisarPve, vencimientoPve } from '@/lib/pve'
+import { PRIMER_MES, carpetaDelMes, inicioMes, hoyAR as hoyPve, mesesEntregables, nombreMes, noLaborables, revisarPve, vencimientoPve } from '@/lib/pve'
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
@@ -618,19 +618,24 @@ export const guardarCarpetaFotos = async (url: string) => conUsuario(async yo =>
 export const ordenarMisFotos = async () => conUsuario(async yo => ordenarFotos(yo.fed.id))
 
 // ---- PVE (Planillas de Visita a Escuelas): el FED sube un PDF por mes a su carpeta; la coordinación las descarga juntas.
-export type PveMes = { mes: string, nombreMes: string, vence: string, carpetaUrl: string, entregada: string | null, nombre: string | null, archivoUrl: string | null, enviada: string | null }
+export type PveMes = { mes: string, nombreMes: string, vence: string, carpetaUrl: string | null, entregada: string | null, nombre: string | null, archivoUrl: string | null, enviada: string | null }
 const urlArchivo = (id: string) => `https://drive.google.com/file/d/${id}/view`
 export const misPve = async (revisar = false) => conUsuario(async (yo): Promise<{ conectada: boolean, meses: PveMes[], error: string | null }> => {
   const db = supabaseServer()
   const { data: fed } = await db.from('feds').select('carpeta_fotos_id').eq('id', yo.fed.id).maybeSingle()
   if (yo.fed.rol !== 'fed' || !fed?.carpeta_fotos_id) return { conectada: false, meses: [], error: null }
   let error: string | null = null
-  if (revisar || !(await db.from('pve').select('mes').eq('fed_id', yo.fed.id).eq('mes', inicioMes(hoyPve())).maybeSingle()).data) {
-    try { await revisarPve(yo.fed.id) } catch (e) { error = e instanceof Error ? e.message : 'No se pudo revisar la carpeta' }
-  }
-  const { data } = await db.from('pve').select('mes, folder_id, file_id, nombre, entregada_at, enviada_at').eq('fed_id', yo.fed.id).gte('mes', PRIMER_MES).order('mes', { ascending: false }).limit(6)
-  const nl = await noLaborables(inicioMes(hoyPve(), -6), inicioMes(hoyPve(), 2))
-  return { conectada: true, error, meses: (data ?? []).map(r => ({ mes: r.mes, nombreMes: nombreMes(r.mes), vence: vencimientoPve(r.mes, nl), carpetaUrl: urlCarpeta(r.folder_id), entregada: r.entregada_at, nombre: r.nombre, archivoUrl: r.file_id ? urlArchivo(r.file_id) : null, enviada: r.enviada_at })) }
+  if (revisar) { try { await revisarPve(yo.fed.id) } catch (e) { error = e instanceof Error ? e.message : 'No se pudo revisar la carpeta' } }
+  const { data } = await db.from('pve').select('mes, folder_id, file_id, nombre, entregada_at, enviada_at').eq('fed_id', yo.fed.id).gte('mes', PRIMER_MES)
+  const nl = await noLaborables(PRIMER_MES, inicioMes(hoyPve(), 2))
+  // Todos los meses entregables, tengan o no carpeta (la carpeta se crea al tocar "Subir").
+  return { conectada: true, error, meses: mesesEntregables().slice(0, 6).map(mes => { const r = (data ?? []).find(x => x.mes === mes); return { mes, nombreMes: nombreMes(mes), vence: vencimientoPve(mes, nl), carpetaUrl: r ? urlCarpeta(r.folder_id) : null, entregada: r?.file_id ? r.entregada_at : null, nombre: r?.nombre ?? null, archivoUrl: r?.file_id ? urlArchivo(r.file_id) : null, enviada: r?.enviada_at ?? null } }) }
+})
+// "Subir": crea (si hace falta) la carpeta del mes en el Drive del FED y devuelve su enlace.
+export const abrirCarpetaPve = async (mes: string) => conUsuario(async yo => {
+  if (yo.fed.rol !== 'fed') throw new Error('Sólo los FED entregan PVE')
+  if (!mesesEntregables().includes(mes)) throw new Error('Ese mes no se puede entregar por la agenda')
+  return urlCarpeta(await carpetaDelMes(yo.fed.id, mes))
 })
 async function soloCoordinacion() {
   const yo = await requerirUsuario()

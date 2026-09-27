@@ -21,36 +21,42 @@ export const carpetaMes = (mes: string) => `PVE ${mes.slice(5, 7)}-${mes.slice(0
 export const nombrePve = (mes: string, fed: string) => `${REGION} - PVE (${nombreMes(mes)}) - ${fed.toUpperCase()}.pdf`
 export const hoyAR = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
 
-// Meses con carpeta abierta: el actual y el anterior (la del mes anterior se entrega los primeros días del siguiente).
-export const mesesAbiertos = (hoy = hoyAR()) => [inicioMes(hoy, -1), inicioMes(hoy)].filter(m => m >= PRIMER_MES)
+// Meses que se pueden entregar: desde el primero por la agenda hasta el actual.
+export function mesesEntregables(hoy = hoyAR()) {
+  const out: string[] = []
+  for (let m = inicioMes(hoy); m >= PRIMER_MES; m = inicioMes(m, -1)) out.push(m)
+  return out
+}
 
-export type ResultadoPve = { entregadas: number, nuevas: number }
-
-export async function revisarPve(fedId: string): Promise<ResultadoPve> {
+// Carpeta de un mes: se crea sólo cuando el FED la pide ("Subir"), dentro de la carpeta "PVE" de su Drive.
+export async function carpetaDelMes(fedId: string, mes: string): Promise<string> {
   const db = supabaseServer()
-  const res: ResultadoPve = { entregadas: 0, nuevas: 0 }
-  const { data: fed } = await db.from('feds').select('nombre_completo, carpeta_fotos_id, carpeta_pve_id, rol').eq('id', fedId).maybeSingle()
-  if (!fed?.carpeta_fotos_id || fed.rol !== 'fed') return res
-
-  // Carpeta "PVE" dentro de la carpeta del FED (se vuelve a crear si la borraron).
+  const { data: fed } = await db.from('feds').select('carpeta_fotos_id, carpeta_pve_id').eq('id', fedId).maybeSingle()
+  if (!fed?.carpeta_fotos_id) throw new Error('Primero conectá tu carpeta de Drive en “Fotos de las acciones”')
+  const { data: fila } = await db.from('pve').select('folder_id').eq('fed_id', fedId).eq('mes', mes).maybeSingle()
+  if (fila && (await carpetaVigente(fila.folder_id as string))) return fila.folder_id as string
   let pveId = fed.carpeta_pve_id as string | null
   if (!pveId || !(await carpetaVigente(pveId))) {
     const existente = (await listarHijos(fed.carpeta_fotos_id)).find(f => esCarpeta(f) && f.name === 'PVE')
     pveId = existente?.id ?? (await crearCarpeta('PVE', fed.carpeta_fotos_id)).id
     await db.from('feds').update({ carpeta_pve_id: pveId }).eq('id', fedId)
   }
+  const folder = (await listarHijos(pveId)).find(f => esCarpeta(f) && f.name === carpetaMes(mes))?.id ?? (await crearCarpeta(carpetaMes(mes), pveId)).id
+  await db.from('pve').upsert({ fed_id: fedId, mes, folder_id: folder, updated_at: new Date().toISOString() })
+  return folder
+}
 
-  // Carpetas de los meses abiertos (la de cada mes se crea sola; las ya existentes con ese nombre se reutilizan).
-  const { data: filas } = await db.from('pve').select('mes, folder_id, file_id, enviada_at').eq('fed_id', fedId).gte('mes', inicioMes(hoyAR(), -3) > PRIMER_MES ? inicioMes(hoyAR(), -3) : PRIMER_MES)
+export type ResultadoPve = { entregadas: number, nuevas: number }
+
+// Revisa las carpetas de mes que ya existen (no crea ninguna).
+export async function revisarPve(fedId: string): Promise<ResultadoPve> {
+  const db = supabaseServer()
+  const res: ResultadoPve = { entregadas: 0, nuevas: 0 }
+  const { data: fed } = await db.from('feds').select('nombre_completo, carpeta_fotos_id, rol').eq('id', fedId).maybeSingle()
+  if (!fed?.carpeta_fotos_id || fed.rol !== 'fed') return res
+  const desde = inicioMes(hoyAR(), -3) > PRIMER_MES ? inicioMes(hoyAR(), -3) : PRIMER_MES
+  const { data: filas } = await db.from('pve').select('mes, folder_id, file_id, enviada_at').eq('fed_id', fedId).gte('mes', desde)
   const porMes = new Map((filas ?? []).map(f => [f.mes as string, f]))
-  const hijos = await listarHijos(pveId)
-  for (const mes of mesesAbiertos()) {
-    const actual = porMes.get(mes)
-    if (actual && (await carpetaVigente(actual.folder_id as string))) continue
-    const folder = hijos.find(f => esCarpeta(f) && f.name === carpetaMes(mes))?.id ?? (await crearCarpeta(carpetaMes(mes), pveId)).id
-    await db.from('pve').upsert({ fed_id: fedId, mes, folder_id: folder, updated_at: new Date().toISOString() })
-    porMes.set(mes, { mes, folder_id: folder, file_id: null, enviada_at: null })
-  }
 
   // Coordinación: recibe permiso de lectura y el aviso de cada entrega nueva.
   const { data: coord } = await db.from('feds').select('id, email').eq('rol', 'coordinacion')

@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/supabase-server', () => ({ supabaseServer: () => ({}) }))
-import { carpetaMes, inicioMes, mesesAbiertos, nombrePve, vencimientoPve } from '@/lib/pve'
+import { carpetaMes, inicioMes, mesesEntregables, nombrePve, vencimientoPve } from '@/lib/pve'
 
 describe('PVE', () => {
   it('meses y carpetas', () => {
     expect(inicioMes('2026-10-15')).toBe('2026-10-01')
     expect(inicioMes('2026-01-10', -1)).toBe('2025-12-01')
-    expect(mesesAbiertos('2026-11-03')).toEqual(['2026-10-01', '2026-11-01'])
-    expect(mesesAbiertos('2026-09-27')).toEqual(['2026-09-01']) // agosto ya se entregó por fuera
+    expect(mesesEntregables('2026-11-03')).toEqual(['2026-11-01', '2026-10-01', '2026-09-01'])
+    expect(mesesEntregables('2026-09-27')).toEqual(['2026-09-01']) // agosto ya se entregó por fuera
     expect(carpetaMes('2026-10-01')).toBe('PVE 10-2026')
   })
   it('nombre del archivo según el instructivo', () => {

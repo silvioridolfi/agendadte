@@ -5,7 +5,7 @@ import { Check, Download, ExternalLink, FileCheck2, FileText, FolderOpen, Loader
 import { Button } from '@/components/ui/button'
 import { Confirmar } from '@/components/ui/confirmar'
 import type { PveFed, PveMes } from '@/app/actions'
-import { cap, errMsg, eyebrow, fmt, parse, misPve, pveEquipo, marcarPveEnviadas, ErrorBox, Skeleton } from '@/components/app/comun'
+import { abrirCarpetaPve, cap, errMsg, eyebrow, fmt, parse, misPve, pveEquipo, marcarPveEnviadas, ErrorBox, Skeleton } from '@/components/app/comun'
 
 const fecha = (ts: string) => cap(fmt(new Date(ts), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))
 const fechaCorta = (f: string) => cap(fmt(parse(f), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))
@@ -19,9 +19,18 @@ export function SeccionPve() {
   const [error, setError] = useState('')
   const cargar = (revisar = false) => { setBusy(revisar); setError(''); misPve(revisar).then(setDatos).catch(e => setError(errMsg(e))).finally(() => setBusy(false)) }
   useEffect(() => { cargar() }, [])
+  // "Subir": la carpeta del mes se crea recién ahora. La ventana se abre antes de esperar al servidor (si no, el navegador la bloquea).
+  const [abriendo, setAbriendo] = useState('')
+  async function subir(m: PveMes) {
+    if (m.carpetaUrl) { window.open(m.carpetaUrl, '_blank', 'noopener'); return }
+    const w = window.open('', '_blank')
+    setAbriendo(m.mes); setError('')
+    try { const url = await abrirCarpetaPve(m.mes); if (w) w.location.href = url; else window.location.href = url; cargar() }
+    catch (e) { w?.close(); setError(errMsg(e)) } finally { setAbriendo('') }
+  }
   return <section className="rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5" aria-labelledby="t-pve">
     <h3 id="t-pve" className="flex items-center gap-1.5 font-bold"><FileText className="size-4 text-dte-petroleo" />Planillas de Visita (PVE)</h3>
-    <p className="mb-3 text-sm text-dte-gris">Subí tu PVE del mes, <b>firmada y en un solo PDF</b>, a la carpeta de ese mes. Vence el <b>5.º día hábil del mes siguiente</b>. La agenda le pone el nombre correcto y se la deja lista a la coordinación.</p>
+    <p className="mb-3 text-sm text-dte-gris">Subí tu PVE del mes, <b>firmada y en un solo PDF</b>, a la carpeta de ese mes. Vence el <b>5.º día hábil del mes siguiente</b>. Tocá <b>Subir</b> en el mes: se crea su carpeta en tu Drive y se abre. La agenda le pone el nombre correcto y se la deja lista a la coordinación.</p>
     {!datos ? (error ? <ErrorBox message={error} /> : <Loader2 className="size-5 animate-spin text-dte-gris" />)
       : !datos.conectada ? <p className="rounded-lg border border-dashed border-dte-linea px-3 py-3 text-sm text-dte-gris">Primero conectá tu carpeta de Drive en “Fotos de las acciones”: las PVE usan la misma carpeta.</p>
       : <>
@@ -30,7 +39,7 @@ export function SeccionPve() {
             <span className={`flex items-center gap-1 text-xs ${m.entregada ? 'text-exito' : 'text-dte-gris'}`}>{m.enviada ? <><Send className="size-3" />Enviada a Nivel Central</> : m.entregada ? <><Check className="size-3" />Entregada el {fecha(m.entregada)}</> : <>Pendiente · vence el {fechaCorta(m.vence)}</>}</span></span>
           <span className="flex flex-wrap gap-1.5">
             {m.archivoUrl && <a href={m.archivoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-dte-linea px-2.5 text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><ExternalLink className="size-3.5" />Ver</a>}
-            {!m.enviada && <a href={m.carpetaUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-dte-linea px-2.5 text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><FolderOpen className="size-3.5" />{m.entregada ? 'Carpeta' : 'Subir'}</a>}
+            {!m.enviada && <button type="button" disabled={abriendo === m.mes} onClick={() => subir(m)} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-dte-linea px-2.5 text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8">{abriendo === m.mes ? <Loader2 className="size-3.5 animate-spin" /> : <FolderOpen className="size-3.5" />}{m.entregada ? 'Carpeta' : 'Subir'}</button>}
           </span>
         </li>)}</ul>
         <div className="mt-2 flex flex-wrap items-center gap-2">
