@@ -114,3 +114,27 @@ describe('orden de grados', () => {
     expect(['7° Informática - Grupo 2', '7° Informática - Grupo 1'].sort(ordenGrupo)).toEqual(['7° Informática - Grupo 1', '7° Informática - Grupo 2'])
   })
 })
+
+import { accionPorHora } from '@/lib/horas'
+describe('fotos por hora de captura', () => {
+  const peat = { id: 'p', hora_inicio: '08:00:00', hora_fin: '12:00:00' }
+  const club4 = { id: 'c4', hora_inicio: '12:00:00', hora_fin: '13:00:00' }
+  const club5 = { id: 'c5', hora_inicio: '13:00:00', hora_fin: '14:00:00' }
+  const sinHora = { id: 's', hora_inicio: null, hora_fin: null }
+  const dia = [peat, club4, club5, sinHora]
+  const m = (h: string) => { const [a, b] = h.split(':').map(Number); return a * 60 + b }
+  it('asigna la acción cuyo horario contiene la hora', () => {
+    expect(accionPorHora(dia, m('09:40'))?.id).toBe('p')
+    expect(accionPorHora(dia, m('12:25'))?.id).toBe('c4')
+    expect(accionPorHora(dia, m('13:10'))?.id).toBe('c5')
+    expect(accionPorHora(dia, m('12:00'))?.id).toBe('c4')
+  })
+  it('usa la más cercana dentro de 30 minutos y si no, ninguna', () => {
+    expect(accionPorHora(dia, m('14:20'))?.id).toBe('c5')
+    expect(accionPorHora(dia, m('16:30'))).toBeNull()
+    expect(accionPorHora(dia, null)).toBeNull()
+  })
+  it('no asigna si hay acciones superpuestas', () => {
+    expect(accionPorHora([club4, { id: 'otro', hora_inicio: '12:00:00', hora_fin: '13:00:00' }], m('12:30'))).toBeNull()
+  })
+})

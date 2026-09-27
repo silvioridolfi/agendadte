@@ -27,7 +27,7 @@ export function SeccionFotos() {
     try {
       const r = await ordenarMisFotos()
       const total = r.ordenadas + r.atajos
-      setAviso(total ? `Se ordenaron ${total} ${total === 1 ? 'archivo' : 'archivos'} por día${r.sinFecha ? ` (${r.sinFecha} sin fecha de captura, en “Sin fecha”)` : ''}${r.pendientes ? `. Quedan ${r.pendientes}: tocá de nuevo para seguir.` : '.'}` : 'No había fotos sueltas para ordenar.')
+      setAviso(total ? `Se ordenaron ${total} ${total === 1 ? 'archivo' : 'archivos'}${r.porAccion ? ` (${r.porAccion} en la carpeta de su acción según la hora)` : ' por día'}${r.sinFecha ? ` (${r.sinFecha} sin fecha de captura, en “Sin fecha”)` : ''}${r.pendientes ? `. Quedan ${r.pendientes}: tocá de nuevo para seguir.` : '.'}` : 'No había fotos sueltas para ordenar.')
     } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
   }
   const copiar = async () => { if (!estado) return; try { await navigator.clipboard.writeText(estado.cuentaTecnica); setCopiado(true) } catch { setCopiado(false) } }
@@ -35,7 +35,7 @@ export function SeccionFotos() {
   const listo = !!estado?.url && !!estado.nombre && estado.puedeEditar
   return <section className="rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5" aria-labelledby="t-fotos">
     <h3 id="t-fotos" className="flex items-center gap-1.5 font-bold"><Camera className="size-4 text-dte-petroleo" />Fotos de las acciones</h3>
-    <p className="mb-3 text-sm text-dte-gris">Subí las fotos sueltas a tu carpeta de Drive: la agenda las ordena sola en una subcarpeta por día, con el nombre de lo que hiciste. El CED las ve desde la agenda.</p>
+    <p className="mb-3 text-sm text-dte-gris">Subí las fotos sueltas a tu carpeta de Drive: la agenda las ordena sola en una carpeta por día y, según la hora en que las sacaste, en la subcarpeta de cada acción. Por eso conviene cargar el horario de las acciones. El CED las ve desde la agenda.</p>
 
     {!estado ? <Loader2 className="size-5 animate-spin text-dte-gris" /> : !estado.configurado ? <p className="text-sm text-dte-gris">La conexión con Drive todavía no está configurada.</p> : <>
       <ol className="mb-3 flex list-decimal flex-col gap-1.5 pl-5 text-sm">
