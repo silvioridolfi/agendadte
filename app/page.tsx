@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { CalendarDays, CloudUpload, LayoutDashboard, Plus, type LucideIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { esTrayecto, type AgendaItem, type Fed } from '@/lib/agenda'
+import { esTrayecto, type AgendaItem, type Fed, type Trayecto } from '@/lib/agenda'
 import { NotificacionesBell } from '@/components/app/notificaciones'
 import { ProfileSelect } from '@/components/app/perfil'
 import { AgendaView } from '@/components/app/agenda'
@@ -11,6 +11,7 @@ import { DetailDialog } from '@/components/app/detalle'
 import { CoordinatorView } from '@/components/app/tablero'
 import { ItemForm } from '@/components/app/formulario'
 import { MenuPerfil, MiPerfilView } from '@/components/app/miperfil'
+import { RegistroEncuentro } from '@/components/app/encuentro'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
 import { PROFILE_KEY, iso, firstName, getFeds, errMsg, storage, Toast, PieInstitucional, ItemPreset, toWeekday } from '@/components/app/comun'
 
@@ -112,8 +113,10 @@ export default function Page() {
 
     <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
       <DialogContent className="bg-white sm:max-w-2xl">
-        <DialogHeader><DialogTitle className="text-lg">{tituloForm(editing)}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : editing?.preset?.modo === 'nuevo' ? 'Con fecha, el primer encuentro se agrega a tu agenda; si todavía no la tenés, queda “por iniciar”.' : editing?.preset?.modo === 'encuentro' ? 'El encuentro se agrega a tu agenda. Los datos de participación se completan cuando está realizado.' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>
-        {editing && <ItemForm key={editing.item?.id ?? `new-${editing.fecha}`} fed={profile} feds={feds ?? []} item={editing.item} defaultFecha={editing.fecha} preset={editing.preset} onCancel={() => setEditing(null)} onSaved={({ creadas, mensaje, offline }) => { changed(mensaje ? mensaje : offline ? 'Sin conexión: la acción quedó guardada en este dispositivo y se envía al volver la señal' : editing.item ? 'Acción actualizada' : creadas > 1 ? `Se crearon ${creadas} acciones de la serie` : editing.preset?.participantes?.length ? 'Reunión creada y notificada al equipo' : 'Acción agregada a tu agenda'); setEditing(null) }} />}
+        <DialogHeader><DialogTitle className="text-lg">{tituloForm(editing)}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : editing?.preset?.modo === 'nuevo' ? 'Con fecha, el primer encuentro se agrega a tu agenda; si todavía no la tenés, queda “por iniciar”.' : editing?.preset?.modo === 'encuentro' ? 'Se agrega a tu agenda como acción realizada (o planificada, si la fecha todavía no llegó).' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>
+        {editing?.preset?.modo === 'encuentro' && esTrayecto(editing.preset.accion ?? null) && !editing.item
+          ? <RegistroEncuentro fed={profile} tipo={editing.preset.accion as Trayecto} clubId={editing.preset.club_id} onCancel={() => setEditing(null)} onSaved={msg => { changed(msg); setEditing(null) }} />
+          : editing && <ItemForm key={editing.item?.id ?? `new-${editing.fecha}`} fed={profile} feds={feds ?? []} item={editing.item} defaultFecha={editing.fecha} preset={editing.preset} onCancel={() => setEditing(null)} onSaved={({ creadas, mensaje, offline }) => { changed(mensaje ? mensaje : offline ? 'Sin conexión: la acción quedó guardada en este dispositivo y se envía al volver la señal' : editing.item ? 'Acción actualizada' : creadas > 1 ? `Se crearon ${creadas} acciones de la serie` : editing.preset?.participantes?.length ? 'Reunión creada y notificada al equipo' : 'Acción agregada a tu agenda'); setEditing(null) }} />}
       </DialogContent>
     </Dialog>
 
