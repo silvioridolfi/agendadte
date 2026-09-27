@@ -1,7 +1,8 @@
 'use server'
 
 import { supabaseServer } from '@/lib/supabase-server'
-import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, MODALIDADES, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
+import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, DISTRITOS_REGION, MODALIDADES, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
+import { armarDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
 // así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
@@ -319,6 +320,24 @@ async function updateFedImpl(autorId: string, fed: Pick<Fed, 'id' | 'nombre_comp
   await audit('feds', fed.id, 'modificacion', autorId, patch)
 }
 
+// Mi perfil: cada FED edita sus distritos, carga horaria y DD.JJ. (la coordinación sólo la consulta).
+async function updateMiPerfilImpl(fedId: string, datos: Pick<Fed, 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>): Promise<void> {
+  const db = supabaseServer()
+  const { data: fed } = await db.from('feds').select('rol').eq('id', fedId).maybeSingle()
+  if (!fed) throw new Error('No se encontró el perfil')
+  if (fed.rol !== 'fed') throw new Error('Sólo cada FED puede editar su perfil')
+  const distritos = [...new Set(datos.distritos_a_cargo.map(d => d.trim().toUpperCase()))].filter(d => DISTRITOS_REGION.includes(d))
+  const franjas = Object.fromEntries(datos.ddjj.map(d => [d.dia, franjasDte(d)]))
+  const errores = validarDdjj(franjas, cargosDe(datos.ddjj))
+  if (datos.ddjj.some(d => !Number.isInteger(d.dia) || d.dia < 1 || d.dia > 5)) errores.push('Día de la DD.JJ. inválido')
+  if (errores.length) throw new Error(errores[0])
+  const ddjj = armarDdjj(franjas, cargosDe(datos.ddjj), Object.fromEntries(datos.ddjj.filter(d => d.externo).map(d => [d.dia, d.externo!.slice(0, 200)])))
+  const patch = { distritos_a_cargo: distritos, carga_horaria: opt(datos.carga_horaria?.slice(0, 40) ?? null), ddjj }
+  const { error } = await db.from('feds').update(patch).eq('id', fedId)
+  if (error) throw new Error(error.message)
+  await audit('feds', fedId, 'modificacion', fedId, patch)
+}
+
 async function addFeriadoImpl(autorId: string, f: Omit<Feriado, 'id'>): Promise<void> {
   await esCoordinacion(autorId)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(f.fecha) || !f.nombre.trim()) throw new Error('Fecha y nombre son obligatorios')
@@ -355,6 +374,7 @@ export const getNotificaciones = async (fedId: string) => run(() => getNotificac
 export const marcarLeidas = async (fedId: string, ids?: string[]) => run(() => marcarLeidasImpl(fedId, ids))
 export const responder = async (itemId: string, fedId: string, respuesta: 'acepta' | 'rechaza') => run(() => responderImpl(itemId, fedId, respuesta))
 export const getHistorial = async (itemId: string) => run(() => getHistorialImpl(itemId))
+export const updateMiPerfil = async (fedId: string, datos: Pick<Fed, 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => run(() => updateMiPerfilImpl(fedId, datos))
 export const updateFed = async (autorId: string, fed: Pick<Fed, 'id' | 'nombre_completo' | 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => run(() => updateFedImpl(autorId, fed))
 export const addFeriado = async (autorId: string, f: Omit<Feriado, 'id'>) => run(() => addFeriadoImpl(autorId, f))
 export const deleteFeriado = async (autorId: string, id: string) => run(() => deleteFeriadoImpl(autorId, id))
