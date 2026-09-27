@@ -118,7 +118,7 @@ async function avisarParticipantes(itemId: string, autorId: string, tipo: 'modif
   if (destinos.length) await db.from('notificaciones').insert(destinos.map(fed_id => ({ fed_id, item_id: conItem ? itemId : null, autor_id: autorId, tipo, detalle })))
 }
 
-async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<{ id: string, creadas: number }> {
+async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' | 'siguientes' = 'uno'): Promise<{ id: string, creadas: number }> {
   const row = clean(input)
   const db = supabaseServer()
   // Paro: se registra en el lugar de trabajo (DTE). Licencia: sin escuela ni lugar.
@@ -128,7 +128,7 @@ async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<{ id: 
   }
   if (row.accion === 'LICENCIA') Object.assign(row, { school_id: null, lugar: null })
   // Estado anterior, para avisar a los compañeros qué cambió.
-  const antes = id ? (await db.from('agenda_items').select('fecha, hora_inicio, hora_fin, school_id, lugar, estado, accion').eq('id', id).eq('fed_id', row.fed_id).maybeSingle()).data : null
+  const antes = id ? (await db.from('agenda_items').select('serie_id, fecha, hora_inicio, hora_fin, school_id, lugar, estado, accion').eq('id', id).eq('fed_id', row.fed_id).maybeSingle()).data : null
   if (id && !antes) throw new Error('La acción no existe o no es tuya')
   const rowSinSerie = row
   // Al editar, el item debe pertenecer al FED que lo edita.
@@ -191,6 +191,22 @@ async function saveItemImpl(input: AgendaItemInput, id?: string): Promise<{ id: 
         await db.from('notificaciones').update({ detalle: `Se repite: ${fechas.length + 1} fechas hasta el ${fechaCorta(input.repeticion.hasta)}` }).eq('item_id', itemId).eq('tipo', 'etiqueta')
       }
       creadas += fechas.length
+    }
+  }
+  // Edición de una serie: "este y los siguientes" aplica horario y datos de la propuesta a las fechas planificadas que siguen
+  // (no cambia la fecha de cada una ni los datos de participación, que son propios de cada encuentro).
+  if (id && alcance === 'siguientes' && antes?.serie_id) {
+    const { data: sig } = await db.from('agenda_items').select('id').eq('serie_id', antes.serie_id).eq('fed_id', row.fed_id).eq('estado', 'planificada').gt('fecha', row.fecha)
+    const ids = (sig ?? []).map(x => x.id as string)
+    if (ids.length) {
+      const up = await db.from('agenda_items').update({ hora_inicio: row.hora_inicio, hora_fin: row.hora_fin, school_id: row.school_id, lugar: row.lugar, sub_accion: row.sub_accion }).in('id', ids).eq('fed_id', row.fed_id)
+      if (up.error) throw new Error(up.error.message)
+      if (enc) {
+        const e = await db.from('agenda_encuentros').update({ propuesta: enc.propuesta, tipo_jornada: enc.tipo_jornada ?? null, modalidad: enc.modalidad, destinatarios: enc.destinatarios, school_id: row.school_id, lugar: row.lugar }).in('agenda_item_id', ids)
+        if (e.error) throw new Error(e.error.message)
+      }
+      creadas += ids.length
+      await audit('agenda_items', itemId, 'modificacion', row.fed_id, { serie: antes.serie_id, siguientes: ids.length })
     }
   }
   return { id: itemId, creadas }
@@ -400,7 +416,7 @@ export const searchSchools = async (query: string) => conUsuario(() => searchSch
 export const getFedItems = async (fedId: string, from: string, to: string) => conUsuario(() => getFedItemsImpl(fedId, from, to))
 export const getAllItems = async (from: string, to: string) => conUsuario(() => getAllItemsImpl(from, to))
 export const getEncuentros = async (from: string, to: string) => conUsuario(() => getEncuentrosImpl(from, to))
-export const saveItem = async (input: AgendaItemInput, id?: string) => conUsuario(yo => saveItemImpl({ ...input, fed_id: yo.fed.id }, id))
+export const saveItem = async (input: AgendaItemInput, id?: string, alcance: 'uno' | 'siguientes' = 'uno') => conUsuario(yo => saveItemImpl({ ...input, fed_id: yo.fed.id }, id, alcance))
 export const setItemStatus = async (id: string, _fedId: string, estado: AgendaItemInput['estado']) => conUsuario(yo => setItemStatusImpl(id, yo.fed.id, estado))
 export const deleteItem = async (id: string, _fedId: string, serie = false) => conUsuario(yo => deleteItemImpl(id, yo.fed.id, serie))
 export const getFeriados = async (from: string, to: string) => conUsuario(() => getFeriadosImpl(from, to))
