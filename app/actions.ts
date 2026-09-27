@@ -409,6 +409,71 @@ async function getFeriadosImpl(from: string, to: string): Promise<Feriado[]> {
   return (data ?? []) as Feriado[]
 }
 
+// ---- Acciones en bloque (selección múltiple): sólo sobre acciones propias; un aviso por compañero, no uno por acción.
+const hoyAR = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
+async function propias(ids: string[], fedId: string) {
+  if (!ids.length || ids.length > 300) throw new Error('Seleccioná entre 1 y 300 acciones')
+  const { data, error } = await supabaseServer().from('agenda_items').select('id, fecha, accion, estado, club_id').in('id', ids).eq('fed_id', fedId)
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+async function avisarEnBloque(ids: string[], autorId: string, detalle: string) {
+  const db = supabaseServer()
+  const { data } = await db.from('agenda_participantes').select('fed_id').in('item_id', ids)
+  const destinos = [...new Set((data ?? []).map(p => p.fed_id as string))].filter(f => f !== autorId)
+  if (destinos.length) await db.from('notificaciones').insert(destinos.map(fed_id => ({ fed_id, item_id: null, autor_id: autorId, tipo: 'cancelacion', detalle })))
+}
+async function cambiarEstadoVariasImpl(ids: string[], fedId: string, estado: AgendaItemInput['estado']) {
+  if (!ESTADOS.includes(estado)) throw new Error('Estado inválido')
+  const lista = await propias(ids, fedId)
+  // "Realizada" no se aplica a fechas futuras.
+  const futuras = estado === 'realizada' ? lista.filter(i => i.fecha > hoyAR()) : []
+  const aplicar = lista.filter(i => !futuras.includes(i) && i.estado !== estado).map(i => i.id as string)
+  if (aplicar.length) {
+    const { error } = await supabaseServer().from('agenda_items').update({ estado }).in('id', aplicar).eq('fed_id', fedId)
+    if (error) throw new Error(error.message)
+    if (estado === 'cancelada') await avisarEnBloque(aplicar, fedId, `Canceló ${aplicar.length} ${aplicar.length === 1 ? 'acción' : 'acciones'}`)
+    await audit('agenda_items', null, 'estado', fedId, { estado, ids: aplicar })
+  }
+  // Clubes y prácticas marcados como realizados sin datos de participación.
+  let sinDatos = 0
+  const clubes = lista.filter(i => aplicar.includes(i.id) && i.club_id).map(i => i.id as string)
+  if (estado === 'realizada' && clubes.length) {
+    const { data } = await supabaseServer().from('agenda_encuentros').select('agenda_item_id, asistentes').in('agenda_item_id', clubes)
+    const conDatos = new Set((data ?? []).filter(e => e.asistentes != null).map(e => e.agenda_item_id))
+    sinDatos = clubes.filter(id => !conDatos.has(id)).length
+  }
+  return { actualizadas: aplicar.length, futuras: futuras.length, ajenas: ids.length - lista.length, sinDatos }
+}
+async function eliminarVariasImpl(ids: string[], fedId: string) {
+  const lista = await propias(ids, fedId)
+  const borrar = lista.map(i => i.id as string)
+  if (!borrar.length) return 0
+  await avisarEnBloque(borrar, fedId, `Eliminó ${borrar.length} ${borrar.length === 1 ? 'acción' : 'acciones'} de su agenda`)
+  const { error } = await supabaseServer().from('agenda_items').delete().in('id', borrar).eq('fed_id', fedId)
+  if (error) throw new Error(error.message)
+  await audit('agenda_items', null, 'baja', fedId, { ids: borrar, fechas: lista.map(i => i.fecha) })
+  return borrar.length
+}
+// Acciones cargadas en fin de semana: pasan al viernes anterior o al lunes siguiente (también su encuentro, si tiene).
+async function moverFinDeSemanaImpl(ids: string[], fedId: string, destino: 'viernes' | 'lunes') {
+  const lista = await propias(ids, fedId)
+  const db = supabaseServer()
+  let movidas = 0
+  for (const i of lista) {
+    const d = new Date(`${i.fecha}T12:00:00`), dia = d.getDay()
+    if (dia !== 0 && dia !== 6) continue
+    d.setDate(d.getDate() + (destino === 'viernes' ? (dia === 6 ? -1 : -2) : (dia === 6 ? 2 : 1)))
+    const nueva = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const up = await db.from('agenda_items').update({ fecha: nueva }).eq('id', i.id).eq('fed_id', fedId)
+    if (up.error) throw new Error(up.error.message)
+    await db.from('agenda_encuentros').update({ fecha: nueva }).eq('agenda_item_id', i.id)
+    movidas++
+  }
+  if (movidas) await audit('agenda_items', null, 'modificacion', fedId, { mover_fin_de_semana: destino, ids: lista.map(i => i.id) })
+  return movidas
+}
+
 // Todas las acciones exigen sesión. El perfil que actúa sale de la sesión, nunca de los parámetros del navegador.
 const conUsuario = <T,>(fn: (yo: Usuario) => Promise<T>) => run(async () => fn(await requerirUsuario()))
 export const getFeds = async () => conUsuario(() => getFedsImpl())
@@ -419,6 +484,9 @@ export const getEncuentros = async (from: string, to: string) => conUsuario(() =
 export const saveItem = async (input: AgendaItemInput, id?: string, alcance: 'uno' | 'siguientes' = 'uno') => conUsuario(yo => saveItemImpl({ ...input, fed_id: yo.fed.id }, id, alcance))
 export const setItemStatus = async (id: string, _fedId: string, estado: AgendaItemInput['estado']) => conUsuario(yo => setItemStatusImpl(id, yo.fed.id, estado))
 export const deleteItem = async (id: string, _fedId: string, serie = false) => conUsuario(yo => deleteItemImpl(id, yo.fed.id, serie))
+export const cambiarEstadoVarias = async (ids: string[], estado: AgendaItemInput['estado']) => conUsuario(yo => cambiarEstadoVariasImpl(ids, yo.fed.id, estado))
+export const eliminarVarias = async (ids: string[]) => conUsuario(yo => eliminarVariasImpl(ids, yo.fed.id))
+export const moverFinDeSemana = async (ids: string[], destino: 'viernes' | 'lunes') => conUsuario(yo => moverFinDeSemanaImpl(ids, yo.fed.id, destino))
 export const getFeriados = async (from: string, to: string) => conUsuario(() => getFeriadosImpl(from, to))
 export const getClubes = async (fedId?: string) => conUsuario(() => getClubesImpl(fedId))
 export const setClubCierre = async (id: string, fecha: string | null) => conUsuario(async yo => {
