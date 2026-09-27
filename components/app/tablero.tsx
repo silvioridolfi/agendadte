@@ -2,7 +2,7 @@
 
 import { Segmented } from '@/components/ui/segmented'
 import { exportarPlanilla } from '@/lib/exportar'
-import { ConfiguracionView } from '@/components/app/configuracion'
+import { MiEquipoView } from '@/components/app/equipo'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarX2, Loader2, Search, SearchX, Users, X, FileSpreadsheet, SlidersHorizontal } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -33,9 +33,8 @@ export const rangeNames: Record<Range, [string, string, string]> = { day: ['Día
 
 export const LISTA_INICIAL = 5, LISTA_PASO = 20
 
-// `autorId`: perfil de coordinación que usa el tablero (habilita Configuración); `onChanged`: aviso tras editar equipo o feriados.
-export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion, autorId, onChanged }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void, autorId?: string, onChanged?: (msg: string) => void }) {
-  const [tab, setTab] = useState<'resumen' | 'clubes' | 'practicas' | 'acciones' | 'config'>('resumen')
+export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void }) {
+  const [tab, setTab] = useState<'resumen' | 'equipo' | 'clubes' | 'practicas' | 'acciones'>('resumen')
   // Pestañas accesibles: flechas izquierda/derecha, Inicio y Fin mueven el foco y activan la pestaña.
   function teclaPestana(e: React.KeyboardEvent<HTMLDivElement>) {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
@@ -119,7 +118,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
 
     {/* Pestañas: en mobile se desplazan horizontalmente en una sola línea. */}
     <div role="tablist" aria-label="Vista del tablero" onKeyDown={teclaPestana} className="-mx-4 mt-6 flex snap-x gap-1 overflow-x-auto border-b border-dte-linea px-4 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
-      {([['resumen', 'Resumen y métricas'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo'], ...(autorId ? [['config', 'Configuración']] as const : [])] as const).map(([k, l]) => <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="panel-tablero" tabIndex={tab === k ? 0 : -1} data-tab={k} onClick={e => { setTab(k); e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }} className={`-mb-px flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
+      {([['resumen', 'Resumen y métricas'], ['equipo', 'Mi equipo'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo']] as const).map(([k, l]) => <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="panel-tablero" tabIndex={tab === k ? 0 : -1} data-tab={k} onClick={e => { setTab(k); e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }} className={`-mb-px flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
     </div>
 
     <div id="panel-tablero" role="tabpanel" aria-labelledby={`tab-${tab}`}>
@@ -130,7 +129,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
       </button>)}
     </div>}
 
-    {tab !== 'config' && <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs md:flex-row md:flex-wrap md:items-center">
+    {tab !== 'equipo' && <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs md:flex-row md:flex-wrap md:items-center">
       <div className="flex gap-2 md:contents">
       <div className="relative min-w-0 flex-1 md:min-w-56"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar escuela, localidad, CUE o FED…" aria-label="Buscar" className="h-11 bg-dte-fondo pl-9 md:h-9" /></div>
       <Button type="button" variant="outline" onClick={() => setFiltrosAbiertos(o => !o)} aria-expanded={filtrosAbiertos} aria-controls="filtros-tablero" className="shrink-0 md:hidden"><SlidersHorizontal data-icon="inline-start" />Filtros{filtrosActivos > 0 && <span className="ml-0.5 rounded-full bg-dte-petroleo px-1.5 text-xs text-white">{filtrosActivos}</span>}</Button>
@@ -143,7 +142,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
       {anyFilter && <Button variant="ghost" onClick={clear} className="self-start text-dte-magenta hover:text-dte-magenta md:self-auto"><X data-icon="inline-start" />Limpiar</Button>}
     </div>}
 
-    {tab === 'config' && autorId ? <div className="mt-6"><ConfiguracionView feds={todos} autorId={autorId} onChanged={m => onChanged?.(m)} /></div>
+    {tab === 'equipo' ? <div className="mt-6"><MiEquipoView feds={feds} items={items} clubes={clubes} noHabiles={noHabiles} periodo={title} onVerAcciones={id => { setFedId(id); setTab('acciones') }} /></div>
     : tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} noHabiles={noHabiles} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) }} />}</div>
     : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base.filter(i => feds.some(f => f.id === i.fed_id))} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} />}</div>
     : <div className="mt-6 flex flex-col gap-6">

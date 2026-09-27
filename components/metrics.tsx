@@ -70,24 +70,6 @@ export function HBar({ label, value, max, sub, color = CAT_COLOR.tecnica }: { la
   </li>
 }
 
-const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
-
-// Disponibilidad declarada en la DD.JJ. de horarios de cada FED (horario DTE y otros cargos).
-export function DdjjPanel({ feds }: { feds: Fed[] }) {
-  if (!feds.some(f => f.ddjj?.length)) return null
-  return <Panel title="Equipo y disponibilidad" subtitle="Horarios DTE según la DD.JJ. de cada FED · en gris, otros cargos declarados">
-    <div className="overflow-x-auto">
-      <table className="tabla-apilada w-full text-sm sm:min-w-[720px]">
-        <thead><tr className="text-left text-xs text-dte-gris"><th className="pb-2 font-semibold">FED</th><th className="pb-2 font-semibold">Carga</th>{DIAS.map(d => <th key={d} className="pb-2 font-semibold">{d}</th>)}</tr></thead>
-        <tbody className="divide-y divide-dte-linea">{feds.map(f => <tr key={f.id} className="align-top">
-          <td className="py-2.5 pr-3 font-semibold">{f.nombre_completo}</td>
-          <td data-label="Carga" className="en-linea py-2.5 pr-3 tabular-nums text-dte-gris">{f.carga_horaria ?? '—'}</td>
-          {DIAS.map((_, i) => { const d = f.ddjj?.find(x => x.dia === i + 1); return <td key={i} data-label={DIAS[i]} className="en-linea py-2.5 pr-3">{d ? <span className="max-sm:text-right"><span className="block font-medium tabular-nums">{d.dte}</span>{d.externo && <span className="block text-xs text-dte-gris">{d.externo}</span>}</span> : <span className="text-dte-gris-claro">—</span>}</td> })}
-        </tr>)}</tbody>
-      </table>
-    </div>
-  </Panel>
-}
 
 // `encuentros` llega ya filtrado con los mismos criterios que las acciones (FED, distrito, búsqueda).
 export function MetricsView({ items, encuentros, feds, onSelect }: { items: AgendaItem[], encuentros: Encuentro[], feds: Fed[], onSelect?: (item: AgendaItem) => void }) {
@@ -162,7 +144,7 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
   if (!totalDone) return <div className="flex flex-col gap-4"><div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-10 text-center">
     <p className="font-semibold">Todavía no hay acciones realizadas en este período</p>
     <p className="mt-1 text-sm text-dte-gris">Las métricas cuentan las acciones marcadas como realizadas{planned ? ` (hay ${planned} planificadas)` : ''}.</p>
-  </div><DdjjPanel feds={feds} /></div>
+  </div></div>
 
   return <div className="flex flex-col gap-4">
     <DrillDialog drill={drill} onClose={() => setDrill(null)} />
@@ -227,6 +209,5 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
     {m.clubSchools.length > 0 && <Panel title="Escuelas con clubes activos" subtitle="Ordenadas por cantidad de encuentros del Club de Tecnología">
       <ul className="divide-y divide-dte-linea">{m.clubSchools.map(c => <li key={c.name + c.distrito} className="flex items-center justify-between gap-3 py-2 text-sm"><span className="min-w-0"><span className="line-clamp-2 font-semibold leading-snug">{titleCase(c.name)}</span><span className="text-xs text-dte-gris">{titleCase(c.distrito)}</span></span><span className="shrink-0 text-right tabular-nums"><span className="font-semibold">{c.encuentros}</span> <span className="text-xs text-dte-gris">encuentros · {c.asistentes} asistentes</span></span></li>)}</ul>
     </Panel>}
-    <DdjjPanel feds={feds} />
   </div>
 }
