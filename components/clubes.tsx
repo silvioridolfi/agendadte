@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { titleCase } from '@/lib/format'
+import { GRUPO_DTE, GRUPO_VIRTUAL, esSedeDte, grupoDistrito } from '@/lib/sede'
 import { CLUB_MAX_PARTICIPANTES, CLUB_MIN_ENCUENTROS, CLUB_DIAS_SIN_ACTIVIDAD, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEstado, iniciado, ordenGrupo, ultimaActividad, type Club, type ClubIniciado, type ClubEstado, type Fed, type Trayecto } from '@/lib/agenda'
 import { DrillDialog, HBar, Kpi, Panel, type DrillRow } from '@/components/metrics'
 import { Confirmar } from '@/components/ui/confirmar'
@@ -74,8 +75,10 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
   const porEscuela = useMemo(() => {
     const m = new Map<string, { nombre: string, distrito: string, grupos: Set<string>, encuentros: Set<string> }>()
     for (const c of clubes) for (const e of c.encuentros) {
-      const k = e.school_id ?? `lugar:${e.lugar ?? '-'}`
-      const x = m.get(k) ?? { nombre: e.school ? schoolLabel({ school: e.school, lugar: null } as Club) : e.lugar ?? 'Sin escuela', distrito: e.school?.distrito ? titleCase(e.school.distrito) : '', grupos: new Set(), encuentros: new Set() }
+      // Encuentros virtuales y los hechos con sede DTE se agrupan aparte: no son una escuela.
+      const g = grupoDistrito(e), especial = g === GRUPO_VIRTUAL || g === GRUPO_DTE
+      const k = especial ? g : e.school_id ?? `lugar:${e.lugar ?? '-'}`
+      const x = m.get(k) ?? { nombre: especial ? g : e.school ? schoolLabel({ school: e.school, lugar: null } as Club) : e.lugar ?? 'Sin escuela', distrito: especial || !e.school?.distrito ? '' : titleCase(e.school.distrito), grupos: new Set(), encuentros: new Set() }
       x.grupos.add(c.id); x.encuentros.add(`${c.id}|${e.fecha}`); m.set(k, x)
     }
     return [...m.entries()].map(([k, x]) => ({ k, ...x, nGrupos: x.grupos.size, nEnc: x.encuentros.size })).sort((a, b) => b.nEnc - a.nEnc)
@@ -97,7 +100,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
       const finalizados = delTipo.filter(c => enRango(c.fecha_cierre))
       const encuentros = activos.reduce((a, c) => a + new Set(c.encuentros.filter(e => enRango(e.fecha)).map(e => e.fecha)).size, 0)
       const inscriptos = activos.reduce((a, c) => a + participacion({ ...c, encuentros: c.encuentros.filter(e => enRango(e.fecha)) }).inscriptos, 0)
-      const escuelas = new Set(activos.flatMap(c => c.encuentros.filter(e => enRango(e.fecha)).map(e => e.school_id ?? e.lugar))).size
+      const escuelas = new Set(activos.flatMap(c => c.encuentros.filter(e => enRango(e.fecha)).filter(e => grupoDistrito(e) !== GRUPO_VIRTUAL && !esSedeDte(e.school)).map(e => e.school_id ?? e.lugar))).size
       return { ...t, activos, iniciados, finalizados, encuentros, inscriptos, escuelas }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps

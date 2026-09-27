@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { titleCase } from '@/lib/format'
+import { esEscuela, esGrupoEspecial, grupoDistrito, ordenGrupos } from '@/lib/sede'
 import { CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, type Accion, type AgendaItem, type Categoria, type Encuentro, type Fed } from '@/lib/agenda'
 
 // Colores por categoría: validados con la guía de dataviz (CVD y contraste sobre fondo claro).
@@ -71,6 +72,10 @@ export function HBar({ label, value, max, sub, color = CAT_COLOR.tecnica }: { la
 }
 
 
+// Una acción cuenta como virtual si todos sus encuentros registrados fueron virtuales.
+const modalidadItem = (i: AgendaItem) => (i.encuentros?.length && i.encuentros.every(e => e.modalidad === 'Virtual') ? 'Virtual' : null)
+const etiqueta = (k: string) => (esGrupoEspecial(k) ? k : titleCase(k))
+
 // `encuentros` llega ya filtrado con los mismos criterios que las acciones (FED, distrito, búsqueda).
 export function MetricsView({ items, encuentros, feds, onSelect }: { items: AgendaItem[], encuentros: Encuentro[], feds: Fed[], onSelect?: (item: AgendaItem) => void }) {
   const [drill, setDrill] = useState<{ title: string, subtitle?: string, rows: DrillRow[] } | null>(null)
@@ -98,10 +103,10 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
       const cat = CATEGORIA[i.accion] ?? 'institucional'
       total[cat]++
       const f = byFed.get(i.fed_id) ?? { counts: emptyCounts(), schools: new Set(), last: '' }
-      f.counts[cat]++; if (i.school_id) f.schools.add(i.school_id); if (i.fecha > f.last) f.last = i.fecha
+      f.counts[cat]++; if (i.school_id && esEscuela(i.school)) f.schools.add(i.school_id); if (i.fecha > f.last) f.last = i.fecha
       byFed.set(i.fed_id, f)
-      if (i.school_id) schools.add(i.school_id)
-      const d = i.school?.distrito ?? 'Sin escuela'
+      if (i.school_id && esEscuela(i.school)) schools.add(i.school_id)
+      const d = grupoDistrito({ school: i.school, modalidad: modalidadItem(i) })
       const row = byDistrict.get(d) ?? new Map<Accion, number>(); row.set(i.accion, (row.get(i.accion) ?? 0) + 1); byDistrict.set(d, row); acciones.add(i.accion)
       if (cat === 'tecnica') {
         equipos += i.cantidad ?? 0
@@ -119,8 +124,8 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
     const encByDistrict = new Map<string, number>()
     for (const i of enc) {
       const p = i.propuesta || titleCase(i.tipo); byPropuesta.set(p, (byPropuesta.get(p) ?? 0) + (i.asistentes ?? 0))
-      const d = i.school?.distrito ?? 'Sin escuela'; encByDistrict.set(d, (encByDistrict.get(d) ?? 0) + (i.asistentes ?? 0))
-      if (i.tipo === 'CLUB DE TECNOLOGÍA' && i.school) {
+      const d = grupoDistrito(i); encByDistrict.set(d, (encByDistrict.get(d) ?? 0) + (i.asistentes ?? 0))
+      if (i.tipo === 'CLUB DE TECNOLOGÍA' && i.school && esEscuela(i.school)) {
         const c = clubSchools.get(i.school.id) ?? { name: i.school.nombre ?? '', distrito: i.school.distrito ?? '', encuentros: 0, asistentes: 0 }
         c.encuentros++; c.asistentes += i.asistentes ?? 0; clubSchools.set(i.school.id, c)
       }
@@ -139,7 +144,7 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
     .map(r => ({ ...r, total: r.counts.tecnica + r.counts.pedagogica + r.counts.institucional })).sort((a, b) => b.total - a.total)
   const maxFed = Math.max(1, ...fedRows.map(r => r.total))
   const cellMax = Math.max(1, ...[...m.byDistrict.values()].flatMap(r => [...r.values()]))
-  const districts = [...m.byDistrict.keys()].sort((a, b) => (a === 'Sin escuela' ? 1 : b === 'Sin escuela' ? -1 : a.localeCompare(b)))
+  const districts = [...m.byDistrict.keys()].sort(ordenGrupos)
 
   if (!totalDone) return <div className="flex flex-col gap-4"><div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-10 text-center">
     <p className="font-semibold">Todavía no hay acciones realizadas en este período</p>
@@ -153,7 +158,7 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
       {CATEGORIAS.map(c => <Kpi key={c} label={CATEGORIA_LABEL[c]} value={nf.format(m.total[c])} hint={`${pct(m.total[c], totalDone)}% del total`} color={CAT_COLOR[c]} onClick={() => openItems(`Acciones ${CATEGORIA_LABEL[c].toLowerCase()}`, done.filter(i => CATEGORIA[i.accion] === c))} />)}
       <Kpi label="Escuelas alcanzadas" value={nf.format(m.schools)} onClick={() => {
         const by = new Map<string, { name: string, sub: string, n: number }>()
-        for (const i of done) if (i.school) { const e = by.get(i.school.id) ?? { name: titleCase(i.school.nombre ?? ''), sub: titleCase(i.school.distrito ?? ''), n: 0 }; e.n++; by.set(i.school.id, e) }
+        for (const i of done) if (i.school && esEscuela(i.school)) { const e = by.get(i.school.id) ?? { name: titleCase(i.school.nombre ?? ''), sub: titleCase(i.school.distrito ?? ''), n: 0 }; e.n++; by.set(i.school.id, e) }
         setDrill({ title: 'Escuelas alcanzadas', subtitle: `${by.size} escuelas con acciones realizadas`, rows: [...by.entries()].sort((a, b) => b[1].n - a[1].n).map(([k, e]) => ({ key: k, title: e.name, sub: e.sub, right: `${e.n} ${e.n === 1 ? 'acción' : 'acciones'}` })) })
       }} />
       <Kpi label="Equipos intervenidos" value={nf.format(m.equipos)} hint="según la cantidad cargada" onClick={() => openItems('Equipos intervenidos', done.filter(i => (i.cantidad ?? 0) > 0))} />
@@ -181,8 +186,8 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
         <table className="w-full text-xs">
           <thead><tr><th className="sticky left-0 bg-white pb-2 pr-3 text-left font-semibold text-dte-gris">Distrito</th>{m.acciones.map(a => <th key={a} className="px-1 pb-2 align-bottom font-semibold text-dte-gris"><span className="mx-auto block max-w-24 leading-tight" style={{ borderBottom: `2px solid ${CAT_COLOR[CATEGORIA[a]]}` }}>{titleCase(a)}</span></th>)}<th className="pb-2 pl-2 text-right font-semibold text-dte-gris">Total</th></tr></thead>
           <tbody>{districts.map(d => { const row = m.byDistrict.get(d)!; const tot = [...row.values()].reduce((a, b) => a + b, 0); return <tr key={d} className="border-t border-dte-linea">
-            <td className="sticky left-0 bg-white py-1.5 pr-3 text-sm font-semibold">{titleCase(d)}</td>
-            {m.acciones.map(a => { const v = row.get(a) ?? 0; return <td key={a} className="p-[2px] text-center"><span title={`${titleCase(d)} · ${titleCase(a)}: ${v}`} className={`block rounded py-1.5 tabular-nums ${v ? 'font-semibold' : 'text-dte-gris-claro'}`} style={v ? { background: `color-mix(in oklab, ${CAT_COLOR[CATEGORIA[a]]} ${Math.round(10 + (v / cellMax) * 35)}%, white)` } : undefined}>{v || '·'}</span></td> })}
+            <td className="sticky left-0 bg-white py-1.5 pr-3 text-sm font-semibold">{etiqueta(d)}</td>
+            {m.acciones.map(a => { const v = row.get(a) ?? 0; return <td key={a} className="p-[2px] text-center"><span title={`${etiqueta(d)} · ${titleCase(a)}: ${v}`} className={`block rounded py-1.5 tabular-nums ${v ? 'font-semibold' : 'text-dte-gris-claro'}`} style={v ? { background: `color-mix(in oklab, ${CAT_COLOR[CATEGORIA[a]]} ${Math.round(10 + (v / cellMax) * 35)}%, white)` } : undefined}>{v || '·'}</span></td> })}
             <td className="py-1.5 pl-2 text-right text-sm font-bold tabular-nums">{tot}</td>
           </tr> })}</tbody>
         </table>
@@ -202,7 +207,7 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
           <div className="rounded-xl bg-dte-fondo p-2" title="Asistentes sobre inscriptos, sólo en encuentros que tienen ambos datos"><p className="text-xl font-bold tabular-nums">{m.enc.inscriptosP ? `${pct(m.enc.asistentesP, m.enc.inscriptosP)}%` : '—'}</p><p className="text-xs text-dte-gris">asistencia</p></div>
         </div>
         {m.byPropuesta.length > 0 && <><p className="mb-2 text-xs font-semibold uppercase tracking-wider text-dte-gris">Asistentes por propuesta</p><ul className="flex flex-col gap-2.5">{m.byPropuesta.slice(0, 6).map(([k, v]) => <HBar key={k} label={k} value={v} max={m.byPropuesta[0][1]} color={CAT_COLOR.pedagogica} />)}</ul></>}
-        {m.encByDistrict.length > 0 && <><p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-dte-gris">Asistentes por distrito</p><ul className="flex flex-col gap-2.5">{m.encByDistrict.map(([k, v]) => <HBar key={k} label={titleCase(k)} value={v} max={m.encByDistrict[0][1]} color={CAT_COLOR.pedagogica} />)}</ul></>}
+        {m.encByDistrict.length > 0 && <><p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-dte-gris">Asistentes por distrito</p><ul className="flex flex-col gap-2.5">{m.encByDistrict.map(([k, v]) => <HBar key={k} label={etiqueta(k)} value={v} max={m.encByDistrict[0][1]} color={CAT_COLOR.pedagogica} />)}</ul></>}
       </Panel>
     </div>
 
