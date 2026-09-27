@@ -125,7 +125,7 @@ export default function Page() {
           propio={profile.rol === 'fed' ? profile : undefined} onNuevaAccion={preset => setEditing({ item: null, fecha: iso(toWeekday(new Date())), preset })}
           onNuevaReunion={profile.rol !== 'coordinacion' ? undefined : () => setEditing({ item: null, fecha: iso(toWeekday(new Date())), preset: { accion: 'REUNIÓN', sub_accion: 'Reunión de equipo (CED/FED)', participantes: (feds ?? []).filter(f => f.id !== profile.id).map(f => f.id) } })} />}
 
-    <DetailDialog item={selected} feds={feds ?? []} profile={profile} onClose={() => setSelected(null)}
+    <DetailDialog item={selected} feds={feds ?? []} profile={profile} soloLectura={!!vista} onClose={() => setSelected(null)}
       onEdit={item => { setSelected(null); setEditing({ item }) }}
       onChanged={(msg, updated) => { changed(msg); setSelected(updated) }} />
 
