@@ -2,6 +2,7 @@
 
 import { supabaseServer } from '@/lib/supabase-server'
 import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, DISTRITOS_REGION, MODALIDADES, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
+import { borrarSesion, guardarSesion, passwordTemporal, requerirUsuario, usuarioActual, usuarioDeSesion, validarPassword, type Usuario } from '@/lib/sesion'
 import { armarDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
@@ -325,8 +326,8 @@ async function getHistorialImpl(itemId: string): Promise<{ operacion: string, au
 
 // ---- Administración (sólo coordinación): equipo y feriados.
 async function esCoordinacion(autorId: string) {
-  const { data } = await supabaseServer().from('feds').select('rol').eq('id', autorId).maybeSingle()
-  if (data?.rol !== 'coordinacion') throw new Error('Sólo coordinación puede hacer este cambio')
+  const { data } = await supabaseServer().from('feds').select('es_admin').eq('id', autorId).maybeSingle()
+  if (!data?.es_admin) throw new Error('Sólo administración puede hacer este cambio')
 }
 
 async function updateFedImpl(autorId: string, fed: Pick<Fed, 'id' | 'nombre_completo' | 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>): Promise<void> {
@@ -377,23 +378,101 @@ async function getFeriadosImpl(from: string, to: string): Promise<Feriado[]> {
   return (data ?? []) as Feriado[]
 }
 
-export const getFeds = async () => run(() => getFedsImpl())
-export const searchSchools = async (query: string) => run(() => searchSchoolsImpl(query))
-export const getFedItems = async (fedId: string, from: string, to: string) => run(() => getFedItemsImpl(fedId, from, to))
-export const getAllItems = async (from: string, to: string) => run(() => getAllItemsImpl(from, to))
-export const getEncuentros = async (from: string, to: string) => run(() => getEncuentrosImpl(from, to))
-export const saveItem = async (input: AgendaItemInput, id?: string) => run(() => saveItemImpl(input, id))
-export const setItemStatus = async (id: string, fedId: string, estado: AgendaItemInput['estado']) => run(() => setItemStatusImpl(id, fedId, estado))
-export const deleteItem = async (id: string, fedId: string, serie = false) => run(() => deleteItemImpl(id, fedId, serie))
-export const getFeriados = async (from: string, to: string) => run(() => getFeriadosImpl(from, to))
-export const getClubes = async (fedId?: string) => run(() => getClubesImpl(fedId))
-export const setClubCierre = async (id: string, fecha: string | null) => run(() => setClubCierreImpl(id, fecha))
-export const getNotificaciones = async (fedId: string) => run(() => getNotificacionesImpl(fedId))
-export const marcarLeidas = async (fedId: string, ids?: string[]) => run(() => marcarLeidasImpl(fedId, ids))
-export const responder = async (itemId: string, fedId: string, respuesta: 'acepta' | 'rechaza') => run(() => responderImpl(itemId, fedId, respuesta))
-export const getHistorial = async (itemId: string) => run(() => getHistorialImpl(itemId))
-export const crearClubPorIniciar = async (c: ClubPorIniciarInput) => run(() => crearClubPorIniciarImpl(c))
-export const updateMiPerfil = async (fedId: string, datos: Pick<Fed, 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => run(() => updateMiPerfilImpl(fedId, datos))
-export const updateFed = async (autorId: string, fed: Pick<Fed, 'id' | 'nombre_completo' | 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => run(() => updateFedImpl(autorId, fed))
-export const addFeriado = async (autorId: string, f: Omit<Feriado, 'id'>) => run(() => addFeriadoImpl(autorId, f))
-export const deleteFeriado = async (autorId: string, id: string) => run(() => deleteFeriadoImpl(autorId, id))
+// Todas las acciones exigen sesión. El perfil que actúa sale de la sesión, nunca de los parámetros del navegador.
+const conUsuario = <T,>(fn: (yo: Usuario) => Promise<T>) => run(async () => fn(await requerirUsuario()))
+export const getFeds = async () => conUsuario(() => getFedsImpl())
+export const searchSchools = async (query: string) => conUsuario(() => searchSchoolsImpl(query))
+export const getFedItems = async (fedId: string, from: string, to: string) => conUsuario(() => getFedItemsImpl(fedId, from, to))
+export const getAllItems = async (from: string, to: string) => conUsuario(() => getAllItemsImpl(from, to))
+export const getEncuentros = async (from: string, to: string) => conUsuario(() => getEncuentrosImpl(from, to))
+export const saveItem = async (input: AgendaItemInput, id?: string) => conUsuario(yo => saveItemImpl({ ...input, fed_id: yo.fed.id }, id))
+export const setItemStatus = async (id: string, _fedId: string, estado: AgendaItemInput['estado']) => conUsuario(yo => setItemStatusImpl(id, yo.fed.id, estado))
+export const deleteItem = async (id: string, _fedId: string, serie = false) => conUsuario(yo => deleteItemImpl(id, yo.fed.id, serie))
+export const getFeriados = async (from: string, to: string) => conUsuario(() => getFeriadosImpl(from, to))
+export const getClubes = async (fedId?: string) => conUsuario(() => getClubesImpl(fedId))
+export const setClubCierre = async (id: string, fecha: string | null) => conUsuario(async yo => {
+  const { data } = await supabaseServer().from('clubes').select('fed_id').eq('id', id).maybeSingle()
+  if (!data || (data.fed_id !== yo.fed.id && !yo.esAdmin)) throw new Error('Sólo quien lleva el club puede finalizarlo o reactivarlo')
+  return setClubCierreImpl(id, fecha)
+})
+export const getNotificaciones = async (_fedId: string) => conUsuario(yo => getNotificacionesImpl(yo.fed.id))
+export const marcarLeidas = async (_fedId: string, ids?: string[]) => conUsuario(yo => marcarLeidasImpl(yo.fed.id, ids))
+export const responder = async (itemId: string, _fedId: string, respuesta: 'acepta' | 'rechaza') => conUsuario(yo => responderImpl(itemId, yo.fed.id, respuesta))
+export const getHistorial = async (itemId: string) => conUsuario(() => getHistorialImpl(itemId))
+export const crearClubPorIniciar = async (c: ClubPorIniciarInput) => conUsuario(yo => crearClubPorIniciarImpl({ ...c, fed_id: yo.fed.id }))
+export const updateMiPerfil = async (_fedId: string, datos: Pick<Fed, 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => conUsuario(yo => updateMiPerfilImpl(yo.fed.id, datos))
+export const updateFed = async (_autorId: string, fed: Pick<Fed, 'id' | 'nombre_completo' | 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => conUsuario(yo => updateFedImpl(yo.fed.id, fed))
+export const addFeriado = async (_autorId: string, f: Omit<Feriado, 'id'>) => conUsuario(yo => addFeriadoImpl(yo.fed.id, f))
+export const deleteFeriado = async (_autorId: string, id: string) => conUsuario(yo => deleteFeriadoImpl(yo.fed.id, id))
+
+// ---- Sesión: ingreso, salida y cambio de contraseña.
+export type Sesion = { fed: Fed, email: string, esAdmin: boolean, debeCambiar: boolean }
+export const miSesion = async () => run(async (): Promise<Sesion | null> => {
+  const u = await usuarioActual()
+  return u ? { fed: u.fed, email: u.email, esAdmin: u.esAdmin, debeCambiar: u.debeCambiar } : null
+})
+export const ingresar = async (email: string, password: string) => run(async (): Promise<Sesion> => {
+  const correo = email.trim().toLowerCase()
+  const invalido = 'Correo o contraseña incorrectos.'
+  if (!correo || !password) throw new Error(invalido)
+  const { data: fed } = await supabaseServer().from('feds').select('id').eq('email', correo).maybeSingle()
+  if (!fed) throw new Error(invalido)
+  // Cliente propio para el ingreso: no reutiliza el de servicio (quedaría con la sesión del usuario).
+  const { data, error } = await supabaseServer().auth.signInWithPassword({ email: correo, password })
+  if (error || !data.session) throw new Error(error?.status === 429 ? 'Demasiados intentos. Esperá unos minutos y probá de nuevo.' : invalido)
+  await guardarSesion(data.session)
+  const u = await usuarioDeSesion(data.session.access_token)
+  if (!u) { await borrarSesion(); throw new Error(invalido) }
+  return { fed: u.fed, email: u.email, esAdmin: u.esAdmin, debeCambiar: u.debeCambiar }
+})
+export const salir = async () => run(async () => { await borrarSesion() })
+export const cambiarPassword = async (nueva: string) => run(async () => {
+  const yo = await requerirUsuario({ permitirTemporal: true })
+  const err = validarPassword(nueva, yo.email)
+  if (err) throw new Error(err)
+  const db = supabaseServer()
+  const { error } = await db.auth.admin.updateUserById(yo.userId, { password: nueva })
+  if (error) throw new Error(error.message.includes('same') ? 'La nueva contraseña tiene que ser distinta de la anterior.' : error.message)
+  await db.from('feds').update({ debe_cambiar_password: false }).eq('id', yo.fed.id)
+  await audit('feds', yo.fed.id, 'modificacion', yo.fed.id, { cambio_password: true })
+})
+
+// ---- Usuarios (sólo administración): alta de cuentas y reseteo de contraseñas.
+export type UsuarioEquipo = { fedId: string, nombre: string, rol: Fed['rol'], email: string | null, esAdmin: boolean, estado: 'sin_cuenta' | 'pendiente' | 'activo', ultimoIngreso: string | null }
+async function cuentasPorEmail() {
+  const db = supabaseServer(), m = new Map<string, { id: string, last_sign_in_at?: string | null }>()
+  for (let page = 1; page < 20; page++) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 })
+    if (error) throw new Error(error.message)
+    for (const u of data.users) if (u.email) m.set(u.email.toLowerCase(), { id: u.id, last_sign_in_at: u.last_sign_in_at })
+    if (data.users.length < 200) break
+  }
+  return m
+}
+async function soloAdmin() { const yo = await requerirUsuario(); if (!yo.esAdmin) throw new Error('Sólo administración puede gestionar usuarios'); return yo }
+export const listarUsuarios = async () => run(async (): Promise<UsuarioEquipo[]> => {
+  await soloAdmin()
+  const [{ data, error }, cuentas] = await Promise.all([supabaseServer().from('feds').select('id, nombre_completo, rol, email, es_admin, debe_cambiar_password').order('nombre_completo'), cuentasPorEmail()])
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(f => {
+    const c = f.email ? cuentas.get(f.email.toLowerCase()) : undefined
+    return { fedId: f.id, nombre: f.nombre_completo, rol: f.rol, email: f.email, esAdmin: f.es_admin, estado: !c ? 'sin_cuenta' : f.debe_cambiar_password ? 'pendiente' : 'activo', ultimoIngreso: c?.last_sign_in_at ?? null }
+  })
+})
+// Crea la cuenta (si no existe) o le asigna una contraseña temporal nueva. Devuelve la temporal para entregarla.
+export const generarPasswordTemporal = async (fedId: string) => run(async (): Promise<{ email: string, password: string }> => {
+  const yo = await soloAdmin()
+  const db = supabaseServer()
+  const { data: fed } = await db.from('feds').select('id, nombre_completo, email').eq('id', fedId).maybeSingle()
+  if (!fed?.email) throw new Error('Ese perfil no tiene correo cargado')
+  if (fed.id === yo.fed.id) throw new Error('Tu propia contraseña se cambia desde "Cambiar contraseña"')
+  const password = passwordTemporal()
+  const existente = (await cuentasPorEmail()).get(fed.email.toLowerCase())
+  const res = existente
+    ? await db.auth.admin.updateUserById(existente.id, { password })
+    : await db.auth.admin.createUser({ email: fed.email.toLowerCase(), password, email_confirm: true, user_metadata: { apellido_nombre: fed.nombre_completo } })
+  if (res.error) throw new Error(res.error.message)
+  await db.from('feds').update({ debe_cambiar_password: true }).eq('id', fed.id)
+  await audit('feds', fed.id, 'modificacion', yo.fed.id, { password_temporal: existente ? 'reseteo' : 'alta' })
+  return { email: fed.email, password }
+})
