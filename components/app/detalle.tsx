@@ -74,13 +74,19 @@ export function DetailDialog({ item, feds, profile, onClose, onEdit, onChanged }
         <div className="flex flex-wrap gap-2">{ESTADOS.map(e => <button key={e} disabled={!!busy || item.estado === e} onClick={() => changeStatus(e)} aria-pressed={item.estado === e} className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition disabled:cursor-default md:min-h-8 md:text-xs ${item.estado === e ? statusStyle[e].badge : 'border-dte-linea text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>{busy === e ? <Loader2 className="size-3 animate-spin" /> : item.estado === e ? <Check className="size-3" /> : null}{statusStyle[e].label}</button>)}</div>
       </div>}
       {error && <ErrorBox message={error} />}
-      <div className="flex flex-col-reverse gap-2 border-t border-dte-linea pt-4 sm:flex-row sm:items-center sm:justify-between">
-        {own ? (confirmDelete
-          ? <div className="flex flex-wrap items-center gap-2"><span className="text-sm text-peligro">¿Eliminar definitivamente?</span><Button variant="destructive" size="sm" disabled={!!busy} onClick={() => remove()}>{busy === 'delete' && <Loader2 className="animate-spin" />}{item.serie_id ? 'Sólo esta' : 'Sí, eliminar'}</Button>{item.serie_id && <Button variant="destructive" size="sm" disabled={!!busy} onClick={() => remove(true)}>{busy === 'delete-serie' && <Loader2 className="animate-spin" />}Esta y las siguientes</Button>}<Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>No</Button></div>
-          : <Button variant="ghost" className="justify-start text-peligro hover:bg-peligro-fondo hover:text-peligro" onClick={() => setConfirmDelete(true)}><Trash2 data-icon="inline-start" />Eliminar</Button>)
+      {own && confirmDelete ? <div role="alertdialog" aria-label="Confirmar eliminación" className="flex flex-col gap-3 rounded-xl border border-peligro-borde bg-peligro-fondo p-3">
+        <p className="text-sm font-semibold text-peligro">¿Eliminar definitivamente?{item.serie_id && <span className="block font-normal">Es parte de una serie: elegí si borrás sólo esta fecha o también las planificadas que siguen.</span>}</p>
+        <div className={`grid gap-2 ${item.serie_id ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+          <Button variant="outline" disabled={!!busy} onClick={() => setConfirmDelete(false)} className="bg-white">No, volver</Button>
+          <Button disabled={!!busy} onClick={() => remove()} className="bg-peligro text-white hover:bg-peligro/90">{busy === 'delete' && <Loader2 className="animate-spin" data-icon="inline-start" />}{item.serie_id ? 'Sólo esta' : 'Sí, eliminar'}</Button>
+          {item.serie_id && <Button disabled={!!busy} onClick={() => remove(true)} className="bg-peligro text-white hover:bg-peligro/90">{busy === 'delete-serie' && <Loader2 className="animate-spin" data-icon="inline-start" />}Esta y las siguientes</Button>}
+        </div>
+      </div>
+      : <div className="flex flex-col-reverse gap-2 border-t border-dte-linea pt-4 sm:flex-row sm:items-center sm:justify-between">
+        {own ? <Button variant="ghost" className="justify-start text-peligro hover:bg-peligro-fondo hover:text-peligro" onClick={() => setConfirmDelete(true)}><Trash2 data-icon="inline-start" />Eliminar</Button>
           : <p className="text-xs text-dte-gris">Sólo {fed ? firstName(fed.nombre_completo) : 'el FED responsable'} puede modificar esta acción.</p>}
         <div className="flex gap-2 sm:justify-end"><Button variant="outline" className="flex-1 sm:flex-none" onClick={onClose}>Cerrar</Button>{own && <Button className="flex-1 bg-dte-petroleo hover:bg-dte-petroleo-oscuro sm:flex-none" onClick={() => onEdit(item)}><Pencil data-icon="inline-start" />Editar</Button>}</div>
-      </div>
+      </div>}
     </DialogContent>
   </Dialog>
 }
