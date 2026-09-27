@@ -136,7 +136,18 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
     } catch (e) { if (!(e instanceof DriveError && (e.status === 404 || e.status === 403))) throw e }
   }
 
-  const sueltos = (await listar(raiz)).filter(f => f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))
+  const enRaiz = await listar(raiz)
+  const sueltos = enRaiz.filter(f => f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))
+  // Fotos borradas de Drive: dejan de contarse (sólo si el listado de la carpeta está completo).
+  if (enRaiz.length < 1000) {
+    const presentes = new Set(sueltos.map(f => f.id)), borradas: string[] = []
+    for (let desde = 0; ; desde += 1000) {
+      const { data } = await db.from('fotos_procesadas').select('file_id').eq('fed_id', fedId).neq('modo', 'movida').order('file_id').range(desde, desde + 999)
+      borradas.push(...(data ?? []).map(r => r.file_id as string).filter(id => !presentes.has(id)))
+      if (!data || data.length < 1000) break
+    }
+    for (let i = 0; i < borradas.length; i += 200) await db.from('fotos_procesadas').delete().eq('fed_id', fedId).in('file_id', borradas.slice(i, i + 200))
+  }
   const { data: hechos } = await db.from('fotos_procesadas').select('file_id').eq('fed_id', fedId).in('file_id', sueltos.map(f => f.id).slice(0, 1000))
   const yaHechos = new Set((hechos ?? []).map(h => h.file_id as string))
   const nuevos = sueltos.filter(f => !yaHechos.has(f.id))

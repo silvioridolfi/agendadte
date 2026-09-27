@@ -537,10 +537,28 @@ export const fotosDelDia = async (fedIds: string[], fecha: string, itemId?: stri
     itemId ? db.from('fotos_acciones').select('fed_id, folder_id').in('fed_id', ids).eq('item_id', itemId) : Promise.resolve({ data: [] as { fed_id: string, folder_id: string }[] }),
   ])
   const porAccion = new Map((acc ?? []).map(a => [a.fed_id as string, a.folder_id as string]))
+  const { data: procesadas } = await db.from('fotos_procesadas').select('fed_id, item_id').in('fed_id', ids).eq('fecha', fecha)
+  const cuenta = (id: string, deAccion: boolean) => (procesadas ?? []).filter(p => p.fed_id === id && (!deAccion || p.item_id === itemId)).length
   return ids.flatMap(id => {
     const a = porAccion.get(id), d = (dias ?? []).find(x => x.fed_id === id)?.folder_id as string | undefined
-    return a ? [{ fedId: id, url: urlCarpeta(a), deAccion: true }] : d ? [{ fedId: id, url: urlCarpeta(d), deAccion: false }] : []
+    return a ? [{ fedId: id, url: urlCarpeta(a), deAccion: true, n: cuenta(id, true) }] : d ? [{ fedId: id, url: urlCarpeta(d), deAccion: false, n: cuenta(id, false) }] : []
   })
+})
+
+// Cantidad de fotos ordenadas: por acción (asignadas por hora) y por FED y día ("fedId|fecha"). Para los contadores del calendario y el tablero.
+export type ConteoFotos = { items: Record<string, number>, dias: Record<string, number> }
+export const conteoFotos = async () => conUsuario(async (): Promise<ConteoFotos> => {
+  const db = supabaseServer(), out: ConteoFotos = { items: {}, dias: {} }
+  for (let desde = 0; ; desde += 1000) {
+    const { data, error } = await db.from('fotos_procesadas').select('fed_id, fecha, item_id').not('fecha', 'is', null).order('file_id').range(desde, desde + 999)
+    if (error) throw new Error(error.message)
+    for (const r of data ?? []) {
+      const k = `${r.fed_id}|${r.fecha}`
+      out.dias[k] = (out.dias[k] ?? 0) + 1
+      if (r.item_id) out.items[r.item_id as string] = (out.items[r.item_id as string] ?? 0) + 1
+    }
+    if (!data || data.length < 1000) return out
+  }
 })
 
 // ---- Sesión: ingreso, salida y cambio de contraseña.

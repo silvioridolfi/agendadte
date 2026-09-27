@@ -5,7 +5,7 @@ import { exportarPlanilla } from '@/lib/exportar'
 import { MiEquipoView } from '@/components/app/equipo'
 import { AgendaEquipoView } from '@/components/app/agendaequipo'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarX2, Loader2, Search, SearchX, Users, X, FileSpreadsheet, SlidersHorizontal } from 'lucide-react'
+import { CalendarX2, Loader2, Search, SearchX, Users, X, FileSpreadsheet, SlidersHorizontal, CameraOff } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,7 @@ import { ClubesView } from '@/components/clubes'
 import { MetricsView } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
 import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed, type Club } from '@/lib/agenda'
+import { FotosChip, fotosDe, useConteoFotos } from '@/components/app/fotosconteo'
 import { type ItemPreset, itemCorto, cueLugar, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, schoolPlace, itemTitle, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
 
 // =====================================================================
@@ -36,6 +37,7 @@ export const LISTA_INICIAL = 5, LISTA_PASO = 20
 
 const PESTANAS = ['resumen', 'agenda', 'equipo', 'clubes', 'practicas', 'acciones'] as const
 type Pestana = typeof PESTANAS[number]
+const SIN_FOTOS = 'sin-fotos'
 const TAB_KEY = 'agenda-territorial:tablero'
 
 // `propio`: tablero individual de un FED (sólo sus datos; sin Agenda del equipo ni Mi equipo). `onNuevaAccion`: abre el formulario con valores iniciales.
@@ -96,7 +98,10 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   const base = useMemo(() => (items ?? []).filter(i =>
     (!distrito || i.school?.distrito === distrito) && (!fedId || i.fed_id === fedId) && (!accion || i.accion === accion) &&
     (!q || `${fedName(i.fed_id)} ${i.school?.nombre ?? ''} ${i.school?.ciudad ?? ''} ${i.school?.cue ?? ''} ${i.accion} ${i.sub_accion ?? ''} ${i.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [items, distrito, fedId, accion, q, fedName])
-  const filtered = useMemo(() => base.filter(i => !estado || i.estado === estado), [base, estado])
+  // "Realizadas sin fotos": ni fotos asignadas a la acción ni fotos de ese día (del responsable o participantes).
+  const conteo = useConteoFotos()
+  const sinFotos = useCallback((i: AgendaItem) => i.estado === 'realizada' && fotosDe(i, conteo)?.n === 0, [conteo])
+  const filtered = useMemo(() => base.filter(i => !estado || (estado === SIN_FOTOS ? sinFotos(i) : i.estado === estado)), [base, estado, sinFotos])
   const encBase = useMemo(() => (encs ?? []).filter(e =>
     (!distrito || e.school?.distrito === distrito) && (!fedId || e.fed_id === fedId) && (!accion || e.tipo === accion) &&
     (!q || `${fedName(e.fed_id)} ${e.school?.nombre ?? ''} ${e.school?.ciudad ?? ''} ${e.school?.cue ?? ''} ${e.propuesta ?? ''} ${e.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [encs, distrito, fedId, accion, q, fedName])
@@ -130,11 +135,15 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     </div>
 
     <div id="panel-tablero" role="tabpanel" aria-labelledby={`tab-${tab}`}>
-    {tab === 'acciones' && <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+    {tab === 'acciones' && <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
       {ESTADOS.map(e => <button key={e} onClick={() => setEstado(estado === e ? '' : e)} aria-pressed={estado === e} className={`rounded-2xl border bg-white px-4 py-3 text-left transition hover:shadow-md ${estado === e ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>
         <span className="text-xs font-semibold text-dte-gris">{statusStyle[e].label}s</span>
         <span className="mt-1 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums sm:text-3xl">{items ? counts[e] : '–'}</span>{estado === e && <span className="text-xs font-semibold text-dte-petroleo">Filtrando</span>}</span>
       </button>)}
+      <button onClick={() => setEstado(estado === SIN_FOTOS ? '' : SIN_FOTOS)} aria-pressed={estado === SIN_FOTOS} disabled={!conteo} className={`col-span-2 rounded-2xl border bg-white px-4 py-3 text-left transition hover:shadow-md md:col-span-1 ${estado === SIN_FOTOS ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>
+        <span className="flex items-center gap-1 text-xs font-semibold text-dte-gris"><CameraOff className="size-3.5" aria-hidden />Realizadas sin fotos</span>
+        <span className="mt-1 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums sm:text-3xl">{items && conteo ? base.filter(sinFotos).length : '–'}</span>{estado === SIN_FOTOS && <span className="text-xs font-semibold text-dte-petroleo">Filtrando</span>}</span>
+      </button>
     </div>}
 
     {tab !== 'equipo' && tab !== 'agenda' && <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs md:flex-row md:flex-wrap md:items-center">
@@ -163,14 +172,14 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
         : groups.map(([id, group]) => <section key={id} aria-label={fedName(id)}>
           <div className="mb-2 flex items-center gap-3">
             <Avatar className="size-9"><AvatarFallback className={`${fedColor(feds, id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(fedName(id))}</AvatarFallback></Avatar>
-            <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-bold">{fedName(id)}</h3><p className="text-xs text-dte-gris">{group.length} {group.length === 1 ? 'acción' : 'acciones'} · {group.filter(i => i.estado === 'realizada').length} realizadas</p></div>
+            <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-bold">{fedName(id)}</h3><p className="text-xs text-dte-gris">{group.length} {group.length === 1 ? 'acción' : 'acciones'} · {group.filter(i => i.estado === 'realizada').length} realizadas{conteo && estado !== SIN_FOTOS && group.some(sinFotos) ? ` · ${group.filter(sinFotos).length} sin fotos` : ''}</p></div>
             {!fedId && groups.length > 1 && <Button variant="ghost" size="sm" onClick={() => setFedId(id)} className="text-dte-petroleo">Ver sólo este FED</Button>}
           </div>
           <ul className="divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xs">{group.slice(0, visibles(id)).map(item =>
             <li key={item.id}><button className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte focus-visible:bg-dte-tinte focus-visible:outline-none sm:grid-cols-[6.5rem_1fr_auto] sm:items-center" onClick={() => onSelect(item)}>
               <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize text-dte-tinta">{range === 'day' ? (hhmm(item.hora_inicio) || '—') : fmt(parse(item.fecha), range === 'week' ? { weekday: 'short', day: 'numeric' } : { day: 'numeric', month: 'short' }).replace('.', '')}</span>{range !== 'day' && <span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span>}</span>
               <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemCorto(item)}</span><span className="block truncate text-xs text-dte-gris">{[cueLugar(item.school), item.school ? item.sub_accion : null].filter(Boolean).join(' · ') || ' '}</span></span>
-              <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ActionChip label={item.accion} /><StatusBadge status={item.estado} /></span>
+              <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ActionChip label={item.accion} /><StatusBadge status={item.estado} /><FotosChip item={item} /></span>
             </button></li>)}</ul>
           {group.length > LISTA_INICIAL && <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm">
             {visibles(id) < group.length && <Button variant="outline" size="sm" onClick={() => setMostrar(m => ({ ...m, [id]: visibles(id) + LISTA_PASO }))}>Ver {Math.min(LISTA_PASO, group.length - visibles(id))} más</Button>}

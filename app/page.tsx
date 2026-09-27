@@ -14,6 +14,7 @@ import { ItemForm } from '@/components/app/formulario'
 import { MenuPerfil, MiPerfilView } from '@/components/app/miperfil'
 import { RegistroEncuentro } from '@/components/app/encuentro'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
+import { ConteoFotosProvider } from '@/components/app/fotosconteo'
 import { iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday, storage } from '@/components/app/comun'
 
 // Botón de la barra inferior mobile (área táctil de 56px de alto).
@@ -91,7 +92,7 @@ export default function Page() {
   if (!sesion || !profile) return <Ingreso onIngreso={cargarSesion} />
   if (sesion.debeCambiar) return <CambiarPassword obligatorio onListo={() => { setToast('Listo: ya tenés tu contraseña propia'); cargarSesion() }} />
 
-  return <div className="flex min-h-dvh flex-col bg-dte-fondo text-dte-tinta">
+  return <ConteoFotosProvider reloadKey={reloadKey}><div className="flex min-h-dvh flex-col bg-dte-fondo text-dte-tinta">
     <header className="sticky top-0 z-header pt-safe border-b border-dte-linea bg-white/95 backdrop-blur">
       <div className="bg-dte-degradado h-1" />
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 lg:px-10">
@@ -161,5 +162,5 @@ export default function Page() {
       </DialogContent>
     </Dialog>
     {toast && <Toast message={toast} onDone={hideToast} />}
-  </div>
+  </div></ConteoFotosProvider>
 }
