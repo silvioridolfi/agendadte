@@ -141,9 +141,11 @@ export type Club = {
   // Escuela de origen de los estudiantes, si difiere de la sede (ej.: prácticas en otra escuela).
   escuela_origen: School | null
   propuesta: string
-  fecha_inicio: string
+  // null = "por iniciar": planificado sin fecha; se completa al programar el primer encuentro.
+  fecha_inicio: string | null
   fecha_cierre: string | null
   encuentros_previstos: number | null
+  created_at?: string
   school: School | null
   encuentros: ClubEncuentro[]
 }
@@ -176,8 +178,11 @@ export function serieFechas(desde: string, dias: number[], hasta: string, noLabo
   }
   return out
 }
-export function ultimaActividad(c: Club) { return c.encuentros.reduce((m, e) => (e.fecha > m ? e.fecha : m), c.fecha_inicio) }
-export function clubEstado(c: Club, hoy: string, noHabiles?: Set<string>): ClubEstado {
+// Club con fecha de inicio (ya empezó o tiene su primer encuentro programado).
+export type ClubIniciado = Club & { fecha_inicio: string }
+export const iniciado = (c: Club): c is ClubIniciado => !!c.fecha_inicio
+export function ultimaActividad(c: ClubIniciado) { return c.encuentros.reduce((m, e) => (e.fecha > m ? e.fecha : m), c.fecha_inicio) }
+export function clubEstado(c: ClubIniciado, hoy: string, noHabiles?: Set<string>): ClubEstado {
   if (c.fecha_cierre) return 'finalizado'
   return diasHabilesEntre(ultimaActividad(c), hoy, noHabiles) > CLUB_DIAS_SIN_ACTIVIDAD ? 'sin_actividad' : 'activo'
 }

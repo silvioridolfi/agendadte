@@ -236,12 +236,30 @@ async function upsertClub(input: AgendaItemInput, row: ReturnType<typeof clean>)
   if (error) throw new Error('El club elegido no existe o no es de este FED')
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (previstos) patch.encuentros_previstos = previstos
-  if (row.fecha < club.fecha_inicio) patch.fecha_inicio = row.fecha
+  if (!club.fecha_inicio || row.fecha < club.fecha_inicio) patch.fecha_inicio = row.fecha
   if (e.es_cierre) patch.fecha_cierre = row.fecha
   else if (club.fecha_cierre === row.fecha) patch.fecha_cierre = null
   const up = await db.from('clubes').update(patch).eq('id', club.id)
   if (up.error) throw new Error(up.error.message)
   return club.id
+}
+
+// Club o práctica "por iniciar": se planifica sin fecha y sin acción en la agenda; la fecha de inicio
+// se completa al programar el primer encuentro desde el formulario.
+export type ClubPorIniciarInput = { fed_id: string, tipo: 'CLUB DE TECNOLOGÍA' | 'PRÁCTICAS PROFESIONALIZANTES', school_id: string | null, lugar: string | null, grupo: string, escuela_origen_id: string | null, encuentros_previstos: number | null }
+async function crearClubPorIniciarImpl(c: ClubPorIniciarInput): Promise<void> {
+  const db = supabaseServer()
+  const { data: fed } = await db.from('feds').select('rol').eq('id', c.fed_id).maybeSingle()
+  if (fed?.rol !== 'fed') throw new Error('Sólo un FED puede iniciar clubes o prácticas')
+  if (c.tipo !== 'CLUB DE TECNOLOGÍA' && c.tipo !== 'PRÁCTICAS PROFESIONALIZANTES') throw new Error('Tipo inválido')
+  if (!c.school_id && !opt(c.lugar)) throw new Error('Indicá el establecimiento o la sede')
+  if (!opt(c.grupo)) throw new Error('Indicá el grado o curso')
+  const previstos = c.encuentros_previstos && c.encuentros_previstos > 0 && c.encuentros_previstos < 100 ? Math.round(c.encuentros_previstos) : null
+  const row = { fed_id: c.fed_id, school_id: c.school_id, lugar: c.school_id ? null : opt(c.lugar), grupo: opt(c.grupo), escuela_origen_id: opt(c.escuela_origen_id), tipo: c.tipo,
+    propuesta: c.tipo === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Prácticas Educativas en Ambientes de Trabajo' : 'Club de Tecnología', fecha_inicio: null, fecha_cierre: null, encuentros_previstos: previstos }
+  const { data, error } = await db.from('clubes').insert(row).select('id').single()
+  if (error) throw new Error(error.message)
+  await audit('clubes', data.id as string, 'alta', c.fed_id, row)
 }
 
 async function getClubesImpl(fedId?: string): Promise<Club[]> {
@@ -374,6 +392,7 @@ export const getNotificaciones = async (fedId: string) => run(() => getNotificac
 export const marcarLeidas = async (fedId: string, ids?: string[]) => run(() => marcarLeidasImpl(fedId, ids))
 export const responder = async (itemId: string, fedId: string, respuesta: 'acepta' | 'rechaza') => run(() => responderImpl(itemId, fedId, respuesta))
 export const getHistorial = async (itemId: string) => run(() => getHistorialImpl(itemId))
+export const crearClubPorIniciar = async (c: ClubPorIniciarInput) => run(() => crearClubPorIniciarImpl(c))
 export const updateMiPerfil = async (fedId: string, datos: Pick<Fed, 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => run(() => updateMiPerfilImpl(fedId, datos))
 export const updateFed = async (autorId: string, fed: Pick<Fed, 'id' | 'nombre_completo' | 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => run(() => updateFedImpl(autorId, fed))
 export const addFeriado = async (autorId: string, f: Omit<Feriado, 'id'>) => run(() => addFeriadoImpl(autorId, f))

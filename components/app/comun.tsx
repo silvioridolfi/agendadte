@@ -91,6 +91,7 @@ export const responder = call(api.responder)
 export const getHistorial = call(api.getHistorial)
 export const updateFed = call(api.updateFed)
 export const updateMiPerfil = call(api.updateMiPerfil)
+export const crearClubPorIniciar = call(api.crearClubPorIniciar)
 export const addFeriado = call(api.addFeriado)
 export const deleteFeriado = call(api.deleteFeriado)
 export const setItemStatus = call(api.setItemStatus)
@@ -153,7 +154,7 @@ export function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[], cac
 
 // =====================================================================
 
-export type ItemPreset = { accion?: Accion, sub_accion?: string, participantes?: string[] }
+export type ItemPreset = { accion?: Accion, sub_accion?: string, participantes?: string[], club_id?: string }
 
 // =====================================================================
 

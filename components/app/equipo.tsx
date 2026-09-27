@@ -5,7 +5,7 @@ import { Clock, MapPin } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { titleCase } from '@/lib/format'
 import { franjasDte, textoFranjas } from '@/lib/ddjj'
-import { clubEstado, type AgendaItem, type Club, type Fed } from '@/lib/agenda'
+import { clubEstado, iniciado, type AgendaItem, type Club, type Fed } from '@/lib/agenda'
 import { fmt, iso, parse, fedColor, initials, Skeleton } from '@/components/app/comun'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
@@ -18,7 +18,7 @@ export function MiEquipoView({ feds, items, clubes, noHabiles, periodo, onVerAcc
     const realizadas = propias.filter(i => i.estado === 'realizada')
     const planificadas = propias.filter(i => i.estado === 'planificada' || i.estado === 'reprogramada').length
     const ultima = realizadas.reduce<string | null>((m, i) => (!m || i.fecha > m ? i.fecha : m), null)
-    const activos = (clubes ?? []).filter(c => c.fed_id === f.id && clubEstado(c, hoy, noHabiles) === 'activo')
+    const activos = (clubes ?? []).filter(iniciado).filter(c => c.fed_id === f.id && clubEstado(c, hoy, noHabiles) === 'activo')
     return [f.id, { realizadas: realizadas.length, planificadas, ultima, clubes: activos.filter(c => c.tipo === 'CLUB DE TECNOLOGÍA').length, practicas: activos.filter(c => c.tipo !== 'CLUB DE TECNOLOGÍA').length }]
   })), [feds, items, clubes, hoy, noHabiles])
 

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { clubEncuentrosRealizados, clubEstado, diasHabilesEntre, esTrayecto, nivelDeEscuela, serieFechas, ultimaActividad, type Club } from '@/lib/agenda'
+import { clubEncuentrosRealizados, clubEstado, diasHabilesEntre, esTrayecto, nivelDeEscuela, serieFechas, ultimaActividad, iniciado, type Club, type ClubIniciado } from '@/lib/agenda'
 import { nombreArchivo } from '@/lib/exportar'
 
-const club = (over: Partial<Club> = {}): Club => ({
+const club = (over: Partial<Club> = {}): ClubIniciado => ({
   id: 'c', fed_id: 'f', school_id: null, lugar: null, grupo: '5° A', tipo: 'CLUB DE TECNOLOGÍA', escuela_origen: null, propuesta: 'Club de Tecnología',
   fecha_inicio: '2026-03-02', fecha_cierre: null, encuentros_previstos: 8, school: null, encuentros: [], ...over,
-})
+} as ClubIniciado)
 const enc = (fecha: string) => ({ id: fecha, fecha, propuesta: null, school_id: null, lugar: null, school: null, encuentro_n: null, inscriptos: null, asistentes: null, tipo_jornada: null, modalidad: null, destinatarios: null, es_cierre: false })
 
 describe('serieFechas', () => {
@@ -98,5 +98,12 @@ describe('DD.JJ. de horarios', () => {
     expect(chequearHorario(ddjj[0], '11:00', '14:00').fuera).toBe(true)
     expect(chequearHorario(ddjj[0], '11:00', '14:00').choques).toHaveLength(1)
     expect(chequearHorario(ddjj[1], '14:30', '').fuera).toBe(false)
+  })
+})
+
+describe('clubes por iniciar', () => {
+  it('distingue clubes sin fecha de inicio', () => {
+    expect(iniciado(club())).toBe(true)
+    expect(iniciado({ ...club(), fecha_inicio: null })).toBe(false)
   })
 })
