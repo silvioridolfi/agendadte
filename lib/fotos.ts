@@ -101,8 +101,10 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
   }
 
   for (const f of lote) {
-    const fecha = fechaDeCaptura(f) ?? SIN_FECHA
-    const item = fecha === SIN_FECHA ? null : accionPorHora(await items(fecha), minutosDeCaptura(f))
+    // Videos: Drive no guarda su fecha de grabación; se usa la fecha en que se subieron (hora argentina) y van a la carpeta del día.
+    const esVideo = f.mimeType.startsWith('video/')
+    const fecha = fechaDeCaptura(f) ?? (esVideo && f.createdTime ? new Date(f.createdTime).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }) : SIN_FECHA)
+    const item = fecha === SIN_FECHA || esVideo ? null : accionPorHora(await items(fecha), minutosDeCaptura(f))
     const destino = item ? await carpetaAccion(fecha, item) : await carpetaDia(fecha)
     let modo = 'movida'
     try { await mover(f.id, raiz, destino); res.ordenadas++ }

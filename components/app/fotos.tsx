@@ -45,6 +45,15 @@ export function SeccionFotos() {
           <span className="mt-1 block text-xs text-dte-gris">También podés compartirla con el correo del CED para que la vea directamente en Drive.</span></li>
         <li>Pegá acá el enlace de la carpeta y guardá.</li>
       </ol>
+      <div className="mb-3 rounded-lg border border-dte-linea bg-dte-fondo px-3 py-2 text-xs text-dte-tinta">
+        <p className="font-semibold">Cómo subir las fotos para que se ordenen bien</p>
+        <ul className="mt-1 list-disc pl-4">
+          <li>Subilas <b>directo desde la galería del celular a la carpeta de Drive</b> (app de Drive: <b>+ → Subir</b>, o desde Fotos: <b>Compartir → Drive</b>).</li>
+          <li><b>No las pases por WhatsApp ni Telegram:</b> borran la fecha y hora en que se sacaron y quedan en “Sin fecha”.</li>
+          <li>Cargá el <b>horario</b> de tus acciones en la agenda: así cada foto va a la carpeta de su acción.</li>
+          <li>Los videos se ordenan por el día en que los subís: conviene subirlos el mismo día que los grabaste.</li>
+        </ul>
+      </div>
       <div className="flex flex-col gap-2 sm:flex-row">
         <Input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://drive.google.com/drive/folders/…" aria-label="Enlace de la carpeta de Drive" className="min-w-0 flex-1" />
         <Button onClick={guardar} disabled={!!busy} className="bg-dte-petroleo hover:bg-dte-petroleo-oscuro">{busy === 'guardar' ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Guardar y verificar</Button>
