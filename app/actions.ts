@@ -528,10 +528,19 @@ export const guardarCarpetaFotos = async (url: string) => conUsuario(async yo =>
   await audit('feds', yo.fed.id, 'modificacion', yo.fed.id, { carpeta_fotos: urlCarpeta(id) })
 })
 export const ordenarMisFotos = async () => conUsuario(async yo => ordenarFotos(yo.fed.id))
-// Enlace a la subcarpeta de fotos de un día (del FED dueño de la acción y de los participantes).
-export const fotosDelDia = async (fedIds: string[], fecha: string) => conUsuario(async () => {
-  const { data } = await supabaseServer().from('fotos_dias').select('fed_id, folder_id').in('fed_id', fedIds.slice(0, 20)).eq('fecha', fecha)
-  return (data ?? []).map(d => ({ fedId: d.fed_id as string, url: urlCarpeta(d.folder_id as string) }))
+// Fotos de una acción: la subcarpeta de la acción si ya tiene fotos asignadas por hora; si no, la carpeta del día.
+// Una por cada FED (responsable y participantes) que tenga fotos ordenadas.
+export const fotosDelDia = async (fedIds: string[], fecha: string, itemId?: string) => conUsuario(async () => {
+  const ids = fedIds.slice(0, 20), db = supabaseServer()
+  const [{ data: dias }, { data: acc }] = await Promise.all([
+    db.from('fotos_dias').select('fed_id, folder_id').in('fed_id', ids).eq('fecha', fecha),
+    itemId ? db.from('fotos_acciones').select('fed_id, folder_id').in('fed_id', ids).eq('item_id', itemId) : Promise.resolve({ data: [] as { fed_id: string, folder_id: string }[] }),
+  ])
+  const porAccion = new Map((acc ?? []).map(a => [a.fed_id as string, a.folder_id as string]))
+  return ids.flatMap(id => {
+    const a = porAccion.get(id), d = (dias ?? []).find(x => x.fed_id === id)?.folder_id as string | undefined
+    return a ? [{ fedId: id, url: urlCarpeta(a), deAccion: true }] : d ? [{ fedId: id, url: urlCarpeta(d), deAccion: false }] : []
+  })
 })
 
 // ---- Sesión: ingreso, salida y cambio de contraseña.

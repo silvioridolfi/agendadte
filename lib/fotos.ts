@@ -1,10 +1,12 @@
 import 'server-only'
 import { supabaseServer } from '@/lib/supabase-server'
-import { DriveError, atajo, crearCarpeta, fechaDeCaptura, listar, mover, renombrar } from '@/lib/drive'
+import { accionPorHora } from '@/lib/horas'
+import { DriveError, atajo, crearCarpeta, fechaDeCaptura, listar, minutosDeCaptura, mover, renombrar } from '@/lib/drive'
 
-// Orden de fotos: las imágenes y videos sueltos en la carpeta del FED pasan a una subcarpeta por día
-// ("2026-09-30 · EP N° 4 (5°) · EES N° 31 (7° Informática - Grupo 1)"), según la fecha de captura.
-// Si Drive no permite mover el archivo (permisos del dueño), se deja un acceso directo en la carpeta del día.
+// Orden de fotos: las imágenes y videos sueltos en la carpeta del FED pasan a la carpeta de su día
+// ("2026-09-30 · EP N° 4 (5°) · EES N° 31 (7° Informática - Grupo 1)") y, si la hora de captura coincide con el horario
+// de una acción de la agenda, a su subcarpeta ("12:00 · Club EP N° 4 - 4°"). Sin fecha: carpeta "Sin fecha".
+// Si Drive no permite mover el archivo (permisos del dueño), se deja un acceso directo en la carpeta de destino.
 const SIN_FECHA = '1900-01-01'
 const LOTE = 150
 const SIGLAS: [RegExp, string][] = [
@@ -18,31 +20,36 @@ function sigla(nombre: string) {
   const corto = s ? n.replace(s[0], s[1]) : n
   return corto.match(/^(.*?N°\s*\d+)/)?.[1] ?? corto
 }
+const TIPO: Record<string, string> = { 'CLUB DE TECNOLOGÍA': 'Club', 'PRÁCTICAS PROFESIONALIZANTES': 'PEAT' }
 
-type ItemDia = { accion: string, lugar: string | null, school: { nombre: string | null } | null, club: { grupo: string | null } | null }
-async function nombreDelDia(fedId: string, fecha: string) {
-  if (fecha === SIN_FECHA) return 'Sin fecha (ordenar a mano)'
-  const db = supabaseServer(), cols = 'accion, lugar, school:establecimientos(nombre), club:clubes(grupo)'
+type ItemDia = { id: string, accion: string, lugar: string | null, hora_inicio: string | null, hora_fin: string | null, school: { nombre: string | null } | null, club: { grupo: string | null } | null }
+const lugarDe = (i: ItemDia) => i.school?.nombre ? sigla(i.school.nombre) : i.lugar ?? titulo(i.accion)
+const nombreAccion = (i: ItemDia) => `${i.hora_inicio ? `${i.hora_inicio.slice(0, 5)} · ` : ''}${TIPO[i.accion] ?? titulo(i.accion)} ${lugarDe(i)}${i.club?.grupo ? ` - ${i.club.grupo}` : ''}`.slice(0, 150)
+
+async function itemsDelDia(fedId: string, fecha: string): Promise<ItemDia[]> {
+  const db = supabaseServer(), cols = 'id, accion, lugar, hora_inicio, hora_fin, school:establecimientos(nombre), club:clubes(grupo)'
   const [{ data: propias }, { data: part }] = await Promise.all([
     db.from('agenda_items').select(cols).eq('fed_id', fedId).eq('fecha', fecha).neq('estado', 'cancelada'),
-    db.from('agenda_participantes').select(`item:agenda_items!inner(${cols}, fecha, estado)`).eq('fed_id', fedId).eq('item.fecha', fecha),
+    db.from('agenda_participantes').select(`item:agenda_items!inner(${cols}, fecha, estado)`).eq('fed_id', fedId).eq('item.fecha', fecha).neq('item.estado', 'cancelada'),
   ])
-  const items = [...(propias ?? []), ...((part ?? []) as unknown as { item: ItemDia }[]).map(p => p.item)] as unknown as ItemDia[]
-  const partes = [...new Set(items.map(i => {
-    const lugar = i.school?.nombre ? sigla(i.school.nombre) : i.lugar ?? titulo(i.accion)
-    return i.club?.grupo ? `${lugar} (${i.club.grupo})` : lugar
-  }))]
+  const todos = [...(propias ?? []), ...((part ?? []) as unknown as { item: ItemDia }[]).map(p => p.item)] as unknown as ItemDia[]
+  return [...new Map(todos.map(i => [i.id, i])).values()].sort((a, b) => (a.hora_inicio ?? '99').localeCompare(b.hora_inicio ?? '99'))
+}
+
+function nombreDelDia(fecha: string, items: ItemDia[]) {
+  if (fecha === SIN_FECHA) return 'Sin fecha (ordenar a mano)'
+  const partes = [...new Set(items.map(i => (i.club?.grupo ? `${lugarDe(i)} (${i.club.grupo})` : lugarDe(i))))]
   const resumen = partes.length ? partes.slice(0, 4).join(' · ') + (partes.length > 4 ? ` y ${partes.length - 4} más` : '') : 'Sin acciones en la agenda'
   return `${fecha} · ${resumen}`.slice(0, 180)
 }
 
-export type ResultadoOrden = { ordenadas: number, atajos: number, sinFecha: number, pendientes: number }
+export type ResultadoOrden = { ordenadas: number, atajos: number, sinFecha: number, porAccion: number, pendientes: number }
 
 export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
   const db = supabaseServer()
   const { data: fed } = await db.from('feds').select('carpeta_fotos_id').eq('id', fedId).maybeSingle()
   const raiz = fed?.carpeta_fotos_id as string | undefined
-  const res: ResultadoOrden = { ordenadas: 0, atajos: 0, sinFecha: 0, pendientes: 0 }
+  const res: ResultadoOrden = { ordenadas: 0, atajos: 0, sinFecha: 0, porAccion: 0, pendientes: 0 }
   if (!raiz) return res
 
   const sueltos = (await listar(raiz)).filter(f => f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))
@@ -51,37 +58,52 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
   const nuevos = sueltos.filter(f => !yaHechos.has(f.id))
   const lote = nuevos.slice(0, LOTE)
   res.pendientes = nuevos.length - lote.length
+  if (!lote.length) return res
 
-  const { data: dias } = await db.from('fotos_dias').select('fecha, folder_id, nombre').eq('fed_id', fedId)
-  const carpetas = new Map((dias ?? []).map(d => [d.fecha as string, { id: d.folder_id as string, nombre: d.nombre as string | null }]))
-  const resueltas = new Map<string, string>()
-  async function carpetaDelDia(fecha: string): Promise<string> {
-    const r = resueltas.get(fecha)
-    if (r) return r
-    const id = await resolver(fecha)
-    resueltas.set(fecha, id)
+  const [{ data: dias }, { data: acciones }] = await Promise.all([
+    db.from('fotos_dias').select('fecha, folder_id, nombre').eq('fed_id', fedId),
+    db.from('fotos_acciones').select('item_id, folder_id, nombre').eq('fed_id', fedId),
+  ])
+  const carpetasDia = new Map((dias ?? []).map(d => [d.fecha as string, { id: d.folder_id as string, nombre: d.nombre as string | null }]))
+  const carpetasAccion = new Map((acciones ?? []).map(a => [a.item_id as string, { id: a.folder_id as string, nombre: a.nombre as string | null }]))
+  const itemsCache = new Map<string, ItemDia[]>()
+  const items = async (fecha: string) => { if (!itemsCache.has(fecha)) itemsCache.set(fecha, fecha === SIN_FECHA ? [] : await itemsDelDia(fedId, fecha)); return itemsCache.get(fecha)! }
+
+  // Crea la carpeta o la renombra si cambió lo cargado en la agenda; si fue borrada en Drive, la vuelve a crear.
+  async function asegurar(actual: { id: string, nombre: string | null } | undefined, nombre: string, padre: string, guardar: (id: string) => PromiseLike<unknown>) {
+    if (actual) {
+      if (actual.nombre === nombre) return actual.id
+      try { await renombrar(actual.id, nombre); await guardar(actual.id); actual.nombre = nombre; return actual.id }
+      catch (e) { if (!(e instanceof DriveError && e.status === 404)) throw e }
+    }
+    const { id } = await crearCarpeta(nombre, padre)
+    await guardar(id)
     return id
   }
-  async function resolver(fecha: string): Promise<string> {
-    const nombre = await nombreDelDia(fedId, fecha)
-    const actual = carpetas.get(fecha)
-    if (actual) {
-      if (actual.nombre !== nombre) {
-        try { await renombrar(actual.id, nombre) } catch (e) { if (!(e instanceof DriveError && e.status === 404)) throw e; carpetas.delete(fecha); return resolver(fecha) }
-        await db.from('fotos_dias').update({ nombre, updated_at: new Date().toISOString() }).eq('fed_id', fedId).eq('fecha', fecha)
-        actual.nombre = nombre
-      }
-      return actual.id
+  const listos = new Map<string, string>()
+  async function carpetaDia(fecha: string) {
+    const k = `d:${fecha}`
+    if (!listos.has(k)) {
+      const nombre = nombreDelDia(fecha, await items(fecha))
+      const id = await asegurar(carpetasDia.get(fecha), nombre, raiz!, id => db.from('fotos_dias').upsert({ fed_id: fedId, fecha, folder_id: id, nombre, updated_at: new Date().toISOString() }))
+      carpetasDia.set(fecha, { id, nombre }); listos.set(k, id)
     }
-    const { id } = await crearCarpeta(nombre, raiz!)
-    await db.from('fotos_dias').upsert({ fed_id: fedId, fecha, folder_id: id, nombre, updated_at: new Date().toISOString() })
-    carpetas.set(fecha, { id, nombre })
-    return id
+    return listos.get(k)!
+  }
+  async function carpetaAccion(fecha: string, item: ItemDia) {
+    const k = `a:${item.id}`
+    if (!listos.has(k)) {
+      const dia = await carpetaDia(fecha), nombre = nombreAccion(item)
+      const id = await asegurar(carpetasAccion.get(item.id), nombre, dia, id => db.from('fotos_acciones').upsert({ fed_id: fedId, item_id: item.id, folder_id: id, nombre, updated_at: new Date().toISOString() }))
+      carpetasAccion.set(item.id, { id, nombre }); listos.set(k, id)
+    }
+    return listos.get(k)!
   }
 
   for (const f of lote) {
     const fecha = fechaDeCaptura(f) ?? SIN_FECHA
-    const destino = await carpetaDelDia(fecha)
+    const item = fecha === SIN_FECHA ? null : accionPorHora(await items(fecha), minutosDeCaptura(f))
+    const destino = item ? await carpetaAccion(fecha, item) : await carpetaDia(fecha)
     let modo = 'movida'
     try { await mover(f.id, raiz, destino); res.ordenadas++ }
     catch (e) {
@@ -89,7 +111,8 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
       await atajo(f.id, f.name, destino); modo = 'atajo'; res.atajos++
     }
     if (fecha === SIN_FECHA) res.sinFecha++
-    await db.from('fotos_procesadas').upsert({ fed_id: fedId, file_id: f.id, fecha: fecha === SIN_FECHA ? null : fecha, modo })
+    if (item) res.porAccion++
+    await db.from('fotos_procesadas').upsert({ fed_id: fedId, file_id: f.id, fecha: fecha === SIN_FECHA ? null : fecha, item_id: item?.id ?? null, modo })
   }
   return res
 }

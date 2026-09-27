@@ -77,3 +77,9 @@ export function fechaDeCaptura(f: ArchivoDrive): string | null {
   const m = t?.match(/^(\d{4})[:-](\d{2})[:-](\d{2})/)
   return m && m[1] !== '0000' ? `${m[1]}-${m[2]}-${m[3]}` : null
 }
+
+// Hora de captura en minutos desde la medianoche (hora local de la cámara), o null.
+export function minutosDeCaptura(f: ArchivoDrive): number | null {
+  const m = f.imageMediaMetadata?.time?.match(/^\d{4}[:-]\d{2}[:-]\d{2}[ T](\d{2}):(\d{2})/)
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null
+}
