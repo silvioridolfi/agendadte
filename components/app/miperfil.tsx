@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Briefcase, CalendarOff, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
+import { Briefcase, CalendarOff, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,13 +10,14 @@ import { DISTRITOS_REGION, type Fed } from '@/lib/agenda'
 import { horasSemanales, textoCarga, armarDdjj, cargosDe, franjasDte, validarDdjj, type Cargo, type Franja } from '@/lib/ddjj'
 import { titleCase } from '@/lib/format'
 import { SeccionFotos } from '@/components/app/fotos'
+import { SeccionPve } from '@/components/app/pve'
 import { eyebrow, errMsg, fedColor, initials, updateMiPerfil, ErrorBox } from '@/components/app/comun'
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
 const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 
 // Menú del avatar: Mi perfil (sólo FED) y cambio de perfil. Se cierra con Escape o tocando afuera.
-export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onFeriados, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, onPerfil: () => void, onUsuarios: () => void, onFeriados: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
+export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onFeriados, onPve, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, onPerfil: () => void, onUsuarios: () => void, onFeriados: () => void, onPve: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null), btnRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
@@ -38,6 +39,7 @@ export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onFer
       <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
+      {(esAdmin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onPve() }} className={item}><FileText className="size-4 text-dte-petroleo" />PVE del equipo</button>}
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onFeriados() }} className={item}><CalendarOff className="size-4 text-dte-petroleo" />Feriados y eventos</button>}
       <button role="menuitem" onClick={() => { setOpen(false); onPassword() }} className={item}><KeyRound className="size-4 text-dte-petroleo" />Cambiar contraseña</button>
       <button role="menuitem" onClick={() => { setOpen(false); onSalir() }} className={`${item} border-t border-dte-linea text-peligro`}><LogOut className="size-4" />Cerrar sesión</button>
@@ -154,6 +156,7 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
       </section>
 
       <SeccionFotos />
+      {fed.rol === 'fed' && <SeccionPve />}
 
       {errores.length > 0 && <div ref={erroresRef} role="alert" className="rounded-xl border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p className="mb-1 font-semibold">Revisá estos datos:</p><ul className="list-disc pl-5">{errores.map(e => <li key={e}>{e}</li>)}</ul></div>}
       {error && <ErrorBox message={error} />}

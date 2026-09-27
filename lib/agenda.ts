@@ -135,7 +135,7 @@ export type AgendaItemInput = {
   repeticion?: { dias: number[], hasta: string } | null
 }
 
-export type Notificacion = { id: string; tipo: 'etiqueta' | 'modificacion' | 'cancelacion' | 'respuesta' | 'evento'; detalle: string | null; leida: boolean; created_at: string; autor_id: string | null; item: AgendaItem | null }
+export type Notificacion = { id: string; tipo: 'etiqueta' | 'modificacion' | 'cancelacion' | 'respuesta' | 'evento' | 'pve'; detalle: string | null; leida: boolean; created_at: string; autor_id: string | null; item: AgendaItem | null }
 
 // Feriados nacionales, días con fines turísticos y aniversarios distritales (tabla public.feriados).
 // distrito null = aplica a todos; si no, sólo a quienes tienen ese distrito a cargo.

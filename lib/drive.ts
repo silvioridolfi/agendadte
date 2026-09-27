@@ -88,6 +88,14 @@ export async function listarHijos(padre: string): Promise<ArchivoDrive[]> {
 }
 export const esAtajo = (f: ArchivoDrive) => f.mimeType === 'application/vnd.google-apps.shortcut'
 export const borrar = (id: string) => api(`files/${id}`, { method: 'DELETE' })
+// Permiso de lectura para una persona (sin mail de aviso de Google).
+export const darLectura = (id: string, email: string) => api(`files/${id}/permissions`, { method: 'POST', body: JSON.stringify({ role: 'reader', type: 'user', emailAddress: email }) }, { sendNotificationEmail: 'false', fields: 'id' })
+// Contenido de un archivo (para armar el ZIP de PVE).
+export async function descargar(id: string): Promise<ArrayBuffer> {
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&supportsAllDrives=true`, { headers: { Authorization: `Bearer ${await token()}` } })
+  if (!res.ok) throw new DriveError(`No se pudo descargar el archivo (${res.status})`, res.status)
+  return res.arrayBuffer()
+}
 export const esCarpeta = (f: ArchivoDrive) => f.mimeType === CARPETA
 export const crearCarpeta = (nombre: string, padre: string) => api<{ id: string }>('files', { method: 'POST', body: JSON.stringify({ name: nombre, mimeType: CARPETA, parents: [padre] }) }, { fields: 'id' })
 export const renombrar = (id: string, nombre: string) => api(`files/${id}`, { method: 'PATCH', body: JSON.stringify({ name: nombre }) }, { fields: 'id' })

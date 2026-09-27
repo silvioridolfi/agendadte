@@ -5,6 +5,7 @@ import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput
 import { borrarSesion, guardarSesion, passwordTemporal, requerirUsuario, usuarioActual, usuarioDeSesion, validarPassword, type Usuario } from '@/lib/sesion'
 import { DriveError, cuentaTecnica, driveConfigurado, idDeCarpeta, urlCarpeta, verificarCarpeta } from '@/lib/drive'
 import { ordenarFotos } from '@/lib/fotos'
+import { inicioMes, hoyAR as hoyPve, nombreMes, revisarPve } from '@/lib/pve'
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
@@ -615,6 +616,44 @@ export const guardarCarpetaFotos = async (url: string) => conUsuario(async yo =>
   await audit('feds', yo.fed.id, 'modificacion', yo.fed.id, { carpeta_fotos: urlCarpeta(id) })
 })
 export const ordenarMisFotos = async () => conUsuario(async yo => ordenarFotos(yo.fed.id))
+
+// ---- PVE (Planillas de Visita a Escuelas): el FED sube un PDF por mes a su carpeta; la coordinación las descarga juntas.
+export type PveMes = { mes: string, nombreMes: string, carpetaUrl: string, entregada: string | null, nombre: string | null, archivoUrl: string | null, enviada: string | null }
+const urlArchivo = (id: string) => `https://drive.google.com/file/d/${id}/view`
+export const misPve = async (revisar = false) => conUsuario(async (yo): Promise<{ conectada: boolean, meses: PveMes[], error: string | null }> => {
+  const db = supabaseServer()
+  const { data: fed } = await db.from('feds').select('carpeta_fotos_id').eq('id', yo.fed.id).maybeSingle()
+  if (yo.fed.rol !== 'fed' || !fed?.carpeta_fotos_id) return { conectada: false, meses: [], error: null }
+  let error: string | null = null
+  if (revisar || !(await db.from('pve').select('mes').eq('fed_id', yo.fed.id).eq('mes', inicioMes(hoyPve())).maybeSingle()).data) {
+    try { await revisarPve(yo.fed.id) } catch (e) { error = e instanceof Error ? e.message : 'No se pudo revisar la carpeta' }
+  }
+  const { data } = await db.from('pve').select('mes, folder_id, file_id, nombre, entregada_at, enviada_at').eq('fed_id', yo.fed.id).order('mes', { ascending: false }).limit(6)
+  return { conectada: true, error, meses: (data ?? []).map(r => ({ mes: r.mes, nombreMes: nombreMes(r.mes), carpetaUrl: urlCarpeta(r.folder_id), entregada: r.entregada_at, nombre: r.nombre, archivoUrl: r.file_id ? urlArchivo(r.file_id) : null, enviada: r.enviada_at })) }
+})
+async function soloCoordinacion() {
+  const yo = await requerirUsuario()
+  if (yo.fed.rol !== 'coordinacion' && !yo.esAdmin) throw new Error('Sólo la coordinación puede ver las PVE del equipo')
+  return yo
+}
+export type PveFed = { fedId: string, nombre: string, conectada: boolean, entregada: string | null, nombreArchivo: string | null, archivoUrl: string | null, enviada: string | null }
+export const pveEquipo = async (mes: string) => run(async (): Promise<PveFed[]> => {
+  await soloCoordinacion()
+  if (!/^\d{4}-\d{2}-01$/.test(mes)) throw new Error('Mes inválido')
+  const db = supabaseServer()
+  const [{ data: feds }, { data: filas }] = await Promise.all([
+    db.from('feds').select('id, nombre_completo, carpeta_fotos_id').eq('rol', 'fed').order('nombre_completo'),
+    db.from('pve').select('fed_id, file_id, nombre, entregada_at, enviada_at').eq('mes', mes),
+  ])
+  return (feds ?? []).map(f => { const r = (filas ?? []).find(x => x.fed_id === f.id); return { fedId: f.id, nombre: f.nombre_completo, conectada: !!f.carpeta_fotos_id, entregada: r?.file_id ? r.entregada_at : null, nombreArchivo: r?.file_id ? r.nombre : null, archivoUrl: r?.file_id ? urlArchivo(r.file_id) : null, enviada: r?.enviada_at ?? null } })
+})
+export const marcarPveEnviadas = async (mes: string) => run(async () => {
+  const yo = await soloCoordinacion()
+  const { data, error } = await supabaseServer().from('pve').update({ enviada_at: new Date().toISOString(), enviada_por: yo.fed.id }).eq('mes', mes).not('file_id', 'is', null).is('enviada_at', null).select('fed_id')
+  if (error) throw new Error(error.message)
+  await audit('pve', null, 'estado', yo.fed.id, { mes, enviadas: data?.length ?? 0 })
+  return data?.length ?? 0
+})
 // Fotos de una acción: la subcarpeta de la acción si ya tiene fotos asignadas por hora; si no, la carpeta del día.
 // Una por cada FED (responsable y participantes) que tenga fotos ordenadas.
 export const fotosDelDia = async (fedIds: string[], fecha: string, itemId?: string) => conUsuario(async () => {
