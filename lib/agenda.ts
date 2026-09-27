@@ -38,7 +38,7 @@ export const SUB_ACCIONES: Partial<Record<Accion, string[]>> = {
 export type CargoDia = { nombre: string; desde: string; hasta: string }
 export type DdjjDia = { dia: number; dte: string; dte_desde?: string; dte_hasta?: string; dte2_desde?: string; dte2_hasta?: string; cargos?: CargoDia[]; externo?: string }
 // rol 'coordinacion': perfil de coordinación (crea reuniones de equipo, no suma a las métricas por FED).
-export type Fed = { id: string; nombre_completo: string; distritos_a_cargo: string[]; carga_horaria: string | null; ddjj: DdjjDia[]; rol: 'fed' | 'coordinacion' }
+export type Fed = { id: string; nombre_completo: string; distritos_a_cargo: string[]; carga_horaria: string | null; ddjj: DdjjDia[]; rol: 'fed' | 'coordinacion'; carpeta_fotos_url?: string | null }
 // Participación en clubes, talleres y prácticas (hoja CAPACITACIONES del master). 0..N por acción.
 export type Encuentro = {
   id: string

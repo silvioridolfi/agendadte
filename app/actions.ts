@@ -3,11 +3,14 @@
 import { supabaseServer } from '@/lib/supabase-server'
 import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, DISTRITOS_REGION, MODALIDADES, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
 import { borrarSesion, guardarSesion, passwordTemporal, requerirUsuario, usuarioActual, usuarioDeSesion, validarPassword, type Usuario } from '@/lib/sesion'
+import { DriveError, cuentaTecnica, driveConfigurado, idDeCarpeta, urlCarpeta, verificarCarpeta } from '@/lib/drive'
+import { ordenarFotos } from '@/lib/fotos'
 import { armarDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
 // así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
 export type Result<T> = { ok: true; data: T } | { ok: false; error: string }
+const errMsgServer = (e: unknown) => (e instanceof Error ? e.message : String(e))
 async function run<T>(fn: () => Promise<T>): Promise<Result<T>> {
   try { return { ok: true, data: await fn() } } catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) } }
 }
@@ -15,7 +18,7 @@ async function run<T>(fn: () => Promise<T>): Promise<Result<T>> {
 const SCHOOL_COLS = 'id, cue, nombre, distrito, ciudad'
 
 async function getFedsImpl(): Promise<Fed[]> {
-  const { data, error } = await supabaseServer().from('feds').select('id, nombre_completo, distritos_a_cargo, carga_horaria, ddjj, rol').order('nombre_completo')
+  const { data, error } = await supabaseServer().from('feds').select('id, nombre_completo, distritos_a_cargo, carga_horaria, ddjj, rol, carpeta_fotos_url').order('nombre_completo')
   if (error) throw new Error(error.message)
   return data ?? []
 }
@@ -503,6 +506,33 @@ export const updateMiPerfil = async (_fedId: string, datos: Pick<Fed, 'distritos
 export const updateFed = async (_autorId: string, fed: Pick<Fed, 'id' | 'nombre_completo' | 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => conUsuario(yo => updateFedImpl(yo.fed.id, fed))
 export const addFeriado = async (_autorId: string, f: Omit<Feriado, 'id'>) => conUsuario(yo => addFeriadoImpl(yo.fed.id, f))
 export const deleteFeriado = async (_autorId: string, id: string) => conUsuario(yo => deleteFeriadoImpl(yo.fed.id, id))
+
+// ---- Fotos en Google Drive: carpeta propia de cada FED, ordenada por día por la cuenta técnica.
+export type EstadoFotos = { configurado: boolean, cuentaTecnica: string, url: string | null, nombre: string | null, puedeEditar: boolean, error: string | null }
+export const estadoFotos = async () => conUsuario(async (yo): Promise<EstadoFotos> => {
+  const { data } = await supabaseServer().from('feds').select('carpeta_fotos_id, carpeta_fotos_url').eq('id', yo.fed.id).maybeSingle()
+  const base = { configurado: driveConfigurado(), cuentaTecnica: cuentaTecnica(), url: data?.carpeta_fotos_url ?? null, nombre: null, puedeEditar: false, error: null }
+  if (!data?.carpeta_fotos_id || !base.configurado) return base
+  try { const v = await verificarCarpeta(data.carpeta_fotos_id); return { ...base, nombre: v.nombre, puedeEditar: v.puedeEditar } }
+  catch (e) { return { ...base, error: e instanceof DriveError && (e.status === 404 || e.status === 403) ? 'La cuenta técnica todavía no tiene acceso a la carpeta. Compartila como Editor.' : errMsgServer(e) } }
+})
+export const guardarCarpetaFotos = async (url: string) => conUsuario(async yo => {
+  if (yo.fed.rol !== 'fed') throw new Error('Sólo los FED cargan su carpeta de fotos')
+  const limpio = url.trim()
+  if (!limpio) { await supabaseServer().from('feds').update({ carpeta_fotos_id: null, carpeta_fotos_url: null }).eq('id', yo.fed.id); return }
+  if (!/^https:\/\/drive\.google\.com\//.test(limpio)) throw new Error('Pegá el enlace de una carpeta de Google Drive (drive.google.com/…)')
+  const id = idDeCarpeta(limpio)
+  if (!id) throw new Error('No se reconoce el enlace: abrí la carpeta en Drive y copiá la dirección completa')
+  const { error } = await supabaseServer().from('feds').update({ carpeta_fotos_id: id, carpeta_fotos_url: urlCarpeta(id) }).eq('id', yo.fed.id)
+  if (error) throw new Error(error.message)
+  await audit('feds', yo.fed.id, 'modificacion', yo.fed.id, { carpeta_fotos: urlCarpeta(id) })
+})
+export const ordenarMisFotos = async () => conUsuario(async yo => ordenarFotos(yo.fed.id))
+// Enlace a la subcarpeta de fotos de un día (del FED dueño de la acción y de los participantes).
+export const fotosDelDia = async (fedIds: string[], fecha: string) => conUsuario(async () => {
+  const { data } = await supabaseServer().from('fotos_dias').select('fed_id, folder_id').in('fed_id', fedIds.slice(0, 20)).eq('fecha', fecha)
+  return (data ?? []).map(d => ({ fedId: d.fed_id as string, url: urlCarpeta(d.folder_id as string) }))
+})
 
 // ---- Sesión: ingreso, salida y cambio de contraseña.
 export type Sesion = { fed: Fed, email: string, esAdmin: boolean, debeCambiar: boolean }
