@@ -22,7 +22,7 @@ function imprimirInforme({ titulo, persona, desde, hasta, indicadores, items, fe
   const hechas = [...items].filter(i => i.estado === 'realizada').sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))
   const variosResponsables = new Set(hechas.map(i => i.fed_id)).size > 1
   const logo = `${location.origin}/brand/oficial-color.png`
-  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(titulo)} · ${esc(persona.nombre)}</title>
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>${esc(titulo)} · ${esc(persona.nombre)}</title>
 <style>
 @font-face { font-family: 'Encode Sans'; font-weight: 100 900; src: url(${location.origin}/fonts/EncodeSans-Variable.woff2) format('woff2'); }
 @page { size: A4; margin: 16mm 14mm 22mm; }
@@ -50,6 +50,15 @@ tr:nth-child(even) td { background: #f6f5f9; } tr { break-inside: avoid; }
 .barra button.pri { background: #05476e; color: #fff; }
 .aviso { font-family: sans-serif; background: #fdf6e3; color: #6b5210; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
 @media print { .aviso, .barra { display: none; } }
+/* En pantalla angosta (celular): márgenes, datos en una columna, indicadores de a dos y tabla con desplazamiento propio. */
+@media screen { body { padding: 0 16px 24px; } .tabla { overflow-x: auto; } }
+@media screen and (max-width: 640px) {
+  .barra button { flex: 1; }
+  .datos { grid-template-columns: 1fr; }
+  .ind { grid-template-columns: repeat(2, 1fr); }
+  .tabla table { min-width: 560px; }
+  .pie { flex-direction: column; align-items: flex-start; }
+}
 </style></head><body>
 <div class="barra"><button type="button" onclick="volver()">‹ Volver a la agenda</button><button type="button" class="pri" onclick="print()">Guardar PDF</button></div>
 <p class="aviso">Para guardarlo, elegí <b>Guardar como PDF</b> en la ventana de impresión (en el celular: Compartir › Imprimir).</p>
@@ -62,9 +71,9 @@ tr:nth-child(even) td { background: #f6f5f9; } tr { break-inside: avoid; }
 <h2>Indicadores del período</h2>
 <div class="ind">${indicadores.map(x => `<div><span>${esc(x.label)}</span><strong>${x.valor}</strong>${x.detalle ? `<em>${esc(x.detalle)}</em>` : ''}</div>`).join('')}</div>
 <h2>Detalle de acciones realizadas (${hechas.length})</h2>
-${hechas.length ? `<table><thead><tr><th>Fecha</th>${variosResponsables ? '<th>Responsable</th>' : ''}<th>Acción</th><th>Escuela / lugar</th><th>Tema / detalle</th></tr></thead><tbody>
+${hechas.length ? `<div class="tabla"><table><thead><tr><th>Fecha</th>${variosResponsables ? '<th>Responsable</th>' : ''}<th>Acción</th><th>Escuela / lugar</th><th>Tema / detalle</th></tr></thead><tbody>
 ${hechas.map(i => `<tr><td>${fechaAR(i.fecha)}</td>${variosResponsables ? `<td>${esc(fedName(i.fed_id))}</td>` : ''}<td>${esc(titleCase(i.accion))}</td><td>${esc(i.school?.nombre ? `${titleCase(i.school.nombre)}${i.school.cue ? ` (CUE ${i.school.cue})` : ''}` : i.lugar ?? '')}</td><td>${esc(i.sub_accion ?? '')}</td></tr>`).join('')}
-</tbody></table>` : '<p>No hay acciones realizadas en el período.</p>'}
+</tbody></table></div>` : '<p>No hay acciones realizadas en el período.</p>'}
 <div class="pie"><img src="${logo}" alt="Dirección de Tecnología Educativa · DGCyE · Gobierno de la Provincia de Buenos Aires"><span>Agenda Territorial · ${esc(persona.nombre)} · ${fechaAR(desde)} al ${fechaAR(hasta)}</span></div>
 <script>
 // En la app instalada (iPhone) la ventana no tiene botón de cerrar: si no se puede cerrar, vuelve a la agenda.
