@@ -32,13 +32,20 @@ async function itemsDelDia(fedId: string, fecha: string): Promise<ItemDia[]> {
     db.from('agenda_items').select(cols).eq('fed_id', fedId).eq('fecha', fecha).neq('estado', 'cancelada'),
     db.from('agenda_participantes').select(`item:agenda_items!inner(${cols}, fecha, estado)`).eq('fed_id', fedId).eq('item.fecha', fecha).neq('item.estado', 'cancelada'),
   ])
-  const todos = [...(propias ?? []), ...((part ?? []) as unknown as { item: ItemDia }[]).map(p => p.item)] as unknown as ItemDia[]
+  // Encuentros importados de la planilla (sin acción en la agenda): cuentan para el nombre del día, sin horario.
+  const { data: importados } = await db.from('agenda_encuentros').select('id, tipo, lugar, school:establecimientos(nombre), club:clubes(grupo)').eq('fed_id', fedId).eq('fecha', fecha).is('agenda_item_id', null)
+  const extra = ((importados ?? []) as unknown as { id: string, tipo: string, lugar: string | null, school: ItemDia['school'], club: ItemDia['club'] }[])
+    .map(e => ({ id: `enc:${e.id}`, accion: e.tipo, lugar: e.lugar, hora_inicio: null, hora_fin: null, school: e.school, club: e.club }))
+  const todos = [...(propias ?? []), ...((part ?? []) as unknown as { item: ItemDia }[]).map(p => p.item), ...extra] as unknown as ItemDia[]
   return [...new Map(todos.map(i => [i.id, i])).values()].sort((a, b) => (a.hora_inicio ?? '99').localeCompare(b.hora_inicio ?? '99'))
 }
 
 function nombreDelDia(fecha: string, items: ItemDia[]) {
   if (fecha === SIN_FECHA) return 'Sin fecha (ordenar a mano)'
-  const partes = [...new Set(items.map(i => (i.club?.grupo ? `${lugarDe(i)} (${i.club.grupo})` : lugarDe(i))))]
+  // Agrupado por escuela: "EP N° 4 (4°, 5°, 6°)".
+  const porLugar = new Map<string, string[]>()
+  for (const i of items) { const l = porLugar.get(lugarDe(i)) ?? []; if (i.club?.grupo && !l.includes(i.club.grupo)) l.push(i.club.grupo); porLugar.set(lugarDe(i), l) }
+  const partes = [...porLugar].map(([l, g]) => (g.length ? `${l} (${g.sort((a, b) => a.localeCompare(b, 'es', { numeric: true })).join(', ')})` : l))
   const resumen = partes.length ? partes.slice(0, 4).join(' · ') + (partes.length > 4 ? ` y ${partes.length - 4} más` : '') : 'Sin acciones en la agenda'
   return `${fecha} · ${resumen}`.slice(0, 180)
 }
@@ -58,7 +65,6 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
   const nuevos = sueltos.filter(f => !yaHechos.has(f.id))
   const lote = nuevos.slice(0, LOTE)
   res.pendientes = nuevos.length - lote.length
-  if (!lote.length) return res
 
   const [{ data: dias }, { data: acciones }] = await Promise.all([
     db.from('fotos_dias').select('fecha, folder_id, nombre').eq('fed_id', fedId),
@@ -99,6 +105,10 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
     }
     return listos.get(k)!
   }
+
+  // Actualiza el nombre de las carpetas de días recientes aunque no tengan fotos nuevas (por si cambió la agenda).
+  const recientes = [...carpetasDia.keys()].filter(f => f !== SIN_FECHA).sort().slice(-60)
+  for (const fecha of recientes) await carpetaDia(fecha)
 
   for (const f of lote) {
     // Videos: Drive no guarda su fecha de grabación; se usa la fecha en que se subieron (hora argentina) y van a la carpeta del día.
