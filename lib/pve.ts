@@ -55,7 +55,7 @@ export async function revisarPve(fedId: string): Promise<ResultadoPve> {
   const { data: fed } = await db.from('feds').select('nombre_completo, carpeta_fotos_id, rol').eq('id', fedId).maybeSingle()
   if (!fed?.carpeta_fotos_id || fed.rol !== 'fed') return res
   const desde = inicioMes(hoyAR(), -3) > PRIMER_MES ? inicioMes(hoyAR(), -3) : PRIMER_MES
-  const { data: filas } = await db.from('pve').select('mes, folder_id, file_id, enviada_at').eq('fed_id', fedId).gte('mes', desde)
+  const { data: filas } = await db.from('pve').select('mes, folder_id, file_id, enviada_at, devuelta_at, reentregada_at').eq('fed_id', fedId).gte('mes', desde)
   const porMes = new Map((filas ?? []).map(f => [f.mes as string, f]))
 
   // Coordinación: recibe permiso de lectura y el aviso de cada entrega nueva.
@@ -73,11 +73,16 @@ export async function revisarPve(fedId: string): Promise<ResultadoPve> {
     }
     res.entregadas++
     const nombre = nombrePve(mes, fed.nombre_completo as string)
+    // Versiones anteriores del mes: quedan en la carpeta, renombradas para no confundirlas con la vigente.
+    for (const viejo of pdfs.slice(1)) if (viejo.name === nombre) try { await renombrar(viejo.id, nombre.replace(/\.pdf$/, ' (VERSIÓN ANTERIOR).pdf')) } catch { /* sin permiso: queda como está */ }
     if (pdf.name !== nombre) await renombrar(pdf.id, nombre)
     if (pdf.id === fila.file_id) continue
     for (const c of coord ?? []) if (c.email) try { await darLectura(pdf.id, c.email as string) } catch { /* sin permiso para compartir: lo ve igual desde la agenda */ }
-    await db.from('pve').update({ file_id: pdf.id, nombre, entregada_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('fed_id', fedId).eq('mes', mes)
-    if (coord?.length) await db.from('notificaciones').insert(coord.map(c => ({ fed_id: c.id, autor_id: fedId, tipo: 'pve', detalle: `Entregó su PVE de ${nombreMes(mes).toLowerCase()}` })))
+    // Si estaba devuelta, el PDF nuevo es la corrección.
+    const corregida = !!fila.devuelta_at && !fila.reentregada_at, ahora = new Date().toISOString()
+    await db.from('pve').update({ file_id: pdf.id, nombre, entregada_at: ahora, ...(corregida ? { reentregada_at: ahora } : {}), updated_at: ahora }).eq('fed_id', fedId).eq('mes', mes)
+    await db.from('pve_historial').insert({ fed_id: fedId, mes, tipo: corregida ? 'reentregada' : 'entregada', autor_id: fedId })
+    if (coord?.length) await db.from('notificaciones').insert(coord.map(c => ({ fed_id: c.id, autor_id: fedId, tipo: 'pve', detalle: corregida ? `Reentregó corregida su PVE de ${nombreMes(mes).toLowerCase()}` : `Entregó su PVE de ${nombreMes(mes).toLowerCase()}` })))
     res.nuevas++
   }
   return res
