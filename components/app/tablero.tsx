@@ -13,7 +13,7 @@ import { ClubesView } from '@/components/clubes'
 import { MetricsView } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
 import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed, type Club } from '@/lib/agenda'
-import { Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, schoolPlace, itemTitle, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav } from '@/components/app/comun'
+import { type ItemPreset, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, schoolPlace, itemTitle, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav } from '@/components/app/comun'
 
 // =====================================================================
 
@@ -34,7 +34,8 @@ export const rangeNames: Record<Range, [string, string, string]> = { day: ['Día
 
 export const LISTA_INICIAL = 5, LISTA_PASO = 20
 
-export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void }) {
+// `propio`: tablero individual de un FED (sólo sus datos; sin Agenda del equipo ni Mi equipo). `onNuevaAccion`: abre el formulario con valores iniciales.
+export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion, propio, onNuevaAccion }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void, propio?: Fed, onNuevaAccion?: (preset: ItemPreset) => void }) {
   const [tab, setTab] = useState<'resumen' | 'agenda' | 'equipo' | 'clubes' | 'practicas' | 'acciones'>('resumen')
   // Pestañas accesibles: flechas izquierda/derecha, Inicio y Fin mueven el foco y activan la pestaña.
   function teclaPestana(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -48,7 +49,8 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   const [anchor, setAnchor] = useState(() => new Date())
   const [search, setSearch] = useState('')
   const [distrito, setDistrito] = useState('')
-  const [fedId, setFedId] = useState('')
+  const [fedIdElegido, setFedId] = useState('')
+  const fedId = propio?.id ?? fedIdElegido
   const [accion, setAccion] = useState('')
   const [estado, setEstado] = useState('')
   // Acciones del equipo: primeras LISTA_INICIAL por FED y "ver más" de a LISTA_PASO; con un FED filtrado se muestran todas.
@@ -99,17 +101,17 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   // FEDs en orden alfabético; dentro de cada uno, las acciones de la más nueva a la más antigua (fecha, hora y carga).
   const recientePrimero = (a: AgendaItem, b: AgendaItem) => b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)
   const groups = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].map(([id, l]) => [id, l.sort(recientePrimero)] as [string, AgendaItem[]]).sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName])
-  const anyFilter = !!(search || distrito || fedId || accion || estado)
+  const anyFilter = !!(search || distrito || fedIdElegido || accion || estado)
   // Filtros plegables en mobile (buscador siempre visible).
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
-  const filtrosActivos = [distrito, fedId, accion].filter(Boolean).length
+  const filtrosActivos = [distrito, fedIdElegido, accion].filter(Boolean).length
   const fedsSinAcciones = useMemo(() => (items && !anyFilter ? feds.filter(f => !items.some(i => i.fed_id === f.id)) : []), [items, feds, anyFilter])
   const clear = () => { setSearch(''); setDistrito(''); setFedId(''); setAccion(''); setEstado('') }
   const title = range === 'day' ? cap(fmt(from, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) : range === 'week' ? weekTitle(from, to) : range === 'year' ? `Año ${from.getFullYear()}` : cap(fmt(from, { month: 'long', year: 'numeric' }))
 
   return <main className="mx-auto w-full min-w-0 max-w-[1440px] px-4 pb-8 pt-6 lg:px-10 lg:pb-16">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div><p className={eyebrow}>Tablero del coordinador</p><h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{tab === 'agenda' ? 'Agenda del equipo' : title}</h2><p className="mt-1.5 text-sm text-dte-gris">Seguimiento territorial de todo el equipo.</p>{onNuevaReunion && <Button variant="marca" onClick={onNuevaReunion} className="mt-3"><Users data-icon="inline-start" />Nueva reunión de equipo</Button>}</div>
+      <div><p className={eyebrow}>{propio ? 'Mi tablero' : 'Tablero del coordinador'}</p><h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{tab === 'agenda' ? 'Agenda del equipo' : title}</h2><p className="mt-1.5 text-sm text-dte-gris">{propio ? 'Tus acciones, clubes y prácticas.' : 'Seguimiento territorial de todo el equipo.'}</p>{onNuevaReunion && <Button variant="marca" onClick={onNuevaReunion} className="mt-3"><Users data-icon="inline-start" />Nueva reunión de equipo</Button>}</div>
       {tab !== 'agenda' && <div className="flex flex-wrap items-center gap-2">
         <Segmented label="Período" value={range} options={(Object.keys(rangeNames) as Range[]).map(v => [v, rangeNames[v][0]] as const)} onChange={setRange} />
         <Button variant="outline" disabled={!items || exportando} onClick={exportar} title="Descargar planilla regional con los filtros aplicados">{exportando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}{exportando ? 'Generando…' : 'Exportar Excel'}</Button>
@@ -119,7 +121,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
 
     {/* Pestañas: en mobile se desplazan horizontalmente en una sola línea. */}
     <div role="tablist" aria-label="Vista del tablero" onKeyDown={teclaPestana} className="-mx-4 mt-6 flex snap-x gap-1 overflow-x-auto border-b border-dte-linea px-4 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
-      {([['resumen', 'Resumen y métricas'], ['agenda', 'Agenda del equipo'], ['equipo', 'Mi equipo'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo']] as const).map(([k, l]) => <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="panel-tablero" tabIndex={tab === k ? 0 : -1} data-tab={k} onClick={e => { setTab(k); e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }} className={`-mb-px flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
+      {((propio ? [['resumen', 'Resumen y métricas'], ['clubes', 'Mis clubes'], ['practicas', 'Mis prácticas (PEAT)'], ['acciones', 'Mis acciones']] as const : [['resumen', 'Resumen y métricas'], ['agenda', 'Agenda del equipo'], ['equipo', 'Mi equipo'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo']] as const)).map(([k, l]) => <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="panel-tablero" tabIndex={tab === k ? 0 : -1} data-tab={k} onClick={e => { setTab(k); e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }} className={`-mb-px flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition ${tab === k ? 'border-dte-magenta text-dte-tinta' : 'border-transparent text-dte-gris hover:text-dte-tinta'}`}>{l}</button>)}
     </div>
 
     <div id="panel-tablero" role="tabpanel" aria-labelledby={`tab-${tab}`}>
@@ -137,7 +139,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
       </div>
       <div id="filtros-tablero" className={`${filtrosAbiertos ? 'flex' : 'hidden'} flex-col gap-2 md:contents`}>
       <select aria-label="Distrito" className={`${selectClass} md:w-44`} value={distrito} onChange={e => setDistrito(e.target.value)}><option value="">Todos los distritos</option>{distritos.map(d => <option key={d} value={d}>{titleCase(d)}</option>)}</select>
-      <select aria-label="FED" className={`${selectClass} md:w-52`} value={fedId} onChange={e => setFedId(e.target.value)}><option value="">Todos los FEDs</option>{[...feds].sort((a, b) => az(a.nombre_completo, b.nombre_completo)).map(f => <option key={f.id} value={f.id}>{f.nombre_completo}</option>)}</select>
+      {!propio && <select aria-label="FED" className={`${selectClass} md:w-52`} value={fedId} onChange={e => setFedId(e.target.value)}><option value="">Todos los FEDs</option>{[...feds].sort((a, b) => az(a.nombre_completo, b.nombre_completo)).map(f => <option key={f.id} value={f.id}>{f.nombre_completo}</option>)}</select>}
       <select aria-label="Tipo de acción" className={`${selectClass} md:w-56`} value={accion} onChange={e => setAccion(e.target.value)}><option value="">Todas las acciones</option>{[...ACCIONES].sort(az).map(a => <option key={a} value={a}>{cap(a.toLowerCase())}</option>)}</select>
       </div>
       {anyFilter && <Button variant="ghost" onClick={clear} className="self-start text-dte-magenta hover:text-dte-magenta md:self-auto"><X data-icon="inline-start" />Limpiar</Button>}
@@ -145,7 +147,9 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
 
     {tab === 'agenda' ? <div className="mt-6"><AgendaEquipoView feds={feds} reloadKey={reloadKey} onSelect={onSelect} /></div>
     : tab === 'equipo' ? <div className="mt-6"><MiEquipoView feds={feds} items={items} clubes={clubes} noHabiles={noHabiles} periodo={title} onVerAcciones={id => { setFedId(id); setTab('acciones') }} /></div>
-    : tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} noHabiles={noHabiles} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) }} />}</div>
+    : tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} noHabiles={noHabiles} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) }}
+      onNuevo={propio && onNuevaAccion ? () => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', club_id: 'nuevo' }) : undefined}
+      onEncuentro={propio && onNuevaAccion ? c => onNuevaAccion({ accion: c.tipo, club_id: c.id }) : undefined} />}</div>
     : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base.filter(i => feds.some(f => f.id === i.fed_id))} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} />}</div>
     : <div className="mt-6 flex flex-col gap-6">
       {error ? <ErrorBox message={error} onRetry={retry} />

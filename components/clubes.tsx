@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from 'react'
 import { titleCase } from '@/lib/format'
-import { CLUB_MAX_PARTICIPANTES, CLUB_MIN_ENCUENTROS, CLUB_DIAS_SIN_ACTIVIDAD, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEstado, ultimaActividad, type Club, type ClubEstado, type Fed, type Trayecto } from '@/lib/agenda'
+import { CLUB_MAX_PARTICIPANTES, CLUB_MIN_ENCUENTROS, CLUB_DIAS_SIN_ACTIVIDAD, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEstado, iniciado, ultimaActividad, type Club, type ClubIniciado, type ClubEstado, type Fed, type Trayecto } from '@/lib/agenda'
 import { DrillDialog, HBar, Kpi, Panel, type DrillRow } from '@/components/metrics'
 import { Confirmar } from '@/components/ui/confirmar'
-import { Loader2 } from 'lucide-react'
+import { CalendarPlus, Loader2, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { ErrorBox, errMsg } from '@/components/app/comun'
 
 const nf = new Intl.NumberFormat('es-AR')
@@ -39,8 +40,11 @@ function participacion(c: Club) {
 
 // Clubes de Tecnología o Prácticas (PEAT). `desde`/`hasta`: período del tablero; se muestran los trayectos
 // con actividad en el período y se cuentan sólo los encuentros de ese período.
-export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 'CLUB DE TECNOLOGÍA', desde, hasta, periodo, noHabiles }: { clubes: Club[], feds: Fed[], onCierre: (club: Club, fecha: string | null) => Promise<void>, schoolLabel: (c: Club) => string, tipo?: Trayecto, desde: string, hasta: string, periodo: string, noHabiles?: Set<string> }) {
+export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo = 'CLUB DE TECNOLOGÍA', desde, hasta, periodo, noHabiles, onNuevo, onEncuentro }: { clubes: Club[], feds: Fed[], onCierre: (club: Club, fecha: string | null) => Promise<void>, schoolLabel: (c: Club) => string, tipo?: Trayecto, desde: string, hasta: string, periodo: string, noHabiles?: Set<string>, onNuevo?: () => void, onEncuentro?: (c: Club) => void }) {
   const hoy = new Date().toISOString().slice(0, 10)
+  // Los "por iniciar" (sin fecha) se listan aparte; el resto de las métricas usa sólo los iniciados.
+  const todos = useMemo(() => entrada.filter(iniciado), [entrada])
+  const pendientes = useMemo(() => entrada.filter(c => !iniciado(c) && c.tipo === tipo && !c.fecha_cierre), [entrada, tipo])
   const [busy, setBusy] = useState('')
   const [drill, setDrill] = useState<{ title: string, subtitle?: string, rows: DrillRow[] } | null>(null)
   const marca = TRAYECTO_MARCA[tipo]
@@ -97,7 +101,7 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todos, tipo, cicloYear])
-  const verCiclo = (titulo: string, t: string, list: Club[]) => setDrill({ title: `${titulo} · ${t}`, subtitle: `${list.length} ${clubesTxt}`, rows: list.map(c => {
+  const verCiclo = (titulo: string, t: string, list: ClubIniciado[]) => setDrill({ title: `${titulo} · ${t}`, subtitle: `${list.length} ${clubesTxt}`, rows: list.map(c => {
     const full = completos.get(c.id) ?? c
     return { key: c.id, title: nombre(c), sub: [fedName(c.fed_id), `inicio ${corta(c.fecha_inicio)}`, c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : null].filter(Boolean).join(' · '), right: ESTADO_CLUB[clubEstado(full, hoy, noHabiles)].label }
   }) })
@@ -135,6 +139,23 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
         <div><p className="text-xs font-semibold uppercase tracking-wider text-white/85">{tipo === 'CLUB DE TECNOLOGÍA' ? 'Línea prioritaria DTE 2025–2027' : marca.nombre} · {periodo}</p><p className="mt-0.5 text-sm text-white/95">{tipo === 'CLUB DE TECNOLOGÍA' ? `Mínimo ${CLUB_MIN_ENCUENTROS} encuentros por club y hasta ${CLUB_MAX_PARTICIPANTES} participantes. Cada grado es un club. ` : 'Cada grupo de estudiantes es una práctica con inicio y cierre. '}Pasa a “sin actividad” tras {CLUB_DIAS_SIN_ACTIVIDAD} días hábiles sin encuentros (sin contar el receso invernal).</p></div>
       </div>
     </div>
+
+    {onNuevo && <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-dte-gris">Tus {clubesTxt}. Los encuentros que registres se agregan a tu agenda.</p>
+      <Button variant="marca" onClick={onNuevo}><Plus data-icon="inline-start" />{tipo === 'CLUB DE TECNOLOGÍA' ? 'Nuevo club' : 'Nueva práctica'}</Button>
+    </div>}
+
+    {pendientes.length > 0 && <Panel title="Por iniciar" subtitle={`Planificados sin fecha: no cuentan en las métricas hasta programar el primer encuentro · ${pendientes.length}`}>
+      <ul className="divide-y divide-dte-linea">{pendientes.map(c => {
+        const dias = c.created_at ? Math.floor((Date.now() - new Date(c.created_at).getTime()) / 86400000) : 0
+        return <li key={c.id} className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold">{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate">{schoolLabel(c)}</span></p>
+            <p className="text-xs text-dte-gris">{[c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id), c.encuentros_previstos ? `${c.encuentros_previstos} encuentros previstos` : null].filter(Boolean).join(' · ')}</p>
+            {dias > 30 && <p className="text-xs font-semibold text-aviso-fuerte">Hace {dias} días sin fecha: ¿lo programamos?</p>}</div>
+          {onEncuentro && <Button variant="outline" size="sm" onClick={() => onEncuentro(c)} className="shrink-0"><CalendarPlus data-icon="inline-start" />Programar primer encuentro</Button>}
+        </li>
+      })}</ul>
+    </Panel>}
 
     <Panel title={`Registro del ciclo lectivo ${cicloYear}`} subtitle={`Totales de ${clubesTxt} por semestre (1.º hasta el receso invernal, 2.º desde agosto), con los filtros de FED, distrito y búsqueda. Tocá un número para ver el listado.`}>
       <div className="overflow-x-auto">
@@ -192,6 +213,7 @@ export function ClubesView({ clubes: todos, feds, onCierre, schoolLabel, tipo = 
               <td data-label="Inscriptos" className="en-linea py-2.5 pr-3 text-right tabular-nums"><span>{inscriptos || '—'}{inscriptos > CLUB_MAX_PARTICIPANTES && <span className="ml-1 text-xs text-aviso-fuerte" title={`Supera los ${CLUB_MAX_PARTICIPANTES} sugeridos`}>▲</span>}</span></td>
               <td data-label="Prom. reales" className="en-linea py-2.5 pr-3 text-right tabular-nums">{promedio ? nf.format(Math.round(promedio * 10) / 10) : '—'}</td>
               <td data-label="Estado" className="en-linea py-2.5"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.badge}`}>{st.label}</span>
+                {onEncuentro && estado !== 'finalizado' && <button onClick={() => onEncuentro(c)} className="inline-flex min-h-10 items-center gap-1 rounded-full border border-dte-linea px-3 text-xs font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-7"><Plus className="size-3" />Encuentro</button>}
                 {estado === 'finalizado' ? <button disabled={busy === c.id} onClick={() => cierre(c, null)} className="inline-flex min-h-10 items-center gap-1 rounded-full border border-dte-linea px-3 text-xs font-semibold text-dte-petroleo transition md:min-h-7 hover:border-dte-petroleo hover:bg-dte-tinte disabled:opacity-50">{busy === c.id && <Loader2 className="size-3 animate-spin" />}Reactivar</button>
                   : <button disabled={busy === c.id} onClick={() => setAFinalizar({ c, fecha: ultima })} title={`Finalizar con fecha ${corta(ultima)} (último encuentro)`} className="inline-flex min-h-10 items-center gap-1 rounded-full border border-dte-linea px-3 text-xs font-semibold text-club-violeta transition md:min-h-7 hover:border-club-violeta hover:bg-club-violeta-fondo disabled:opacity-50">{busy === c.id && <Loader2 className="size-3 animate-spin" />}Finalizar</button>}
               </div></td>
