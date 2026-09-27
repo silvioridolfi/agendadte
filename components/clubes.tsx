@@ -55,8 +55,8 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
   const completos = useMemo(() => new Map(todos.map(c => [c.id, c])), [todos])
   const fedName = (id: string) => feds.find(f => f.id === id)?.nombre_completo ?? '—'
   const rows = useMemo(() => clubes.map(c => { const full = completos.get(c.id)!; return { c, estado: clubEstado(full, hoy, noHabiles), realizados: new Set(c.encuentros.map(e => e.fecha)).size, total: new Set(full.encuentros.map(e => e.fecha)).size, ultima: ultimaActividad(full), fechas: [...new Set(full.encuentros.map(e => e.fecha))], ...participacion(c) } })
-    // Por escuela (alfabético) y, dentro de cada una, de menor a mayor grado.
-    .sort((a, b) => schoolLabel(a.c).localeCompare(schoolLabel(b.c), 'es', { numeric: true }) || ordenGrupo(a.c.grupo, b.c.grupo)), [clubes, completos, hoy])
+    // Primero los que siguen en curso (activos y sin actividad), los finalizados al final; dentro de cada bloque, por escuela y de menor a mayor grado.
+    .sort((a, b) => Number(a.estado === 'finalizado') - Number(b.estado === 'finalizado') || schoolLabel(a.c).localeCompare(schoolLabel(b.c), 'es', { numeric: true }) || ordenGrupo(a.c.grupo, b.c.grupo)), [clubes, completos, hoy])
   const n = (e: ClubEstado) => rows.filter(r => r.estado === e).length
   const encuentros = rows.reduce((a, r) => a + r.realizados, 0)
   const cumplen = rows.filter(r => r.total >= CLUB_MIN_ENCUENTROS).length
