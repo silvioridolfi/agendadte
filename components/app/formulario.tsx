@@ -3,20 +3,24 @@
 import { Pill } from '@/components/ui/segmented'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { chequearHorario, franjasDte, textoFranjas } from '@/lib/ddjj'
-import { Check, Clock, Loader2, Plus, School as SchoolIcon, Search, TriangleAlert } from 'lucide-react'
+import { Check, Clock, Landmark, Loader2, Plus, School as SchoolIcon, Search, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
 import { iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA } from '@/lib/agenda'
-import { crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, saveItem, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
+import type { Organismo } from '@/app/actions'
+import { titleCase } from '@/lib/format'
+import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, saveItem, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
 import { encolarOffline } from '@/components/app/offline'
 
 // =====================================================================
 
-export function SchoolPicker({ value, onChange }: { value: School | null, onChange: (s: School | null) => void }) {
+// `onOrganismo`: si se pasa, la búsqueda incluye jefaturas distritales y regional; al elegir una se recibe "NOMBRE (CÓDIGO)" como lugar.
+export function SchoolPicker({ value, onChange, onOrganismo }: { value: School | null, onChange: (s: School | null) => void, onOrganismo?: (lugar: string) => void }) {
   const [query, setQuery] = useState('')
+  const [orgs, setOrgs] = useState<Organismo[]>([])
   const [results, setResults] = useState<School[]>([])
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -24,16 +28,19 @@ export function SchoolPicker({ value, onChange }: { value: School | null, onChan
   const [active, setActive] = useState(0)
   const seq = useRef(0)
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); setLoading(false); return }
+    if (query.trim().length < 2) { setResults([]); setOrgs([]); setLoading(false); return }
     const n = ++seq.current
     setLoading(true); setFailed(false)
-    const t = setTimeout(() => searchSchools(query)
-      .then(r => { if (n === seq.current) { setResults([...r].sort((a, b) => az(a.nombre ?? '', b.nombre ?? ''))); setActive(0) } })
-      .catch(() => { if (n === seq.current) { setResults([]); setFailed(true) } })
+    const t = setTimeout(() => Promise.all([searchSchools(query), onOrganismo ? buscarOrganismos(query) : Promise.resolve([])])
+      .then(([r, o]) => { if (n === seq.current) { setOrgs(o); setResults([...r].sort((a, b) => az(a.nombre ?? '', b.nombre ?? ''))); setActive(0) } })
+      .catch(() => { if (n === seq.current) { setResults([]); setOrgs([]); setFailed(true) } })
       .finally(() => { if (n === seq.current) setLoading(false) }), 250)
     return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query])
-  const pick = (s: School) => { onChange(s); setQuery(''); setOpen(false) }
+  // Opciones: primero las jefaturas que coinciden y después las escuelas.
+  const opciones: ({ tipo: 'org', o: Organismo } | { tipo: 'esc', s: School })[] = [...orgs.map(o => ({ tipo: 'org' as const, o })), ...results.map(s => ({ tipo: 'esc' as const, s }))]
+  const pick = (x: typeof opciones[number]) => { if (x.tipo === 'org') onOrganismo?.(`${x.o.nombre} (${x.o.codigo})`); else onChange(x.s); setQuery(''); setOpen(false) }
 
   if (value) return <div className="flex items-center gap-3 rounded-lg border border-pba-celeste/60 bg-pba-celeste/5 p-2.5 pl-3 font-normal">
     <SchoolIcon className="size-4 shrink-0 text-pba-celeste-texto" />
@@ -47,19 +54,21 @@ export function SchoolPicker({ value, onChange }: { value: School | null, onChan
     <Input role="combobox" aria-expanded={showList} aria-controls="school-results" aria-autocomplete="list" className="h-11 md:h-10 pl-9 font-normal" placeholder="Nombre, localidad o CUE…" value={query}
       onChange={e => { setQuery(e.target.value); setOpen(true) }} onFocus={e => { setOpen(true); e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' }) }} onBlur={() => setTimeout(() => setOpen(false), 150)}
       onKeyDown={e => {
-        if (!showList || !results.length) return
-        if (e.key === 'ArrowDown') { e.preventDefault(); setActive(a => Math.min(a + 1, results.length - 1)) }
+        if (!showList || !opciones.length) return
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActive(a => Math.min(a + 1, opciones.length - 1)) }
         else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(a => Math.max(a - 1, 0)) }
-        else if (e.key === 'Enter') { e.preventDefault(); pick(results[active]) }
+        else if (e.key === 'Enter') { e.preventDefault(); pick(opciones[active]) }
         else if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
       }} />
     {showList && <div id="school-results" role="listbox" className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-dte-linea bg-white p-1 text-sm font-normal text-dte-tinta shadow-xl">
       {loading ? <p className="flex items-center gap-2 p-3 text-dte-gris"><Loader2 className="size-4 animate-spin" />Buscando…</p>
         : failed ? <p className="p-3 text-peligro">No se pudo buscar. Probá de nuevo.</p>
-        : !results.length ? <p className="p-3 text-dte-gris">Sin resultados para “{query.trim()}”.</p>
-        : results.map((s, i) => <button key={s.id} type="button" role="option" aria-selected={i === active} onMouseDown={e => e.preventDefault()} onMouseEnter={() => setActive(i)} onClick={() => pick(s)} className={`block w-full rounded-lg px-3 py-2 text-left ${i === active ? 'bg-dte-tinte' : ''}`}>
-          <span className="block font-semibold leading-snug">{schoolName(s)}</span>
-          <span className="block text-xs text-dte-gris">CUE {s.cue ?? '—'}{schoolPlace(s) ? ` · ${schoolPlace(s)}` : ''}</span>
+        : !opciones.length ? <p className="p-3 text-dte-gris">Sin resultados para “{query.trim()}”.</p>
+        : opciones.map((x, i) => <button key={x.tipo === 'org' ? `o-${x.o.id}` : x.s.id} type="button" role="option" aria-selected={i === active} onMouseDown={e => e.preventDefault()} onMouseEnter={() => setActive(i)} onClick={() => pick(x)} className={`block w-full rounded-lg px-3 py-2 text-left ${i === active ? 'bg-dte-tinte' : ''}`}>
+          {x.tipo === 'org' ? <><span className="flex items-center gap-1.5 font-semibold leading-snug"><Landmark className="size-3.5 shrink-0 text-dte-violeta" aria-hidden />{x.o.nombre.split(' | ').map(titleCase).join(' · ')}</span>
+            <span className="block text-xs text-dte-gris">Código {x.o.codigo}{x.o.localidad ? ` · ${titleCase(x.o.localidad)}` : ''}</span></>
+          : <><span className="block font-semibold leading-snug">{schoolName(x.s)}</span>
+            <span className="block text-xs text-dte-gris">CUE {x.s.cue ?? '—'}{schoolPlace(x.s) ? ` · ${schoolPlace(x.s)}` : ''}</span></>}
         </button>)}
     </div>}
   </div>
@@ -211,7 +220,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   }
 
   return <form onSubmit={submit} className="flex flex-col gap-5">
-    {!esParo && !esLicencia && <div id="campo-establecimiento" className="flex scroll-mt-24 flex-col gap-1.5"><span className="text-sm font-semibold">Establecimiento <span className="text-dte-magenta">*</span> <span className="font-normal text-dte-gris">{modoT ? '(sede donde se desarrolla)' : '(escuela o lugar; no hace falta para Licencia ni Paro)'}</span></span><SchoolPicker value={school} onChange={v => { setSchool(v); limpiar('establecimiento') }} />{!school && <Input placeholder="…o lugar, si no es una escuela (ej.: Jefatura Distrital, Feria de Ciencias)" value={form.lugar} onChange={e => { set('lugar', e.target.value); limpiar('establecimiento') }} aria-invalid={!!errores.establecimiento || undefined} aria-describedby={errores.establecimiento ? 'err-establecimiento' : undefined} className="h-10" aria-label="Lugar" />}{errores.establecimiento && <p id="err-establecimiento" role="alert" className="text-sm font-medium text-peligro">{errores.establecimiento}</p>}</div>}
+    {!esParo && !esLicencia && <div id="campo-establecimiento" className="flex scroll-mt-24 flex-col gap-1.5"><span className="text-sm font-semibold">Establecimiento <span className="text-dte-magenta">*</span> <span className="font-normal text-dte-gris">{modoT ? '(sede donde se desarrolla)' : '(escuela o lugar; no hace falta para Licencia ni Paro)'}</span></span><SchoolPicker value={school} onChange={v => { setSchool(v); limpiar('establecimiento') }} onOrganismo={l => { set('lugar', l); limpiar('establecimiento') }} />{!school && <Input placeholder="Otro lugar, si no aparece en la búsqueda (ej.: Feria de Ciencias)" value={form.lugar} onChange={e => { set('lugar', e.target.value); limpiar('establecimiento') }} aria-invalid={!!errores.establecimiento || undefined} aria-describedby={errores.establecimiento ? 'err-establecimiento' : undefined} className="h-10" aria-label="Lugar" />}{errores.establecimiento && <p id="err-establecimiento" role="alert" className="text-sm font-medium text-peligro">{errores.establecimiento}</p>}</div>}
 
     {modoT === 'nuevo' && <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-dte-fondo p-2.5 text-sm"><input type="checkbox" checked={aDefinirMarcado} onChange={e => setADefinir(e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Fecha a definir.</b> {marca.corto === 'club' ? 'El club queda' : 'La práctica queda'} “por iniciar” y no se agrega a tu agenda hasta que programes el primer encuentro.</span></label>}
     {!aDefinir && <div className="grid gap-4 sm:grid-cols-3">

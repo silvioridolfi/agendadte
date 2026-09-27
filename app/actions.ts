@@ -481,6 +481,34 @@ async function moverFinDeSemanaImpl(ids: string[], fedId: string, destino: 'vier
 const conUsuario = <T,>(fn: (yo: Usuario) => Promise<T>) => run(async () => fn(await requerirUsuario()))
 export const getFeds = async () => conUsuario(() => getFedsImpl())
 export const searchSchools = async (query: string) => conUsuario(() => searchSchoolsImpl(query))
+
+// Jefaturas distritales y regional (organismos descentralizados, con código propio en lugar de CUE).
+// Al elegir una se guarda como lugar "NOMBRE (CÓDIGO)", el mismo formato que venían usando a mano.
+export type Organismo = { id: string, codigo: string, nombre: string, distrito: string | null, localidad: string | null, domicilio: string | null, lat: number | null, lon: number | null }
+const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+async function organismos(): Promise<Organismo[]> {
+  const { data, error } = await supabaseServer().from('organismos_descentralizados').select('id, codigo, nombre, distrito, localidad, domicilio, latitud, longitud').order('nombre')
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(o => ({ id: o.id, codigo: o.codigo, nombre: o.nombre, distrito: o.distrito, localidad: o.localidad, domicilio: o.domicilio, lat: o.latitud == null ? null : Number(o.latitud), lon: o.longitud == null ? null : Number(o.longitud) }))
+}
+export const buscarOrganismos = async (query: string) => conUsuario(async () => {
+  const palabras = sinTildes(query.trim()).split(/\s+/).filter(Boolean)
+  if (!palabras.length || query.trim().length < 2) return []
+  return (await organismos()).filter(o => { const t = sinTildes(`${o.nombre} ${o.codigo} ${o.distrito ?? ''} ${o.localidad ?? ''}`); return palabras.every(p => t.includes(p)) }).slice(0, 5)
+})
+
+// Dirección de la escuela o jefatura de una acción, para el detalle ("a dónde vamos").
+export type Ubicacion = { direccion: string | null, localidad: string | null, lat: number | null, lon: number | null }
+export const ubicacionDe = async (schoolId: string | null, lugar: string | null) => conUsuario(async (): Promise<Ubicacion | null> => {
+  if (schoolId) {
+    const { data } = await supabaseServer().from('establecimientos').select('direccion, ciudad, lat, lon').eq('id', schoolId).maybeSingle()
+    if (!data) return null
+    return { direccion: data.direccion ?? null, localidad: data.ciudad ?? null, lat: data.lat == null ? null : Number(data.lat), lon: data.lon == null ? null : Number(data.lon) }
+  }
+  const codigo = lugar?.match(/\(([0-9]{4}T[A-Z][0-9]{4})\)/)?.[1]
+  const o = codigo ? (await organismos()).find(x => x.codigo === codigo) : null
+  return o ? { direccion: o.domicilio, localidad: o.localidad, lat: o.lat, lon: o.lon } : null
+})
 export const getFedItems = async (fedId: string, from: string, to: string) => conUsuario(() => getFedItemsImpl(fedId, from, to))
 export const getAllItems = async (from: string, to: string) => conUsuario(() => getAllItemsImpl(from, to))
 export const getEncuentros = async (from: string, to: string) => conUsuario(() => getEncuentrosImpl(from, to))

@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Camera, Check, ClipboardList, Clock, History, Loader2, MapPin, Pencil, Repeat, School as SchoolIcon, Trash2, UserRound, Users, X } from 'lucide-react'
+import { Camera, Check, ClipboardList, Clock, History, Loader2, MapPin, Navigation, Pencil, Repeat, School as SchoolIcon, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed } from '@/lib/agenda'
-import { statusStyle, parse, fmt, cap, timeRange, schoolPlace, itemTitle, firstName, setItemStatus, deleteItem, responder, getHistorial, fotosDelDia, errMsg, ActionChip, StatusBadge, ErrorBox } from '@/components/app/comun'
+import type { Ubicacion } from '@/app/actions'
+import { titleCase } from '@/lib/format'
+import { ubicacionDe, statusStyle, parse, fmt, cap, timeRange, schoolPlace, itemTitle, firstName, setItemStatus, deleteItem, responder, getHistorial, fotosDelDia, errMsg, ActionChip, StatusBadge, ErrorBox } from '@/components/app/comun'
 
 // =====================================================================
 
@@ -26,7 +28,18 @@ export function DetailDialog({ item, feds, profile, soloLectura, onClose, onEdit
     fotosDelDia([item.fed_id, ...(item.participantes ?? []).map(p => p.fed_id)], item.fecha, item.id).then(r => vivo && setFotos(r)).catch(() => {})
     return () => { vivo = false }
   }, [item])
+  // Dirección de la escuela o jefatura, con enlace a Google Maps (enlace común, sin API ni límites de uso).
+  const [ubic, setUbic] = useState<Ubicacion | null>(null)
+  useEffect(() => {
+    setUbic(null)
+    if (!item || (!item.school_id && !item.lugar)) return
+    let vivo = true
+    ubicacionDe(item.school_id, item.lugar).then(u => vivo && setUbic(u)).catch(() => {})
+    return () => { vivo = false }
+  }, [item])
   if (!item) return <Dialog open={false} />
+  const textoDir = ubic ? [ubic.direccion, ubic.localidad ? titleCase(ubic.localidad) : null].filter(Boolean).join(', ') : ''
+  const mapa = ubic && (ubic.lat != null && ubic.lon != null ? `${ubic.lat},${ubic.lon}` : textoDir ? `${textoDir}, Buenos Aires, Argentina` : null)
   // En las vistas de solo lectura (administración) el detalle es sólo de consulta, aunque la acción sea propia.
   const own = item.fed_id === profile.id && !soloLectura
   const fed = feds.find(f => f.id === item.fed_id)
@@ -64,6 +77,7 @@ export function DetailDialog({ item, feds, profile, soloLectura, onClose, onEdit
       <dl className="flex flex-col gap-3 rounded-xl bg-dte-fondo p-4">
         {row(MapPin, 'Lugar', !item.school && item.lugar)}
         {row(SchoolIcon, 'Escuela', item.school && <>CUE {item.school.cue ?? '—'}{schoolPlace(item.school) ? ` · ${schoolPlace(item.school)}` : ''}</>)}
+        {row(Navigation, 'Dirección', (textoDir || mapa) && <>{textoDir}{mapa && <> {textoDir ? '· ' : ''}<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapa)}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Cómo llegar</a></>}</>)}
         {row(ClipboardList, 'Sub-acción', item.sub_accion && <>{item.sub_accion}{item.cantidad ? <span className="text-dte-gris"> · {item.cantidad} equipos</span> : null}</>)}
         {row(UserRound, item.encuentros?.length > 1 ? `Encuentros (${item.encuentros.length})` : 'Encuentro', item.encuentros?.length ? <ul className="flex flex-col gap-1.5">{item.encuentros.map(e => <li key={e.id}>{[e.propuesta, e.encuentro_n ? `Encuentro N° ${e.encuentro_n}` : null, e.modalidad].filter(Boolean).join(' · ')}<span className="block text-xs text-dte-gris">{[e.destinatarios, e.inscriptos != null ? `${e.inscriptos} inscriptos` : null, e.asistentes != null ? `${e.asistentes} asistentes` : null].filter(Boolean).join(' · ')}{e.fotos_url && <> · <a href={e.fotos_url} target="_blank" rel="noreferrer" className="text-dte-petroleo underline">fotos</a></>}</span></li>)}</ul> : null)}
         {row(Pencil, 'Detalle', item.detalle && <span className="whitespace-pre-wrap">{item.detalle}</span>)}
