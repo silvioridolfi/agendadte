@@ -40,7 +40,7 @@ function participacion(c: Club) {
 
 // Clubes de Tecnología o Prácticas (PEAT). `desde`/`hasta`: período del tablero; se muestran los trayectos
 // con actividad en el período y se cuentan sólo los encuentros de ese período.
-export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo = 'CLUB DE TECNOLOGÍA', desde, hasta, periodo, noHabiles, onNuevo, onEncuentro }: { clubes: Club[], feds: Fed[], onCierre: (club: Club, fecha: string | null) => Promise<void>, schoolLabel: (c: Club) => string, tipo?: Trayecto, desde: string, hasta: string, periodo: string, noHabiles?: Set<string>, onNuevo?: () => void, onEncuentro?: (c: Club) => void }) {
+export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo = 'CLUB DE TECNOLOGÍA', desde, hasta, periodo, noHabiles, onNuevo, onEncuentro }: { clubes: Club[], feds: Fed[], onCierre: (club: Club, fecha: string | null) => Promise<void>, schoolLabel: (c: Club) => string, tipo?: Trayecto, desde: string, hasta: string, periodo: string, noHabiles?: Set<string>, onNuevo?: () => void, onEncuentro?: (c?: Club) => void }) {
   const hoy = new Date().toISOString().slice(0, 10)
   // Los "por iniciar" (sin fecha) se listan aparte; el resto de las métricas usa sólo los iniciados.
   const todos = useMemo(() => entrada.filter(iniciado), [entrada])
@@ -142,7 +142,10 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
 
     {onNuevo && <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-dte-gris">Tus {clubesTxt}. Los encuentros que registres se agregan a tu agenda.</p>
-      <Button variant="marca" onClick={onNuevo}><Plus data-icon="inline-start" />{tipo === 'CLUB DE TECNOLOGÍA' ? 'Nuevo club' : 'Nueva práctica'}</Button>
+      <div className="grid grid-cols-2 gap-2 sm:flex">
+        {onEncuentro && <Button variant="outline" onClick={() => onEncuentro()}><CalendarPlus data-icon="inline-start" />Registrar encuentro</Button>}
+        <Button variant="marca" onClick={onNuevo}><Plus data-icon="inline-start" />{tipo === 'CLUB DE TECNOLOGÍA' ? 'Nuevo club' : 'Nueva práctica'}</Button>
+      </div>
     </div>}
 
     {pendientes.length > 0 && <Panel title="Por iniciar" subtitle={`Planificados sin fecha: no cuentan en las métricas hasta programar el primer encuentro · ${pendientes.length}`}>

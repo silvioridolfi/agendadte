@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { CalendarDays, CloudUpload, LayoutDashboard, Plus, type LucideIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { type AgendaItem, type Fed } from '@/lib/agenda'
+import { esTrayecto, type AgendaItem, type Fed } from '@/lib/agenda'
 import { NotificacionesBell } from '@/components/app/notificaciones'
 import { ProfileSelect } from '@/components/app/perfil'
 import { AgendaView } from '@/components/app/agenda'
@@ -19,6 +19,15 @@ function BarraBoton({ activo, onClick, icono: Icono, label }: { activo: boolean,
   return <button type="button" onClick={onClick} aria-current={activo ? 'page' : undefined} className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-semibold transition ${activo ? 'text-dte-petroleo' : 'text-dte-gris hover:text-dte-tinta'}`}>
     <span className={`flex h-7 w-12 items-center justify-center rounded-full transition ${activo ? 'bg-dte-petroleo/10' : ''}`}><Icono className="size-5" /></span>{label}
   </button>
+}
+
+// Título del formulario según desde dónde se abre (agenda general o sección de clubes/prácticas).
+function tituloForm(e: { item: AgendaItem | null, preset?: ItemPreset } | null) {
+  const club = e?.preset?.accion === 'PRÁCTICAS PROFESIONALIZANTES' || e?.item?.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? 'práctica' : 'club'
+  if (e?.item) return esTrayecto(e.item.accion) ? `Editar encuentro de ${club === 'club' ? 'club' : 'práctica'}` : 'Editar acción'
+  if (e?.preset?.modo === 'nuevo') return club === 'club' ? 'Nuevo club' : 'Nueva práctica'
+  if (e?.preset?.modo === 'encuentro') return `Registrar encuentro de ${club === 'club' ? 'club' : 'práctica'}`
+  return 'Nueva acción'
 }
 
 export default function Page() {
@@ -103,7 +112,7 @@ export default function Page() {
 
     <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
       <DialogContent className="bg-white sm:max-w-2xl">
-        <DialogHeader><DialogTitle className="text-lg">{editing?.item ? 'Editar acción' : 'Nueva acción'}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle className="text-lg">{tituloForm(editing)}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : editing?.preset?.modo === 'nuevo' ? 'Con fecha, el primer encuentro se agrega a tu agenda; si todavía no la tenés, queda “por iniciar”.' : editing?.preset?.modo === 'encuentro' ? 'El encuentro se agrega a tu agenda. Los datos de participación se completan cuando está realizado.' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>
         {editing && <ItemForm key={editing.item?.id ?? `new-${editing.fecha}`} fed={profile} feds={feds ?? []} item={editing.item} defaultFecha={editing.fecha} preset={editing.preset} onCancel={() => setEditing(null)} onSaved={({ creadas, mensaje, offline }) => { changed(mensaje ? mensaje : offline ? 'Sin conexión: la acción quedó guardada en este dispositivo y se envía al volver la señal' : editing.item ? 'Acción actualizada' : creadas > 1 ? `Se crearon ${creadas} acciones de la serie` : editing.preset?.participantes?.length ? 'Reunión creada y notificada al equipo' : 'Acción agregada a tu agenda'); setEditing(null) }} />}
       </DialogContent>
     </Dialog>

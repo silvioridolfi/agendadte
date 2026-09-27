@@ -148,8 +148,8 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     {tab === 'agenda' ? <div className="mt-6"><AgendaEquipoView feds={feds} reloadKey={reloadKey} onSelect={onSelect} /></div>
     : tab === 'equipo' ? <div className="mt-6"><MiEquipoView feds={feds} items={items} clubes={clubes} noHabiles={noHabiles} periodo={title} onVerAcciones={id => { setFedId(id); setTab('acciones') }} /></div>
     : tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} noHabiles={noHabiles} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) }}
-      onNuevo={propio && onNuevaAccion ? () => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', club_id: 'nuevo' }) : undefined}
-      onEncuentro={propio && onNuevaAccion ? c => onNuevaAccion({ accion: c.tipo, club_id: c.id }) : undefined} />}</div>
+      onNuevo={propio && onNuevaAccion ? () => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', modo: 'nuevo' }) : undefined}
+      onEncuentro={propio && onNuevaAccion ? c => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', club_id: c?.id, modo: 'encuentro' }) : undefined} />}</div>
     : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base.filter(i => feds.some(f => f.id === i.fed_id))} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} />}</div>
     : <div className="mt-6 flex flex-col gap-6">
       {error ? <ErrorBox message={error} onRetry={retry} />
