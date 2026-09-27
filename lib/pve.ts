@@ -6,6 +6,8 @@ import { DriveError, carpetaVigente, crearCarpeta, darLectura, esCarpeta, listar
 // de su carpeta de Drive (la misma que usa para las fotos). La agenda lo detecta, lo renombra con el formato del
 // instructivo ("R01 - PVE (OCTUBRE 2026) - NOMBRE") y le da permiso de lectura a la coordinación.
 export const REGION = 'R01'
+// Primer mes que se entrega por la agenda (las anteriores ya se entregaron por fuera).
+export const PRIMER_MES = '2026-09-01'
 const MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']
 
 // Mes como AAAA-MM-01; `desplazamiento` en meses respecto de la fecha dada.
@@ -20,7 +22,7 @@ export const nombrePve = (mes: string, fed: string) => `${REGION} - PVE (${nombr
 export const hoyAR = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
 
 // Meses con carpeta abierta: el actual y el anterior (la del mes anterior se entrega los primeros días del siguiente).
-export const mesesAbiertos = (hoy = hoyAR()) => [inicioMes(hoy, -1), inicioMes(hoy)]
+export const mesesAbiertos = (hoy = hoyAR()) => [inicioMes(hoy, -1), inicioMes(hoy)].filter(m => m >= PRIMER_MES)
 
 export type ResultadoPve = { entregadas: number, nuevas: number }
 
@@ -39,7 +41,7 @@ export async function revisarPve(fedId: string): Promise<ResultadoPve> {
   }
 
   // Carpetas de los meses abiertos (la de cada mes se crea sola; las ya existentes con ese nombre se reutilizan).
-  const { data: filas } = await db.from('pve').select('mes, folder_id, file_id, enviada_at').eq('fed_id', fedId).gte('mes', inicioMes(hoyAR(), -3))
+  const { data: filas } = await db.from('pve').select('mes, folder_id, file_id, enviada_at').eq('fed_id', fedId).gte('mes', inicioMes(hoyAR(), -3) > PRIMER_MES ? inicioMes(hoyAR(), -3) : PRIMER_MES)
   const porMes = new Map((filas ?? []).map(f => [f.mes as string, f]))
   const hijos = await listarHijos(pveId)
   for (const mes of mesesAbiertos()) {

@@ -9,6 +9,7 @@ import { cap, errMsg, eyebrow, fmt, parse, misPve, pveEquipo, marcarPveEnviadas,
 
 const fecha = (ts: string) => cap(fmt(new Date(ts), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))
 const fechaCorta = (f: string) => cap(fmt(parse(f), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))
+const PRIMER_MES = '2026-09-01'
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
 // Mi perfil (FED): una carpeta por mes para subir el PDF de la PVE ya firmada.
@@ -45,7 +46,8 @@ export function SeccionPve() {
 // Coordinación: estado de entrega del mes, descarga de todas juntas y marca de enviadas a Nivel Central.
 export function PveEquipoView() {
   const hoy = new Date()
-  const [mes, setMes] = useState(() => { const d = new Date(hoy.getFullYear(), hoy.getMonth() - (hoy.getDate() <= 15 ? 1 : 0), 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01` })
+  // Las PVE se entregan por la agenda desde septiembre de 2026.
+  const [mes, setMes] = useState(() => { const d = new Date(hoy.getFullYear(), hoy.getMonth() - (hoy.getDate() <= 15 ? 1 : 0), 1); const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; return m < PRIMER_MES ? PRIMER_MES : m })
   const [lista, setLista] = useState<PveFed[] | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -65,7 +67,7 @@ export function PveEquipoView() {
     <p className={eyebrow}>Coordinación</p>
     <h2 className="mt-1 text-2xl font-bold tracking-tight">PVE del equipo</h2>
     <p className="mt-1.5 text-sm text-dte-gris">Cada FED sube su PVE firmada a su carpeta de Drive; acá ves quién la entregó y las descargás todas juntas para enviarlas a Nivel Central (asunto: <b>R01 - PVE - {nombreMes.toUpperCase()}</b>).</p>
-    <div className="mt-4 flex items-center gap-1"><Button variant="outline" size="sm" onClick={() => mover(-1)} aria-label="Mes anterior">‹</Button><span className="min-w-36 px-2 text-center text-sm font-bold capitalize">{nombreMes}</span><Button variant="outline" size="sm" onClick={() => mover(1)} aria-label="Mes siguiente">›</Button></div>
+    <div className="mt-4 flex items-center gap-1"><Button variant="outline" size="sm" disabled={mes <= PRIMER_MES} onClick={() => mover(-1)} aria-label="Mes anterior">‹</Button><span className="min-w-36 px-2 text-center text-sm font-bold capitalize">{nombreMes}</span><Button variant="outline" size="sm" onClick={() => mover(1)} aria-label="Mes siguiente">›</Button></div>
     {error && <div className="mt-3"><ErrorBox message={error} /></div>}
     {!lista ? <div className="mt-4 flex flex-col gap-2"><Skeleton className="h-14" /><Skeleton className="h-14" /><Skeleton className="h-14" /></div> : <>
       <p className="mt-4 text-sm">Vence el <b>{lista[0] ? fechaCorta(lista[0].vence) : '—'}</b> (5.º día hábil del mes siguiente) · <b>{entregadas.length}</b> de {lista.length} entregadas{pendientes.length ? <> · faltan: {pendientes.map(f => f.nombre.split(' ')[0]).join(', ')}</> : ''}</p>

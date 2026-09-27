@@ -5,7 +5,7 @@ import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput
 import { borrarSesion, guardarSesion, passwordTemporal, requerirUsuario, usuarioActual, usuarioDeSesion, validarPassword, type Usuario } from '@/lib/sesion'
 import { DriveError, cuentaTecnica, driveConfigurado, idDeCarpeta, urlCarpeta, verificarCarpeta } from '@/lib/drive'
 import { ordenarFotos } from '@/lib/fotos'
-import { inicioMes, hoyAR as hoyPve, nombreMes, noLaborables, revisarPve, vencimientoPve } from '@/lib/pve'
+import { PRIMER_MES, inicioMes, hoyAR as hoyPve, nombreMes, noLaborables, revisarPve, vencimientoPve } from '@/lib/pve'
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
@@ -628,7 +628,7 @@ export const misPve = async (revisar = false) => conUsuario(async (yo): Promise<
   if (revisar || !(await db.from('pve').select('mes').eq('fed_id', yo.fed.id).eq('mes', inicioMes(hoyPve())).maybeSingle()).data) {
     try { await revisarPve(yo.fed.id) } catch (e) { error = e instanceof Error ? e.message : 'No se pudo revisar la carpeta' }
   }
-  const { data } = await db.from('pve').select('mes, folder_id, file_id, nombre, entregada_at, enviada_at').eq('fed_id', yo.fed.id).order('mes', { ascending: false }).limit(6)
+  const { data } = await db.from('pve').select('mes, folder_id, file_id, nombre, entregada_at, enviada_at').eq('fed_id', yo.fed.id).gte('mes', PRIMER_MES).order('mes', { ascending: false }).limit(6)
   const nl = await noLaborables(inicioMes(hoyPve(), -6), inicioMes(hoyPve(), 2))
   return { conectada: true, error, meses: (data ?? []).map(r => ({ mes: r.mes, nombreMes: nombreMes(r.mes), vence: vencimientoPve(r.mes, nl), carpetaUrl: urlCarpeta(r.folder_id), entregada: r.entregada_at, nombre: r.nombre, archivoUrl: r.file_id ? urlArchivo(r.file_id) : null, enviada: r.enviada_at })) }
 })
@@ -640,7 +640,7 @@ async function soloCoordinacion() {
 export type PveFed = { fedId: string, nombre: string, vence: string, conectada: boolean, entregada: string | null, nombreArchivo: string | null, archivoUrl: string | null, enviada: string | null }
 export const pveEquipo = async (mes: string) => run(async (): Promise<PveFed[]> => {
   await soloCoordinacion()
-  if (!/^\d{4}-\d{2}-01$/.test(mes)) throw new Error('Mes inválido')
+  if (!/^\d{4}-\d{2}-01$/.test(mes) || mes < PRIMER_MES) throw new Error('Mes inválido')
   const db = supabaseServer()
   const [{ data: feds }, { data: filas }] = await Promise.all([
     db.from('feds').select('id, nombre_completo, carpeta_fotos_id').eq('rol', 'fed').order('nombre_completo'),

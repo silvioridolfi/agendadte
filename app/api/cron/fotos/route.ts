@@ -1,7 +1,7 @@
 import { supabaseServer } from '@/lib/supabase-server'
 import { driveConfigurado } from '@/lib/drive'
 import { ordenarFotos } from '@/lib/fotos'
-import { habilesDelMes, hoyAR, nombreMes, inicioMes, noLaborables, revisarPve } from '@/lib/pve'
+import { PRIMER_MES, habilesDelMes, hoyAR, nombreMes, inicioMes, noLaborables, revisarPve } from '@/lib/pve'
 
 // Tarea nocturna (Vercel Cron): ordena por día las fotos sueltas de cada FED con carpeta cargada y revisa sus PVE.
 // PVE: aviso el 1.er día hábil del mes y recordatorio el 4.º (vencen el 5.º día hábil del mes siguiente).
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   const hoy = hoyAR(), mes = inicioMes(hoy, -1)
   const habiles = habilesDelMes(inicioMes(hoy), await noLaborables(inicioMes(hoy), inicioMes(hoy, 1)))
   const vence = habiles[4], dia = habiles.indexOf(hoy)
-  if (vence && (dia === 0 || dia === 3)) {
+  if (vence && mes >= PRIMER_MES && (dia === 0 || dia === 3)) {
     const { data: todos } = await db.from('feds').select('id').eq('rol', 'fed')
     const { data: hechas } = await db.from('pve').select('fed_id').eq('mes', mes).not('file_id', 'is', null)
     const faltan = (todos ?? []).filter(f => !(hechas ?? []).some(h => h.fed_id === f.id))
