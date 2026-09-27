@@ -69,9 +69,15 @@ async function getAllItemsImpl(from: string, to: string): Promise<AgendaItem[]> 
 }
 
 // Todos los encuentros del período, estén o no vinculados a una acción (para las métricas de participación).
+// Métricas: sólo cuentan los encuentros realizados (los importados de la planilla no tienen acción y se cuentan).
+type ConItem = { item?: { estado: string } | null, agenda_item_id?: string | null }
+const realizado = (e: ConItem) => !e.agenda_item_id || e.item?.estado === 'realizada'
+function sinItem<T extends ConItem>(e: T) { const { item: _item, ...resto } = e; return resto }
+
 async function getEncuentrosImpl(from: string, to: string): Promise<Encuentro[]> {
-  return fetchAll<Encuentro>((a, b) => supabaseServer().from('agenda_encuentros').select(`*, school:establecimientos(${SCHOOL_COLS})`)
+  const l = await fetchAll<Encuentro & ConItem>((a, b) => supabaseServer().from('agenda_encuentros').select(`*, school:establecimientos(${SCHOOL_COLS}), item:agenda_items(estado)`)
     .gte('fecha', from).lte('fecha', to).order('fecha').order('id').range(a, b))
+  return l.filter(realizado).map(sinItem) as Encuentro[]
 }
 
 const opt = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null)
@@ -273,11 +279,11 @@ async function crearClubPorIniciarImpl(c: ClubPorIniciarInput): Promise<void> {
 }
 
 async function getClubesImpl(fedId?: string): Promise<Club[]> {
-  let q = supabaseServer().from('clubes').select(`*, school:establecimientos!clubes_school_id_fkey(${SCHOOL_COLS}), escuela_origen:establecimientos!clubes_escuela_origen_id_fkey(${SCHOOL_COLS}), encuentros:agenda_encuentros(id, fecha, propuesta, school_id, lugar, school:establecimientos(${SCHOOL_COLS}), encuentro_n, inscriptos, asistentes, tipo_jornada, modalidad, destinatarios, es_cierre)`).order('fecha_inicio')
+  let q = supabaseServer().from('clubes').select(`*, school:establecimientos!clubes_school_id_fkey(${SCHOOL_COLS}), escuela_origen:establecimientos!clubes_escuela_origen_id_fkey(${SCHOOL_COLS}), encuentros:agenda_encuentros(id, fecha, propuesta, school_id, lugar, school:establecimientos(${SCHOOL_COLS}), encuentro_n, inscriptos, asistentes, tipo_jornada, modalidad, destinatarios, es_cierre, agenda_item_id, item:agenda_items(estado))`).order('fecha_inicio')
   if (fedId) q = q.eq('fed_id', fedId)
   const { data, error } = await q
   if (error) throw new Error(error.message)
-  return (data ?? []) as Club[]
+  return ((data ?? []) as (Club & { encuentros: (Club['encuentros'][number] & ConItem)[] })[]).map(c => ({ ...c, encuentros: c.encuentros.filter(realizado).map(e => { const { agenda_item_id: _id, ...r } = sinItem(e); return r }) })) as Club[]
 }
 
 // Finalizar (fecha) o reactivar (null) un club desde el tablero.
