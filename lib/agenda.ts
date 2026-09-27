@@ -1,7 +1,7 @@
 export const ACCIONES = [
   'VISITA TÉCNICA', 'VISITA PEDAGÓGICA', 'REUNIÓN', 'CLUB DE TECNOLOGÍA', 'PRÁCTICAS PROFESIONALIZANTES', 'TALLER/CAPACITACIÓN',
   'ASISTENCIA REMOTA', 'CONECTIVIDAD', 'ENTREGA DE EQUIPAMIENTO', 'ADMINISTRATIVO', 'PLANIFICACIÓN', 'OFICINA R1',
-  'LICENCIA', 'PARO',
+  'LICENCIA', 'PARO', 'EVENTO DTE', 'FORMACIÓN INTERNA',
 ] as const
 export const ESTADOS = ['planificada', 'realizada', 'reprogramada', 'cancelada'] as const
 
@@ -16,7 +16,7 @@ export const CATEGORIA_LABEL: Record<Categoria, string> = { tecnica: 'Técnicas'
 export const CATEGORIA: Record<Accion, Categoria> = {
   'VISITA TÉCNICA': 'tecnica', 'ASISTENCIA REMOTA': 'tecnica', 'CONECTIVIDAD': 'tecnica', 'ENTREGA DE EQUIPAMIENTO': 'tecnica',
   'VISITA PEDAGÓGICA': 'pedagogica', 'CLUB DE TECNOLOGÍA': 'pedagogica', 'PRÁCTICAS PROFESIONALIZANTES': 'pedagogica', 'TALLER/CAPACITACIÓN': 'pedagogica',
-  'REUNIÓN': 'institucional', 'ADMINISTRATIVO': 'institucional', 'OFICINA R1': 'institucional', 'PLANIFICACIÓN': 'institucional', 'PARO': 'institucional', 'LICENCIA': 'institucional',
+  'REUNIÓN': 'institucional', 'ADMINISTRATIVO': 'institucional', 'OFICINA R1': 'institucional', 'PLANIFICACIÓN': 'institucional', 'PARO': 'institucional', 'LICENCIA': 'institucional', 'EVENTO DTE': 'institucional', 'FORMACIÓN INTERNA': 'institucional',
 }
 // Acciones que registran encuentros con participantes (N° de encuentro, destinatarios, inscriptos, asistentes).
 export const CON_ENCUENTRO: Accion[] = ['CLUB DE TECNOLOGÍA', 'TALLER/CAPACITACIÓN', 'PRÁCTICAS PROFESIONALIZANTES']
@@ -94,7 +94,19 @@ export type AgendaItem = {
   club_id?: string | null
   // Grado o grupo del club/práctica (para distinguir varios grupos de una misma escuela).
   club?: { grupo: string | null } | null
+  // Evento DTE al que corresponde la acción (participación registrada desde el calendario).
+  evento_id?: string | null
+  // Formación interna: modalidad, si asistió o la dictó, y quién la dictó.
+  modalidad?: ModalidadEvento | null
+  rol_formacion?: RolFormacion | null
+  dictada_por?: string | null
 }
+export const MODALIDADES_EVENTO = ['Presencial', 'Virtual', 'Híbrido'] as const
+export type ModalidadEvento = (typeof MODALIDADES_EVENTO)[number]
+export const ROLES_FORMACION = ['Asistí', 'La dicté'] as const
+export type RolFormacion = (typeof ROLES_FORMACION)[number]
+// Eventos propios de la DTE (JED, jornadas): los carga administración y aparecen en el calendario de todos.
+export type EventoDte = { id: string; nombre: string; fechas: string[]; hora_inicio: string | null; hora_fin: string | null; modalidad: ModalidadEvento; lugar: string | null; enlace: string | null; descripcion: string | null }
 export type AgendaItemInput = {
   fed_id: string
   school_id: string | null
@@ -107,6 +119,9 @@ export type AgendaItemInput = {
   estado: Estado
   cantidad: number | null
   lugar: string | null
+  modalidad?: ModalidadEvento | null
+  rol_formacion?: RolFormacion | null
+  dictada_por?: string | null
   // Datos del encuentro (sólo clubes, talleres y prácticas); se guardan en agenda_encuentros.
   encuentro: EncuentroInput | null
   // FEDs etiquetados (sin incluir a quien la crea).
@@ -115,7 +130,7 @@ export type AgendaItemInput = {
   repeticion?: { dias: number[], hasta: string } | null
 }
 
-export type Notificacion = { id: string; tipo: 'etiqueta' | 'modificacion' | 'cancelacion' | 'respuesta'; detalle: string | null; leida: boolean; created_at: string; autor_id: string | null; item: AgendaItem | null }
+export type Notificacion = { id: string; tipo: 'etiqueta' | 'modificacion' | 'cancelacion' | 'respuesta' | 'evento'; detalle: string | null; leida: boolean; created_at: string; autor_id: string | null; item: AgendaItem | null }
 
 // Feriados nacionales, días con fines turísticos y aniversarios distritales (tabla public.feriados).
 // distrito null = aplica a todos; si no, sólo a quienes tienen ese distrito a cargo.

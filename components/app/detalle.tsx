@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Camera, Check, ClipboardList, Clock, History, Loader2, MapPin, Navigation, Pencil, Repeat, School as SchoolIcon, Trash2, UserRound, Users, X } from 'lucide-react'
+import { Camera, Check, ClipboardList, Clock, History, Loader2, GraduationCap, MapPin, Navigation, Pencil, Repeat, School as SchoolIcon, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed } from '@/lib/agenda'
@@ -76,6 +76,7 @@ export function DetailDialog({ item, feds, profile, soloLectura, onClose, onEdit
       </DialogHeader>
       <dl className="flex flex-col gap-3 rounded-xl bg-dte-fondo p-4">
         {row(MapPin, 'Lugar', !item.school && item.lugar)}
+        {row(GraduationCap, item.accion === 'FORMACIÓN INTERNA' ? 'Formación' : 'Modalidad', (item.modalidad || item.rol_formacion || item.dictada_por) && [item.rol_formacion, item.modalidad, item.dictada_por ? `dictada por ${item.dictada_por}` : null].filter(Boolean).join(' · '))}
         {row(SchoolIcon, 'Escuela', item.school && <>CUE {item.school.cue ?? '—'}{schoolPlace(item.school) ? ` · ${schoolPlace(item.school)}` : ''}</>)}
         {row(Navigation, 'Dirección', (textoDir || mapa) && <>{textoDir}{mapa && <> {textoDir ? '· ' : ''}<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapa)}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Cómo llegar</a></>}</>)}
         {row(ClipboardList, 'Sub-acción', item.sub_accion && <>{item.sub_accion}{item.cantidad ? <span className="text-dte-gris"> · {item.cantidad} equipos</span> : null}</>)}

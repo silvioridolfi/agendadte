@@ -7,6 +7,7 @@ import { esTrayecto, type AgendaItem, type Fed, type Trayecto } from '@/lib/agen
 import { NotificacionesBell } from '@/components/app/notificaciones'
 import { CambiarPassword, Ingreso, UsuariosView } from '@/components/app/acceso'
 import { FeriadosView } from '@/components/app/feriados'
+import { EventosPanel, RECARGAR } from '@/components/app/eventos'
 import type { Sesion } from '@/app/actions'
 import { AgendaView } from '@/components/app/agenda'
 import { DetailDialog } from '@/components/app/detalle'
@@ -74,6 +75,8 @@ export default function Page() {
   }, [cargarSesion])
   const cerrarSesion = async () => { try { await salir() } finally { storage(() => sessionStorage.removeItem(SECCION_KEY)); limpiarCache(); setSesion(null); setVista(null); setFeds(null); setEditing(null); setSelected(null) } }
   const changed = (message: string) => { setReloadKey(k => k + 1); setToast(message) }
+  // Registrar la participación en un evento (u otro cambio hecho desde un diálogo) recarga las vistas.
+  useEffect(() => { const f = () => setReloadKey(k => k + 1); window.addEventListener(RECARGAR, f); return () => window.removeEventListener(RECARGAR, f) }, [])
   const hideToast = useCallback(() => setToast(''), [])
 
   // Acciones cargadas sin conexión: se envían al volver la señal (y al abrir la app).
@@ -119,7 +122,7 @@ export default function Page() {
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 lg:px-6"><span className="flex items-center gap-1.5"><Eye className="size-4 shrink-0" aria-hidden /><span>{vista.tipo === 'equipo' ? <>Estás viendo el <b>tablero del equipo completo</b></> : <>Estás viendo la agenda de <b>{vista.fed.nombre_completo}</b></>} · Solo lectura</span></span>
         <button type="button" onClick={() => { setVista(null); setSection('agenda') }} className="min-h-10 rounded-full bg-white px-3 text-xs font-semibold text-dte-petroleo shadow-xs hover:bg-dte-tinte md:min-h-8">Volver a mi agenda</button></div>
     </div>}
-    {section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><FeriadosView autorId={profile.id} onSaved={setToast} /></main>
+    {section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><div className="flex flex-col gap-4"><EventosPanel onSaved={changed} /><FeriadosView autorId={profile.id} onSaved={changed} /></div></main>
       : section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); setSection('agenda') } }} />
       : section === 'perfil' && profile.rol === 'fed'
       ? <MiPerfilView key={profile.id} fed={profile} feds={feds ?? []} onSaved={f => { setProfile(f); setFeds(l => l && l.map(x => (x.id === f.id ? f : x))); setToast('Se guardó tu perfil'); setSection('agenda') }} />

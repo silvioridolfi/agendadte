@@ -7,8 +7,9 @@ import { CalendarX2, Check, Clock, ListChecks, Loader2, Plus, Users, WifiOff, Fi
 import { BarraSeleccion, PanelFinDeSemana } from '@/components/app/seleccion'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ESTADOS, type AgendaItem, type Feriado, type Estado, type Fed } from '@/lib/agenda'
+import { ESTADOS, type AgendaItem, type Feriado, type EventoDte, type Estado, type Fed } from '@/lib/agenda'
 import { FotosChip } from '@/components/app/fotosconteo'
+import { EventoTag, useEventos } from '@/components/app/eventos'
 import { actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, shortSchoolName, schoolPlace, ddjjFor, itemTitle, itemCorto, cueLugar, firstName, getFedItems, storage, ActionChip, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
 
 export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: { fed: Fed, feds: Fed[], reloadKey: number, onNew?: (fecha?: string) => void, onSelect: (item: AgendaItem) => void, onCambio?: (msg: string) => void }) {
@@ -37,6 +38,8 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
   const [from, to] = calBounds(anchor, view)
   const { items, error, retry, desdeCache } = useItems(() => getFedItems(fed.id, iso(from), iso(to)), [fed.id, iso(from), iso(to), reloadKey], `${fed.id}:${iso(from)}:${iso(to)}`)
   const feriados = useFeriados(iso(from), iso(to), fed.rol === 'coordinacion' ? null : fed.distritos_a_cargo)
+  // Eventos DTE: en la agenda propia de un FED se puede registrar la participación desde la marca del evento.
+  const eventos = useEventos(iso(from), iso(to)), registrar = !!onNew && fed.rol === 'fed'
   const today = iso(new Date())
   const byDay = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of items ?? []) m.set(i.fecha, [...(m.get(i.fecha) ?? []), i]); return m }, [items])
   const weekendItems = useMemo(() => (items ?? []).filter(i => !isWeekday(parse(i.fecha))), [items])
@@ -81,7 +84,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? <Skeleton className="h-72" />
         : view === 'day' ? <section className="rounded-2xl border border-dte-linea bg-white p-4">
-            <header className="mb-3 flex flex-wrap items-center justify-between gap-2">{dayHeader(anchor, true)}{sel && (byDay.get(iso(anchor)) ?? []).some(i => i.fed_id === fed.id) && <Button variant="outline" size="sm" onClick={() => selDia(iso(anchor))}><ListChecks data-icon="inline-start" />Todo el día</Button>}<div className="flex flex-wrap gap-1.5">{(feriados.get(iso(anchor)) ?? []).map(f => <FeriadoTag key={f.nombre} f={f} />)}</div></header>
+            <header className="mb-3 flex flex-wrap items-center justify-between gap-2">{dayHeader(anchor, true)}{sel && (byDay.get(iso(anchor)) ?? []).some(i => i.fed_id === fed.id) && <Button variant="outline" size="sm" onClick={() => selDia(iso(anchor))}><ListChecks data-icon="inline-start" />Todo el día</Button>}<div className="flex flex-wrap gap-1.5">{(feriados.get(iso(anchor)) ?? []).map(f => <FeriadoTag key={f.nombre} f={f} />)}{(eventos.get(iso(anchor)) ?? []).map(e => <EventoTag key={e.id} e={e} registrar={registrar} />)}</div></header>
             {(byDay.get(iso(anchor)) ?? []).length
               ? <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{(byDay.get(iso(anchor)) ?? []).map(card)}</div>
               : !onNew ? <p className="rounded-xl border border-dashed border-dte-linea py-10 text-center text-sm text-dte-gris">Sin acciones</p> : <button onClick={() => onNew(iso(anchor))} className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed border-dte-linea py-10 text-sm text-dte-gris hover:border-dte-magenta hover:text-dte-magenta"><Plus />Sin acciones · agregar una</button>}
@@ -92,6 +95,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
               return <section key={key} aria-label={cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))} className={`group/day flex flex-col rounded-2xl border p-2.5 lg:min-h-72 ${key === today ? 'border-pba-celeste bg-white shadow-[0_0_0_1px] shadow-pba-celeste' : fer.length ? 'border-feriado-borde bg-feriado-fondo' : 'border-dte-linea bg-white'}`}>
                 <header className="mb-2 flex items-center justify-between px-1">{dayHeader(d)}{sel ? (list.some(i => i.fed_id === fed.id) && <Button variant="ghost" size="sm" onClick={() => selDia(key)} className="text-dte-petroleo">Todo el día</Button>) : onNew && <Button variant="ghost" size="icon-sm" aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric' })}`} onClick={() => onNew(key)} className="text-dte-gris hover:text-dte-magenta lg:opacity-0 lg:group-hover/day:opacity-100 lg:focus-visible:opacity-100"><Plus /></Button>}</header>
                 {fer.length > 0 && <div className="mb-2 flex flex-col gap-1 px-1">{fer.map(f => <FeriadoTag key={f.nombre} f={f} />)}</div>}
+                {(eventos.get(key) ?? []).length > 0 && <div className="mb-2 flex flex-col gap-1 px-1">{eventos.get(key)!.map(e => <EventoTag key={e.id} e={e} registrar={registrar} />)}</div>}
                 <div className="flex flex-1 flex-col gap-2">
                   {list.map(card)}
                   {!list.length && <p className="px-1 pb-1 text-xs text-dte-gris-claro">{fer.length ? 'No laborable' : 'Sin acciones'}</p>}
@@ -99,7 +103,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
               </section>
             })}
           </div>
-        : view === 'month' ? <MonthGrid month={from} byDay={byDay} feriados={feriados} today={today} onDay={goDay} onSelect={onSelect} onNew={onNew} />
+        : view === 'month' ? <MonthGrid month={from} byDay={byDay} feriados={feriados} eventos={eventos} registrar={registrar} today={today} onDay={goDay} onSelect={onSelect} onNew={onNew} />
         : view === 'list' ? <ListaAcciones items={items} viewer={fed.id} onSelect={onSelect} sel={sel} onToggle={toggleSel} />
         : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }, (_, i) => monthStart(from, i)).map(m => <MiniMonth key={iso(m)} month={m} byDay={byDay} feriados={feriados} today={today} onDay={goDay} />)}</div>}
     </div>
@@ -112,7 +116,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
   </main>
 }
 
-export function MonthGrid({ month, byDay, feriados, today, onDay, onSelect, onNew }: { month: Date, byDay: Map<string, AgendaItem[]>, feriados: Map<string, Feriado[]>, today: string, onDay: (d: Date) => void, onSelect: (i: AgendaItem) => void, onNew?: (fecha: string) => void }) {
+export function MonthGrid({ month, byDay, feriados, eventos, registrar = false, today, onDay, onSelect, onNew }: { month: Date, byDay: Map<string, AgendaItem[]>, feriados: Map<string, Feriado[]>, eventos?: Map<string, EventoDte[]>, registrar?: boolean, today: string, onDay: (d: Date) => void, onSelect: (i: AgendaItem) => void, onNew?: (fecha: string) => void }) {
   // En móvil, tocar un día abre una hoja con sus acciones y el atajo para agregar.
   const [dia, setDia] = useState<Date | null>(null)
   const diaKey = dia ? iso(dia) : '', diaList = dia ? byDay.get(diaKey) ?? [] : [], diaFer = dia ? feriados.get(diaKey) ?? [] : []
@@ -128,6 +132,8 @@ export function MonthGrid({ month, byDay, feriados, today, onDay, onSelect, onNe
           {onNew && <button onClick={() => onNew(key)} aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })}`} title="Agregar acción" className="absolute right-1.5 top-1.5 hidden size-7 sm:flex items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-magenta hover:text-white focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"><Plus className="size-4" /></button>}
           {fer.map(f => <span key={f.nombre} className="hidden sm:block"><FeriadoTag f={f} /></span>)}
           {fer.length > 0 && <span className="sm:hidden"><FeriadoTag f={fer[0]} compact /></span>}
+          {(eventos?.get(key) ?? []).map(e => <span key={e.id} className="hidden sm:block"><EventoTag e={e} registrar={registrar} /></span>)}
+          {!fer.length && (eventos?.get(key) ?? []).length > 0 && <span className="sm:hidden"><EventoTag e={eventos!.get(key)![0]} compact registrar={registrar} /></span>}
           {list.slice(0, 3).map(i => <button key={i.id} onClick={() => onSelect(i)} title={itemTitle(i)} className={`hidden items-center gap-1 truncate rounded px-1 py-0.5 text-left text-xs hover:bg-dte-tinte sm:flex ${i.estado === 'cancelada' ? 'opacity-60 line-through' : ''}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[i.accion]?.dot}`} /><span className="truncate">{i.hora_inicio ? `${hhmm(i.hora_inicio)} ` : ''}{itemCorto(i)}</span></button>)}
           {list.length > 3 && <button onClick={() => onDay(d)} className="hidden px-1 text-left text-xs font-semibold text-dte-petroleo sm:block">+{list.length - 3} más</button>}
           {list.length > 0 && <span className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden>{list.slice(0, 6).map(i => <span key={i.id} className={`size-2 rounded-full ${actionStyle[i.accion]?.dot}`} />)}</span>}
@@ -140,6 +146,7 @@ export function MonthGrid({ month, byDay, feriados, today, onDay, onSelect, onNe
     <DialogContent className="bg-white">
       <DialogHeader><DialogTitle className="text-lg">{dia ? cap(fmt(dia, { weekday: 'long', day: 'numeric', month: 'long' })) : ''}</DialogTitle><DialogDescription>{diaList.length ? `${diaList.length} ${diaList.length === 1 ? 'acción' : 'acciones'}` : 'Sin acciones cargadas.'}</DialogDescription></DialogHeader>
       {diaFer.length > 0 && <div className="flex flex-wrap gap-1">{diaFer.map(f => <FeriadoTag key={f.nombre} f={f} />)}</div>}
+      {(eventos?.get(diaKey) ?? []).length > 0 && <div className="flex flex-wrap gap-1">{eventos!.get(diaKey)!.map(e => <EventoTag key={e.id} e={e} registrar={registrar} />)}</div>}
       {diaList.length > 0 && <ul className="flex flex-col gap-2">{[...diaList].sort((a, b) => (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? '')).map(i => <li key={i.id}><ItemCard item={i} onClick={() => { setDia(null); onSelect(i) }} /></li>)}</ul>}
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
         <Button variant="outline" onClick={() => { const d = dia; setDia(null); if (d) onDay(d) }}>Ver día completo</Button>

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
-import { iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA } from '@/lib/agenda'
+import { iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
 import type { Organismo } from '@/app/actions'
 import { titleCase } from '@/lib/format'
 import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, saveItem, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
@@ -90,11 +90,13 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const enc0 = item?.encuentros?.find(e => e.origen === 'app') ?? item?.encuentros?.[0]
   // Formulario exclusivo de clubes y prácticas (abierto desde su sección, o al editar un encuentro): sin tipos de acción ni campos generales.
   const modoT = preset?.modo ?? (item && esTrayecto(item.accion) ? 'encuentro' : null)
-  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? preset?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? preset?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', club_id: enc0?.club_id ?? item?.club_id ?? (preset?.modo === 'nuevo' ? 'nuevo' : preset?.club_id) ?? '', nivel: '', curso: '', seccion: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
+  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? preset?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? preset?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', modalidad_ev: item?.modalidad ?? ('Presencial' as ModalidadEvento), rol_formacion: item?.rol_formacion ?? ('Asistí' as RolFormacion), dictada_por: item?.dictada_por ?? '', club_id: enc0?.club_id ?? item?.club_id ?? (preset?.modo === 'nuevo' ? 'nuevo' : preset?.club_id) ?? '', nivel: '', curso: '', seccion: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
   // Clubes y prácticas: registro por grupo con inicio y cierre (cada uno con su identidad visual).
   const esClub = esTrayecto(form.accion)
   const marca = esClub ? TRAYECTO_MARCA[form.accion as keyof typeof TRAYECTO_MARCA] : TRAYECTO_MARCA['CLUB DE TECNOLOGÍA']
   const esParo = form.accion === 'PARO', esLicencia = form.accion === 'LICENCIA'
+  // Formación interna y eventos DTE: el lugar es opcional (suelen ser virtuales o en la DTE).
+  const esFormacion = form.accion === 'FORMACIÓN INTERNA', esEvento = form.accion === 'EVENTO DTE', lugarOpcional = esFormacion || esEvento
   const conSubAccion = !!form.accion && !esClub && !esParo && !esLicencia
   // Clubes del FED (para elegir a cuál corresponde el encuentro). Los finalizados sólo si es el del encuentro que se edita.
   const [clubes, setClubes] = useState<Club[] | null>(null)
@@ -177,7 +179,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     e.preventDefault()
     // Validación: mensaje debajo de cada campo y foco/scroll al primero con error.
     const errs: typeof errores = {}
-    if (!esParo && !esLicencia && !school && !form.lugar.trim()) errs.establecimiento = 'Indicá el establecimiento (o el lugar, si no es una escuela).'
+    if (!esParo && !esLicencia && !lugarOpcional && !school && !form.lugar.trim()) errs.establecimiento = 'Indicá el establecimiento (o el lugar, si no es una escuela).'
     if (!form.accion) errs.accion = 'Elegí el tipo de acción.'
     if (timeError) errs.hora = timeError
     if (esClub && !form.club_id) errs.club = `Elegí a qué ${marca.corto} corresponde el encuentro, o iniciá uno nuevo.`
@@ -206,6 +208,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       repeticion: repetir && !item ? { dias: diasSerie, hasta: hastaSerie } : null,
       fed_id: fed.id, school_id: esLicencia || esParo ? null : school?.id ?? null, lugar: school || esLicencia || esParo ? null : form.lugar || null, fecha: form.fecha, accion: form.accion, estado: form.estado,
       hora_inicio: esParo ? null : form.hora_inicio || null, hora_fin: esParo ? null : form.hora_fin || null, sub_accion: conSubAccion ? form.sub_accion : null, detalle: form.detalle,
+      modalidad: lugarOpcional ? form.modalidad_ev : null, rol_formacion: esFormacion ? form.rol_formacion : null, dictada_por: esFormacion ? form.dictada_por : null,
       cantidad: cat === 'tecnica' ? toNum(form.cantidad) : null,
       participantes: esParo || esLicencia ? [] : participantes,
       encuentro: conEncuentro ? { id: enc0?.id, propuesta: form.propuesta, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: form.destinatarios, inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes),
@@ -220,7 +223,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   }
 
   return <form onSubmit={submit} className="flex flex-col gap-5">
-    {!esParo && !esLicencia && <div id="campo-establecimiento" className="flex scroll-mt-24 flex-col gap-1.5"><span className="text-sm font-semibold">Establecimiento <span className="text-dte-magenta">*</span> <span className="font-normal text-dte-gris">{modoT ? '(sede donde se desarrolla)' : '(escuela o lugar; no hace falta para Licencia ni Paro)'}</span></span><SchoolPicker value={school} onChange={v => { setSchool(v); limpiar('establecimiento') }} onOrganismo={l => { set('lugar', l); limpiar('establecimiento') }} />{!school && <Input placeholder="Otro lugar, si no aparece en la búsqueda (ej.: Feria de Ciencias)" value={form.lugar} onChange={e => { set('lugar', e.target.value); limpiar('establecimiento') }} aria-invalid={!!errores.establecimiento || undefined} aria-describedby={errores.establecimiento ? 'err-establecimiento' : undefined} className="h-10" aria-label="Lugar" />}{errores.establecimiento && <p id="err-establecimiento" role="alert" className="text-sm font-medium text-peligro">{errores.establecimiento}</p>}</div>}
+    {!esParo && !esLicencia && <div id="campo-establecimiento" className="flex scroll-mt-24 flex-col gap-1.5"><span className="text-sm font-semibold">Establecimiento {!lugarOpcional && <span className="text-dte-magenta">*</span>} <span className="font-normal text-dte-gris">{modoT ? '(sede donde se desarrolla)' : lugarOpcional ? '(opcional)' : '(escuela o lugar; no hace falta para Licencia ni Paro)'}</span></span><SchoolPicker value={school} onChange={v => { setSchool(v); limpiar('establecimiento') }} onOrganismo={l => { set('lugar', l); limpiar('establecimiento') }} />{!school && <Input placeholder="Otro lugar, si no aparece en la búsqueda (ej.: Feria de Ciencias)" value={form.lugar} onChange={e => { set('lugar', e.target.value); limpiar('establecimiento') }} aria-invalid={!!errores.establecimiento || undefined} aria-describedby={errores.establecimiento ? 'err-establecimiento' : undefined} className="h-10" aria-label="Lugar" />}{errores.establecimiento && <p id="err-establecimiento" role="alert" className="text-sm font-medium text-peligro">{errores.establecimiento}</p>}</div>}
 
     {modoT === 'nuevo' && <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-dte-fondo p-2.5 text-sm"><input type="checkbox" checked={aDefinirMarcado} onChange={e => setADefinir(e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Fecha a definir.</b> {marca.corto === 'club' ? 'El club queda' : 'La práctica queda'} “por iniciar” y no se agrega a tu agenda hasta que programes el primer encuentro.</span></label>}
     {!aDefinir && <div className="grid gap-4 sm:grid-cols-3">
@@ -237,7 +240,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       {errores.accion && <p id="err-accion" role="alert" className="-mt-1 mb-2 text-sm font-medium text-peligro">{errores.accion}</p>}
       <div className="flex flex-col gap-3">{CATEGORIAS.map(c => <div key={c}>
         <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris"><span className="size-2 rounded-sm" style={{ background: CAT_COLOR[c] }} />{CATEGORIA_LABEL[c]}</p>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c).sort(az).map(name => {
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c && (name !== 'EVENTO DTE' || item?.accion === 'EVENTO DTE')).sort(az).map(name => {
           const on = form.accion === name
           return <button key={name} type="button" aria-pressed={on} onClick={() => { limpiar('accion'); setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '', tipo_jornada: f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada })) }} className={`flex min-h-11 min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs font-bold uppercase leading-tight break-words hyphens-auto transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
             <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span><span className="min-w-0 [overflow-wrap:anywhere]">{name}</span>
@@ -257,8 +260,13 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     </fieldset>}
 
     {conSubAccion && <div className={`grid gap-4 ${cat === 'tecnica' ? 'sm:grid-cols-[1fr_9rem]' : ''}`}>
-      <Field label="Sub-acción" hint="(opcional)"><Input list="sub-acciones" placeholder={form.accion && SUB_ACCIONES[form.accion] ? `Ej.: ${SUB_ACCIONES[form.accion]!.slice(0, 2).join(', ')}` : 'Ej.: revisión de equipamiento'} value={form.sub_accion} onChange={e => set('sub_accion', e.target.value)} className="h-10" /></Field>
+      <Field label={esFormacion ? 'Tema' : esEvento ? 'Evento' : 'Sub-acción'} hint="(opcional)"><Input list="sub-acciones" placeholder={esFormacion ? 'Ej.: Inteligencia artificial en el aula' : esEvento ? 'Ej.: JED 2026' : form.accion && SUB_ACCIONES[form.accion] ? `Ej.: ${SUB_ACCIONES[form.accion]!.slice(0, 2).join(', ')}` : 'Ej.: revisión de equipamiento'} value={form.sub_accion} onChange={e => set('sub_accion', e.target.value)} className="h-10" /></Field>
       {cat === 'tecnica' && <Field label="Cantidad" hint="(equipos)"><Input type="number" min={0} inputMode="numeric" placeholder="0" value={form.cantidad} onChange={e => set('cantidad', e.target.value)} className="h-10" /></Field>}
+    </div>}
+    {esFormacion && <div className="grid gap-4 sm:grid-cols-3">
+      <fieldset className="flex flex-col gap-1.5"><legend className="mb-1.5 text-sm font-semibold">Participación</legend><div className="flex flex-wrap gap-1.5">{ROLES_FORMACION.map(r => <Pill key={r} on={form.rol_formacion === r} onClick={() => set('rol_formacion', r)}>{r}</Pill>)}</div></fieldset>
+      <Field label="Dictada por" hint="(opcional)"><Input placeholder="Ej.: DTE, Región 1, otro equipo" value={form.dictada_por} onChange={e => set('dictada_por', e.target.value)} className="h-10" /></Field>
+      <Field label="Modalidad"><select className={`${selectClass} h-10`} value={form.modalidad_ev} onChange={e => set('modalidad_ev', e.target.value as ModalidadEvento)}>{MODALIDADES_EVENTO.map(m => <option key={m}>{m}</option>)}</select></Field>
     </div>}
     <datalist id="sub-acciones">{[...(form.accion ? SUB_ACCIONES[form.accion] ?? [] : [])].sort(az).map(o => <option key={o} value={o} />)}</datalist>
     {conSubAccion && form.accion && SUB_ACCIONES[form.accion] && <div className="-mt-3 flex flex-wrap items-center gap-1.5"><span className="mr-0.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Sugerencias</span>{[...SUB_ACCIONES[form.accion]!].sort(az).map(o => { const on = form.sub_accion.split(',').map(x => x.trim()).includes(o); return <Pill key={o} on={on} onClick={() => { const cur = form.sub_accion.split(',').map(x => x.trim()).filter(Boolean); set('sub_accion', (on ? cur.filter(x => x !== o) : [...cur, o]).join(', ')) }}>{o}</Pill> })}</div>}

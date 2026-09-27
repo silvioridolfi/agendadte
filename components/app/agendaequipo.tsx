@@ -6,6 +6,7 @@ import { Segmented, Pill } from '@/components/ui/segmented'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { CATEGORIA, DISTRITOS_REGION, type AgendaItem, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
+import { EventoTag, useEventos } from '@/components/app/eventos'
 import { actionStyle, addDays, cap, fmt, hhmm, iso, parse, selectClass, siglaEscuela, conGrupo, startOfWeek, toWeekday, firstName, getAllItems, useItems, useFeriados, ActionChip, ErrorBox, FeriadoTag, Skeleton, Vacio, WeekNav } from '@/components/app/comun'
 import { ItemCard } from '@/components/app/agenda'
 
@@ -34,6 +35,7 @@ export function AgendaEquipoView({ feds, reloadKey, onSelect }: { feds: Fed[], r
   const [desde, hasta] = modo === 'dia' ? [fecha, fecha] : modo === 'semana' ? [lunes, addDays(lunes, 4)] : [new Date(), addDays(new Date(), 7)]
   const { items, error, retry } = useItems(() => getAllItems(iso(desde), iso(hasta)), [iso(desde), iso(hasta), reloadKey], `todos:${iso(desde)}:${iso(hasta)}`)
   const feriados = useFeriados(iso(desde), iso(hasta), null)
+  const eventos = useEventos(iso(desde), iso(hasta))
 
   const equipo = useMemo(() => feds.filter(f => (!fedId || f.id === fedId) && (!distrito || f.distritos_a_cargo.includes(distrito))), [feds, fedId, distrito])
   // Acciones de cada FED: las propias y aquellas en las que participa (salvo que haya rechazado la invitación).
@@ -77,6 +79,7 @@ export function AgendaEquipoView({ feds, reloadKey, onSelect }: { feds: Fed[], r
       {modo === 'dia' && items && <p className="text-sm text-dte-gris"><b className="text-dte-tinta">{conActividad}</b> de {equipo.length} con acciones{soloTerritorio ? ' en territorio' : ''}{ausentes ? ` · ${ausentes} con licencia o paro` : ''}</p>}
     </header>
     {modo === 'dia' && (feriados.get(iso(fecha)) ?? []).length > 0 && <div className="flex flex-wrap gap-1">{feriados.get(iso(fecha))!.map(f => <FeriadoTag key={f.nombre} f={f} />)}</div>}
+    {modo === 'dia' && (eventos.get(iso(fecha)) ?? []).length > 0 && <div className="flex flex-wrap gap-1">{eventos.get(iso(fecha))!.map(e => <EventoTag key={e.id} e={e} />)}</div>}
 
     {error ? <ErrorBox message={error} onRetry={retry} />
       : !items ? <Skeleton className="h-72" />

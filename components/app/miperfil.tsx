@@ -38,7 +38,7 @@ export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onFer
       {profile.rol === 'fed' && <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>}
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
-      {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onFeriados() }} className={item}><CalendarOff className="size-4 text-dte-petroleo" />Feriados y recesos</button>}
+      {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onFeriados() }} className={item}><CalendarOff className="size-4 text-dte-petroleo" />Feriados y eventos</button>}
       <button role="menuitem" onClick={() => { setOpen(false); onPassword() }} className={item}><KeyRound className="size-4 text-dte-petroleo" />Cambiar contraseña</button>
       <button role="menuitem" onClick={() => { setOpen(false); onSalir() }} className={`${item} border-t border-dte-linea text-peligro`}><LogOut className="size-4" />Cerrar sesión</button>
     </div>}

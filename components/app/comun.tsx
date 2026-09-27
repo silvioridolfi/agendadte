@@ -26,6 +26,8 @@ export const actionStyle: Record<Accion, { chip: string, dot: string }> = {
   'ENTREGA DE EQUIPAMIENTO': { chip: 'bg-[#dbe6f4] text-[#244f86]', dot: 'bg-[#2a6fb0]' },
   'PLANIFICACIÓN': { chip: 'bg-[#ece9f7] text-[#4e4390]', dot: 'bg-[#6f5fc2]' },
   'LICENCIA': { chip: 'bg-[#eeeaee] text-[#5c5160]', dot: 'bg-[#9a8f9d]' },
+  'EVENTO DTE': { chip: 'bg-[#f3e1f0] text-[#7a2d6e]', dot: 'bg-[#b8469f]' },
+  'FORMACIÓN INTERNA': { chip: 'bg-[#e0eef0] text-[#245e66]', dot: 'bg-[#3b8f99]' },
 }
 export const statusStyle: Record<Estado, { badge: string, label: string }> = {
   planificada: { badge: 'border-pba-azul/40 bg-pba-azul/10 text-pba-azul', label: 'Planificada' },
@@ -104,6 +106,12 @@ export const ubicacionDe = call(api.ubicacionDe)
 export const getAllItems = call(api.getAllItems)
 export const getEncuentros = call(api.getEncuentros)
 export const getFeriados = call(api.getFeriados)
+export const getEventos = call(api.getEventos)
+export const listarEventos = call(api.listarEventos)
+export const guardarEvento = call(api.guardarEvento)
+export const eliminarEvento = call(api.eliminarEvento)
+export const miParticipacion = call(api.miParticipacion)
+export const registrarParticipacion = call(api.registrarParticipacion)
 export const getClubes = call(api.getClubes)
 export const getNotificaciones = call(api.getNotificaciones)
 export const marcarLeidas = call(api.marcarLeidas)
