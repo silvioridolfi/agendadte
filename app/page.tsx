@@ -1,8 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { CalendarDays, ChevronDown, CloudUpload, LayoutDashboard, Plus, type LucideIcon } from 'lucide-react'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { CalendarDays, CloudUpload, LayoutDashboard, Plus, type LucideIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { type AgendaItem, type Fed } from '@/lib/agenda'
 import { NotificacionesBell } from '@/components/app/notificaciones'
@@ -11,8 +10,9 @@ import { AgendaView } from '@/components/app/agenda'
 import { DetailDialog } from '@/components/app/detalle'
 import { CoordinatorView } from '@/components/app/tablero'
 import { ItemForm } from '@/components/app/formulario'
+import { MenuPerfil, MiPerfilView } from '@/components/app/miperfil'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
-import { PROFILE_KEY, iso, initials, firstName, fedColor, getFeds, errMsg, storage, Toast, PieInstitucional, ItemPreset, toWeekday } from '@/components/app/comun'
+import { PROFILE_KEY, iso, firstName, getFeds, errMsg, storage, Toast, PieInstitucional, ItemPreset, toWeekday } from '@/components/app/comun'
 
 // Botón de la barra inferior mobile (área táctil de 56px de alto).
 function BarraBoton({ activo, onClick, icono: Icono, label }: { activo: boolean, onClick: () => void, icono: LucideIcon, label: string }) {
@@ -25,7 +25,7 @@ export default function Page() {
   const [feds, setFeds] = useState<Fed[] | null>(null)
   const [fedsError, setFedsError] = useState('')
   const [profile, setProfile] = useState<Fed | null>(null)
-  const [section, setSection] = useState<'agenda' | 'board'>('agenda')
+  const [section, setSection] = useState<'agenda' | 'board' | 'perfil'>('agenda')
   // `preset`: valores iniciales (ej.: reunión de equipo con todo el equipo invitado).
   const [editing, setEditing] = useState<{ item: AgendaItem | null, fecha?: string, preset?: ItemPreset } | null>(null)
   const [selected, setSelected] = useState<AgendaItem | null>(null)
@@ -84,16 +84,14 @@ export default function Page() {
         <div className="flex shrink-0 items-center gap-1">
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <NotificacionesBell profile={profile} feds={feds ?? []} reloadKey={reloadKey} onOpen={setSelected} />
-        <button onClick={() => choose(null)} className="flex min-h-11 min-w-11 items-center gap-2 rounded-full py-1 pl-1 pr-1 text-left transition hover:bg-dte-fondo md:pr-2" aria-label={`Perfil: ${profile.nombre_completo}. Cambiar de perfil`}>
-          <Avatar className="size-9"><AvatarFallback className={`${fedColor(feds ?? [], profile.id)} text-xs font-bold text-dte-petroleo-oscuro`}>{initials(profile.nombre_completo)}</AvatarFallback></Avatar>
-          <span className="hidden md:block"><span className="block text-sm font-semibold leading-tight">{profile.nombre_completo}</span><span className="block text-xs text-dte-gris">{profile.rol === 'coordinacion' ? 'Coordinación · cambiar' : 'Cambiar de perfil'}</span></span>
-          <ChevronDown className="hidden size-4 text-dte-gris md:block" />
-        </button>
+        <MenuPerfil profile={profile} feds={feds ?? []} onPerfil={() => setSection('perfil')} onCambiar={() => choose(null)} />
         </div>
       </div>
     </header>
 
-    {section === 'agenda'
+    {section === 'perfil' && profile.rol === 'fed'
+      ? <MiPerfilView key={profile.id} fed={profile} feds={feds ?? []} onSaved={f => { setProfile(f); setFeds(l => l && l.map(x => (x.id === f.id ? f : x))); setToast('Se guardó tu perfil'); setSection('agenda') }} />
+      : section === 'agenda'
       ? <AgendaView fed={profile} feds={feds ?? []} reloadKey={reloadKey} onNew={fecha => setEditing({ item: null, fecha })} onSelect={setSelected} />
       : <CoordinatorView feds={(feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected}
           onNuevaReunion={profile.rol !== 'coordinacion' ? undefined : () => setEditing({ item: null, fecha: iso(toWeekday(new Date())), preset: { accion: 'REUNIÓN', sub_accion: 'Reunión de equipo (CED/FED)', participantes: (feds ?? []).filter(f => f.id !== profile.id).map(f => f.id) } })} />}
