@@ -17,7 +17,7 @@ import { RegistroEncuentro } from '@/components/app/encuentro'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
 import { limpiarCache } from '@/components/app/offline'
 import { ConteoFotosProvider } from '@/components/app/fotosconteo'
-import { iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday, storage } from '@/components/app/comun'
+import { iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday, storage, VolverArriba } from '@/components/app/comun'
 
 // Botón de la barra inferior mobile (área táctil de 56px de alto).
 function BarraBoton({ activo, onClick, icono: Icono, label }: { activo: boolean, onClick: () => void, icono: LucideIcon, label: string }) {
@@ -164,6 +164,7 @@ export default function Page() {
         {cambiandoPass && <CambiarPassword obligatorio={false} onCancelar={() => setCambiandoPass(false)} onListo={() => { setCambiandoPass(false); setToast('Se cambió tu contraseña') }} />}
       </DialogContent>
     </Dialog>
+    <VolverArriba alto={section === 'perfil'} />
     {toast && <Toast message={toast} onDone={hideToast} />}
   </div></ConteoFotosProvider>
 }

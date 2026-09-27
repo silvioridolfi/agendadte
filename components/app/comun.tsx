@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, CircleAlert, PartyPopper, X } from 'lucide-react'
+import { ArrowUp, Check, ChevronLeft, ChevronRight, CircleAlert, PartyPopper, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import * as api from '@/app/actions'
 import { guardarCache, leerCache } from '@/components/app/offline'
@@ -259,4 +259,19 @@ export function PieInstitucional({ oscuro = false }: { oscuro?: boolean }) {
       <p>© {new Date().getFullYear()} Dirección de Tecnología Educativa (DTE), Región 1 · Desarrollado por Silvio Ridolfi, Facilitador de Educación Digital</p>
     </div>
   </footer>
+}
+
+// Botón "Volver arriba": aparece al bajar bastante en páginas largas. `alto`: deja lugar a una barra fija inferior.
+export function VolverArriba({ alto = false }: { alto?: boolean }) {
+  const [ver, setVer] = useState(false)
+  useEffect(() => {
+    const f = () => setVer(window.scrollY > 900)
+    f(); window.addEventListener('scroll', f, { passive: true })
+    return () => window.removeEventListener('scroll', f)
+  }, [])
+  if (!ver) return null
+  return <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Volver arriba" title="Volver arriba"
+    className={`fixed right-4 z-fab flex size-11 items-center justify-center rounded-full border border-dte-linea bg-white/95 text-dte-petroleo shadow-lg backdrop-blur transition hover:bg-dte-tinte md:right-6 ${alto ? 'bottom-[calc(10rem+env(safe-area-inset-bottom,0px))] md:bottom-24' : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:bottom-6'}`}>
+    <ArrowUp className="size-5" aria-hidden />
+  </button>
 }

@@ -171,17 +171,24 @@ export function MiniMonth({ month, byDay, feriados, today, onDay }: { month: Dat
 
 // Vista Lista de Mi agenda: de la acción más nueva a la más antigua, de a 20.
 export function ListaAcciones({ items, viewer, onSelect, sel, onToggle }: { items: AgendaItem[], viewer: string, onSelect: (i: AgendaItem) => void, sel?: string[] | null, onToggle?: (id: string) => void }) {
+  // Orden cronológico hacia adelante: arranca en hoy y sigue con lo próximo; lo anterior se despliega arriba a pedido.
+  const hoy = iso(new Date())
+  const orden = useMemo(() => [...items].sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '99').localeCompare(b.hora_inicio ?? '99') || a.created_at.localeCompare(b.created_at)), [items])
+  const inicioHoy = useMemo(() => { const i = orden.findIndex(x => x.fecha >= hoy); return i === -1 ? orden.length : i }, [orden, hoy])
+  const [anteriores, setAnteriores] = useState(0)
   const [n, setN] = useState(20)
-  const orden = useMemo(() => [...items].sort((a, b) => b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)), [items])
-  if (!orden.length) return <Vacio icono={CalendarX2} titulo="No hay acciones cargadas en este año" texto="Las acciones que agregues van a aparecer acá, de la más nueva a la más antigua." />
+  if (!orden.length) return <Vacio icono={CalendarX2} titulo="No hay acciones cargadas en este año" texto="Las acciones que agregues van a aparecer acá, de hoy en adelante." />
+  const desde = Math.max(0, inicioHoy - anteriores), visibles = orden.slice(desde, inicioHoy + n)
   return <div className="flex flex-col gap-3">
-    <ul className="divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xs">{orden.slice(0, n).map(item =>
+    {desde > 0 && <div className="flex items-center justify-center gap-2"><Button variant="outline" size="sm" onClick={() => setAnteriores(a => a + 20)}>Ver {Math.min(20, desde)} anteriores</Button><span className="text-xs text-dte-gris">{desde} acciones antes de hoy</span></div>}
+    {!visibles.length ? <p className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-6 text-center text-sm text-dte-gris">No hay acciones de hoy en adelante.</p>
+    : <ul className="divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xs">{visibles.map(item =>
       <li key={item.id}><button onClick={() => (sel && onToggle && item.fed_id === viewer ? onToggle(item.id) : onSelect(item))} aria-pressed={sel && item.fed_id === viewer ? sel.includes(item.id) : undefined} className={`grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte sm:grid-cols-[6.5rem_1fr_auto] sm:items-center ${sel?.includes(item.id) ? 'bg-dte-tinte ring-2 ring-inset ring-dte-petroleo' : ''}`}>
         <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize">{fmt(parse(item.fecha), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')}</span><span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span></span>
         <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemCorto(item)}</span><span className="block truncate text-xs text-dte-gris">{[cueLugar(item.school), item.sub_accion].filter(Boolean).join(' · ') || ' '}</span></span>
         <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ActionChip label={item.accion} /><StatusBadge status={item.estado} /><FotosChip item={item} />{item.fed_id !== viewer && <span className="inline-flex items-center gap-0.5 rounded-full bg-dte-tinte px-1.5 py-0.5 text-xs font-semibold text-dte-petroleo"><Users className="size-3" />Compartida</span>}</span>
-      </button></li>)}</ul>
-    {orden.length > n && <div className="flex items-center justify-center gap-2"><Button variant="outline" size="sm" onClick={() => setN(n + 20)}>Ver {Math.min(20, orden.length - n)} más</Button><span className="text-xs text-dte-gris">Mostrando {n} de {orden.length}</span></div>}
+      </button></li>)}</ul>}
+    {orden.length > inicioHoy + n && <div className="flex items-center justify-center gap-2"><Button variant="outline" size="sm" onClick={() => setN(n + 20)}>Ver {Math.min(20, orden.length - inicioHoy - n)} próximas</Button><span className="text-xs text-dte-gris">Mostrando {visibles.length} de {orden.length}</span></div>}
   </div>
 }
 
