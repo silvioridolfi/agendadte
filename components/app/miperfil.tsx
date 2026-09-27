@@ -9,6 +9,7 @@ import { Pill } from '@/components/ui/segmented'
 import { DISTRITOS_REGION, type Fed } from '@/lib/agenda'
 import { armarDdjj, cargosDe, franjasDte, validarDdjj, type Cargo, type Franja } from '@/lib/ddjj'
 import { titleCase } from '@/lib/format'
+import { SeccionFotos } from '@/components/app/fotos'
 import { eyebrow, errMsg, fedColor, initials, updateMiPerfil, ErrorBox } from '@/components/app/comun'
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
@@ -143,6 +144,8 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
           </li>)}</ul>
         </div>}
       </section>
+
+      <SeccionFotos />
 
       {errores.length > 0 && <div ref={erroresRef} role="alert" className="rounded-xl border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p className="mb-1 font-semibold">Revisá estos datos:</p><ul className="list-disc pl-5">{errores.map(e => <li key={e}>{e}</li>)}</ul></div>}
       {error && <ErrorBox message={error} />}

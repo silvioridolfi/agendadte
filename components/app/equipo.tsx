@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Clock, MapPin } from 'lucide-react'
+import { Camera, Clock, MapPin } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { titleCase } from '@/lib/format'
 import { franjasDte, textoFranjas } from '@/lib/ddjj'
@@ -55,7 +55,11 @@ export function MiEquipoView({ feds, items, clubes, noHabiles, periodo, onVerAcc
           })}</ul> : <p className="rounded-xl border border-dashed border-dte-linea px-3 py-3 text-sm text-dte-gris">Todavía no cargó su DD.JJ. de horarios.</p>}
         </div>
 
-        <button type="button" onClick={() => onVerAcciones(f.id)} className="mt-auto min-h-11 rounded-lg border border-dte-linea text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9">Ver acciones del período</button>
+        <div className="mt-auto flex gap-2">
+          <button type="button" onClick={() => onVerAcciones(f.id)} className="min-h-11 flex-1 rounded-lg border border-dte-linea text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9">Ver acciones del período</button>
+          {f.carpeta_fotos_url ? <a href={f.carpeta_fotos_url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-dte-linea px-3 text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9"><Camera className="size-4" />Fotos</a>
+            : <span className="inline-flex min-h-11 items-center px-2 text-xs text-dte-gris md:min-h-9">Sin carpeta de fotos</span>}
+        </div>
       </li>
     })}</ul>
   </div>

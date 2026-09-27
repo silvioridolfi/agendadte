@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Check, ClipboardList, Clock, History, Loader2, MapPin, Pencil, Repeat, School as SchoolIcon, Trash2, UserRound, Users, X } from 'lucide-react'
+import { Camera, Check, ClipboardList, Clock, History, Loader2, MapPin, Pencil, Repeat, School as SchoolIcon, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed } from '@/lib/agenda'
-import { statusStyle, parse, fmt, cap, timeRange, schoolPlace, itemTitle, firstName, setItemStatus, deleteItem, responder, getHistorial, errMsg, ActionChip, StatusBadge, ErrorBox } from '@/components/app/comun'
+import { statusStyle, parse, fmt, cap, timeRange, schoolPlace, itemTitle, firstName, setItemStatus, deleteItem, responder, getHistorial, fotosDelDia, errMsg, ActionChip, StatusBadge, ErrorBox } from '@/components/app/comun'
 
 // =====================================================================
 
@@ -17,6 +17,15 @@ export function DetailDialog({ item, feds, profile, soloLectura, onClose, onEdit
   const [verHistorial, setVerHistorial] = useState(false)
   useEffect(() => { setError(''); setConfirmDelete(false); setBusy(''); setHistorial(null); setVerHistorial(false) }, [item?.id])
   useEffect(() => { if (verHistorial && item && !historial) getHistorial(item.id).then(setHistorial).catch(() => setHistorial([])) }, [verHistorial, item, historial])
+  // Fotos del día en Drive (del responsable y de quienes participaron), si ya se ordenaron.
+  const [fotos, setFotos] = useState<{ fedId: string, url: string }[]>([])
+  useEffect(() => {
+    setFotos([])
+    if (!item) return
+    let vivo = true
+    fotosDelDia([item.fed_id, ...(item.participantes ?? []).map(p => p.fed_id)], item.fecha).then(r => vivo && setFotos(r)).catch(() => {})
+    return () => { vivo = false }
+  }, [item])
   if (!item) return <Dialog open={false} />
   // En las vistas de solo lectura (administración) el detalle es sólo de consulta, aunque la acción sea propia.
   const own = item.fed_id === profile.id && !soloLectura
@@ -67,6 +76,7 @@ export function DetailDialog({ item, feds, profile, soloLectura, onClose, onEdit
         <div className="flex gap-2"><Button size="sm" variant={mio.respuesta === 'acepta' ? 'default' : 'outline'} disabled={!!busy} onClick={() => responderInv('acepta')} className={mio.respuesta === 'acepta' ? 'bg-dte-petroleo' : ''}>{busy === 'acepta' ? <Loader2 className="animate-spin" /> : <Check data-icon="inline-start" />}Participo</Button><Button size="sm" variant="outline" disabled={!!busy} onClick={() => responderInv('rechaza')} className={mio.respuesta === 'rechaza' ? 'border-peligro text-peligro' : ''}>{busy === 'rechaza' ? <Loader2 className="animate-spin" /> : <X data-icon="inline-start" />}No puedo</Button></div>
       </div>}
       <div>
+        {fotos.length > 0 && <div className="mb-2 flex flex-wrap items-center gap-2">{fotos.map(f => <a key={f.fedId} href={f.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-dte-linea px-3 text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><Camera className="size-3.5" />Fotos de ese día{fotos.length > 1 || f.fedId !== item.fed_id ? ` · ${firstName(feds.find(x => x.id === f.fedId)?.nombre_completo ?? '')}` : ''}</a>)}</div>}
         <button type="button" onClick={() => setVerHistorial(v => !v)} className="flex items-center gap-1.5 text-xs font-semibold text-dte-gris hover:text-dte-tinta"><History className="size-3.5" />{verHistorial ? 'Ocultar historial' : 'Ver historial de cambios'}</button>
         {verHistorial && <ul className="mt-2 flex flex-col gap-1 text-xs text-dte-gris">{!historial ? <li>Cargando…</li> : !historial.length ? <li>Sin cambios registrados (las acciones importadas de las planillas no tienen historial).</li> : historial.map((h, i) => <li key={i}><b className="text-dte-tinta">{nombre(h.autor_id)}</b> · {{ alta: 'la creó', modificacion: 'la modificó', baja: 'la eliminó', estado: `cambió el estado a ${String(h.datos?.estado ?? '')}` }[h.operacion] ?? h.operacion} · {new Date(h.created_at).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</li>)}</ul>}
       </div>
