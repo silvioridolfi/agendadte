@@ -3,13 +3,22 @@
 import { Segmented } from '@/components/ui/segmented'
 import { exportarPlanilla } from '@/lib/exportar'
 import { useMemo, useState } from 'react'
-import { CalendarX2, Clock, Loader2, Plus, Users, WifiOff, FileSpreadsheet } from 'lucide-react'
+import { CalendarX2, Check, Clock, ListChecks, Loader2, Plus, Users, WifiOff, FileSpreadsheet } from 'lucide-react'
+import { BarraSeleccion, PanelFinDeSemana } from '@/components/app/seleccion'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ESTADOS, type AgendaItem, type Feriado, type Estado, type Fed } from '@/lib/agenda'
 import { actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, shortSchoolName, schoolPlace, ddjjFor, itemTitle, itemCorto, cueLugar, firstName, getFedItems, storage, ActionChip, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
 
-export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed, feds: Fed[], reloadKey: number, onNew?: (fecha?: string) => void, onSelect: (item: AgendaItem) => void }) {
+export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: { fed: Fed, feds: Fed[], reloadKey: number, onNew?: (fecha?: string) => void, onSelect: (item: AgendaItem) => void, onCambio?: (msg: string) => void }) {
+  // Selección múltiple (null = apagada): sólo acciones propias, para cambiar estado o eliminar en bloque.
+  const [sel, setSel] = useState<string[] | null>(null)
+  const editable = !!onNew && !!onCambio
+  const toggleSel = (id: string) => setSel(l => (l ? (l.includes(id) ? l.filter(x => x !== id) : [...l, id]) : l))
+  const card = (item: AgendaItem) => sel && item.fed_id === fed.id
+    ? <ItemCard key={item.id} item={item} viewer={fed.id} seleccionado={sel.includes(item.id)} onClick={() => toggleSel(item.id)} />
+    : <ItemCard key={item.id} item={item} viewer={fed.id} onClick={() => onSelect(item)} />
+  const selDia = (key: string) => { const ids = (byDay.get(key) ?? []).filter(i => i.fed_id === fed.id).map(i => i.id); setSel(l => { const base = l ?? []; const todos = ids.every(id => base.includes(id)); return todos ? base.filter(id => !ids.includes(id)) : [...new Set([...base, ...ids])] }) }
   const [exportando, setExportando] = useState(false)
   // Planilla del período visible: las acciones propias (las compartidas figuran en la planilla de quien las creó).
   async function exportar() {
@@ -50,7 +59,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
     </div>
   }
 
-  return <main className="mx-auto w-full min-w-0 max-w-[1440px] px-4 pb-8 pt-6 lg:px-10 lg:pb-10">
+  return <main className={`mx-auto w-full min-w-0 max-w-[1440px] px-4 pt-6 lg:px-10 ${sel ? 'pb-64 md:pb-40' : 'pb-8 lg:pb-10'}`}>
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
         <p className={eyebrow}>Mi agenda · {CAL_VIEWS.find(v => v[0] === view)?.[1]}</p>
@@ -61,6 +70,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
         <Segmented label="Vista" value={view} options={CAL_VIEWS} onChange={setView} />
         <WeekNav prevLabel="Anterior" nextLabel="Siguiente" onPrev={() => setAnchor(calShift(anchor, view, -1))} onToday={() => setAnchor(toWeekday(new Date()))} onNext={() => setAnchor(calShift(anchor, view, 1))} />
         <Button size="lg" variant="outline" disabled={!items?.length || exportando} onClick={exportar} title="Descargar la planilla del período en Excel" aria-label="Exportar la planilla del período a Excel" className="h-10 px-3"><FileSpreadsheet />{exportando && <Loader2 className="animate-spin" />}</Button>
+        {editable && ['day', 'week', 'list'].includes(view) && <Button size="lg" variant={sel ? 'default' : 'outline'} onClick={() => setSel(s => (s ? null : []))} aria-pressed={!!sel} className={`h-10 px-3 ${sel ? 'bg-dte-petroleo hover:bg-dte-petroleo-oscuro' : ''}`}><ListChecks data-icon="inline-start" />Seleccionar</Button>}
         {onNew && <Button size="lg" variant="marca" onClick={() => onNew(suggested)} className="hidden px-4 md:inline-flex"><Plus data-icon="inline-start" />Nueva acción</Button>}
       </div>
     </div>
@@ -70,33 +80,31 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect }: { fed: Fed
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? <Skeleton className="h-72" />
         : view === 'day' ? <section className="rounded-2xl border border-dte-linea bg-white p-4">
-            <header className="mb-3 flex flex-wrap items-center justify-between gap-2">{dayHeader(anchor, true)}<div className="flex flex-wrap gap-1.5">{(feriados.get(iso(anchor)) ?? []).map(f => <FeriadoTag key={f.nombre} f={f} />)}</div></header>
+            <header className="mb-3 flex flex-wrap items-center justify-between gap-2">{dayHeader(anchor, true)}{sel && (byDay.get(iso(anchor)) ?? []).some(i => i.fed_id === fed.id) && <Button variant="outline" size="sm" onClick={() => selDia(iso(anchor))}><ListChecks data-icon="inline-start" />Todo el día</Button>}<div className="flex flex-wrap gap-1.5">{(feriados.get(iso(anchor)) ?? []).map(f => <FeriadoTag key={f.nombre} f={f} />)}</div></header>
             {(byDay.get(iso(anchor)) ?? []).length
-              ? <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{(byDay.get(iso(anchor)) ?? []).map(item => <ItemCard key={item.id} item={item} viewer={fed.id} onClick={() => onSelect(item)} />)}</div>
+              ? <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{(byDay.get(iso(anchor)) ?? []).map(card)}</div>
               : !onNew ? <p className="rounded-xl border border-dashed border-dte-linea py-10 text-center text-sm text-dte-gris">Sin acciones</p> : <button onClick={() => onNew(iso(anchor))} className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed border-dte-linea py-10 text-sm text-dte-gris hover:border-dte-magenta hover:text-dte-magenta"><Plus />Sin acciones · agregar una</button>}
           </section>
         : view === 'week' ? <div className="grid gap-3 lg:grid-cols-5">
             {Array.from({ length: 5 }, (_, i) => addDays(from, i)).map(d => {
               const key = iso(d), list = byDay.get(key) ?? [], fer = feriados.get(key) ?? []
               return <section key={key} aria-label={cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))} className={`group/day flex flex-col rounded-2xl border p-2.5 lg:min-h-72 ${key === today ? 'border-pba-celeste bg-white shadow-[0_0_0_1px] shadow-pba-celeste' : fer.length ? 'border-feriado-borde bg-feriado-fondo' : 'border-dte-linea bg-white'}`}>
-                <header className="mb-2 flex items-center justify-between px-1">{dayHeader(d)}{onNew && <Button variant="ghost" size="icon-sm" aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric' })}`} onClick={() => onNew(key)} className="text-dte-gris hover:text-dte-magenta lg:opacity-0 lg:group-hover/day:opacity-100 lg:focus-visible:opacity-100"><Plus /></Button>}</header>
+                <header className="mb-2 flex items-center justify-between px-1">{dayHeader(d)}{sel ? (list.some(i => i.fed_id === fed.id) && <Button variant="ghost" size="sm" onClick={() => selDia(key)} className="text-dte-petroleo">Todo el día</Button>) : onNew && <Button variant="ghost" size="icon-sm" aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric' })}`} onClick={() => onNew(key)} className="text-dte-gris hover:text-dte-magenta lg:opacity-0 lg:group-hover/day:opacity-100 lg:focus-visible:opacity-100"><Plus /></Button>}</header>
                 {fer.length > 0 && <div className="mb-2 flex flex-col gap-1 px-1">{fer.map(f => <FeriadoTag key={f.nombre} f={f} />)}</div>}
                 <div className="flex flex-1 flex-col gap-2">
-                  {list.map(item => <ItemCard key={item.id} item={item} viewer={fed.id} onClick={() => onSelect(item)} />)}
+                  {list.map(card)}
                   {!list.length && <p className="px-1 pb-1 text-xs text-dte-gris-claro">{fer.length ? 'No laborable' : 'Sin acciones'}</p>}
                 </div>
               </section>
             })}
           </div>
         : view === 'month' ? <MonthGrid month={from} byDay={byDay} feriados={feriados} today={today} onDay={goDay} onSelect={onSelect} onNew={onNew} />
-        : view === 'list' ? <ListaAcciones items={items} viewer={fed.id} onSelect={onSelect} />
+        : view === 'list' ? <ListaAcciones items={items} viewer={fed.id} onSelect={onSelect} sel={sel} onToggle={toggleSel} />
         : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }, (_, i) => monthStart(from, i)).map(m => <MiniMonth key={iso(m)} month={m} byDay={byDay} feriados={feriados} today={today} onDay={goDay} />)}</div>}
     </div>
 
-    {items && weekendItems.length > 0 && view !== 'semester' && view !== 'list' && <details className="mt-4 rounded-2xl border border-dte-linea bg-white p-3">
-      <summary className="cursor-pointer text-sm font-semibold text-dte-gris">{weekendItems.length} {weekendItems.length === 1 ? 'acción cargada' : 'acciones cargadas'} en fin de semana</summary>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{weekendItems.map(item => <ItemCard key={item.id} item={item} viewer={fed.id} onClick={() => onSelect(item)} />)}</div>
-    </details>}
+    {items && weekendItems.length > 0 && view !== 'semester' && view !== 'list' && <PanelFinDeSemana key={iso(from)} items={weekendItems} viewer={fed.id} editable={editable} onSelect={onSelect} onCambio={m => onCambio?.(m)} />}
+    {sel && <BarraSeleccion ids={sel} onListo={() => setSel(null)} onCambio={m => onCambio?.(m)} />}
 
     {(view === 'month' || view === 'semester') && <p className="mt-3 flex flex-wrap items-center gap-3 text-xs text-dte-gris"><span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-feriado-marca ring-1 ring-pba-fucsia/40" />Feriado nacional</span><span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-aniversario-marca ring-1 ring-cat-institucional/40" />Aniversario distrital</span><span>* fecha a confirmar</span><span>Tocá un día para verlo en detalle.</span></p>}
 
@@ -161,13 +169,13 @@ export function MiniMonth({ month, byDay, feriados, today, onDay }: { month: Dat
 }
 
 // Vista Lista de Mi agenda: de la acción más nueva a la más antigua, de a 20.
-export function ListaAcciones({ items, viewer, onSelect }: { items: AgendaItem[], viewer: string, onSelect: (i: AgendaItem) => void }) {
+export function ListaAcciones({ items, viewer, onSelect, sel, onToggle }: { items: AgendaItem[], viewer: string, onSelect: (i: AgendaItem) => void, sel?: string[] | null, onToggle?: (id: string) => void }) {
   const [n, setN] = useState(20)
   const orden = useMemo(() => [...items].sort((a, b) => b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)), [items])
   if (!orden.length) return <Vacio icono={CalendarX2} titulo="No hay acciones cargadas en este año" texto="Las acciones que agregues van a aparecer acá, de la más nueva a la más antigua." />
   return <div className="flex flex-col gap-3">
     <ul className="divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xs">{orden.slice(0, n).map(item =>
-      <li key={item.id}><button onClick={() => onSelect(item)} className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte sm:grid-cols-[6.5rem_1fr_auto] sm:items-center">
+      <li key={item.id}><button onClick={() => (sel && onToggle && item.fed_id === viewer ? onToggle(item.id) : onSelect(item))} aria-pressed={sel && item.fed_id === viewer ? sel.includes(item.id) : undefined} className={`grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte sm:grid-cols-[6.5rem_1fr_auto] sm:items-center ${sel?.includes(item.id) ? 'bg-dte-tinte ring-2 ring-inset ring-dte-petroleo' : ''}`}>
         <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize">{fmt(parse(item.fecha), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')}</span><span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span></span>
         <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemCorto(item)}</span><span className="block truncate text-xs text-dte-gris">{[cueLugar(item.school), item.sub_accion].filter(Boolean).join(' · ') || ' '}</span></span>
         <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ActionChip label={item.accion} /><StatusBadge status={item.estado} />{item.fed_id !== viewer && <span className="inline-flex items-center gap-0.5 rounded-full bg-dte-tinte px-1.5 py-0.5 text-xs font-semibold text-dte-petroleo"><Users className="size-3" />Compartida</span>}</span>
@@ -176,9 +184,11 @@ export function ListaAcciones({ items, viewer, onSelect }: { items: AgendaItem[]
   </div>
 }
 
-export function ItemCard({ item, onClick, viewer }: { item: AgendaItem, onClick: () => void, viewer?: string }) {
+// `seleccionado` (definido): la tarjeta está en modo selección y muestra su casilla.
+export function ItemCard({ item, onClick, viewer, seleccionado }: { item: AgendaItem, onClick: () => void, viewer?: string, seleccionado?: boolean }) {
   const muted = item.estado === 'cancelada'
-  return <button onClick={onClick} title={item.school ? schoolName(item.school) : undefined} className={`relative w-full overflow-hidden rounded-xl border border-dte-linea bg-white p-2.5 pl-3.5 text-left transition hover:border-pba-celeste hover:shadow-md focus-visible:border-pba-celeste focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-pba-celeste/30 ${muted ? 'opacity-65' : ''}`}>
+  return <button onClick={onClick} aria-pressed={seleccionado} title={item.school ? schoolName(item.school) : undefined} className={`relative w-full ${seleccionado ? 'ring-2 ring-dte-petroleo border-dte-petroleo' : ''} overflow-hidden rounded-xl border border-dte-linea bg-white p-2.5 pl-3.5 text-left transition hover:border-pba-celeste hover:shadow-md focus-visible:border-pba-celeste focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-pba-celeste/30 ${muted ? 'opacity-65' : ''}`}>
+    {seleccionado !== undefined && <span aria-hidden className={`absolute right-2 top-2 flex size-5 items-center justify-center rounded-md border ${seleccionado ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-gris-claro bg-white'}`}>{seleccionado && <Check className="size-3.5" />}</span>}
     <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${actionStyle[item.accion]?.dot}`} />
     <span className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-dte-gris"><Clock className="size-3 shrink-0" />{timeRange(item)}</span>
     <p className={`mt-1 line-clamp-3 text-sm font-semibold leading-snug ${muted ? 'line-through decoration-1' : ''}`}>{itemCorto(item)}</p>
