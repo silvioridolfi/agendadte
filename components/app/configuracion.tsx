@@ -17,7 +17,6 @@ const TIPO_FERIADO: Record<Feriado['tipo'], string> = { nacional: 'Nacional', tu
 function FedEditor({ fed, autorId, onSaved }: { fed: Fed, autorId: string, onSaved: (msg: string) => void }) {
   const [nombre, setNombre] = useState(fed.nombre_completo)
   const [distritos, setDistritos] = useState(fed.distritos_a_cargo.map(titleCase).join(', '))
-  const [carga, setCarga] = useState(fed.carga_horaria ?? '')
   const [ddjj, setDdjj] = useState<DdjjDia[]>(() => [1, 2, 3, 4, 5].map(dia => fed.ddjj?.find(d => d.dia === dia) ?? { dia, dte: '' }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -27,7 +26,7 @@ function FedEditor({ fed, autorId, onSaved }: { fed: Fed, autorId: string, onSav
     // El texto del horario DTE se arma a partir de desde/hasta si no se escribió.
     const dias = ddjj.map(d => ({ ...d, dte: d.dte.trim() || (d.dte_desde && d.dte_hasta ? `${d.dte_desde} a ${d.dte_hasta}` : '') })).filter(d => d.dte || d.externo)
     try {
-      await updateFed(autorId, { id: fed.id, nombre_completo: nombre, distritos_a_cargo: distritos.split(',').map(d => d.trim()).filter(Boolean), carga_horaria: carga, ddjj: dias })
+      await updateFed(autorId, { id: fed.id, nombre_completo: nombre, distritos_a_cargo: distritos.split(',').map(d => d.trim()).filter(Boolean), carga_horaria: null, ddjj: dias })
       onSaved(`Se guardaron los datos de ${nombre}`)
     } catch (e) { setError(errMsg(e)) } finally { setBusy(false) }
   }
@@ -35,7 +34,7 @@ function FedEditor({ fed, autorId, onSaved }: { fed: Fed, autorId: string, onSav
     <div className="grid gap-3 sm:grid-cols-3">
       <label className="flex flex-col gap-1 text-sm font-semibold">Nombre<Input value={nombre} onChange={e => setNombre(e.target.value)} className="h-11 md:h-9" /></label>
       <label className="flex flex-col gap-1 text-sm font-semibold">Distritos a cargo <span className="text-xs font-normal text-dte-gris">(separados por coma)</span><Input value={distritos} onChange={e => setDistritos(e.target.value)} className="h-11 md:h-9" /></label>
-      <label className="flex flex-col gap-1 text-sm font-semibold">Carga horaria<Input value={carga} onChange={e => setCarga(e.target.value)} placeholder="Ej.: 20 hs" className="h-11 md:h-9" /></label>
+      <p className="flex flex-col gap-1 text-sm font-semibold">Carga horaria<span className="font-normal text-dte-gris">{fed.carga_horaria ?? 'Sin horario DTE'} (se calcula del horario DTE)</span></p>
     </div>
     <div className="overflow-x-auto"><table className="tabla-apilada w-full text-sm sm:min-w-[640px]">
       <thead><tr className="text-left text-xs text-dte-gris"><th className="pb-1 font-semibold">DD.JJ.</th><th className="pb-1 font-semibold">Desde</th><th className="pb-1 font-semibold">Hasta</th><th className="pb-1 font-semibold">Horario DTE (texto)</th><th className="pb-1 font-semibold">Otro cargo</th></tr></thead>

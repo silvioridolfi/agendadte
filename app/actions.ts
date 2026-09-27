@@ -5,7 +5,7 @@ import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput
 import { borrarSesion, guardarSesion, passwordTemporal, requerirUsuario, usuarioActual, usuarioDeSesion, validarPassword, type Usuario } from '@/lib/sesion'
 import { DriveError, cuentaTecnica, driveConfigurado, idDeCarpeta, urlCarpeta, verificarCarpeta } from '@/lib/drive'
 import { ordenarFotos } from '@/lib/fotos'
-import { armarDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
+import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
 // así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
@@ -367,7 +367,8 @@ async function esCoordinacion(autorId: string) {
 async function updateFedImpl(autorId: string, fed: Pick<Fed, 'id' | 'nombre_completo' | 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>): Promise<void> {
   await esCoordinacion(autorId)
   if (!fed.nombre_completo.trim()) throw new Error('El nombre es obligatorio')
-  const patch = { nombre_completo: fed.nombre_completo.trim(), distritos_a_cargo: fed.distritos_a_cargo.map(d => d.trim().toUpperCase()).filter(Boolean), carga_horaria: opt(fed.carga_horaria), ddjj: fed.ddjj }
+  // La carga horaria se calcula del horario DTE declarado (no se escribe a mano).
+  const patch = { nombre_completo: fed.nombre_completo.trim(), distritos_a_cargo: fed.distritos_a_cargo.map(d => d.trim().toUpperCase()).filter(Boolean), carga_horaria: cargaDeDdjj(fed.ddjj), ddjj: fed.ddjj }
   const { error } = await supabaseServer().from('feds').update(patch).eq('id', fed.id)
   if (error) throw new Error(error.message)
   await audit('feds', fed.id, 'modificacion', autorId, patch)
@@ -385,7 +386,7 @@ async function updateMiPerfilImpl(fedId: string, datos: Pick<Fed, 'distritos_a_c
   if (datos.ddjj.some(d => !Number.isInteger(d.dia) || d.dia < 1 || d.dia > 5)) errores.push('Día de la DD.JJ. inválido')
   if (errores.length) throw new Error(errores[0])
   const ddjj = armarDdjj(franjas, cargosDe(datos.ddjj), Object.fromEntries(datos.ddjj.filter(d => d.externo).map(d => [d.dia, d.externo!.slice(0, 200)])))
-  const patch = { distritos_a_cargo: distritos, carga_horaria: opt(datos.carga_horaria?.slice(0, 40) ?? null), ddjj }
+  const patch = { distritos_a_cargo: distritos, carga_horaria: cargaDeDdjj(ddjj), ddjj }
   const { error } = await db.from('feds').update(patch).eq('id', fedId)
   if (error) throw new Error(error.message)
   await audit('feds', fedId, 'modificacion', fedId, patch)

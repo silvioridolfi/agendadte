@@ -81,3 +81,13 @@ export function chequearHorario(d: DdjjDia | undefined, inicio: string, fin: str
   const choques = accion ? (d?.cargos ?? []).filter(c => accion.desde === accion.hasta ? accion.desde >= c.desde && accion.desde < c.hasta : solapan(accion, c)) : []
   return { franjas, fuera, choques }
 }
+
+// Carga horaria semanal DTE: suma de las franjas DTE de lunes a viernes (p. ej., "20 hs semanales").
+const minutos = (h: string) => { const [a, b] = h.split(':').map(Number); return a * 60 + b }
+export function horasSemanales(franjas: Record<number, Franja[]>): number {
+  let total = 0
+  for (let dia = 1; dia <= 5; dia++) for (const f of franjas[dia] ?? []) if (esHora(f.desde) && esHora(f.hasta) && f.hasta > f.desde) total += minutos(f.hasta) - minutos(f.desde)
+  return total / 60
+}
+export const textoCarga = (horas: number) => (horas > 0 ? `${horas.toLocaleString('es-AR', { maximumFractionDigits: 2 })} hs semanales` : null)
+export const cargaDeDdjj = (ddjj: DdjjDia[] | null | undefined) => textoCarga(horasSemanales(Object.fromEntries([1, 2, 3, 4, 5].map(d => [d, franjasDte(ddjj?.find(x => x.dia === d))]))))

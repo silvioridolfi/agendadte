@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Pill } from '@/components/ui/segmented'
 import { DISTRITOS_REGION, type Fed } from '@/lib/agenda'
-import { armarDdjj, cargosDe, franjasDte, validarDdjj, type Cargo, type Franja } from '@/lib/ddjj'
+import { horasSemanales, textoCarga, armarDdjj, cargosDe, franjasDte, validarDdjj, type Cargo, type Franja } from '@/lib/ddjj'
 import { titleCase } from '@/lib/format'
 import { SeccionFotos } from '@/components/app/fotos'
 import { eyebrow, errMsg, fedColor, initials, updateMiPerfil, ErrorBox } from '@/components/app/comun'
@@ -54,18 +54,17 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
     notas: () => Object.fromEntries((fed.ddjj ?? []).filter(d => d.externo).map(d => [d.dia, d.externo!])) as Record<number, string>,
   }
   const [distritos, setDistritos] = useState(fed.distritos_a_cargo)
-  const [carga, setCarga] = useState(fed.carga_horaria ?? '')
   const [franjas, setFranjas] = useState<Record<number, Franja[]>>(inicial.franjas)
   const [cargos, setCargos] = useState<CargoForm[]>(inicial.cargos)
   const [notas, setNotas] = useState<Record<number, string>>(inicial.notas)
   // Descartar: vuelve a lo guardado.
-  const descartar = () => { setDistritos(fed.distritos_a_cargo); setCarga(fed.carga_horaria ?? ''); setFranjas(inicial.franjas()); setCargos(inicial.cargos()); setNotas(inicial.notas()); setErrores([]); setError('') }
+  const descartar = () => { setDistritos(fed.distritos_a_cargo); setFranjas(inicial.franjas()); setCargos(inicial.cargos()); setNotas(inicial.notas()); setErrores([]); setError('') }
   const [errores, setErrores] = useState<string[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const erroresRef = useRef<HTMLDivElement>(null)
   // El botón Guardar aparece sólo si algo cambió respecto de lo guardado.
-  const firma = () => JSON.stringify([[...distritos].sort(), carga.trim(), franjas, cargos.map(({ key: _, ...c }) => c), notas])
+  const firma = () => JSON.stringify([[...distritos].sort(), franjas, cargos.map(({ key: _, ...c }) => c), notas])
   const [base, setBase] = useState(firma)
   const cambios = firma() !== base
 
@@ -77,7 +76,7 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
     const errs = validarDdjj(franjas, cargos)
     setErrores(errs); setError('')
     if (errs.length) { requestAnimationFrame(() => erroresRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })); return }
-    const datos = { distritos_a_cargo: distritos, carga_horaria: carga.trim() || null, ddjj: armarDdjj(franjas, cargos, notas) }
+    const datos = { distritos_a_cargo: distritos, carga_horaria: textoCarga(horasSemanales(franjas)), ddjj: armarDdjj(franjas, cargos, notas) }
     setBusy(true)
     try { await updateMiPerfil(fed.id, datos); setBase(firma()); onSaved({ ...fed, ...datos }) } catch (e) { setError(errMsg(e)) } finally { setBusy(false) }
   }
@@ -96,7 +95,7 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
         <fieldset className="mb-4"><legend className="mb-1.5 text-sm font-semibold">Distritos a cargo</legend>
           <div className="flex flex-wrap gap-1.5">{DISTRITOS_REGION.map(d => <Pill key={d} on={distritos.includes(d)} onClick={() => setDistritos(l => (l.includes(d) ? l.filter(x => x !== d) : [...l, d]))}>{titleCase(d)}</Pill>)}</div>
         </fieldset>
-        <label className="flex max-w-xs flex-col gap-1 text-sm font-semibold">Carga horaria<Input value={carga} onChange={e => setCarga(e.target.value)} placeholder="Ej.: 20 hs" maxLength={40} /></label>
+        <div className="text-sm"><p className="font-semibold">Carga horaria</p><p className="mt-1"><b className="text-base tabular-nums">{textoCarga(horasSemanales(franjas)) ?? 'Sin horario DTE cargado'}</b></p><p className="text-xs text-dte-gris">Se calcula sola con tu horario DTE de abajo.</p></div>
       </section>
 
       <section className={panel} aria-labelledby="t-dte">
