@@ -2,6 +2,7 @@
 
 import { Pill } from '@/components/ui/segmented'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { chequearHorario, franjasDte, textoFranjas } from '@/lib/ddjj'
 import { Check, Clock, Loader2, Plus, School as SchoolIcon, Search, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -137,7 +138,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     const d = parse(form.fecha).getDay()
     if (d === 0 || d === 6) out.push('La fecha cae en fin de semana.')
     for (const f of delDia.feriados) out.push(`${cap(fmt(parse(f.fecha), { weekday: 'long', day: 'numeric', month: 'long' }))} es ${f.tipo === 'receso' ? 'receso escolar' : 'feriado'}: ${f.nombre}${f.confirmado ? '' : ' (a confirmar)'}.`)
-    if (!esParo && d >= 1 && d <= 5 && fed.ddjj?.length && !ddjjFor(fed, form.fecha)) out.push('No tenés horario DTE declarado ese día en la DD.JJ.')
+    if (!esParo && d >= 1 && d <= 5 && fed.ddjj?.length && !franjasDte(ddjjFor(fed, form.fecha)).length && !ddjjFor(fed, form.fecha)?.dte) out.push('No tenés horario DTE declarado ese día en la DD.JJ.')
     const solapa = delDia.items.filter(i => i.estado !== 'cancelada' && (
       (form.hora_inicio && i.hora_inicio && (form.hora_inicio < (hhmm(i.hora_fin) || hhmm(i.hora_inicio)) || form.hora_inicio === hhmm(i.hora_inicio)) && (hhmm(i.hora_inicio) < (form.hora_fin || form.hora_inicio) || form.hora_inicio === hhmm(i.hora_inicio)))
       || (school && i.school_id === school.id && i.accion === form.accion)))
@@ -145,7 +146,8 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     if (form.estado === 'realizada' && form.fecha > iso(new Date())) out.push('Está marcada como realizada pero la fecha todavía no llegó.')
     return out
   }, [form.accion, form.fecha, form.hora_inicio, form.hora_fin, form.estado, delDia, fed, school, esLicencia, esParo])
-  const fueraDeHorario = !!ddjjDia?.dte_desde && !!ddjjDia?.dte_hasta && ((!!form.hora_inicio && form.hora_inicio < ddjjDia.dte_desde) || (!!form.hora_fin && form.hora_fin > ddjjDia.dte_hasta))
+  const horario = chequearHorario(ddjjDia, form.hora_inicio, form.hora_fin)
+  const fueraDeHorario = horario.fuera || horario.choques.length > 0
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -187,7 +189,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="h-10" /></Field></>}
     </div>
     {timeError && <p id="campo-hora" role="alert" className="-mt-3 scroll-mt-24 text-sm font-medium text-peligro">{timeError}</p>}
-    {ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-aviso-fuerte' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{ddjjDia.dte}</b>{ddjjDia.externo ? ` · Otro cargo: ${ddjjDia.externo}` : ''}{fueraDeHorario ? '. La acción queda fuera de ese horario.' : ''}</span></p>}
+    {ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-aviso-fuerte' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{horario.franjas.length ? textoFranjas(horario.franjas) : ddjjDia.dte || 'sin horario DTE'}</b>{(ddjjDia.cargos ?? []).map(c => ` · ${c.nombre}: ${c.desde} a ${c.hasta}`).join('')}{horario.fuera ? '. La acción queda fuera de tu horario DTE.' : ''}{horario.choques.length ? `. Se superpone con ${horario.choques.map(c => c.nombre).join(' y ')}.` : ''}</span></p>}
 
     <fieldset id="campo-accion" className="scroll-mt-24" aria-describedby={errores.accion ? 'err-accion' : undefined}>
       <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta" aria-hidden>*</span></legend>

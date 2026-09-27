@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { Clock, MapPin } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { titleCase } from '@/lib/format'
+import { franjasDte, textoFranjas } from '@/lib/ddjj'
 import { clubEstado, type AgendaItem, type Club, type Fed } from '@/lib/agenda'
 import { fmt, iso, parse, fedColor, initials, Skeleton } from '@/components/app/comun'
 
@@ -46,10 +47,10 @@ export function MiEquipoView({ feds, items, clubes, noHabiles, periodo, onVerAcc
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Horarios (DD.JJ.)</p>
           {f.ddjj?.length ? <ul className="divide-y divide-dte-linea rounded-xl border border-dte-linea text-sm">{DIAS.map((d, i) => {
             const dj = f.ddjj.find(x => x.dia === i + 1)
-            const dte = dj ? (dj.dte_desde && dj.dte_hasta ? `${dj.dte_desde} a ${dj.dte_hasta}` : dj.dte) : ''
+            const fr = franjasDte(dj), dte = fr.length ? textoFranjas(fr) : dj?.dte ?? ''
             return <li key={d} className="grid grid-cols-[2.5rem_1fr] gap-2 px-3 py-1.5">
               <span className="font-semibold">{d}</span>
-              <span className="min-w-0">{dte ? <span className="block tabular-nums">DTE {dte}</span> : <span className="block text-dte-gris-claro">Sin horario DTE</span>}{dj?.externo && <span className="block text-xs text-dte-gris">Otro cargo: {dj.externo}</span>}</span>
+              <span className="min-w-0">{dte ? <span className="block tabular-nums">DTE {dte}</span> : <span className="block text-dte-gris-claro">Sin horario DTE</span>}{dj?.cargos?.map(c => <span key={c.nombre + c.desde} className="block text-xs text-dte-gris">{c.nombre}: {c.desde} a {c.hasta}</span>)}{dj?.externo && <span className="block text-xs text-dte-gris">Nota: {dj.externo}</span>}</span>
             </li>
           })}</ul> : <p className="rounded-xl border border-dashed border-dte-linea px-3 py-3 text-sm text-dte-gris">Todavía no cargó su DD.JJ. de horarios.</p>}
         </div>
