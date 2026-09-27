@@ -35,7 +35,7 @@ export const rangeNames: Record<Range, [string, string, string]> = { day: ['Día
 export const LISTA_INICIAL = 5, LISTA_PASO = 20
 
 // `propio`: tablero individual de un FED (sólo sus datos; sin Agenda del equipo ni Mi equipo). `onNuevaAccion`: abre el formulario con valores iniciales.
-export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion, propio, onNuevaAccion }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void, propio?: Fed, onNuevaAccion?: (preset: ItemPreset) => void }) {
+export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion, propio, onNuevaAccion, soloLectura }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void, propio?: Fed, onNuevaAccion?: (preset: ItemPreset) => void, soloLectura?: boolean }) {
   const [tab, setTab] = useState<'resumen' | 'agenda' | 'equipo' | 'clubes' | 'practicas' | 'acciones'>('resumen')
   // Pestañas accesibles: flechas izquierda/derecha, Inicio y Fin mueven el foco y activan la pestaña.
   function teclaPestana(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -147,7 +147,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
 
     {tab === 'agenda' ? <div className="mt-6"><AgendaEquipoView feds={feds} reloadKey={reloadKey} onSelect={onSelect} /></div>
     : tab === 'equipo' ? <div className="mt-6"><MiEquipoView feds={feds} items={items} clubes={clubes} noHabiles={noHabiles} periodo={title} onVerAcciones={id => { setFedId(id); setTab('acciones') }} /></div>
-    : tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} noHabiles={noHabiles} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) }}
+    : tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} noHabiles={noHabiles} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={propio && !soloLectura ? async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) } : undefined}
       onNuevo={propio && onNuevaAccion ? () => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', modo: 'nuevo' }) : undefined}
       onEncuentro={propio && onNuevaAccion ? c => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', club_id: c?.id, modo: 'encuentro' }) : undefined} />}</div>
     : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <MetricsView items={base.filter(i => feds.some(f => f.id === i.fed_id))} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} />}</div>

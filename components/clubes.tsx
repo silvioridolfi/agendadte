@@ -40,7 +40,7 @@ function participacion(c: Club) {
 
 // Clubes de Tecnología o Prácticas (PEAT). `desde`/`hasta`: período del tablero; se muestran los trayectos
 // con actividad en el período y se cuentan sólo los encuentros de ese período.
-export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo = 'CLUB DE TECNOLOGÍA', desde, hasta, periodo, noHabiles, onNuevo, onEncuentro }: { clubes: Club[], feds: Fed[], onCierre: (club: Club, fecha: string | null) => Promise<void>, schoolLabel: (c: Club) => string, tipo?: Trayecto, desde: string, hasta: string, periodo: string, noHabiles?: Set<string>, onNuevo?: () => void, onEncuentro?: (c?: Club) => void }) {
+export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo = 'CLUB DE TECNOLOGÍA', desde, hasta, periodo, noHabiles, onNuevo, onEncuentro }: { clubes: Club[], feds: Fed[], onCierre?: (club: Club, fecha: string | null) => Promise<void>, schoolLabel: (c: Club) => string, tipo?: Trayecto, desde: string, hasta: string, periodo: string, noHabiles?: Set<string>, onNuevo?: () => void, onEncuentro?: (c?: Club) => void }) {
   const hoy = new Date().toISOString().slice(0, 10)
   // Los "por iniciar" (sin fecha) se listan aparte; el resto de las métricas usa sólo los iniciados.
   const todos = useMemo(() => entrada.filter(iniciado), [entrada])
@@ -124,7 +124,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
   const verParticipacion = () => setDrill({ title: 'Participación real', subtitle: `Promedio de participantes por encuentro vs. inscriptos · ${periodo}`, rows: conIns.map(r => ({ key: r.c.id, title: nombre(r.c), sub: `${nf.format(Math.round(r.promedio * 10) / 10)} participantes promedio de ${r.inscriptos} inscriptos`, right: `${pct(r.promedio, r.inscriptos)}%` })) })
 
   const [errorCierre, setErrorCierre] = useState('')
-  async function cierre(club: Club, fecha: string | null) { setBusy(club.id); setErrorCierre(''); try { await onCierre(club, fecha) } catch (e) { setErrorCierre(errMsg(e)) } finally { setBusy('') } }
+  async function cierre(club: Club, fecha: string | null) { setBusy(club.id); setErrorCierre(''); try { await onCierre?.(club, fecha) } catch (e) { setErrorCierre(errMsg(e)) } finally { setBusy('') } }
   const [aFinalizar, setAFinalizar] = useState<{ c: Club, fecha: string } | null>(null)
 
   return <div className="flex flex-col gap-4">
@@ -217,7 +217,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
               <td data-label="Prom. reales" className="en-linea py-2.5 pr-3 text-right tabular-nums">{promedio ? nf.format(Math.round(promedio * 10) / 10) : '—'}</td>
               <td data-label="Estado" className="en-linea py-2.5"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.badge}`}>{st.label}</span>
                 {onEncuentro && estado !== 'finalizado' && <button onClick={() => onEncuentro(c)} className="inline-flex min-h-10 items-center gap-1 rounded-full border border-dte-linea px-3 text-xs font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-7"><Plus className="size-3" />Encuentro</button>}
-                {estado === 'finalizado' ? <button disabled={busy === c.id} onClick={() => cierre(c, null)} className="inline-flex min-h-10 items-center gap-1 rounded-full border border-dte-linea px-3 text-xs font-semibold text-dte-petroleo transition md:min-h-7 hover:border-dte-petroleo hover:bg-dte-tinte disabled:opacity-50">{busy === c.id && <Loader2 className="size-3 animate-spin" />}Reactivar</button>
+                {!onCierre ? null : estado === 'finalizado' ? <button disabled={busy === c.id} onClick={() => cierre(c, null)} className="inline-flex min-h-10 items-center gap-1 rounded-full border border-dte-linea px-3 text-xs font-semibold text-dte-petroleo transition md:min-h-7 hover:border-dte-petroleo hover:bg-dte-tinte disabled:opacity-50">{busy === c.id && <Loader2 className="size-3 animate-spin" />}Reactivar</button>
                   : <button disabled={busy === c.id} onClick={() => setAFinalizar({ c, fecha: ultima })} title={`Finalizar con fecha ${corta(ultima)} (último encuentro)`} className="inline-flex min-h-10 items-center gap-1 rounded-full border border-dte-linea px-3 text-xs font-semibold text-club-violeta transition md:min-h-7 hover:border-club-violeta hover:bg-club-violeta-fondo disabled:opacity-50">{busy === c.id && <Loader2 className="size-3 animate-spin" />}Finalizar</button>}
               </div></td>
             </tr>
