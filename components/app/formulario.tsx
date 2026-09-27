@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
-import { ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA } from '@/lib/agenda'
-import { actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, saveItem, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
+import { iniciado, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Encuentro, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA } from '@/lib/agenda'
+import { crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, saveItem, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
 import { encolarOffline } from '@/components/app/offline'
 
 // =====================================================================
@@ -70,7 +70,7 @@ export function Field({ label, hint, required, children, className = '', error, 
     {error && <span id={errorId} role="alert" className="text-sm font-medium text-peligro">{error}</span>}</label>
 }
 
-export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSaved }: { fed: Fed, feds: Fed[], item: AgendaItem | null, defaultFecha?: string, preset?: ItemPreset, onCancel: () => void, onSaved: (r: { creadas: number, offline?: boolean }) => void }) {
+export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSaved }: { fed: Fed, feds: Fed[], item: AgendaItem | null, defaultFecha?: string, preset?: ItemPreset, onCancel: () => void, onSaved: (r: { creadas: number, mensaje?: string, offline?: boolean }) => void }) {
   // Compañeros etiquetados: la acción aparece también en su calendario y reciben una notificación.
   const [participantes, setParticipantes] = useState<string[]>(() => item?.participantes?.map(p => p.fed_id) ?? preset?.participantes ?? [])
   const companeros = useMemo(() => feds.filter(f => f.id !== fed.id).sort((a, b) => (a.rol === b.rol ? az(a.nombre_completo, b.nombre_completo) : a.rol === 'coordinacion' ? 1 : -1)), [feds, fed.id])
@@ -78,7 +78,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const [school, setSchool] = useState<School | null>(item?.school ?? null)
   // Encuentro editable desde la app: el propio (origen app) o, si no hay, el primero importado.
   const enc0 = item?.encuentros?.find(e => e.origen === 'app') ?? item?.encuentros?.[0]
-  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? preset?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? preset?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', club_id: enc0?.club_id ?? item?.club_id ?? '', nivel: '', curso: '', seccion: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
+  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? iso(new Date()), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? preset?.accion ?? null as Accion | null, estado: item?.estado ?? ('planificada' as Estado), sub_accion: item?.sub_accion ?? preset?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? '', destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', club_id: enc0?.club_id ?? item?.club_id ?? preset?.club_id ?? '', nivel: '', curso: '', seccion: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
   // Clubes y prácticas: registro por grupo con inicio y cierre (cada uno con su identidad visual).
   const esClub = esTrayecto(form.accion)
   const marca = esClub ? TRAYECTO_MARCA[form.accion as keyof typeof TRAYECTO_MARCA] : TRAYECTO_MARCA['CLUB DE TECNOLOGÍA']
@@ -88,9 +88,9 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const [clubes, setClubes] = useState<Club[] | null>(null)
   useEffect(() => { if (esClub && !clubes) getClubes(fed.id).then(setClubes).catch(() => setClubes([])) }, [esClub, clubes, fed.id])
   const hoy = iso(new Date())
-  const clubOpts = (clubes ?? []).filter(c => c.tipo === form.accion && (c.id === form.club_id || clubEstado(c, hoy) !== 'finalizado'))
+  const clubOpts = (clubes ?? []).filter(c => c.tipo === form.accion && (c.id === form.club_id || !iniciado(c) || clubEstado(c, hoy) !== 'finalizado'))
   const club = clubOpts.find(c => c.id === form.club_id) ?? null
-  const clubLabel = (c: Club) => `${c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar'}${c.grupo ? ` · ${c.grupo}` : ''}${c.escuela_origen ? ` · estudiantes de ${shortSchoolName(c.escuela_origen)}` : ''} · desde ${fmt(parse(c.fecha_inicio), { day: 'numeric', month: 'short' })}${clubEstado(c, hoy) === 'sin_actividad' ? ' (sin actividad)' : ''}`
+  const clubLabel = (c: Club) => `${c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar'}${c.grupo ? ` · ${c.grupo}` : ''}${c.escuela_origen ? ` · estudiantes de ${shortSchoolName(c.escuela_origen)}` : ''} ${iniciado(c) ? ` · desde ${fmt(parse(c.fecha_inicio), { day: 'numeric', month: 'short' })}${clubEstado(c, hoy) === 'sin_actividad' ? ' (sin actividad)' : ''}` : ' · por iniciar'}`
   // Grado/curso del club nuevo: nivel sugerido por el nombre de la escuela, editable (cualquier nivel o modalidad).
   const nivelId = form.nivel || nivelDeEscuela(school?.nombre)
   const nivel = NIVELES.find(n => n.id === nivelId) ?? NIVELES[0]
@@ -102,10 +102,21 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     // La sede del club se sugiere sólo si todavía no se eligió escuela (las prácticas pueden hacerse en otras sedes).
     if (c?.school && !school) setSchool(c.school)
   }
+  // Abierto desde la sección de clubes/prácticas con un club elegido: completa sede y N° de encuentro.
+  const presetAplicado = useRef(false)
+  useEffect(() => {
+    if (presetAplicado.current || item || !clubes || !preset?.club_id || preset.club_id === 'nuevo') return
+    presetAplicado.current = true
+    pickClub(preset.club_id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clubes])
   // Escuela de origen de los estudiantes, cuando el trayecto se desarrolla en otra sede (ej.: prácticas).
   const [origen, setOrigen] = useState<School | null>(null)
   const [otroOrigen, setOtroOrigen] = useState(false)
   const [saving, setSaving] = useState(false)
+  // Club o práctica nueva sin fecha: queda "por iniciar" y no se agrega a la agenda hasta programar el primer encuentro.
+  const [aDefinirMarcado, setADefinir] = useState(false)
+  const aDefinir = aDefinirMarcado && !item && esClub && form.club_id === 'nuevo'
   const [error, setError] = useState('')
   const [errores, setErrores] = useState<Partial<Record<'establecimiento' | 'accion' | 'hora' | 'club' | 'curso' | 'serie', string>>>({})
   const limpiar = (k: keyof typeof errores) => setErrores(e => (e[k] ? { ...e, [k]: undefined } : e))
@@ -163,6 +174,13 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     const primero = (['establecimiento', 'hora', 'accion', 'club', 'curso', 'serie'] as const).find(k => errs[k])
     if (primero || !form.accion) { document.getElementById(`campo-${primero ?? 'accion'}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setError(''); return }
     setSaving(true); setError('')
+    if (aDefinir) {
+      try {
+        await crearClubPorIniciar({ fed_id: fed.id, tipo: form.accion as 'CLUB DE TECNOLOGÍA' | 'PRÁCTICAS PROFESIONALIZANTES', school_id: school?.id ?? null, lugar: school ? null : form.lugar || null, grupo, escuela_origen_id: otroOrigen ? origen?.id ?? null : null, encuentros_previstos: toNum(form.encuentros_previstos) })
+        onSaved({ creadas: 0, mensaje: marca.corto === 'club' ? `Club ${grupo} guardado como “por iniciar”` : `Práctica ${grupo} guardada como “por iniciar”` })
+      } catch (err) { setError(errMsg(err)); setSaving(false) }
+      return
+    }
     const input: AgendaItemInput = {
       repeticion: repetir && !item ? { dias: diasSerie, hasta: hastaSerie } : null,
       fed_id: fed.id, school_id: esLicencia || esParo ? null : school?.id ?? null, lugar: school || esLicencia || esParo ? null : form.lugar || null, fecha: form.fecha, accion: form.accion, estado: form.estado,
@@ -183,13 +201,13 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   return <form onSubmit={submit} className="flex flex-col gap-5">
     {!esParo && !esLicencia && <div id="campo-establecimiento" className="flex scroll-mt-24 flex-col gap-1.5"><span className="text-sm font-semibold">Establecimiento <span className="text-dte-magenta">*</span> <span className="font-normal text-dte-gris">(escuela o lugar; no hace falta para Licencia ni Paro)</span></span><SchoolPicker value={school} onChange={v => { setSchool(v); limpiar('establecimiento') }} />{!school && <Input placeholder="…o lugar, si no es una escuela (ej.: Jefatura Distrital, Feria de Ciencias)" value={form.lugar} onChange={e => { set('lugar', e.target.value); limpiar('establecimiento') }} aria-invalid={!!errores.establecimiento || undefined} aria-describedby={errores.establecimiento ? 'err-establecimiento' : undefined} className="h-10" aria-label="Lugar" />}{errores.establecimiento && <p id="err-establecimiento" role="alert" className="text-sm font-medium text-peligro">{errores.establecimiento}</p>}</div>}
 
-    <div className="grid gap-4 sm:grid-cols-3">
+    {!aDefinir && <div className="grid gap-4 sm:grid-cols-3">
       <Field label="Fecha" required><Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} className="h-10" /></Field>
       {!esParo && <><Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="h-10" /></Field>
       <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="h-10" /></Field></>}
-    </div>
-    {timeError && <p id="campo-hora" role="alert" className="-mt-3 scroll-mt-24 text-sm font-medium text-peligro">{timeError}</p>}
-    {ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-aviso-fuerte' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{horario.franjas.length ? textoFranjas(horario.franjas) : ddjjDia.dte || 'sin horario DTE'}</b>{(ddjjDia.cargos ?? []).map(c => ` · ${c.nombre}: ${c.desde} a ${c.hasta}`).join('')}{horario.fuera ? '. La acción queda fuera de tu horario DTE.' : ''}{horario.choques.length ? `. Se superpone con ${horario.choques.map(c => c.nombre).join(' y ')}.` : ''}</span></p>}
+    </div>}
+    {!aDefinir && timeError && <p id="campo-hora" role="alert" className="-mt-3 scroll-mt-24 text-sm font-medium text-peligro">{timeError}</p>}
+    {!aDefinir && ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-aviso-fuerte' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{horario.franjas.length ? textoFranjas(horario.franjas) : ddjjDia.dte || 'sin horario DTE'}</b>{(ddjjDia.cargos ?? []).map(c => ` · ${c.nombre}: ${c.desde} a ${c.hasta}`).join('')}{horario.fuera ? '. La acción queda fuera de tu horario DTE.' : ''}{horario.choques.length ? `. Se superpone con ${horario.choques.map(c => c.nombre).join(' y ')}.` : ''}</span></p>}
 
     <fieldset id="campo-accion" className="scroll-mt-24" aria-describedby={errores.accion ? 'err-accion' : undefined}>
       <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta" aria-hidden>*</span></legend>
@@ -208,7 +226,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     {esLicencia && <p className="rounded-lg border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso"><b>Recordatorio:</b> {RECORDATORIO_LICENCIA}</p>}
 
 
-    {!esParo && !esLicencia && companeros.length > 0 && <fieldset>
+    {!aDefinir && !esParo && !esLicencia && companeros.length > 0 && <fieldset>
       <legend className="mb-1.5 flex w-full items-center justify-between text-sm font-semibold"><span>Acompañado por <span className="font-normal text-dte-gris">(opcional)</span></span>
         <button type="button" onClick={() => setParticipantes(participantes.length === companeros.length ? [] : companeros.map(c => c.id))} className="-my-2 min-h-10 px-1 text-xs font-semibold text-dte-petroleo hover:opacity-80 md:my-0 md:min-h-0">{participantes.length === companeros.length ? 'Quitar a todos' : 'Todo el equipo'}</button></legend>
       <div className="flex flex-wrap gap-1.5">{companeros.map(c => { const on = participantes.includes(c.id); return <Pill key={c.id} on={on} onClick={() => togglePart(c.id)}>{c.nombre_completo}</Pill> })}</div>
@@ -231,6 +249,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         <option value="nuevo">{marca.corto === 'club' ? '+ Iniciar un club nuevo' : '+ Iniciar una práctica nueva'} (comienza en esta fecha)</option>
       </select></Field>
       {form.club_id === 'nuevo' && <div className="grid gap-3 rounded-lg border border-dashed border-club-lila/50 bg-white p-3 sm:col-span-6 sm:grid-cols-6">
+        {!item && <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-dte-fondo p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={aDefinirMarcado} onChange={e => setADefinir(e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Fecha a definir.</b> {marca.corto === 'club' ? 'El club queda' : 'La práctica queda'} “por iniciar” y no se agrega a tu agenda hasta que programes el primer encuentro.</span></label>}
         <p className="text-xs text-dte-gris sm:col-span-6">Cada grado o curso es {marca.corto === 'club' ? 'un club' : 'una práctica'} en sí mismo. {school ? 'El nivel se sugiere según la escuela; podés cambiarlo.' : 'Elegí primero la escuela para sugerir el nivel.'}</p>
         <Field label="Nivel / modalidad" className="sm:col-span-3"><select className={`${selectClass} h-11 md:h-10`} value={nivel.id} onChange={e => setForm(f => ({ ...f, nivel: e.target.value, curso: '' }))}>{[...NIVELES].sort((a, b) => az(a.label, b.label)).map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select></Field>
         <Field id="campo-curso" label={nivel.cursoLabel} required className="scroll-mt-24 sm:col-span-2" error={errores.curso} errorId="err-curso"><select className={`${selectClass} h-11 md:h-10`} value={form.curso} onChange={e => { set('curso', e.target.value); limpiar('curso') }} aria-invalid={!!errores.curso || undefined} aria-describedby={errores.curso ? 'err-curso' : undefined}><option value="">Elegí…</option>{nivel.cursos.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
@@ -239,17 +258,17 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         {otroOrigen && <div className="flex flex-col gap-1.5 sm:col-span-6"><span className="text-sm font-semibold">Escuela de origen de los estudiantes</span><SchoolPicker value={origen} onChange={setOrigen} /></div>}
         {grupo && <p className="text-xs sm:col-span-6">Se va a registrar como <b>{grupo}</b>{school ? ` · ${shortSchoolName(school)}` : ''}{otroOrigen && origen ? ` · estudiantes de ${shortSchoolName(origen)}` : ''}.</p>}
       </div>}
-      {club && <p className="-mt-2 text-xs text-dte-gris sm:col-span-6">{clubEncuentrosRealizados(club)} encuentros registrados{club.encuentros_previstos ? ` de ${club.encuentros_previstos} previstos` : ''}{club.escuela_origen ? ` · Estudiantes de ${shortSchoolName(club.escuela_origen)}` : ''}. La escuela o lugar de arriba es donde se hizo este encuentro.</p>}
-      <Field label="Propuesta dictada" hint={marca.corto === 'club' ? '(ej.: taller de redes dentro del club)' : undefined} className="sm:col-span-4"><Input placeholder={marca.propuesta} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
-      <Field label="Encuentros de la propuesta" hint="(previstos)" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={form.encuentros_previstos} onChange={e => set('encuentros_previstos', e.target.value)} className="h-10 bg-white" /></Field>
-      <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
-      <Field label="Tipo de jornada" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={form.tipo_jornada} onChange={e => set('tipo_jornada', e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{[...TIPOS_JORNADA].sort(azOtroAlFinal).map(t => <option key={t} value={t}>{t === 'Otro' ? 'Otro (aclarar en la descripción)' : t}</option>)}</select></Field>
-      <Field label="Formato de participación" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>
-      <Field label="Destinatarios" className="sm:col-span-6"><Input placeholder="Ej.: estudiantes de 5° y 6°, familias" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" /></Field>
-      <Field label="Cantidad de inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
-      <Field label="Participantes reales" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>
-      <Field label="Breve descripción de lo realizado" className="sm:col-span-6"><Textarea rows={3} placeholder="Qué se trabajó, con qué recursos, cómo participó el grupo…" value={form.descripcion} onChange={e => set('descripcion', e.target.value)} className="bg-white" /></Field>
-      <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-white p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={form.es_cierre} onChange={e => set('es_cierre', e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Este es el encuentro de cierre {marca.corto === 'club' ? 'del club' : 'de la práctica'}</b><span className="block text-xs text-dte-gris">{marca.corto === 'club' ? 'El club queda finalizado' : 'La práctica queda finalizada'} con esta fecha y deja de figurar entre los activos.</span></span></label>
+      {!aDefinir && club && <p className="-mt-2 text-xs text-dte-gris sm:col-span-6">{clubEncuentrosRealizados(club)} encuentros registrados{club.encuentros_previstos ? ` de ${club.encuentros_previstos} previstos` : ''}{club.escuela_origen ? ` · Estudiantes de ${shortSchoolName(club.escuela_origen)}` : ''}. La escuela o lugar de arriba es donde se hizo este encuentro.</p>}
+      {!aDefinir && <Field label="Propuesta dictada" hint={marca.corto === 'club' ? '(ej.: taller de redes dentro del club)' : undefined} className="sm:col-span-4"><Input placeholder={marca.propuesta} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>}
+      {<Field label="Encuentros de la propuesta" hint="(previstos)" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={form.encuentros_previstos} onChange={e => set('encuentros_previstos', e.target.value)} className="h-10 bg-white" /></Field>}
+      {!aDefinir && <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>}
+      {!aDefinir && <Field label="Tipo de jornada" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={form.tipo_jornada} onChange={e => set('tipo_jornada', e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{[...TIPOS_JORNADA].sort(azOtroAlFinal).map(t => <option key={t} value={t}>{t === 'Otro' ? 'Otro (aclarar en la descripción)' : t}</option>)}</select></Field>}
+      {!aDefinir && <Field label="Formato de participación" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>}
+      {!aDefinir && <Field label="Destinatarios" className="sm:col-span-6"><Input placeholder="Ej.: estudiantes de 5° y 6°, familias" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" /></Field>}
+      {!aDefinir && <Field label="Cantidad de inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>}
+      {!aDefinir && <Field label="Participantes reales" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>}
+      {!aDefinir && <Field label="Breve descripción de lo realizado" className="sm:col-span-6"><Textarea rows={3} placeholder="Qué se trabajó, con qué recursos, cómo participó el grupo…" value={form.descripcion} onChange={e => set('descripcion', e.target.value)} className="bg-white" /></Field>}
+      {!aDefinir && <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-white p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={form.es_cierre} onChange={e => set('es_cierre', e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Este es el encuentro de cierre {marca.corto === 'club' ? 'del club' : 'de la práctica'}</b><span className="block text-xs text-dte-gris">{marca.corto === 'club' ? 'El club queda finalizado' : 'La práctica queda finalizada'} con esta fecha y deja de figurar entre los activos.</span></span></label>}
     </fieldset>}
     {conEncuentro && !esClub && <fieldset className="grid gap-4 rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
       <legend className="px-1 text-sm font-semibold">Datos del encuentro <span className="font-normal text-dte-gris">(para las métricas de participación)</span></legend>
@@ -260,11 +279,11 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       <Field label="Inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Asistentes" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>
     </fieldset>}
-    {!esParo && <Field label={esLicencia ? 'Motivo' : 'Detalle'} hint="(opcional)"><Textarea placeholder={esLicencia ? 'Ej.: enfermedad, razones particulares (sin datos sensibles)' : 'Información útil para el seguimiento: con quién, qué se acordó, pendientes…'} rows={3} value={form.detalle} onChange={e => set('detalle', e.target.value)} /></Field>}
+    {!aDefinir && !esParo && <Field label={esLicencia ? 'Motivo' : 'Detalle'} hint="(opcional)"><Textarea placeholder={esLicencia ? 'Ej.: enfermedad, razones particulares (sin datos sensibles)' : 'Información útil para el seguimiento: con quién, qué se acordó, pendientes…'} rows={3} value={form.detalle} onChange={e => set('detalle', e.target.value)} /></Field>}
 
     {item && <fieldset><legend className="mb-2 text-sm font-semibold">Estado</legend><div className="flex flex-wrap gap-2">{ESTADOS.map(e => <button key={e} type="button" aria-pressed={form.estado === e} onClick={() => set('estado', e)} className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition md:min-h-8 md:text-xs ${form.estado === e ? statusStyle[e].badge : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{form.estado === e && <Check className="size-3" />}{statusStyle[e].label}</button>)}</div></fieldset>}
 
-    {!item && !esParo && !esLicencia && form.accion && <fieldset id="campo-serie" className="scroll-mt-24 rounded-xl border border-dte-linea p-3">
+    {!aDefinir && !item && !esParo && !esLicencia && form.accion && <fieldset id="campo-serie" className="scroll-mt-24 rounded-xl border border-dte-linea p-3">
       <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={repetir} onChange={e => { setRepetir(e.target.checked); limpiar('serie') }} className="size-5" />Se repite cada semana <span className="font-normal text-dte-gris">(ej.: el club todos los miércoles)</span></label>
       {repetir && <div className="mt-3 flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-1.5"><span className="mr-1 text-xs font-semibold uppercase tracking-wider text-dte-gris">Días</span>{DIAS_HABILES.map((d, i) => { const n = i + 1, on = diasSerie.includes(n); return <Pill key={d} on={on} conIcono={false} className="min-w-11 justify-center font-semibold" onClick={() => setDias((on ? diasSerie.filter(x => x !== n) : [...diasSerie, n]).sort())}>{d}</Pill> })}</div>
@@ -274,14 +293,14 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       </div>}
     </fieldset>}
 
-    {avisos.length > 0 && <div role="status" className="rounded-xl border border-aviso-borde bg-aviso-fondo px-3 py-2.5 text-sm text-aviso">
+    {!aDefinir && avisos.length > 0 && <div role="status" className="rounded-xl border border-aviso-borde bg-aviso-fondo px-3 py-2.5 text-sm text-aviso">
       <p className="mb-1 flex items-center gap-1.5 font-semibold"><TriangleAlert className="size-4" />Revisá antes de guardar</p>
       <ul className="list-disc pl-5 text-sm">{avisos.map(a => <li key={a}>{a}</li>)}</ul>
     </div>}
     {error && <ErrorBox message={error} />}
     <div className="sticky -bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] -mx-4 -mb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex gap-2 border-t border-dte-linea bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:-bottom-4 sm:-mb-4 sm:justify-end sm:pb-3">
       <Button variant="outline" type="button" size="lg" className="flex-1 sm:flex-none" onClick={onCancel}>Cancelar</Button>
-      <Button type="submit" size="lg" disabled={saving} className="flex-1 bg-dte-petroleo px-4 sm:flex-none font-semibold hover:bg-dte-petroleo-oscuro">{saving && <Loader2 className="animate-spin" data-icon="inline-start" />}{item ? 'Guardar cambios' : 'Agregar a mi agenda'}</Button>
+      <Button type="submit" size="lg" disabled={saving} className="flex-1 bg-dte-petroleo px-4 sm:flex-none font-semibold hover:bg-dte-petroleo-oscuro">{saving && <Loader2 className="animate-spin" data-icon="inline-start" />}{item ? 'Guardar cambios' : aDefinir ? 'Guardar como “por iniciar”' : 'Agregar a mi agenda'}</Button>
     </div>
   </form>
 }
