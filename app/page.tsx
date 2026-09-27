@@ -1,11 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { CalendarDays, CloudUpload, LayoutDashboard, Plus, type LucideIcon } from 'lucide-react'
+import { CalendarDays, CloudUpload, LayoutDashboard, Loader2, Plus, type LucideIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { esTrayecto, type AgendaItem, type Fed, type Trayecto } from '@/lib/agenda'
 import { NotificacionesBell } from '@/components/app/notificaciones'
-import { ProfileSelect } from '@/components/app/perfil'
+import { CambiarPassword, Ingreso, UsuariosView } from '@/components/app/acceso'
+import type { Sesion } from '@/app/actions'
 import { AgendaView } from '@/components/app/agenda'
 import { DetailDialog } from '@/components/app/detalle'
 import { CoordinatorView } from '@/components/app/tablero'
@@ -13,7 +14,7 @@ import { ItemForm } from '@/components/app/formulario'
 import { MenuPerfil, MiPerfilView } from '@/components/app/miperfil'
 import { RegistroEncuentro } from '@/components/app/encuentro'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
-import { PROFILE_KEY, iso, firstName, getFeds, errMsg, storage, Toast, PieInstitucional, ItemPreset, toWeekday } from '@/components/app/comun'
+import { iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday } from '@/components/app/comun'
 
 // Botón de la barra inferior mobile (área táctil de 56px de alto).
 function BarraBoton({ activo, onClick, icono: Icono, label }: { activo: boolean, onClick: () => void, icono: LucideIcon, label: string }) {
@@ -32,33 +33,33 @@ function tituloForm(e: { item: AgendaItem | null, preset?: ItemPreset } | null) 
 }
 
 export default function Page() {
+  // Sesión: undefined = verificando; null = sin sesión (pantalla de ingreso).
+  const [sesion, setSesion] = useState<Sesion | null | undefined>(undefined)
   const [feds, setFeds] = useState<Fed[] | null>(null)
-  const [fedsError, setFedsError] = useState('')
-  const [profile, setProfile] = useState<Fed | null>(null)
-  const [section, setSection] = useState<'agenda' | 'board' | 'perfil'>('agenda')
+  const profile = sesion?.fed ?? null
+  const setProfile = (f: Fed) => setSesion(s => (s ? { ...s, fed: f } : s))
+  const [section, setSection] = useState<'agenda' | 'board' | 'perfil' | 'usuarios'>('agenda')
+  const [cambiandoPass, setCambiandoPass] = useState(false)
   // `preset`: valores iniciales (ej.: reunión de equipo con todo el equipo invitado).
   const [editing, setEditing] = useState<{ item: AgendaItem | null, fecha?: string, preset?: ItemPreset } | null>(null)
   const [selected, setSelected] = useState<AgendaItem | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [toast, setToast] = useState('')
 
-  const loadFeds = useCallback(() => {
-    setFedsError(''); setFeds(null)
-    getFeds().then(list => {
-      setFeds(list)
-      // Recordar el último perfil usado en este navegador.
-      const saved = storage(() => localStorage.getItem(PROFILE_KEY))
-      const fed = saved ? list.find(f => f.id === saved) : undefined
-      if (fed) { setProfile(fed); if (fed.rol === 'coordinacion') setSection('board') }
-    }).catch(e => setFedsError(errMsg(e)))
+  const cargarSesion = useCallback(() => {
+    miSesion().then(s => {
+      setSesion(s)
+      // Coordinación entra al Tablero (vistazo general del equipo); cada FED, a su agenda.
+      if (s) { setSection(s.fed.rol === 'coordinacion' ? 'board' : 'agenda'); if (!s.debeCambiar) getFeds().then(setFeds).catch(() => setFeds([])) }
+    }).catch(() => setSesion(null))
   }, [])
-  useEffect(loadFeds, [loadFeds])
-
-  const choose = (fed: Fed | null) => {
-    // Coordinación entra al Tablero (vistazo general del equipo); cada FED, a su agenda.
-    setProfile(fed); setSection(fed?.rol === 'coordinacion' ? 'board' : 'agenda')
-    storage(() => (fed ? localStorage.setItem(PROFILE_KEY, fed.id) : localStorage.removeItem(PROFILE_KEY)))
-  }
+  useEffect(() => {
+    cargarSesion()
+    const vencida = () => setSesion(null)
+    window.addEventListener('agenda-sesion-vencida', vencida)
+    return () => window.removeEventListener('agenda-sesion-vencida', vencida)
+  }, [cargarSesion])
+  const cerrarSesion = async () => { try { await salir() } finally { setSesion(null); setFeds(null); setEditing(null); setSelected(null) } }
   const changed = (message: string) => { setReloadKey(k => k + 1); setToast(message) }
   const hideToast = useCallback(() => setToast(''), [])
 
@@ -76,7 +77,9 @@ export default function Page() {
     return () => { window.removeEventListener('online', enviar); window.removeEventListener('agenda-pendientes', contar) }
   }, [])
 
-  if (!profile) return <ProfileSelect feds={feds} error={fedsError} onRetry={loadFeds} onSelect={choose} />
+  if (sesion === undefined) return <div className="flex min-h-dvh items-center justify-center bg-dte-fondo" aria-busy="true"><Loader2 className="size-8 animate-spin text-dte-petroleo" aria-label="Cargando" /></div>
+  if (!sesion || !profile) return <Ingreso onIngreso={cargarSesion} />
+  if (sesion.debeCambiar) return <CambiarPassword obligatorio onListo={() => { setToast('Listo: ya tenés tu contraseña propia'); cargarSesion() }} />
 
   return <div className="flex min-h-dvh flex-col bg-dte-fondo text-dte-tinta">
     <header className="sticky top-0 z-header pt-safe border-b border-dte-linea bg-white/95 backdrop-blur">
@@ -94,12 +97,13 @@ export default function Page() {
         <div className="flex shrink-0 items-center gap-1">
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <NotificacionesBell profile={profile} feds={feds ?? []} reloadKey={reloadKey} onOpen={setSelected} />
-        <MenuPerfil profile={profile} feds={feds ?? []} onPerfil={() => setSection('perfil')} onCambiar={() => choose(null)} />
+        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} onPerfil={() => setSection('perfil')} onUsuarios={() => setSection('usuarios')} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
         </div>
       </div>
     </header>
 
-    {section === 'perfil' && profile.rol === 'fed'
+    {section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} />
+      : section === 'perfil' && profile.rol === 'fed'
       ? <MiPerfilView key={profile.id} fed={profile} feds={feds ?? []} onSaved={f => { setProfile(f); setFeds(l => l && l.map(x => (x.id === f.id ? f : x))); setToast('Se guardó tu perfil'); setSection('agenda') }} />
       : section === 'agenda'
       ? <AgendaView fed={profile} feds={feds ?? []} reloadKey={reloadKey} onNew={fecha => setEditing({ item: null, fecha })} onSelect={setSelected} />
@@ -130,6 +134,12 @@ export default function Page() {
       </div>
     </nav>
 
+    <Dialog open={cambiandoPass} onOpenChange={setCambiandoPass}>
+      <DialogContent className="bg-white sm:max-w-md">
+        <DialogHeader><DialogTitle className="text-lg">Cambiar contraseña</DialogTitle><DialogDescription>Elegí una contraseña nueva para ingresar a la agenda.</DialogDescription></DialogHeader>
+        {cambiandoPass && <CambiarPassword obligatorio={false} onCancelar={() => setCambiandoPass(false)} onListo={() => { setCambiandoPass(false); setToast('Se cambió tu contraseña') }} />}
+      </DialogContent>
+    </Dialog>
     {toast && <Toast message={toast} onDone={hideToast} />}
   </div>
 }

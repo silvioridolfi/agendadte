@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Briefcase, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
+import { Briefcase, KeyRound, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,7 @@ const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
 const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 
 // Menú del avatar: Mi perfil (sólo FED) y cambio de perfil. Se cierra con Escape o tocando afuera.
-export function MenuPerfil({ profile, feds, onPerfil, onCambiar }: { profile: Fed, feds: Fed[], onPerfil: () => void, onCambiar: () => void }) {
+export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, onPerfil: () => void, onUsuarios: () => void, onPassword: () => void, onSalir: () => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null), btnRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
@@ -35,7 +35,9 @@ export function MenuPerfil({ profile, feds, onPerfil, onCambiar }: { profile: Fe
     </button>
     {open && <div role="menu" aria-label="Opciones de perfil" className="absolute right-0 top-12 z-modal w-60 overflow-hidden rounded-2xl border border-dte-linea bg-white py-1 shadow-xl">
       {profile.rol === 'fed' && <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>}
-      <button role="menuitem" onClick={() => { setOpen(false); onCambiar() }} className={item}><Users className="size-4 text-dte-petroleo" />Cambiar de perfil</button>
+      {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
+      <button role="menuitem" onClick={() => { setOpen(false); onPassword() }} className={item}><KeyRound className="size-4 text-dte-petroleo" />Cambiar contraseña</button>
+      <button role="menuitem" onClick={() => { setOpen(false); onSalir() }} className={`${item} border-t border-dte-linea text-peligro`}><LogOut className="size-4" />Cerrar sesión</button>
     </div>}
   </div>
 }

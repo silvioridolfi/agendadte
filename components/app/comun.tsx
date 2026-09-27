@@ -40,7 +40,6 @@ export const azOtroAlFinal = (a: string, b: string) => (a === 'Otro' ? 1 : b ===
 // Select nativo: 44px y 16px en mobile (sin zoom en iOS), compacto desde md.
 export const selectClass = 'h-11 w-full rounded-lg border border-input bg-white px-2.5 text-base text-dte-tinta md:h-9 md:text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
 export const eyebrow = 'text-xs font-bold uppercase tracking-[0.15em] text-dte-magenta'
-export const PROFILE_KEY = 'agenda-territorial:fed'
 
 // ---- fechas (siempre en hora local, formato YYYY-MM-DD) ----
 export const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -75,7 +74,21 @@ export const fedColor = (feds: Fed[], id: string) => avatarColors[Math.max(0, fe
 export const districtsLabel = (f: Fed) => (f.distritos_a_cargo.length ? f.distritos_a_cargo.map(titleCase).join(' · ') : 'Sin distritos asignados')
 
 // Desenvuelve el Result de las server actions: lanza con el mensaje real del servidor.
-export const call = <A extends unknown[], T>(fn: (...a: A) => Promise<api.Result<T>>) => async (...a: A): Promise<T> => { const r = await fn(...a); if (!r.ok) throw new Error(r.error); return r.data }
+// Sesión vencida o cerrada en el servidor: se avisa a la página para volver a la pantalla de ingreso.
+export const call = <A extends unknown[], T>(fn: (...a: A) => Promise<api.Result<T>>) => async (...a: A): Promise<T> => {
+  const r = await fn(...a)
+  if (!r.ok) {
+    if (r.error === 'SESION_VENCIDA') { if (typeof window !== 'undefined') window.dispatchEvent(new Event('agenda-sesion-vencida')); throw new Error('Tu sesión venció. Ingresá de nuevo.') }
+    throw new Error(r.error)
+  }
+  return r.data
+}
+export const miSesion = call(api.miSesion)
+export const ingresar = call(api.ingresar)
+export const salir = call(api.salir)
+export const cambiarPassword = call(api.cambiarPassword)
+export const listarUsuarios = call(api.listarUsuarios)
+export const generarPasswordTemporal = call(api.generarPasswordTemporal)
 export const getFeds = call(api.getFeds)
 export const searchSchools = call(api.searchSchools)
 export const getFedItems = call(api.getFedItems)
