@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Pill } from '@/components/ui/segmented'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Field } from '@/components/app/formulario'
-import { CLUB_MIN_ENCUENTROS, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEncuentrosRealizados, clubEstado, iniciado, type Club, type Fed, type Modalidad, type TipoJornada, type Trayecto } from '@/lib/agenda'
+import { Field, SchoolPicker } from '@/components/app/formulario'
+import { CLUB_MIN_ENCUENTROS, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEncuentrosRealizados, clubEstado, iniciado, type Club, type Fed, type School, type Modalidad, type TipoJornada, type Trayecto } from '@/lib/agenda'
 import { az, errMsg, getClubes, iso, saveItem, selectClass, shortSchoolName, ErrorBox } from '@/components/app/comun'
 
 const OTRA = '__otra'
@@ -29,6 +29,9 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
   const [otraPropuesta, setOtraPropuesta] = useState('')
   const [fecha, setFecha] = useState(hoy)
   const [desde, setDesde] = useState('')
+  // Sede del encuentro: la habitual del grupo o, cuando salen a territorio, la escuela donde se hace ese día.
+  const [enOtraSede, setEnOtraSede] = useState(false)
+  const [otraSede, setOtraSede] = useState<School | null>(null)
   const [hasta, setHasta] = useState('')
   // Otros grupos (grados) de la misma sede que se registran con los mismos datos, cada uno con su número de encuentro.
   const [otros, setOtros] = useState<string[]>([])
@@ -58,6 +61,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
     const errs: typeof errores = {}
     if (!club) errs.club = `Elegí ${marca.corto === 'club' ? 'el club' : 'la práctica'}.`
     if (propuesta === OTRA && !otraPropuesta.trim()) errs.propuesta = 'Escribí la propuesta dictada.'
+    if (enOtraSede && !otraSede) errs.club = 'Elegí la escuela donde se hizo el encuentro.'
     if (desde && hasta && hasta <= desde) errs.hora = 'La hora de fin tiene que ser posterior a la de inicio.'
     if (repetir && (!diasSerie.length || !serieHasta || serieHasta <= fecha)) errs.serie = 'Elegí al menos un día y una fecha de fin posterior.'
     setErrores(errs)
@@ -69,7 +73,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
       let creadas = 0
       for (const c of grupos) {
         const r = await saveItem({
-          fed_id: fed.id, school_id: c.school_id, lugar: c.school_id ? null : c.lugar, fecha, hora_inicio: desde || null, hora_fin: hasta || null, accion: tipo,
+          fed_id: fed.id, school_id: enOtraSede && otraSede ? otraSede.id : c.school_id, lugar: enOtraSede && otraSede ? null : c.school_id ? null : c.lugar, fecha, hora_inicio: desde || null, hora_fin: hasta || null, accion: tipo,
           estado: fecha <= hoy ? 'realizada' : 'planificada', sub_accion: null, detalle: null, cantidad: null, participantes: [],
           repeticion: repetir ? { dias: diasSerie, hasta: serieHasta } : null,
           encuentro: { propuesta: propuesta === OTRA ? otraPropuesta.trim() : propuesta, encuentro_n: null, modalidad, destinatarios, inscriptos: num(inscriptos), asistentes: num(asistentes),
@@ -94,6 +98,16 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
 
     {hermanos.length > 0 && <fieldset><legend className="mb-1.5 text-sm font-semibold">Registrar también para <span className="font-normal text-dte-gris">(mismos datos, otros grupos de la escuela)</span></legend>
       <div className="flex flex-wrap gap-1.5">{hermanos.map(c => <Pill key={c.id} on={otros.includes(c.id)} onClick={() => setOtros(l => (l.includes(c.id) ? l.filter(x => x !== c.id) : [...l, c.id]))}>{c.grupo ?? etiqueta(c)}</Pill>)}</div>
+    </fieldset>}
+
+    {club && <fieldset>
+      <legend className="mb-1.5 text-sm font-semibold">Sede del encuentro</legend>
+      <div className="grid gap-1.5 sm:grid-cols-2">
+        <Pill conIcono={false} on={!enOtraSede} onClick={() => setEnOtraSede(false)} className="justify-center">Sede habitual</Pill>
+        <Pill conIcono={false} on={enOtraSede} onClick={() => setEnOtraSede(true)} className="justify-center">Otra escuela (territorio)</Pill>
+      </div>
+      {enOtraSede ? <div className="mt-2"><SchoolPicker value={otraSede} onChange={setOtraSede} /></div>
+        : <p className="mt-1.5 text-xs text-dte-gris">{club.school ? shortSchoolName(club.school) : club.lugar ?? 'Sin sede cargada'}</p>}
     </fieldset>}
 
     <Field label="Propuesta dictada" required error={errores.propuesta} errorId="err-propuesta">
