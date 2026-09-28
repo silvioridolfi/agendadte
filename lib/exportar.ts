@@ -1,5 +1,5 @@
 // Exportación a Excel (planilla mensual por FED y consolidado regional). Se genera en el navegador.
-import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, clubEstado, iniciado, ordenGrupo, ultimaActividad, type AgendaItem, type Club, type Encuentro, type Fed } from '@/lib/agenda'
+import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, clubEstado, cuentaHecha, esAusencia, iniciado, ordenGrupo, ultimaActividad, type AgendaItem, type Club, type Encuentro, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
 import { hoyAR, anioAR, ZONA } from '@/lib/hora'
 
@@ -72,16 +72,16 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
   // Resumen por FED (sólo acciones realizadas, como las métricas del tablero).
   const equipo = feds.filter(f => f.rol !== 'coordinacion' && items.some(i => i.fed_id === f.id))
   const resumen = equipo.map(f => {
-    const suyas = items.filter(i => i.fed_id === f.id), hechas = suyas.filter(i => i.estado === 'realizada')
+    const suyas = items.filter(i => i.fed_id === f.id), hechas = suyas.filter(cuentaHecha)
     const cuenta = Object.fromEntries(CATEGORIAS.map(c => [c, hechas.filter(i => CATEGORIA[i.accion] === c).length]))
     return { fed: f.nombre_completo, distritos: f.distritos_a_cargo.map(titleCase).join(', '), ...cuenta, total: hechas.length,
-      planificadas: suyas.filter(i => i.estado === 'planificada').length, escuelas: new Set(hechas.map(i => i.school_id).filter(Boolean)).size,
+      planificadas: suyas.filter(i => i.estado === 'planificada' && !esAusencia(i.accion)).length, escuelas: new Set(hechas.map(i => i.school_id).filter(Boolean)).size,
       equipos: hechas.reduce((a, i) => a + (i.cantidad ?? 0), 0), encuentros: encuentros.filter(e => e.fed_id === f.id).length }
   })
   if (resumen.length > 1) {
     const tot: Record<string, unknown> = { fed: 'TOTAL', distritos: '' }
     for (const k of [...CATEGORIAS, 'total', 'planificadas', 'equipos', 'encuentros'] as const) tot[k] = resumen.reduce((a, r) => a + Number(r[k as keyof typeof r] ?? 0), 0)
-    tot.escuelas = new Set(items.filter(i => i.estado === 'realizada').map(i => i.school_id).filter(Boolean)).size
+    tot.escuelas = new Set(items.filter(cuentaHecha).map(i => i.school_id).filter(Boolean)).size
     resumen.push(tot as typeof resumen[number])
   }
   const wsRes = tabla('Resumen', [
@@ -179,7 +179,7 @@ export async function exportarInforme({ titulo, persona, desde, hasta, indicador
   cols.forEach(([h, w], i) => { wd.getRow(1).getCell(i + 1).value = h; wd.getColumn(i + 1).width = w })
   wd.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
   wd.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PETROLEO } }
-  const ordenados = [...items].filter(i => i.estado === 'realizada').sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))
+  const ordenados = [...items].filter(cuentaHecha).sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))
   ordenados.forEach((i, n) => {
     const row = wd.addRow([fecha(i.fecha), hora(i), fedName(i.fed_id), titleCase(i.accion), i.sub_accion ?? '', escuela(i.school, i.lugar), i.school?.cue ?? '', i.school?.distrito ? titleCase(i.school.distrito) : '', i.detalle ?? ''])
     row.alignment = { vertical: 'top', wrapText: true }
