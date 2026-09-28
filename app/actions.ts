@@ -137,7 +137,8 @@ async function avisarParticipantes(itemId: string, autorId: string, tipo: 'modif
   if (destinos.length) await db.from('notificaciones').insert(destinos.map(fed_id => ({ fed_id, item_id: conItem ? itemId : null, autor_id: autorId, tipo, detalle })))
 }
 
-async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' | 'siguientes' = 'uno'): Promise<{ id: string, creadas: number }> {
+// `avisar`: si se notifica a los compañeros etiquetados (en una visita con varias acciones, sólo la primera avisa).
+async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' | 'siguientes' = 'uno', avisar = true): Promise<{ id: string, creadas: number }> {
   const row = clean(input)
   const db = supabaseServer()
   // Paro: se registra en el lugar de trabajo (DTE). Licencia: sin escuela ni lugar.
@@ -157,7 +158,7 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
     : await db.from('agenda_items').insert(rowSinSerie).select('id').single()
   if (res.error) throw new Error(res.error.message)
   const itemId = res.data.id as string
-  const cambiosPart = input.participantes ? await syncParticipantes(itemId, row.fed_id, input.participantes) : { sumar: [], quitar: [] }
+  const cambiosPart = input.participantes ? await syncParticipantes(itemId, row.fed_id, input.participantes, avisar) : { sumar: [], quitar: [] }
 
   // Encuentro: se edita el que se mostró en el formulario (puede ser uno importado) o se crea uno nuevo.
   // Si la acción deja de ser club/taller/prácticas, sólo se borra el encuentro creado desde la app; los importados se conservan.
@@ -245,7 +246,7 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
 }
 
 // Compañeros etiquetados: se reemplaza la lista y se notifica a quienes se suman.
-async function syncParticipantes(itemId: string, autorId: string, fedIds: string[]): Promise<{ sumar: string[], quitar: string[] }> {
+async function syncParticipantes(itemId: string, autorId: string, fedIds: string[], avisar = true): Promise<{ sumar: string[], quitar: string[] }> {
   const db = supabaseServer()
   const quiero = [...new Set(fedIds.filter(f => f && f !== autorId))]
   const { data: actuales, error } = await db.from('agenda_participantes').select('fed_id').eq('item_id', itemId)
@@ -256,7 +257,7 @@ async function syncParticipantes(itemId: string, autorId: string, fedIds: string
   if (sumar.length) {
     const r = await db.from('agenda_participantes').insert(sumar.map(fed_id => ({ item_id: itemId, fed_id })))
     if (r.error) throw new Error(r.error.message)
-    const n = await db.from('notificaciones').insert(sumar.map(fed_id => ({ fed_id, item_id: itemId, autor_id: autorId, tipo: 'etiqueta' })))
+    const n = avisar ? await db.from('notificaciones').insert(sumar.map(fed_id => ({ fed_id, item_id: itemId, autor_id: autorId, tipo: 'etiqueta' }))) : { error: null }
     if (n.error) throw new Error(n.error.message)
   }
   return { sumar, quitar }
@@ -536,6 +537,27 @@ export const getFedItems = async (fedId: string, from: string, to: string) => co
 export const getAllItems = async (from: string, to: string) => conUsuario(() => getAllItemsImpl(from, to))
 export const getEncuentros = async (from: string, to: string) => conUsuario(() => getEncuentrosImpl(from, to))
 export const saveItem = async (input: AgendaItemInput, id?: string, alcance: 'uno' | 'siguientes' = 'uno') => conUsuario(yo => saveItemImpl({ ...input, fed_id: yo.fed.id }, id, alcance))
+// Visita con varias acciones: una acción por tipo, con la misma escuela, fecha, horario y acompañantes.
+// Cada compañero recibe un solo aviso (el de la primera acción, con el resumen de la visita).
+// Si una falla, las anteriores quedan guardadas y se informa cuáles, para no duplicarlas al reintentar.
+export const guardarVisita = async (inputs: AgendaItemInput[]) => conUsuario(async yo => {
+  if (!inputs.length || inputs.length > 8) throw new Error('Una visita puede tener entre 1 y 8 acciones')
+  const guardadas: AgendaItemInput['accion'][] = []
+  let creadas = 0, primera: string | null = null
+  for (const [k, input] of inputs.entries()) {
+    try {
+      const r = await saveItemImpl({ ...input, fed_id: yo.fed.id }, undefined, 'uno', k === 0)
+      creadas += r.creadas; guardadas.push(input.accion); if (k === 0) primera = r.id
+    } catch (e) {
+      return { creadas, guardadas, error: `${input.accion.toLowerCase()}: ${e instanceof Error ? e.message : String(e)}` }
+    }
+  }
+  if (primera && inputs.length > 1) {
+    const lista = inputs.map(i => i.accion.toLowerCase()).join(', ')
+    await supabaseServer().from('notificaciones').update({ detalle: `Visita con ${inputs.length} acciones: ${lista}${inputs[0].repeticion ? ' · se repite cada semana' : ''}` }).eq('item_id', primera).eq('tipo', 'etiqueta')
+  }
+  return { creadas, guardadas, error: null as string | null }
+})
 export const setItemStatus = async (id: string, _fedId: string, estado: AgendaItemInput['estado']) => conUsuario(yo => setItemStatusImpl(id, yo.fed.id, estado))
 export const deleteItem = async (id: string, _fedId: string, serie = false) => conUsuario(yo => deleteItemImpl(id, yo.fed.id, serie))
 export const cambiarEstadoVarias = async (ids: string[], estado: AgendaItemInput['estado']) => conUsuario(yo => cambiarEstadoVariasImpl(ids, yo.fed.id, estado))
