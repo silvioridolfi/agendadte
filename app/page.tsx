@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { CalendarDays, CloudUpload, Eye, LayoutDashboard, Loader2, Plus, type LucideIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { esTrayecto, type AgendaItem, type Fed, type Trayecto } from '@/lib/agenda'
+import { CON_ENCUENTRO, esTrayecto, type AgendaItem, type Fed, type Trayecto } from '@/lib/agenda'
 import { NotificacionesBell } from '@/components/app/notificaciones'
 import { CambiarPassword, Ingreso, UsuariosView } from '@/components/app/acceso'
 import { FeriadosView } from '@/components/app/feriados'
@@ -19,7 +19,7 @@ import { RegistroEncuentro } from '@/components/app/encuentro'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
 import { limpiarCache } from '@/components/app/offline'
 import { ConteoFotosProvider } from '@/components/app/fotosconteo'
-import { iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday, storage, VolverArriba } from '@/components/app/comun'
+import { cambiarEstadoVarias, errMsg, type AccionAviso, iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday, storage, VolverArriba } from '@/components/app/comun'
 import { fechaHoyAR } from '@/lib/hora'
 
 // Botón de la barra inferior mobile (área táctil de 56px de alto).
@@ -61,6 +61,7 @@ export default function Page() {
   const [selected, setSelected] = useState<AgendaItem | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [toast, setToast] = useState('')
+  const [toastAcciones, setToastAcciones] = useState<AccionAviso[]>([])
 
   const cargarSesion = useCallback(() => {
     miSesion().then(s => {
@@ -76,10 +77,23 @@ export default function Page() {
     return () => window.removeEventListener('agenda-sesion-vencida', vencida)
   }, [cargarSesion])
   const cerrarSesion = async () => { try { await salir() } finally { storage(() => sessionStorage.removeItem(SECCION_KEY)); limpiarCache(); setSesion(null); setVista(null); setFeds(null); setEditing(null); setSelected(null) } }
-  const changed = (message: string) => { setReloadKey(k => k + 1); setToast(message) }
+  const changed = (message: string, acciones: AccionAviso[] = []) => { setReloadKey(k => k + 1); setToast(message); setToastAcciones(acciones) }
+  // Marcar como realizada con un toque (la visita completa si tiene varias acciones), con Deshacer.
+  // En clubes, prácticas y talleres se avisa para completar los asistentes.
+  const marcarRealizada = async (item: AgendaItem) => {
+    const ids = item.visita?.map(v => v.id) ?? [item.id], antes = item.estado
+    try {
+      const r = await cambiarEstadoVarias(ids, 'realizada')
+      if (!r.actualizadas) { setToast(r.futuras ? 'No se puede marcar como realizada una acción de una fecha que todavía no llegó' : 'No se pudo marcar como realizada'); setToastAcciones([]); return }
+      const deshacer = { label: 'Deshacer', onClick: () => { cambiarEstadoVarias(ids, antes).then(() => changed('Se deshizo el cambio')).catch(e => setToast(errMsg(e))) } }
+      const conEncuentro = (item.visita ?? [item]).some(v => CON_ENCUENTRO.includes(v.accion))
+      changed(conEncuentro ? 'Marcada como realizada. Completá los asistentes del encuentro.' : ids.length > 1 ? 'Visita marcada como realizada' : 'Marcada como realizada',
+        conEncuentro ? [deshacer, { label: 'Completar', onClick: () => setEditing({ item: { ...item, estado: 'realizada' } }) }] : [deshacer])
+    } catch (e) { setToast(errMsg(e)); setToastAcciones([]) }
+  }
   // Registrar la participación en un evento (u otro cambio hecho desde un diálogo) recarga las vistas.
   useEffect(() => { const f = () => setReloadKey(k => k + 1); window.addEventListener(RECARGAR, f); return () => window.removeEventListener(RECARGAR, f) }, [])
-  const hideToast = useCallback(() => setToast(''), [])
+  const hideToast = useCallback(() => { setToast(''); setToastAcciones([]) }, [])
 
   // Acciones cargadas sin conexión: se envían al volver la señal (y al abrir la app).
   const [enCola, setEnCola] = useState(0)
@@ -136,8 +150,8 @@ export default function Page() {
       : vista?.tipo === 'equipo' && section === 'board'
       ? <CoordinatorView key="equipo" feds={(feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} soloLectura />
       : section === 'agenda'
-      ? <AgendaView fed={profile} feds={feds ?? []} reloadKey={reloadKey} onNew={fecha => setEditing({ item: null, fecha })} onSelect={setSelected} onCambio={changed} />
-      : <CoordinatorView key={profile.id} feds={profile.rol === 'fed' ? [profile] : (feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected}
+      ? <AgendaView fed={profile} feds={feds ?? []} reloadKey={reloadKey} onNew={fecha => setEditing({ item: null, fecha })} onSelect={setSelected} onCambio={changed} onRealizar={marcarRealizada} />
+      : <CoordinatorView key={profile.id} feds={profile.rol === 'fed' ? [profile] : (feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} onRealizar={marcarRealizada}
           propio={profile.rol === 'fed' ? profile : undefined} onNuevaAccion={preset => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset })}
           onNuevaReunion={profile.rol !== 'coordinacion' ? undefined : () => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { accion: 'REUNIÓN', sub_accion: 'Reunión de equipo (CED/FED)', participantes: (feds ?? []).filter(f => f.id !== profile.id).map(f => f.id) } })} />}
 
@@ -171,6 +185,6 @@ export default function Page() {
       </DialogContent>
     </Dialog>
     <VolverArriba alto={section === 'perfil'} />
-    {toast && <Toast message={toast} onDone={hideToast} />}
+    {toast && <Toast message={toast} onDone={hideToast} acciones={toastAcciones} />}
   </div></ConteoFotosProvider>
 }

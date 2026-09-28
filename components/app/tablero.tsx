@@ -16,7 +16,7 @@ import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type F
 import { FotosChip } from '@/components/app/fotosconteo'
 import { InformeBloque, personaDe } from '@/components/app/informes'
 import { indicadoresCoordinacion, informeFed } from '@/lib/informes'
-import { EtiquetasAccion, type ItemPreset, itemCorto, cueLugar, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
+import { BotonRealizar, puedeRealizar, EtiquetasAccion, type ItemPreset, itemCorto, cueLugar, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
 import { hoyAR, fechaHoyAR, anioAR } from '@/lib/hora'
 import { agruparVisitas } from '@/lib/visita'
 
@@ -44,7 +44,7 @@ type Pestana = typeof PESTANAS[number]
 const TAB_KEY = 'agenda-territorial:tablero'
 
 // `propio`: tablero individual de un FED (sólo sus datos; sin Agenda del equipo ni Mi equipo). `onNuevaAccion`: abre el formulario con valores iniciales.
-export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion, propio, onNuevaAccion, soloLectura }: { feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void, propio?: Fed, onNuevaAccion?: (preset: ItemPreset) => void, soloLectura?: boolean }) {
+export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion, propio, onNuevaAccion, soloLectura, onRealizar }: { onRealizar?: (item: AgendaItem) => void, feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void, propio?: Fed, onNuevaAccion?: (preset: ItemPreset) => void, soloLectura?: boolean }) {
   const [tab, setTab] = useState<Pestana>(() => { const t = storage(() => sessionStorage.getItem(TAB_KEY)) as Pestana | null; return t && PESTANAS.includes(t) && !(propio && (t === 'agenda' || t === 'equipo')) ? t : 'resumen' })
   useEffect(() => { storage(() => sessionStorage.setItem(TAB_KEY, tab)) }, [tab])
   // Pestañas accesibles: flechas izquierda/derecha, Inicio y Fin mueven el foco y activan la pestaña.
@@ -181,11 +181,11 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
             {!fedId && groups.length > 1 && <Button variant="ghost" size="sm" onClick={() => setFedId(id)} className="text-dte-petroleo">Ver sólo este FED</Button>}
           </div>
           <ul className="divide-y divide-dte-linea overflow-hidden rounded-card border border-dte-linea bg-white shadow-e1">{group.slice(0, visibles(id)).map(item =>
-            <li key={item.id}><button className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte focus-visible:bg-dte-tinte focus-visible:outline-none sm:grid-cols-[6.5rem_1fr_auto] sm:items-center" onClick={() => onSelect(item)}>
+            <li key={item.id} className="group/check relative"><button className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte focus-visible:bg-dte-tinte focus-visible:outline-none sm:grid-cols-[6.5rem_1fr_auto] sm:items-center" onClick={() => onSelect(item)}>
               <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize text-dte-tinta">{range === 'day' ? (hhmm(item.hora_inicio) || '—') : fmt(parse(item.fecha), range === 'week' ? { weekday: 'short', day: 'numeric' } : { day: 'numeric', month: 'short' }).replace('.', '')}</span>{range !== 'day' && <span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span>}</span>
               <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemCorto(item)}</span><span className="block truncate text-xs text-dte-gris" title={[cueLugar(item.school), item.school ? item.sub_accion : null].filter(Boolean).join(' · ') || ' '}>{[cueLugar(item.school), item.school ? item.sub_accion : null].filter(Boolean).join(' · ') || ' '}</span></span>
               <span className="flex flex-wrap items-center gap-2 sm:justify-end"><EtiquetasAccion item={item} /><StatusBadge status={item.estado} /><FotosChip item={item} /></span>
-            </button></li>)}</ul>
+            </button>{onRealizar && !soloLectura && propio && puedeRealizar(item, propio.id) && <BotonRealizar item={item} onRealizar={onRealizar} className="absolute right-1 top-1 md:opacity-0 md:group-hover/check:opacity-100" />}</li>)}</ul>
           {group.length > LISTA_INICIAL && <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm">
             {visibles(id) < group.length && <Button variant="outline" size="sm" onClick={() => setMostrar(m => ({ ...m, [id]: visibles(id) + LISTA_PASO }))}>Ver {Math.min(LISTA_PASO, group.length - visibles(id))} más</Button>}
             {visibles(id) < group.length && group.length - visibles(id) > LISTA_PASO && <Button variant="ghost" size="sm" onClick={() => setMostrar(m => ({ ...m, [id]: group.length }))} className="text-dte-petroleo">Ver todas ({group.length})</Button>}
