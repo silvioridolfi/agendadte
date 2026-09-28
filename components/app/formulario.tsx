@@ -169,10 +169,11 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const ddjjDia = ddjjFor(fed, form.fecha)
   // Repetir (sólo al crear): mismos datos los días elegidos hasta una fecha, salteando feriados y recesos.
   const [repetir, setRepetir] = useState(false)
-  const [dias, setDias] = useState<number[]>([])
+  // null = sin tocar: se propone el día de la fecha elegida.
+  const [dias, setDias] = useState<number[] | null>(null)
   const [hasta, setHasta] = useState('')
   const diaFecha = parse(form.fecha).getDay()
-  const diasSerie = dias.length ? dias : diaFecha >= 1 && diaFecha <= 5 ? [diaFecha] : []
+  const diasSerie = dias ?? (diaFecha >= 1 && diaFecha <= 5 ? [diaFecha] : [])
   const hastaSerie = hasta || iso(addDays(parse(form.fecha), 7 * 8))
   // Avisos al cargar: superposición, feriado, fin de semana, sin DD.JJ., realizada a futuro. No impiden guardar.
   const [delDia, setDelDia] = useState<{ items: AgendaItem[], feriados: Feriado[] }>({ items: [], feriados: [] })
@@ -436,7 +437,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     {!aDefinir && !item && !esParo && !esLicencia && form.accion && <fieldset id="campo-serie" className="scroll-mt-24 rounded-tile border border-dte-linea p-3">
       <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={repetir} onChange={e => { setRepetir(e.target.checked); limpiar('serie') }} className="size-5" />Se repite cada semana <span className="font-normal text-dte-gris">(ej.: el club todos los miércoles)</span></label>
       {repetir && <div className="mt-3 flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-1.5"><span className="mr-1 text-xs font-semibold uppercase tracking-wider text-dte-gris">Días</span>{DIAS_HABILES.map((d, i) => { const n = i + 1, on = diasSerie.includes(n); return <Pill key={d} on={on} conIcono={false} className="min-w-11 justify-center font-semibold" onClick={() => setDias((on ? diasSerie.filter(x => x !== n) : [...diasSerie, n]).sort())}>{d}</Pill> })}</div>
+        <div className="flex flex-wrap items-center gap-1.5"><span className="mr-1 text-xs font-semibold uppercase tracking-wider text-dte-gris">Días</span>{DIAS_HABILES.map((d, i) => { const n = i + 1, on = diasSerie.includes(n); return <Pill key={d} on={on} conIcono={false} className="min-w-11 justify-center font-semibold" onClick={() => { limpiar('serie'); setDias((on ? diasSerie.filter(x => x !== n) : [...diasSerie, n]).sort()) }}>{d}</Pill> })}</div>
         <Field label="Hasta" className="max-w-48"><Input type="date" min={form.fecha} value={hastaSerie} onChange={e => setHasta(e.target.value)} className="md:h-10" /></Field>
         <p className="text-xs text-dte-gris">Se crean como <b>planificadas</b> con los mismos datos, salteando feriados y recesos. Después completás cada encuentro{esClub ? ` y queda asociado al ${marca.corto}` : ''}. Máximo 60 fechas.</p>
         {errores.serie && <p role="alert" className="text-sm font-medium text-peligro">{errores.serie}</p>}
