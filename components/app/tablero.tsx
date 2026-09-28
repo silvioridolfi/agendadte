@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { ClubesView } from '@/components/clubes'
 import { MetricsView } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
-import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed, type Club } from '@/lib/agenda'
+import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed, type Club, clubEstado } from '@/lib/agenda'
 import { FotosChip } from '@/components/app/fotosconteo'
 import { InformeBloque, personaDe } from '@/components/app/informes'
 import { indicadoresCoordinacion, informeFed } from '@/lib/informes'
@@ -125,7 +125,9 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   const clear = () => { setSearch(''); setDistrito(''); setFedId(''); setAccion(''); setEstado('') }
   const title = range === 'day' ? cap(fmt(from, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) : range === 'week' ? weekTitle(from, to) : range === 'year' ? `Año ${from.getFullYear()}` : cap(fmt(from, { month: 'long', year: 'numeric' }))
 
-  const metricas = <MetricsView items={base.filter(i => feds.some(f => f.id === i.fed_id))} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} />
+  // Clubes que siguen activos hoy (los finalizados o sin actividad no figuran en "Escuelas con clubes activos").
+  const clubesActivos = useMemo(() => new Set(clubBase.filter(c => c.fecha_inicio && clubEstado({ ...c, fecha_inicio: c.fecha_inicio }, hoyAR(), noHabiles) === 'activo').map(c => c.id)), [clubBase, noHabiles])
+  const metricas = <MetricsView items={base.filter(i => feds.some(f => f.id === i.fed_id))} encuentros={encBase} feds={fedId ? feds.filter(f => f.id === fedId) : feds} onSelect={onSelect} clubesActivos={clubes ? clubesActivos : undefined} />
   return <main className="mx-auto w-full min-w-0 max-w-[1440px] px-4 pb-8 pt-6 lg:px-10 lg:pb-16">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div><p className={eyebrow}>{propio ? 'Mi tablero' : 'Tablero del coordinador'}</p><h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{tab === 'agenda' ? 'Agenda del equipo' : title}</h2><p className="mt-1.5 text-sm text-dte-gris">{propio ? 'Tus acciones, clubes y prácticas.' : 'Seguimiento territorial de todo el equipo.'}</p>{onNuevaReunion && <Button variant="marca" onClick={onNuevaReunion} className="mt-3"><Users data-icon="inline-start" />Nueva reunión de equipo</Button>}</div>

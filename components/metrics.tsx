@@ -4,8 +4,9 @@ import { useMemo, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { titleCase } from '@/lib/format'
+import { siglaEscuela } from '@/components/app/comun'
 import { esEscuela, esGrupoEspecial, grupoDistrito, ordenGrupos } from '@/lib/sede'
-import { CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, type Accion, type AgendaItem, type Categoria, type Encuentro, type Fed } from '@/lib/agenda'
+import { CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, type Accion, type AgendaItem, type Categoria, type Encuentro, type Fed, type School } from '@/lib/agenda'
 
 // Colores por categoría: validados con la guía de dataviz (CVD y contraste sobre fondo claro).
 export const CAT_COLOR: Record<Categoria, string> = { tecnica: 'var(--color-cat-tecnica)', pedagogica: 'var(--color-cat-pedagogica)', institucional: 'var(--color-cat-institucional)' }
@@ -41,13 +42,13 @@ export function Kpi({ label, value, hint, color, onClick, active }: { label: str
 }
 
 // Listado de detalle que abre un indicador.
-export type DrillRow = { key: string, title: string, sub?: string, right?: string, onClick?: () => void }
+export type DrillRow = { key: string, title: React.ReactNode, sub?: string, right?: string, onClick?: () => void }
 export function DrillDialog({ drill, onClose }: { drill: { title: string, subtitle?: string, rows: DrillRow[] } | null, onClose: () => void }) {
   return <Dialog open={!!drill} onOpenChange={o => !o && onClose()}>
     <DialogContent className="max-h-[85vh] overflow-y-auto bg-white sm:max-w-xl">
       <DialogHeader><DialogTitle className="text-lg">{drill?.title}</DialogTitle><DialogDescription>{drill?.subtitle ?? `${drill?.rows.length ?? 0} en total`}</DialogDescription></DialogHeader>
       {drill && (drill.rows.length ? <ul className="divide-y divide-dte-linea rounded-tile border border-dte-linea">{drill.rows.map(r => {
-        const inner = <><span className="min-w-0"><span className="block truncate font-semibold" title={r.title}>{r.title}</span>{r.sub && <span className="block truncate text-xs text-dte-gris" title={r.sub}>{r.sub}</span>}</span>{r.right && <span className="shrink-0 text-xs tabular-nums text-dte-gris">{r.right}</span>}</>
+        const inner = <><span className="min-w-0"><span className="block truncate font-semibold" title={typeof r.title === 'string' ? r.title : undefined}>{r.title}</span>{r.sub && <span className="block truncate text-xs text-dte-gris" title={r.sub}>{r.sub}</span>}</span>{r.right && <span className="shrink-0 text-xs tabular-nums text-dte-gris">{r.right}</span>}</>
         return <li key={r.key}>{r.onClick ? <button type="button" onClick={r.onClick} className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition hover:bg-dte-tinte">{inner}</button> : <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">{inner}</div>}</li>
       })}</ul> : <p className="py-6 text-center text-sm text-dte-gris">No hay elementos para mostrar.</p>)}
     </DialogContent>
@@ -77,12 +78,16 @@ const modalidadItem = (i: AgendaItem) => (i.encuentros?.length && i.encuentros.e
 const etiqueta = (k: string) => (esGrupoEspecial(k) ? k : titleCase(k))
 
 // `encuentros` llega ya filtrado con los mismos criterios que las acciones (FED, distrito, búsqueda).
-export function MetricsView({ items, encuentros, feds, onSelect }: { items: AgendaItem[], encuentros: Encuentro[], feds: Fed[], onSelect?: (item: AgendaItem) => void }) {
+// Nombre de escuela: en el celular, con la sigla y el número (como en el calendario); en pantallas grandes, completo.
+const NombreEscuela = ({ s }: { s: School }) => <><span className="sm:hidden">{siglaEscuela(s)}</span><span className="hidden sm:inline">{titleCase(s.nombre ?? '')}</span></>
+
+// `clubesActivos`: ids de los clubes que siguen activos; si se pasa, "Escuelas con clubes activos" sólo cuenta esos.
+export function MetricsView({ items, encuentros, feds, onSelect, clubesActivos }: { items: AgendaItem[], encuentros: Encuentro[], feds: Fed[], onSelect?: (item: AgendaItem) => void, clubesActivos?: Set<string> }) {
   const [drill, setDrill] = useState<{ title: string, subtitle?: string, rows: DrillRow[] } | null>(null)
   const fedName = (id: string) => feds.find(f => f.id === id)?.nombre_completo ?? ''
   const fecha = (s: string) => { const [y, mo, d] = s.split('-').map(Number); return new Date(y, mo - 1, d).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }).replace('.', '') }
   const itemRows = (list: AgendaItem[]): DrillRow[] => [...list].sort((a, b) => b.fecha.localeCompare(a.fecha)).map(i => ({
-    key: i.id, title: i.school?.nombre ? titleCase(i.school.nombre) : i.lugar || titleCase(i.accion), right: fecha(i.fecha),
+    key: i.id, title: i.school?.nombre ? <NombreEscuela s={i.school} /> : i.lugar || titleCase(i.accion), right: fecha(i.fecha),
     sub: [titleCase(i.accion), i.sub_accion, fedName(i.fed_id), i.cantidad ? `${i.cantidad} equipos` : null].filter(Boolean).join(' · '),
     onClick: onSelect ? () => { setDrill(null); onSelect(i) } : undefined,
   }))
@@ -120,13 +125,13 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
     // Encuentros de clubes, talleres y prácticas
     const enc = encuentros
     const paired = enc.filter(i => i.inscriptos != null && i.asistentes != null)
-    const byPropuesta = new Map<string, number>(), clubSchools = new Map<string, { name: string, distrito: string, encuentros: number, asistentes: number }>()
+    const byPropuesta = new Map<string, number>(), clubSchools = new Map<string, { school: School, distrito: string, encuentros: number, asistentes: number }>()
     const encByDistrict = new Map<string, number>()
     for (const i of enc) {
       const p = i.propuesta || titleCase(i.tipo); byPropuesta.set(p, (byPropuesta.get(p) ?? 0) + (i.asistentes ?? 0))
       const d = grupoDistrito(i); encByDistrict.set(d, (encByDistrict.get(d) ?? 0) + (i.asistentes ?? 0))
-      if (i.tipo === 'CLUB DE TECNOLOGÍA' && i.school && esEscuela(i.school)) {
-        const c = clubSchools.get(i.school.id) ?? { name: i.school.nombre ?? '', distrito: i.school.distrito ?? '', encuentros: 0, asistentes: 0 }
+      if (i.tipo === 'CLUB DE TECNOLOGÍA' && i.school && esEscuela(i.school) && (!clubesActivos || (!!i.club_id && clubesActivos.has(i.club_id)))) {
+        const c = clubSchools.get(i.school.id) ?? { school: i.school, distrito: i.school.distrito ?? '', encuentros: 0, asistentes: 0 }
         c.encuentros++; c.asistentes += i.asistentes ?? 0; clubSchools.set(i.school.id, c)
       }
     }
@@ -137,7 +142,7 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
       byPropuesta: [...byPropuesta.entries()].sort((a, b) => b[1] - a[1]), encByDistrict: [...encByDistrict.entries()].sort((a, b) => b[1] - a[1]),
       clubSchools: [...clubSchools.values()].sort((a, b) => b.encuentros - a.encuentros).slice(0, 8),
     }
-  }, [done, encuentros])
+  }, [done, encuentros, clubesActivos])
 
   const totalDone = done.length
   const fedRows = feds.map(f => ({ fed: f, ...(m.byFed.get(f.id) ?? { counts: emptyCounts(), schools: new Set<string>(), last: '' }) }))
@@ -157,9 +162,9 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
       <Kpi label="Acciones realizadas" value={nf.format(totalDone)} hint={planned ? `+${planned} planificadas` : undefined} onClick={() => openItems('Acciones realizadas', done)} />
       {CATEGORIAS.map(c => <Kpi key={c} label={CATEGORIA_LABEL[c]} value={nf.format(m.total[c])} hint={`${pct(m.total[c], totalDone)}% del total`} color={CAT_COLOR[c]} onClick={() => openItems(`Acciones ${CATEGORIA_LABEL[c].toLowerCase()}`, done.filter(i => CATEGORIA[i.accion] === c))} />)}
       <Kpi label="Escuelas alcanzadas" value={nf.format(m.schools)} onClick={() => {
-        const by = new Map<string, { name: string, sub: string, n: number }>()
-        for (const i of done) if (i.school && esEscuela(i.school)) { const e = by.get(i.school.id) ?? { name: titleCase(i.school.nombre ?? ''), sub: titleCase(i.school.distrito ?? ''), n: 0 }; e.n++; by.set(i.school.id, e) }
-        setDrill({ title: 'Escuelas alcanzadas', subtitle: `${by.size} escuelas con acciones realizadas`, rows: [...by.entries()].sort((a, b) => b[1].n - a[1].n).map(([k, e]) => ({ key: k, title: e.name, sub: e.sub, right: `${e.n} ${e.n === 1 ? 'acción' : 'acciones'}` })) })
+        const by = new Map<string, { school: School, sub: string, n: number }>()
+        for (const i of done) if (i.school && esEscuela(i.school)) { const e = by.get(i.school.id) ?? { school: i.school, sub: titleCase(i.school.distrito ?? ''), n: 0 }; e.n++; by.set(i.school.id, e) }
+        setDrill({ title: 'Escuelas alcanzadas', subtitle: `${by.size} escuelas con acciones realizadas`, rows: [...by.entries()].sort((a, b) => b[1].n - a[1].n).map(([k, e]) => ({ key: k, title: <NombreEscuela s={e.school} />, sub: e.sub, right: `${e.n} ${e.n === 1 ? 'acción' : 'acciones'}` })) })
       }} />
       <Kpi label="Equipos intervenidos" value={nf.format(m.equipos)} hint="según la cantidad cargada" onClick={() => openItems('Equipos intervenidos', done.filter(i => (i.cantidad ?? 0) > 0))} />
     </div>
@@ -212,7 +217,7 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
     </div>
 
     {m.clubSchools.length > 0 && <Panel title="Escuelas con clubes activos" subtitle="Ordenadas por cantidad de encuentros del Club de Tecnología">
-      <ul className="divide-y divide-dte-linea">{m.clubSchools.map(c => <li key={c.name + c.distrito} className="flex items-center justify-between gap-3 py-2 text-sm"><span className="min-w-0"><span className="line-clamp-2 font-semibold leading-snug">{titleCase(c.name)}</span><span className="text-xs text-dte-gris">{titleCase(c.distrito)}</span></span><span className="shrink-0 text-right tabular-nums"><span className="font-semibold">{c.encuentros}</span> <span className="text-xs text-dte-gris">encuentros · {c.asistentes} asistentes</span></span></li>)}</ul>
+      <ul className="divide-y divide-dte-linea">{m.clubSchools.map(c => <li key={c.school.id} className="flex items-center justify-between gap-3 py-2 text-sm"><span className="min-w-0"><span className="line-clamp-2 font-semibold leading-snug"><NombreEscuela s={c.school} /></span><span className="text-xs text-dte-gris">{titleCase(c.distrito)}</span></span><span className="shrink-0 text-right tabular-nums"><span className="font-semibold">{c.encuentros}</span> <span className="text-xs text-dte-gris">encuentros · {c.asistentes} asistentes</span></span></li>)}</ul>
     </Panel>}
   </div>
 }
