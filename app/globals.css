@@ -130,6 +130,12 @@
   --color-accion-reunion-con-inspeccion: #f3eadb;
   --color-accion-reunion-con-inspeccion-texto: #6e5220;
   --color-accion-reunion-con-inspeccion-punto: #b08a3e;
+  --color-accion-reunion-con-nivel-central: #e3e6f4;
+  --color-accion-reunion-con-nivel-central-texto: #36407a;
+  --color-accion-reunion-con-nivel-central-punto: #5b66a8;
+  --color-accion-articulacion-municipal: #e2f0e6;
+  --color-accion-articulacion-municipal-texto: #2f5f3c;
+  --color-accion-articulacion-municipal-punto: #4f8a5e;
   --color-accion-evento-dte-hover: #ead0e6;
   /* Fondos de avatar por persona */
   --color-avatar-1: #dff3f8;

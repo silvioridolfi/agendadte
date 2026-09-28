@@ -3,7 +3,7 @@ export const ACCIONES = [
   'ASISTENCIA REMOTA', 'CONECTIVIDAD', 'ENTREGA DE EQUIPAMIENTO', 'ADMINISTRATIVO', 'PLANIFICACIÓN', 'OFICINA R1',
   'LICENCIA', 'PARO', 'EVENTO DTE', 'FORMACIÓN INTERNA',
   'REUNIÓN CON JEFATURA', 'ACOMPAÑAMIENTO A FED', 'GESTIÓN INSTITUCIONAL', 'SEGUIMIENTO DEL EQUIPO',
-  'INFORME TÉCNICO', 'REUNIÓN CON INSPECCIÓN',
+  'INFORME TÉCNICO', 'REUNIÓN CON INSPECCIÓN', 'REUNIÓN CON NIVEL CENTRAL', 'ARTICULACIÓN MUNICIPAL',
 ] as const
 export const ESTADOS = ['planificada', 'realizada', 'reprogramada', 'cancelada'] as const
 
@@ -26,11 +26,12 @@ export const CATEGORIA: Record<Accion, Categoria> = {
   'VISITA PEDAGÓGICA': 'pedagogica', 'CLUB DE TECNOLOGÍA': 'pedagogica', 'PRÁCTICAS PROFESIONALIZANTES': 'pedagogica', 'TALLER/CAPACITACIÓN': 'pedagogica',
   'REUNIÓN': 'institucional', 'ADMINISTRATIVO': 'institucional', 'OFICINA R1': 'institucional', 'PLANIFICACIÓN': 'institucional', 'PARO': 'institucional', 'LICENCIA': 'institucional', 'EVENTO DTE': 'institucional', 'FORMACIÓN INTERNA': 'institucional',
   'REUNIÓN CON JEFATURA': 'institucional', 'ACOMPAÑAMIENTO A FED': 'institucional', 'GESTIÓN INSTITUCIONAL': 'institucional', 'SEGUIMIENTO DEL EQUIPO': 'institucional',
-  'INFORME TÉCNICO': 'institucional', 'REUNIÓN CON INSPECCIÓN': 'institucional',
+  'INFORME TÉCNICO': 'institucional', 'REUNIÓN CON INSPECCIÓN': 'institucional', 'REUNIÓN CON NIVEL CENTRAL': 'institucional', 'ARTICULACIÓN MUNICIPAL': 'institucional',
 }
 // Tareas propias de la coordinación (CED): el formulario las muestra primero al CED y no se ofrecen a los FED.
-export const ACCIONES_CED: Accion[] = ['REUNIÓN', 'REUNIÓN CON JEFATURA', 'REUNIÓN CON INSPECCIÓN', 'ACOMPAÑAMIENTO A FED', 'SEGUIMIENTO DEL EQUIPO', 'GESTIÓN INSTITUCIONAL', 'INFORME TÉCNICO']
-export const SOLO_CED: Accion[] = ['REUNIÓN CON JEFATURA', 'REUNIÓN CON INSPECCIÓN', 'ACOMPAÑAMIENTO A FED', 'SEGUIMIENTO DEL EQUIPO', 'GESTIÓN INSTITUCIONAL', 'INFORME TÉCNICO']
+export const ACCIONES_CED: Accion[] = ['REUNIÓN', 'REUNIÓN CON JEFATURA', 'REUNIÓN CON INSPECCIÓN', 'REUNIÓN CON NIVEL CENTRAL', 'ARTICULACIÓN MUNICIPAL', 'ACOMPAÑAMIENTO A FED', 'SEGUIMIENTO DEL EQUIPO', 'GESTIÓN INSTITUCIONAL', 'INFORME TÉCNICO']
+// La reunión con Jefatura también la usan los FED (articulación con las jefaturas distritales).
+export const SOLO_CED: Accion[] = ['REUNIÓN CON INSPECCIÓN', 'REUNIÓN CON NIVEL CENTRAL', 'ARTICULACIÓN MUNICIPAL', 'ACOMPAÑAMIENTO A FED', 'SEGUIMIENTO DEL EQUIPO', 'GESTIÓN INSTITUCIONAL', 'INFORME TÉCNICO']
 // Acciones que registran encuentros con participantes (N° de encuentro, destinatarios, inscriptos, asistentes).
 export const CON_ENCUENTRO: Accion[] = ['CLUB DE TECNOLOGÍA', 'TALLER/CAPACITACIÓN', 'PRÁCTICAS PROFESIONALIZANTES']
 // Sugerencias de sub-acción tomadas del instructivo de la DTE y del master regional (se puede escribir otra).
@@ -44,6 +45,7 @@ export const SUB_ACCIONES: Partial<Record<Accion, string[]>> = {
   'ENTREGA DE EQUIPAMIENTO': ['Tablets', 'Netbooks', 'Kits de robótica', 'Pisos tecnológicos', 'Otro equipamiento'],
   // Coordinación (según la planificación del CED 2026).
   'REUNIÓN CON JEFATURA': ['Jefatura Regional', 'Jefatura Distrital La Plata', 'Jefatura Distrital Berisso', 'Jefatura Distrital Ensenada', 'Jefatura Distrital Magdalena', 'Jefatura Distrital Brandsen', 'Jefatura Distrital Punta Indio'],
+  'ARTICULACIÓN MUNICIPAL': ['Municipio de La Plata', 'Municipio de Berisso', 'Municipio de Ensenada', 'Municipio de Magdalena', 'Municipio de Brandsen', 'Municipio de Punta Indio'],
   'REUNIÓN CON INSPECCIÓN': ['Inicial', 'Primaria', 'Secundaria', 'Técnico Profesional', 'Especial', 'Adultos', 'Superior'],
   'SEGUIMIENTO DEL EQUIPO': ['Reunión quincenal', 'Seguimiento semanal'],
   'ACOMPAÑAMIENTO A FED': ['Acompañamiento en escuela', 'Apoyo a club', 'Apoyo a PEAT'],

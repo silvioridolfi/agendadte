@@ -25,6 +25,7 @@ export function indicadoresCoordinacion(equipo: AgendaItem[], ced: Set<string>):
   const clubes = de(todas, 'CLUB DE TECNOLOGÍA'), peat = de(todas, 'PRÁCTICAS PROFESIONALIZANTES')
   const formacion = [...de(todas, 'TALLER/CAPACITACIÓN'), ...todas.filter(i => i.accion === 'FORMACIÓN INTERNA' && i.rol_formacion === 'La dicté')]
   const jed = de(todas, 'EVENTO DTE'), informes = de(propias, 'INFORME TÉCNICO'), articulaciones = de(propias, 'REUNIÓN CON JEFATURA', 'REUNIÓN CON INSPECCIÓN')
+  const nivelCentral = de(propias, 'REUNIÓN CON NIVEL CENTRAL'), municipales = de(propias, 'ARTICULACIÓN MUNICIPAL')
   const nClubes = new Set(clubes.map(i => i.club_id ?? i.id)).size
   return [
     { clave: 'reuniones', label: 'Reuniones de coordinación', valor: reuniones.length, items: reuniones },
@@ -36,6 +37,8 @@ export function indicadoresCoordinacion(equipo: AgendaItem[], ced: Set<string>):
     { clave: 'jed', label: 'Participación en Jornadas de Educación Digital y eventos DTE', valor: jed.length, detalle: 'participaciones registradas', items: jed },
     { clave: 'informes', label: 'Informes técnicos elaborados', valor: informes.length, items: informes },
     { clave: 'articulaciones', label: 'Articulaciones con Jefaturas e Inspección', valor: articulaciones.length, items: articulaciones },
+    { clave: 'nivel-central', label: 'Reuniones con Nivel Central', valor: nivelCentral.length, items: nivelCentral },
+    { clave: 'municipales', label: 'Articulaciones municipales', valor: municipales.length, items: municipales },
   ]
 }
 
