@@ -5,7 +5,7 @@ import { Camera, Check, Copy, ExternalLink, FolderSync, Loader2, TriangleAlert }
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { EstadoFotos } from '@/app/actions'
-import { errMsg, estadoFotos, guardarCarpetaFotos, ordenarMisFotos, ErrorBox } from '@/components/app/comun'
+import { errMsg, estadoFotos, guardarCarpetaFotos, ordenarMisFotos, ErrorBox, Skeleton } from '@/components/app/comun'
 
 // Mi perfil → Fotos de las acciones: enlace a la carpeta de Drive del FED, verificación de acceso y orden por día.
 export function SeccionFotos() {
@@ -38,7 +38,7 @@ export function SeccionFotos() {
     <h3 id="t-fotos" className="flex items-center gap-1.5 font-bold"><Camera className="size-4 text-dte-petroleo" />Fotos de las acciones</h3>
     <p className="mb-3 text-sm text-dte-gris">Subí las fotos sueltas a tu carpeta de Drive: la agenda las <b>mueve a una carpeta por día</b> y, según la hora en que las sacaste, a una subcarpeta por acción. Si la acción la cargás después, en la próxima pasada la foto pasa sola a su carpeta. <b>No borres las carpetas que crea la agenda</b>: si pasa, las fotos vuelven a tu carpeta principal y se ordenan de nuevo. El CED las ve desde la agenda.</p>
 
-    {!estado ? <Loader2 className="size-5 animate-spin text-dte-gris" /> : !estado.configurado ? <p className="text-sm text-dte-gris">La conexión con Drive todavía no está configurada.</p> : <>
+    {!estado ? <div className="flex flex-col gap-2" aria-busy="true" aria-label="Cargando la conexión con Drive"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-11" /></div> : !estado.configurado ? <p className="text-sm text-dte-gris">La conexión con Drive todavía no está configurada.</p> : <>
       <ol className="mb-3 flex list-decimal flex-col gap-1.5 pl-5 text-sm">
         <li>Creá una carpeta en tu Drive (por ejemplo, “Fotos Agenda DTE”).</li>
         <li>Compartila como <b>Editor</b> con la cuenta de la agenda:

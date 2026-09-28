@@ -37,8 +37,8 @@ export function MiEquipoView({ feds, todos, items, clubes, noHabiles, periodo, d
         <header className="flex items-center gap-3">
           <Avatar className="size-10"><AvatarFallback className={`${fedColor(feds, f.id)} text-sm font-bold text-dte-petroleo-oscuro`}>{initials(f.nombre_completo)}</AvatarFallback></Avatar>
           <div className="min-w-0">
-            <h3 className="truncate font-bold">{f.nombre_completo}</h3>
-            <p className="flex items-center gap-1 text-xs text-dte-gris"><MapPin className="size-3.5 shrink-0" aria-hidden /><span className="truncate">{f.distritos_a_cargo.length ? f.distritos_a_cargo.map(titleCase).join(', ') : 'Sin distritos asignados'}</span></p>
+            <h3 className="truncate font-bold" title={f.nombre_completo}>{f.nombre_completo}</h3>
+            <p className="flex items-center gap-1 text-xs text-dte-gris"><MapPin className="size-3.5 shrink-0" aria-hidden /><span className="truncate" title={f.distritos_a_cargo.length ? f.distritos_a_cargo.map(titleCase).join(', ') : 'Sin distritos asignados'}>{f.distritos_a_cargo.length ? f.distritos_a_cargo.map(titleCase).join(', ') : 'Sin distritos asignados'}</span></p>
             {f.carga_horaria && <p className="flex items-center gap-1 text-xs text-dte-gris"><Clock className="size-3.5 shrink-0" aria-hidden />{f.carga_horaria}</p>}
           </div>
         </header>

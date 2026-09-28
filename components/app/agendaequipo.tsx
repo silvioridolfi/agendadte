@@ -103,7 +103,7 @@ export function AgendaEquipoView({ feds, reloadKey, onSelect }: { feds: Fed[], r
 function Bloque({ i, onSelect, className = '' }: { i: AgendaItem, onSelect: (i: AgendaItem) => void, className?: string }) {
   return <button type="button" onClick={() => onSelect(i)} title={`${horario(i)} · ${titleCase(i.accion)} · ${lugar(i)}`}
     className={`flex min-w-0 flex-col overflow-hidden rounded-md px-1.5 py-1 text-left text-xs leading-tight ring-1 ring-inset ring-black/5 transition hover:brightness-95 ${actionStyle[i.accion]?.chip ?? 'bg-dte-fondo'} ${className}`}>
-    <span className="truncate font-bold">{lugar(i)}</span><span className="truncate tabular-nums opacity-80">{horario(i)}</span>
+    <span className="truncate font-bold" title={lugar(i)}>{lugar(i)}</span><span className="truncate tabular-nums opacity-80" title={horario(i)}>{horario(i)}</span>
   </button>
 }
 
@@ -122,7 +122,7 @@ function VistaDia({ equipo, fecha, esHoy, deDia, onSelect }: { equipo: Fed[], fe
         const l = deDia(f, fecha), aus = l.filter(ausencia), conHora = l.filter(i => !ausencia(i) && i.hora_inicio), sinHora = l.filter(i => !ausencia(i) && !i.hora_inicio)
         return <li key={f.id} className={`grid grid-cols-[11rem_1fr] ${l.length ? '' : 'opacity-55'}`}>
           <div className="flex min-w-0 flex-col justify-center gap-1 px-3 py-2">
-            <span className="truncate text-sm font-semibold">{f.nombre_completo}</span>
+            <span className="truncate text-sm font-semibold" title={f.nombre_completo}>{f.nombre_completo}</span>
             {aus.map(i => <span key={i.id} className="w-fit rounded-full bg-aviso-fondo-fuerte px-2 py-0.5 text-xs font-semibold text-aviso-fuerte">{titleCase(i.accion)}</span>)}
             {sinHora.map(i => <Bloque key={i.id} i={i} onSelect={onSelect} className="max-w-full" />)}
             {!l.length && <span className="text-xs text-dte-gris">Sin acciones</span>}
@@ -141,11 +141,11 @@ function VistaDia({ equipo, fecha, esHoy, deDia, onSelect }: { equipo: Fed[], fe
     <ul className="flex flex-col gap-3 md:hidden">{orden.map(f => {
       const l = deDia(f, fecha)
       return <li key={f.id} className={`rounded-card border border-dte-linea bg-white p-3 ${l.length ? '' : 'opacity-60'}`}>
-        <p className="mb-1.5 flex items-center justify-between gap-2 font-semibold"><span className="truncate">{f.nombre_completo}</span><span className="shrink-0 text-xs font-normal text-dte-gris">{l.length ? `${l.length} ${l.length === 1 ? 'acción' : 'acciones'}` : 'Sin acciones'}</span></p>
+        <p className="mb-1.5 flex items-center justify-between gap-2 font-semibold"><span className="truncate" title={f.nombre_completo}>{f.nombre_completo}</span><span className="shrink-0 text-xs font-normal text-dte-gris">{l.length ? `${l.length} ${l.length === 1 ? 'acción' : 'acciones'}` : 'Sin acciones'}</span></p>
         {l.length > 0 && <ul className="flex flex-col divide-y divide-dte-linea">{l.map(i => <li key={i.id}>
           <button type="button" onClick={() => onSelect(i)} className="grid min-h-11 w-full grid-cols-[4.25rem_1fr] items-center gap-2 py-1.5 text-left text-sm">
             <span className="tabular-nums text-dte-gris">{i.hora_inicio ? hhmm(i.hora_inicio) : '—'}</span>
-            <span className="min-w-0"><span className="block truncate font-semibold">{ausencia(i) ? titleCase(i.accion) : lugar(i)}</span>{!ausencia(i) && <span className="flex items-center gap-1.5 text-xs text-dte-gris"><span className={`size-2 shrink-0 rounded-full ${actionStyle[i.accion]?.dot}`} />{titleCase(i.accion)}{i.hora_fin ? ` · hasta ${hhmm(i.hora_fin)}` : ''}</span>}</span>
+            <span className="min-w-0"><span className="block truncate font-semibold" title={ausencia(i) ? titleCase(i.accion) : lugar(i)}>{ausencia(i) ? titleCase(i.accion) : lugar(i)}</span>{!ausencia(i) && <span className="flex items-center gap-1.5 text-xs text-dte-gris"><span className={`size-2 shrink-0 rounded-full ${actionStyle[i.accion]?.dot}`} />{titleCase(i.accion)}{i.hora_fin ? ` · hasta ${hhmm(i.hora_fin)}` : ''}</span>}</span>
           </button>
         </li>)}</ul>}
       </li>
@@ -169,7 +169,7 @@ function VistaSemana({ equipo, lunes, hoy, deDia, feriados, onCelda }: { equipo:
           className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 border-l border-dte-linea p-1 transition hover:bg-dte-tinte sm:items-start sm:px-2 ${fer ? 'bg-feriado-fondo' : iso(d) === hoy ? 'bg-info-fondo' : ''}`}>
           {aus ? <span className="rounded-full bg-aviso-fondo-fuerte px-1.5 text-xs font-semibold text-aviso-fuerte">{aus.accion === 'PARO' ? 'Paro' : 'Lic.'}</span>
             : <><span className="flex flex-wrap justify-center gap-0.5">{l.slice(0, 6).map(i => <span key={i.id} className={`size-2 rounded-full ${actionStyle[i.accion]?.dot}`} />)}</span>
-              {prim && <span className="hidden w-full truncate text-left text-xs lg:block">{lugar(prim)}</span>}</>}
+              {prim && <span className="hidden w-full truncate text-left text-xs lg:block" title={lugar(prim)}>{lugar(prim)}</span>}</>}
         </button>
       })}
     </li>)}</ul>
@@ -191,7 +191,7 @@ function VistaProximas({ equipo, delFed, feds, onSelect }: { equipo: Fed[], delF
     <ul className="divide-y divide-dte-linea overflow-hidden rounded-card border border-dte-linea bg-white">{l.map(i => <li key={i.id}>
       <button type="button" onClick={() => onSelect(i)} className="grid w-full grid-cols-[3.5rem_1fr] gap-x-3 gap-y-1 p-3 text-left transition hover:bg-dte-tinte sm:grid-cols-[4rem_1fr_auto] sm:items-center">
         <span className="row-span-2 text-sm font-semibold tabular-nums sm:row-span-1">{i.hora_inicio ? hhmm(i.hora_inicio) : '—'}</span>
-        <span className="min-w-0"><span className="block truncate font-semibold">{lugar(i)}</span><span className="flex items-center gap-1 truncate text-xs text-dte-gris">{i.school?.distrito && <><MapPin className="size-3 shrink-0" />{titleCase(i.school.distrito)} · </>}{[nombre(i.fed_id), ...i.participantes.filter(p => p.respuesta !== 'rechaza').map(p => firstName(nombre(p.fed_id)))].filter(Boolean).join(', ')}</span></span>
+        <span className="min-w-0"><span className="block truncate font-semibold" title={lugar(i)}>{lugar(i)}</span><span className="flex items-center gap-1 truncate text-xs text-dte-gris">{i.school?.distrito && <><MapPin className="size-3 shrink-0" />{titleCase(i.school.distrito)} · </>}{[nombre(i.fed_id), ...i.participantes.filter(p => p.respuesta !== 'rechaza').map(p => firstName(nombre(p.fed_id)))].filter(Boolean).join(', ')}</span></span>
         <span className="sm:justify-self-end"><ActionChip label={i.accion} /></span>
       </button>
     </li>)}</ul>

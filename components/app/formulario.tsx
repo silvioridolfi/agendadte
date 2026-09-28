@@ -45,7 +45,7 @@ export function SchoolPicker({ value, onChange, onOrganismo }: { value: School |
 
   if (value) return <div className="flex items-center gap-3 rounded-control border border-pba-celeste/60 bg-pba-celeste/5 p-2.5 pl-3 font-normal">
     <SchoolIcon className="size-4 shrink-0 text-pba-celeste-texto" />
-    <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{schoolName(value)}</p><p className="truncate text-xs text-dte-gris">CUE {value.cue ?? '—'}{schoolPlace(value) ? ` · ${schoolPlace(value)}` : ''}</p></div>
+    <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold" title={schoolName(value)}>{schoolName(value)}</p><p className="truncate text-xs text-dte-gris">CUE {value.cue ?? '—'}{schoolPlace(value) ? ` · ${schoolPlace(value)}` : ''}</p></div>
     <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)}>Cambiar</Button>
   </div>
 
@@ -250,21 +250,21 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         // Botón de cada tipo de acción.
         const boton = (name: Accion) => {
           const on = form.accion === name
-          return <button key={name} type="button" title={nombreAccion(name)} aria-pressed={on} onClick={() => { limpiar('accion'); setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '', tipo_jornada: f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada })) }} className={`flex min-h-11 min-w-0 items-center gap-2 rounded-control border px-2.5 py-2 text-left text-xs font-bold uppercase leading-tight break-words hyphens-auto transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
-            <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span><span className="min-w-0 [overflow-wrap:anywhere]">{etiquetaAccion(name)}</span>
+          return <button key={name} type="button" title={nombreAccion(name)} aria-pressed={on} onClick={() => { limpiar('accion'); setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '', tipo_jornada: f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada })) }} className={`flex min-h-11 min-w-0 items-center gap-1.5 rounded-control border px-2 py-2 text-left sm:gap-2 sm:px-2.5 text-xs font-bold uppercase leading-tight tracking-tight sm:tracking-normal break-words hyphens-auto transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
+            <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span><span className="min-w-0">{etiquetaAccion(name).replace('/', '/\u200b')}</span>
           </button>
         }
         const visible = (name: Accion) => (name !== 'EVENTO DTE' || item?.accion === 'EVENTO DTE') && (esCed || !SOLO_CED.includes(name) || item?.accion === name) && (!esCed || !ACCIONES_CED.includes(name))
         const grupos = <div className="flex flex-col gap-3">{CATEGORIAS.map(c => <div key={c}>
           <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris"><span className="size-2 rounded-sm" style={{ background: CAT_COLOR[c] }} />{CATEGORIA_LABEL[c]}</p>
-          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c && visible(name)).sort(az).map(boton)}</div>
+          <div className="grid grid-cols-1 gap-1.5 min-[360px]:grid-cols-2 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c && visible(name)).sort(az).map(boton)}</div>
         </div>)}</div>
         if (!esCed) return grupos
         // Coordinación: primero sus tareas; las acciones territoriales, plegadas (abiertas si ya hay una elegida).
         const territorial = !!form.accion && !ACCIONES_CED.includes(form.accion)
         return <div className="flex flex-col gap-3">
           <div><p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Coordinación</p>
-            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES_CED.map(boton)}</div></div>
+            <div className="grid grid-cols-1 gap-1.5 min-[360px]:grid-cols-2 sm:grid-cols-3">{ACCIONES_CED.map(boton)}</div></div>
           <details open={territorial} className="rounded-tile border border-dte-linea p-3"><summary className="cursor-pointer text-sm font-semibold text-dte-petroleo">Acciones territoriales (como FED)</summary><div className="mt-3">{grupos}</div></details>
         </div>
       })()}

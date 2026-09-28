@@ -42,7 +42,7 @@ export function SeccionPve() {
   return <section className="rounded-card border border-dte-linea bg-white p-4 shadow-e1 sm:p-5" aria-labelledby="t-pve">
     <h3 id="t-pve" className="flex items-center gap-1.5 font-bold"><FileText className="size-4 text-dte-petroleo" />Planillas de Visita (PVE)</h3>
     <p className="mb-3 text-sm text-dte-gris">Subí tu PVE del mes, <b>firmada y en un solo PDF</b>, a la carpeta de ese mes. Vence el <b>5.º día hábil del mes siguiente</b>. Tocá <b>Subir</b> en el mes: se crea su carpeta en tu Drive y se abre. La agenda le pone el nombre correcto y se la deja lista a la coordinación.</p>
-    {!datos ? (error ? <ErrorBox message={error} /> : <Loader2 className="size-5 animate-spin text-dte-gris" />)
+    {!datos ? (error ? <ErrorBox message={error} /> : <div className="flex flex-col gap-2" aria-busy="true" aria-label="Cargando planillas"><Skeleton className="h-14" /><Skeleton className="h-14" /></div>)
       : !datos.conectada ? <p className="rounded-control border border-dashed border-dte-linea px-3 py-3 text-sm text-dte-gris">Primero conectá tu carpeta de Drive en “Fotos de las acciones”: las PVE usan la misma carpeta.</p>
       : <>
         <ul className="divide-y divide-dte-linea rounded-tile border border-dte-linea">{datos.meses.map(m => <li key={m.mes} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm">

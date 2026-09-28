@@ -157,7 +157,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
       <ul className="divide-y divide-dte-linea">{pendientes.map(c => {
         const dias = c.created_at ? Math.floor((Date.now() - new Date(c.created_at).getTime()) / 86400000) : 0
         return <li key={c.id} className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold">{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate">{schoolLabel(c)}</span></p>
+          <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold">{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate" title={schoolLabel(c)}>{schoolLabel(c)}</span></p>
             <p className="text-xs text-dte-gris">{[c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id), c.encuentros_previstos ? `${c.encuentros_previstos} encuentros previstos` : null].filter(Boolean).join(' · ')}</p>
             {dias > 30 && <p className="text-xs font-semibold text-aviso-fuerte">Hace {dias} días sin fecha: ¿lo programamos?</p>}</div>
           {onEncuentro && <Button variant="outline" size="sm" onClick={() => onEncuentro(c)} className="shrink-0"><CalendarPlus data-icon="inline-start" />Programar primer encuentro</Button>}
@@ -210,7 +210,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
             const st = ESTADO_CLUB[estado], prev = c.encuentros_previstos ?? CLUB_MIN_ENCUENTROS
             const fin = c.fecha_cierre ?? ultima
             return <tr key={c.id} className="align-middle">
-              <td className="py-2.5 pr-3"><p className="flex max-w-[20rem] items-center gap-1.5 font-semibold" title={c.school?.nombre ?? c.lugar ?? ''}>{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate">{schoolLabel(c)}</span></p><p className="text-xs text-dte-gris">{[c.escuela_origen ? `Estudiantes de ${schoolLabel({ school: c.escuela_origen, lugar: null } as Club)}` : null, c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id)].filter(Boolean).join(' · ')}</p>{(() => { const n = new Set(completos.get(c.id)!.encuentros.map(e => e.school_id ?? e.lugar)).size; return n > 1 ? <p className="text-xs font-semibold" style={{ color: marca.acento }}>{n} sedes</p> : null })()}</td>
+              <td className="py-2.5 pr-3"><p className="flex max-w-[20rem] items-center gap-1.5 font-semibold" title={c.school?.nombre ?? c.lugar ?? ''}>{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate" title={schoolLabel(c)}>{schoolLabel(c)}</span></p><p className="text-xs text-dte-gris">{[c.escuela_origen ? `Estudiantes de ${schoolLabel({ school: c.escuela_origen, lugar: null } as Club)}` : null, c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id)].filter(Boolean).join(' · ')}</p>{(() => { const n = new Set(completos.get(c.id)!.encuentros.map(e => e.school_id ?? e.lugar)).size; return n > 1 ? <p className="text-xs font-semibold" style={{ color: marca.acento }}>{n} sedes</p> : null })()}</td>
               <td data-label="Recorrido" className="py-2.5 pr-3"><div className="relative h-5" role="img" aria-label={`Del ${corta(c.fecha_inicio)} al ${corta(fin)}`}>
                 <div className="absolute inset-y-[7px] left-0 right-0 rounded bg-dte-fondo" />
                 <div className="absolute inset-y-[5px] rounded" style={{ left: `${pos(c.fecha_inicio)}%`, width: `${Math.max(0.8, pos(fin) - pos(c.fecha_inicio))}%`, background: st.color, opacity: estado === 'finalizado' ? 0.55 : 0.85 }} title={`${corta(c.fecha_inicio)} → ${c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : `último ${corta(ultima)}`}`} />
@@ -248,7 +248,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel title={`${cap(clubesTxt)} por FED`} subtitle="Activos, sin actividad y finalizados">
         <ul className="flex flex-col gap-2.5">{porFed.map(({ f, r }) => <li key={f.id} className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 text-sm">
-          <span className="truncate">{f.nombre_completo}</span>
+          <span className="truncate" title={f.nombre_completo}>{f.nombre_completo}</span>
           <span className="flex h-2.5 gap-[2px]">{ORDEN.map(e => { const k = r.filter(x => x.estado === e).length; return k ? <span key={e} title={`${ESTADO_CLUB[e].label}: ${k}`} className="h-full first:rounded-l last:rounded-r" style={{ width: `${(k / maxFed) * 100}%`, background: ESTADO_CLUB[e].color }} /> : null })}</span>
           <span className="tabular-nums font-semibold">{r.length}</span>
         </li>)}</ul>

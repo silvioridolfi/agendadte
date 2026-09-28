@@ -47,7 +47,7 @@ export function DrillDialog({ drill, onClose }: { drill: { title: string, subtit
     <DialogContent className="max-h-[85vh] overflow-y-auto bg-white sm:max-w-xl">
       <DialogHeader><DialogTitle className="text-lg">{drill?.title}</DialogTitle><DialogDescription>{drill?.subtitle ?? `${drill?.rows.length ?? 0} en total`}</DialogDescription></DialogHeader>
       {drill && (drill.rows.length ? <ul className="divide-y divide-dte-linea rounded-tile border border-dte-linea">{drill.rows.map(r => {
-        const inner = <><span className="min-w-0"><span className="block truncate font-semibold">{r.title}</span>{r.sub && <span className="block truncate text-xs text-dte-gris">{r.sub}</span>}</span>{r.right && <span className="shrink-0 text-xs tabular-nums text-dte-gris">{r.right}</span>}</>
+        const inner = <><span className="min-w-0"><span className="block truncate font-semibold" title={r.title}>{r.title}</span>{r.sub && <span className="block truncate text-xs text-dte-gris" title={r.sub}>{r.sub}</span>}</span>{r.right && <span className="shrink-0 text-xs tabular-nums text-dte-gris">{r.right}</span>}</>
         return <li key={r.key}>{r.onClick ? <button type="button" onClick={r.onClick} className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition hover:bg-dte-tinte">{inner}</button> : <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">{inner}</div>}</li>
       })}</ul> : <p className="py-6 text-center text-sm text-dte-gris">No hay elementos para mostrar.</p>)}
     </DialogContent>
@@ -65,7 +65,7 @@ function StackedBar({ counts, max }: { counts: Counts, max: number }) {
 
 export function HBar({ label, value, max, sub, color = CAT_COLOR.tecnica }: { label: string, value: number, max: number, sub?: string, color?: string }) {
   return <li className="grid grid-cols-[minmax(0,10rem)_1fr_auto] items-center gap-3 text-sm sm:grid-cols-[minmax(0,14rem)_1fr_auto]" title={`${label}: ${value}${sub ? ` · ${sub}` : ''}`}>
-    <span className="truncate text-dte-tinta">{label}</span>
+    <span className="truncate text-dte-tinta" title={label}>{label}</span>
     <span className="h-2.5 rounded-r bg-dte-fondo"><span className="block h-full rounded-r" style={{ width: `${(value / Math.max(max, 1)) * 100}%`, background: color }} /></span>
     <span className="text-right tabular-nums"><span className="font-semibold">{nf.format(value)}</span>{sub && <span className="ml-1 text-xs text-dte-gris">{sub}</span>}</span>
   </li>
