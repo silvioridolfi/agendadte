@@ -9,7 +9,7 @@ import { Confirmar } from '@/components/ui/confirmar'
 import { CalendarPlus, Loader2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ErrorBox, errMsg } from '@/components/app/comun'
-import { hoyAR } from '@/lib/hora'
+import { hoyAR, ZONA } from '@/lib/hora'
 
 const nf = new Intl.NumberFormat('es-AR')
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -46,19 +46,19 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
   const hoy = hoyAR()
   // Los "por iniciar" (sin fecha) se listan aparte; el resto de las métricas usa sólo los iniciados.
   const todos = useMemo(() => entrada.filter(iniciado), [entrada])
-  const pendientes = useMemo(() => entrada.filter(c => !iniciado(c) && c.tipo === tipo && !c.fecha_cierre).sort((a, b) => schoolLabel(a).localeCompare(schoolLabel(b), 'es', { numeric: true }) || ordenGrupo(a.grupo, b.grupo)), [entrada, tipo])
+  const pendientes = useMemo(() => entrada.filter(c => !iniciado(c) && c.tipo === tipo && !c.fecha_cierre).sort((a, b) => schoolLabel(a).localeCompare(schoolLabel(b), 'es', { numeric: true }) || ordenGrupo(a.grupo, b.grupo)), [entrada, tipo, schoolLabel])
   const [busy, setBusy] = useState('')
   const [drill, setDrill] = useState<{ title: string, subtitle?: string, rows: DrillRow[] } | null>(null)
   const marca = TRAYECTO_MARCA[tipo]
   const clubesTxt = marca.plural
   // Trayectos con actividad en el período (del inicio al cierre o, si sigue abierto, hasta hoy) y sus encuentros del período.
   const clubes = useMemo(() => todos.filter(c => c.tipo === tipo && c.fecha_inicio <= hasta && (c.fecha_cierre ?? (clubEstado(c, hoy, noHabiles) === 'activo' ? hoy : ultimaActividad(c))) >= desde)
-    .map(c => ({ ...c, encuentros: c.encuentros.filter(e => e.fecha >= desde && e.fecha <= hasta) })), [todos, tipo, desde, hasta, hoy])
+    .map(c => ({ ...c, encuentros: c.encuentros.filter(e => e.fecha >= desde && e.fecha <= hasta) })), [todos, tipo, desde, hasta, hoy, noHabiles])
   const completos = useMemo(() => new Map(todos.map(c => [c.id, c])), [todos])
   const fedName = (id: string) => feds.find(f => f.id === id)?.nombre_completo ?? '—'
   const rows = useMemo(() => clubes.map(c => { const full = completos.get(c.id)!; return { c, estado: clubEstado(full, hoy, noHabiles), realizados: new Set(c.encuentros.map(e => e.fecha)).size, total: new Set(full.encuentros.map(e => e.fecha)).size, ultima: ultimaActividad(full), fechas: [...new Set(full.encuentros.map(e => e.fecha))], ...participacion(c) } })
     // Primero los que siguen en curso (activos y sin actividad), los finalizados al final; dentro de cada bloque, por escuela y de menor a mayor grado.
-    .sort((a, b) => Number(a.estado === 'finalizado') - Number(b.estado === 'finalizado') || schoolLabel(a.c).localeCompare(schoolLabel(b.c), 'es', { numeric: true }) || ordenGrupo(a.c.grupo, b.c.grupo)), [clubes, completos, hoy])
+    .sort((a, b) => Number(a.estado === 'finalizado') - Number(b.estado === 'finalizado') || schoolLabel(a.c).localeCompare(schoolLabel(b.c), 'es', { numeric: true }) || ordenGrupo(a.c.grupo, b.c.grupo)), [clubes, completos, hoy, noHabiles, schoolLabel])
   const n = (e: ClubEstado) => rows.filter(r => r.estado === e).length
   const encuentros = rows.reduce((a, r) => a + r.realizados, 0)
   const cumplen = rows.filter(r => r.total >= CLUB_MIN_ENCUENTROS).length
@@ -155,7 +155,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
 
     {pendientes.length > 0 && <Panel title="Por iniciar" subtitle={`Planificados sin fecha: no cuentan en las métricas hasta programar el primer encuentro · ${pendientes.length}`}>
       <ul className="divide-y divide-dte-linea">{pendientes.map(c => {
-        const dias = c.created_at ? Math.floor((Date.now() - new Date(c.created_at).getTime()) / 86400000) : 0
+        const dias = c.created_at ? Math.round((Date.parse(`${hoy}T12:00:00Z`) - Date.parse(`${new Date(c.created_at).toLocaleDateString('en-CA', { timeZone: ZONA })}T12:00:00Z`)) / 86400000) : 0
         return <li key={c.id} className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold">{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate" title={schoolLabel(c)}>{schoolLabel(c)}</span></p>
             <p className="text-xs text-dte-gris">{[c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id), c.encuentros_previstos ? `${c.encuentros_previstos} encuentros previstos` : null].filter(Boolean).join(' · ')}</p>

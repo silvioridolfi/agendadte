@@ -7,12 +7,14 @@ export default defineConfig([
   ...nextTs,
   {
     rules: {
-      // Reglas nuevas del React Compiler: señalan patrones que hoy funcionan (cargar datos en un efecto, memos manuales).
-      // Quedan como aviso para ir corrigiéndolos de a poco sin frenar las publicaciones.
+      // Reglas del React Compiler: como aviso, para que un caso nuevo no frene una publicación.
       'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/preserve-manual-memoization': 'warn',
       'react-hooks/immutability': 'warn',
       'react-hooks/purity': 'warn',
+      // Sólo aplica cuando el React Compiler está activo (no lo está en next.config): los useMemo manuales se mantienen.
+      'react-hooks/preserve-manual-memoization': 'off',
+      // Logos e íconos institucionales estáticos, con tamaño fijo: next/image no aporta y cambiaría cómo se dimensionan.
+      '@next/next/no-img-element': 'off',
       // Parámetros o desestructuraciones descartadas a propósito se nombran con guion bajo.
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_', ignoreRestSiblings: true }],
     },
