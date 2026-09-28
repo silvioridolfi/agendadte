@@ -35,14 +35,16 @@ export const SOLO_CED: Accion[] = ['REUNIÓN CON INSPECCIÓN', 'REUNIÓN CON NIV
 // Acciones que registran encuentros con participantes (N° de encuentro, destinatarios, inscriptos, asistentes).
 export const CON_ENCUENTRO: Accion[] = ['CLUB DE TECNOLOGÍA', 'TALLER/CAPACITACIÓN', 'PRÁCTICAS PROFESIONALIZANTES']
 // Sugerencias de sub-acción tomadas del instructivo de la DTE y del master regional (se puede escribir otra).
+// Propuestas habituales de los encuentros de Clubes de Tecnología (líneas de la DTE).
+export const PROPUESTAS_CLUB = ['Pensamiento computacional', 'Programación', 'Robótica', 'Inteligencia artificial']
 export const SUB_ACCIONES: Partial<Record<Accion, string[]>> = {
-  'VISITA TÉCNICA': ['Desbloqueos', 'Actualización de S.O.', 'Cambio de pilas', 'Chequeo de enlaces', 'Pisos tecnológicos', 'Demanda escolar', 'Soporte técnico en territorio', 'Mantenimiento de equipamiento', 'Gestión de accesos y blanqueos'],
+  'VISITA TÉCNICA': ['Desbloqueos', 'Actualización de S.O.', 'Cambio de pilas', 'Chequeo de enlaces', 'Pisos tecnológicos', 'Demanda escolar', 'Soporte técnico en territorio', 'Mantenimiento de equipamiento', 'Gestión de accesos y blanqueos', 'Banco de netbooks (con EMATP)', 'Recuperación de sistema (software libre)', 'Recuperación de hardware', 'Actualización de navegadores'],
   'ASISTENCIA REMOTA': ['Desbloqueos', 'Gestión de accesos y blanqueos', 'Soporte técnico', 'Instalación de imágenes'],
-  'CONECTIVIDAD': ['Checklist', 'Relevamiento de conectividad', 'Gestión y seguimiento de incidencias', 'Ampliación u obra nueva', 'Gestión de reclamos institucionales'],
-  'VISITA PEDAGÓGICA': ['Presentación', 'Relevamiento de autoridades', 'Propuestas de intervención', 'Planificación de actividades institucionales', 'Gestión administrativa de clubes', 'Acompañamiento a experiencias (JED)', 'Elaboración de materiales pedagógicos'],
-  'TALLER/CAPACITACIÓN': ['Ciudadanía digital', 'Introducción a la programación', 'Plataforma ABC'],
+  'CONECTIVIDAD': ['Checklist', 'Relevamiento de conectividad', 'Gestión y seguimiento de incidencias', 'Ampliación u obra nueva', 'Gestión de reclamos institucionales', 'Plan Nacional de Conectividad Escolar', 'Ampliación de conectividad provincial'],
+  'VISITA PEDAGÓGICA': ['Presentación', 'Relevamiento de autoridades', 'Propuestas de intervención', 'Planificación de actividades institucionales', 'Gestión administrativa de clubes', 'Acompañamiento a experiencias (JED)', 'Elaboración de materiales pedagógicos', 'Acompañamiento a proyecto de medios escolares', 'Articulación con EMATP', 'Difusión de Continuemos Estudiando y contenidos digitales'],
+  'TALLER/CAPACITACIÓN': ['Ciudadanía digital', 'Introducción a la programación', 'Plataforma ABC', 'Pensamiento computacional', 'Robótica', 'Inteligencia artificial', 'Uso seguro y responsable de la tecnología', 'Medios escolares', 'Entornos virtuales (EVEA)', 'Continuemos Estudiando', 'Herramientas para EMATP'],
   'ADMINISTRATIVO': ['Atención de consultas', 'Planificación de agenda', 'Elaboración de informes', 'Carga de bases de datos'],
-  'ENTREGA DE EQUIPAMIENTO': ['Tablets', 'Netbooks', 'Kits de robótica', 'Pisos tecnológicos', 'Otro equipamiento'],
+  'ENTREGA DE EQUIPAMIENTO': ['Tablets', 'Netbooks', 'Kits de robótica', 'Pisos tecnológicos', 'Otro equipamiento', 'Conectar Igualdad', 'Conectar Igualdad Bonaerense', 'Puesta en funcionamiento', 'Sensibilización'],
   // Coordinación (según la planificación del CED 2026).
   'REUNIÓN CON JEFATURA': ['Jefatura Regional', 'Jefatura Distrital La Plata', 'Jefatura Distrital Berisso', 'Jefatura Distrital Ensenada', 'Jefatura Distrital Magdalena', 'Jefatura Distrital Brandsen', 'Jefatura Distrital Punta Indio'],
   'ARTICULACIÓN MUNICIPAL': ['Municipio de La Plata', 'Municipio de Berisso', 'Municipio de Ensenada', 'Municipio de Magdalena', 'Municipio de Brandsen', 'Municipio de Punta Indio'],
@@ -51,7 +53,7 @@ export const SUB_ACCIONES: Partial<Record<Accion, string[]>> = {
   'ACOMPAÑAMIENTO A FED': ['Acompañamiento en escuela', 'Apoyo a club', 'Apoyo a PEAT'],
   'GESTIÓN INSTITUCIONAL': ['Conectividad', 'Continuemos Estudiando', 'JED', 'Organización de capacitación'],
   'INFORME TÉCNICO': ['Informe mensual', 'Evaluación semestral', 'Sistematización de experiencias'],
-  'REUNIÓN': ['Reunión de equipo (CED/FED)', 'Reunión entre FEDs', 'Reunión institucional', 'Reunión técnica', 'Trabajo interregional'],
+  'REUNIÓN': ['Reunión de equipo (CED/FED)', 'Reunión entre FEDs', 'Reunión institucional', 'Reunión técnica', 'Trabajo interregional', 'Reunión con EMATP', 'Articulación con Educación Técnica'],
 }
 
 // DD.JJ. de horarios: un registro por día hábil (1 = lunes ... 5 = viernes).
