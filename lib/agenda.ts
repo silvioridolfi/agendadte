@@ -269,6 +269,11 @@ export const TRAYECTO_MARCA: Record<Trayecto, { nombre: string, corto: string, p
   'PRÁCTICAS PROFESIONALIZANTES': { nombre: 'Prácticas Educativas en Ambientes de Trabajo', corto: 'práctica', plural: 'prácticas', logo: '/practicas/peat-logo.png', degradado: 'bg-peat-degradado-h', acento: '#d81b72', propuesta: 'Prácticas Educativas en Ambientes de Trabajo', nota: 'PEAT · cada grupo de estudiantes es un trayecto con inicio y cierre' },
 }
 // Recordatorio del Instructivo Planillas Visita a Escuelas (apartado Ausencias).
+// Ausencias (licencia y paro): se ven en la agenda pero no son trabajo, así que no cuentan en métricas ni informes.
+export const esAusencia = (a: Accion) => a === 'LICENCIA' || a === 'PARO'
+// Acción que cuenta como trabajo hecho (métricas, informes y exportaciones).
+export const cuentaHecha = (i: Pick<AgendaItem, 'estado' | 'accion'>) => i.estado === 'realizada' && !esAusencia(i.accion)
+
 export const RECORDATORIO_LICENCIA = 'En el caso de ausencias, especificá el motivo. El aviso se realiza en el momento en que se produce y dentro de las 48 hs posteriores se debe enviar la constancia de justificación.'
 // Establecimiento DTE (lugar de trabajo): los paros se registran ahí.
 export const CUE_DTE = 60000000

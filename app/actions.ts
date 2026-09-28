@@ -203,7 +203,7 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
     if (fechas.length) {
       const serieId = crypto.randomUUID()
       await db.from('agenda_items').update({ serie_id: serieId }).eq('id', itemId)
-      const copia = { ...rowSinSerie, estado: 'planificada' as const, serie_id: serieId, club_id: clubId }
+      const copia = { ...rowSinSerie, estado: row.accion === 'LICENCIA' ? row.estado : 'planificada' as const, serie_id: serieId, club_id: clubId }
       const ins = await db.from('agenda_items').insert(fechas.map(fecha => ({ ...copia, fecha }))).select('id')
       if (ins.error) throw new Error(ins.error.message)
       const otros = (input.participantes ?? []).filter(f => f && f !== row.fed_id)
@@ -214,6 +214,13 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
       }
       creadas += fechas.length
     }
+  }
+  // Licencia nueva: la coordinación recibe un solo aviso con el período completo.
+  if (!id && row.accion === 'LICENCIA') {
+    const { data: coord } = await db.from('feds').select('id').eq('rol', 'coordinacion').neq('id', row.fed_id)
+    const hasta = input.repeticion?.hasta && creadas > 1 ? input.repeticion.hasta : null
+    const detalle = `${hasta ? `Del ${fechaCorta(row.fecha)} al ${fechaCorta(hasta)}` : `El ${fechaCorta(row.fecha)}`} · ${creadas} ${creadas === 1 ? 'día hábil' : 'días hábiles'}`
+    if (coord?.length) await db.from('notificaciones').insert(coord.map(c => ({ fed_id: c.id as string, item_id: itemId, autor_id: row.fed_id, tipo: 'etiqueta', detalle })))
   }
   // Edición de una serie: "este y los siguientes" aplica horario, club/grupo y datos de la propuesta a las fechas planificadas que siguen
   // y los acompañantes sumados o quitados (no cambia la fecha de cada una ni los datos de participación, que son propios de cada encuentro).

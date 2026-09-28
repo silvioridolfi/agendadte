@@ -9,10 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
-import { etiquetaAccion, nombreAccion, iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, ACCIONES_CED, SOLO_CED, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
+import { etiquetaAccion, nombreAccion, iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, esAusencia, ACCIONES_CED, SOLO_CED, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
 import type { Organismo } from '@/app/actions'
 import { titleCase } from '@/lib/format'
-import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, guardarVisita, editarVisita, ActionChip, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
+import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, cambiarEstadoVarias, guardarVisita, editarVisita, ActionChip, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
 import { encolarOffline, encolarVisitaOffline } from '@/components/app/offline'
 import { alternarTipo, datosDeAccion, datosVacios, inputDeTipo, type DatosTipo } from '@/lib/visita'
 import { hoyAR } from '@/lib/hora'
@@ -202,6 +202,26 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const fechaError = aDefinir || item?.fecha === form.fecha ? ''
     : diaSemana === 0 || diaSemana === 6 ? 'Es fin de semana: sólo se pueden cargar acciones de lunes a viernes.'
     : noHabil ? `Es ${noHabil.tipo === 'receso' ? 'receso escolar' : 'feriado'} (${noHabil.nombre}): elegí un día hábil.` : ''
+  // Licencia por período: desde la fecha elegida hasta `licHasta`, un registro por día hábil, sin horario (todo el día).
+  const [licHasta, setLicHasta] = useState('')
+  const licFin = esLicencia && !item && licHasta > form.fecha ? licHasta : form.fecha
+  const [licRango, setLicRango] = useState<{ clave: string, dias: string[], choques: AgendaItem[] } | null>(null)
+  const [reprogramar, setReprogramar] = useState(true)
+  useEffect(() => {
+    if (!esLicencia || item || !/^\d{4}-\d{2}-\d{2}$/.test(form.fecha) || !/^\d{4}-\d{2}-\d{2}$/.test(licFin)) return
+    let vivo = true
+    const clave = `${form.fecha}:${licFin}`
+    Promise.all([getFeriados(form.fecha, licFin).catch(() => []), getFedItems(fed.id, form.fecha, licFin).catch(() => [])]).then(([fer, its]) => {
+      if (!vivo) return
+      const no = new Set(fer.filter(f => f.tipo !== 'distrital' || (!!f.distrito && fed.distritos_a_cargo.includes(f.distrito))).map(f => f.fecha))
+      const dias: string[] = []
+      for (let d = parse(form.fecha); iso(d) <= licFin; d = addDays(d, 1)) { const w = d.getDay(); if (w >= 1 && w <= 5 && !no.has(iso(d))) dias.push(iso(d)) }
+      setLicRango({ clave, dias, choques: its.filter(i => i.fed_id === fed.id && !esAusencia(i.accion) && (i.estado === 'planificada' || i.estado === 'reprogramada')) })
+    })
+    return () => { vivo = false }
+  }, [esLicencia, item, form.fecha, licFin, fed.id, fed.distritos_a_cargo])
+  const rango = licRango?.clave === `${form.fecha}:${licFin}` ? licRango : null
+  const diaCorto = (s: string) => fmt(parse(s), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')
   const horario = chequearHorario(ddjjDia, form.hora_inicio, form.hora_fin)
   const fueraDeHorario = horario.fuera || horario.choques.length > 0
 
@@ -224,6 +244,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     const errs: typeof errores = {}
     if (!esParo && !esLicencia && !lugarOpcional && !school && !form.lugar.trim()) errs.establecimiento = 'Indicá el establecimiento (o el lugar, si no es una escuela).'
     if (fechaError) errs.fecha = fechaError
+    else if (esLicencia && !item && licHasta && licHasta < form.fecha) errs.fecha = 'La fecha de fin de la licencia tiene que ser igual o posterior al inicio.'
     if (!form.accion) errs.accion = 'Elegí el tipo de acción.'
     if (timeError) errs.hora = timeError
     if (esClub && !form.club_id) errs.club = `Elegí a qué ${marca.corto} corresponde el encuentro, o iniciá uno nuevo.`
@@ -249,9 +270,9 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       return
     }
     const input: AgendaItemInput = {
-      repeticion: repetir && !item ? { dias: diasSerie, hasta: hastaSerie } : null,
+      repeticion: repetir && !item ? { dias: diasSerie, hasta: hastaSerie } : esLicencia && !item && licFin > form.fecha ? { dias: [1, 2, 3, 4, 5], hasta: licFin } : null,
       fed_id: fed.id, school_id: esLicencia || esParo ? null : school?.id ?? null, lugar: school || esLicencia || esParo ? null : form.lugar || null, fecha: form.fecha, accion: form.accion, estado: form.estado,
-      hora_inicio: esParo ? null : form.hora_inicio || null, hora_fin: esParo ? null : form.hora_fin || null, sub_accion: conSubAccion ? form.sub_accion : null, detalle: form.detalle,
+      hora_inicio: esParo || esLicencia ? null : form.hora_inicio || null, hora_fin: esParo || esLicencia ? null : form.hora_fin || null, sub_accion: conSubAccion ? form.sub_accion : null, detalle: form.detalle,
       modalidad: lugarOpcional ? form.modalidad_ev : null, rol_formacion: esFormacion ? form.rol_formacion : null, dictada_por: esFormacion ? form.dictada_por : null,
       cantidad: cat === 'tecnica' ? toNum(form.cantidad) : null,
       participantes: esParo || esLicencia ? [] : participantes,
@@ -285,7 +306,16 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     }
     // Sin conexión: queda en cola en este dispositivo y se envía al volver la señal.
     if (typeof navigator !== 'undefined' && !navigator.onLine) { encolarOffline(input, item?.id); onSaved({ creadas: 1, offline: true }); return }
-    try { const r = await saveItem(input, item?.id, alcance); onSaved({ creadas: r.creadas, mensaje: alcance === 'siguientes' && r.creadas > 1 ? `Se actualizaron este encuentro y ${r.creadas - 1} ${r.creadas === 2 ? 'fecha siguiente' : 'fechas siguientes'} de la serie` : undefined }) } catch (err) {
+    try {
+      const r = await saveItem(input, item?.id, alcance)
+      // Licencia: las acciones planificadas de esos días pasan a reprogramadas (si se eligió).
+      if (esLicencia && !item) {
+        const ids = reprogramar ? (rango?.choques ?? []).map(i => i.id) : []
+        if (ids.length) await cambiarEstadoVarias(ids, 'reprogramada').catch(() => null)
+        onSaved({ creadas: r.creadas, mensaje: `Licencia cargada: ${r.creadas} ${r.creadas === 1 ? 'día hábil' : 'días hábiles'}${ids.length ? ` · ${ids.length} ${ids.length === 1 ? 'acción reprogramada' : 'acciones reprogramadas'}` : ''}` })
+        return
+      }
+      onSaved({ creadas: r.creadas, mensaje: alcance === 'siguientes' && r.creadas > 1 ? `Se actualizaron este encuentro y ${r.creadas - 1} ${r.creadas === 2 ? 'fecha siguiente' : 'fechas siguientes'} de la serie` : undefined }) } catch (err) {
       if (typeof navigator !== 'undefined' && !navigator.onLine) { encolarOffline(input, item?.id); onSaved({ creadas: 1, offline: true }); return }
       setError(errMsg(err)); setSaving(false)
     }
@@ -296,8 +326,9 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
 
     {modoT === 'nuevo' && <label className="flex items-start gap-2.5 rounded-control border border-dte-linea bg-dte-fondo p-2.5 text-sm"><input type="checkbox" checked={aDefinirMarcado} onChange={e => setADefinir(e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Fecha a definir.</b> {marca.corto === 'club' ? 'El club queda' : 'La práctica queda'} “por iniciar” y no se agrega a tu agenda hasta que programes el primer encuentro.</span></label>}
     {!aDefinir && <div className="grid gap-4 sm:grid-cols-3">
-      <Field id="campo-fecha" label={modoT === 'nuevo' ? 'Fecha del primer encuentro' : 'Fecha'} required className="scroll-mt-24" error={fechaError} errorId="err-fecha"><Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} aria-invalid={!!fechaError || undefined} aria-describedby={fechaError ? 'err-fecha' : undefined} className="md:h-10" /></Field>
-      {!esParo && <><Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="md:h-10" /></Field>
+      <Field id="campo-fecha" label={modoT === 'nuevo' ? 'Fecha del primer encuentro' : esLicencia && !item ? 'Desde' : 'Fecha'} required className="scroll-mt-24" error={fechaError} errorId="err-fecha"><Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} aria-invalid={!!fechaError || undefined} aria-describedby={fechaError ? 'err-fecha' : undefined} className="md:h-10" /></Field>
+      {esLicencia ? !item && <Field label="Hasta" hint="(si dura más de un día)"><Input type="date" min={form.fecha} value={licHasta} onChange={e => { setLicHasta(e.target.value); limpiar('fecha') }} className="md:h-10" aria-label="Último día de la licencia" /></Field>
+      : !esParo && <><Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="md:h-10" /></Field>
       <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="md:h-10" /></Field></>}
     </div>}
     {!aDefinir && timeError && <p id="campo-hora" role="alert" className="-mt-3 scroll-mt-24 text-sm font-medium text-peligro">{timeError}</p>}
@@ -348,6 +379,10 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       })()}
     </fieldset>}
     {esParo && <p className="rounded-control border border-dte-linea bg-dte-fondo px-3 py-2 text-sm text-dte-gris">Adhesión a paro gremial/docente. Se registra en la <b className="text-dte-tinta">Dirección de Tecnología Educativa</b> (lugar de trabajo); no hace falta completar nada más.</p>}
+    {esLicencia && !item && rango && <div role="status" className="rounded-control border border-dte-linea bg-dte-fondo px-3 py-2 text-sm">
+      <p><b>Licencia {licFin > form.fecha ? `del ${diaCorto(form.fecha)} al ${diaCorto(licFin)}` : `el ${diaCorto(form.fecha)}`}</b> · {rango.dias.length} {rango.dias.length === 1 ? 'día hábil' : 'días hábiles'} · todo el día</p>
+      {rango.choques.length > 0 && <label className="mt-2 flex items-start gap-2"><input type="checkbox" checked={reprogramar} onChange={e => setReprogramar(e.target.checked)} className="mt-0.5 size-5 shrink-0" /><span>Tenés {rango.choques.length} {rango.choques.length === 1 ? 'acción planificada' : 'acciones planificadas'} en esos días. Marcarlas como <b>reprogramadas</b>.</span></label>}
+    </div>}
     {esLicencia && <p className="rounded-control border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso"><b>Recordatorio:</b> {RECORDATORIO_LICENCIA}</p>}
 
 

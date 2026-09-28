@@ -1,11 +1,11 @@
 // Informes del período: indicadores de la coordinación (planificación del CED 2026) y resumen de cada FED.
 // Cuentan sólo acciones realizadas. Cada indicador trae las acciones que lo forman (para ver el detalle y exportarlo).
-import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, type AgendaItem, type Categoria } from '@/lib/agenda'
+import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, type AgendaItem, type Categoria, cuentaHecha } from '@/lib/agenda'
 import { esEscuela } from '@/lib/sede'
 
 export type Indicador = { clave: string, label: string, valor: number, detalle?: string, items: AgendaItem[] }
 
-const hechas = (items: AgendaItem[]) => items.filter(i => i.estado === 'realizada')
+const hechas = (items: AgendaItem[]) => items.filter(cuentaHecha)
 const escuelas = (items: AgendaItem[]) => new Set(items.filter(i => i.school_id && esEscuela(i.school)).map(i => i.school_id!)).size
 // Inscriptos de cada club/práctica: el máximo registrado en sus encuentros (un grupo se cuenta una vez).
 function inscriptos(items: AgendaItem[]) {

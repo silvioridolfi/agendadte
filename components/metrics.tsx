@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { titleCase } from '@/lib/format'
 import { siglaEscuela } from '@/components/app/comun'
 import { esEscuela, esGrupoEspecial, grupoDistrito, ordenGrupos } from '@/lib/sede'
-import { CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, type Accion, type AgendaItem, type Categoria, type Encuentro, type Fed, type School } from '@/lib/agenda'
+import { CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, type Accion, type AgendaItem, type Categoria, type Encuentro, type Fed, type School, cuentaHecha, esAusencia } from '@/lib/agenda'
 
 // Colores por categoría: validados con la guía de dataviz (CVD y contraste sobre fondo claro).
 export const CAT_COLOR: Record<Categoria, string> = { tecnica: 'var(--color-cat-tecnica)', pedagogica: 'var(--color-cat-pedagogica)', institucional: 'var(--color-cat-institucional)' }
@@ -93,8 +93,8 @@ export function MetricsView({ items, encuentros, feds, onSelect, clubesActivos }
   }))
   const openItems = (title: string, list: AgendaItem[]) => setDrill({ title, subtitle: `${list.length} acciones realizadas`, rows: itemRows(list) })
   // Las métricas cuentan trabajo hecho: sólo acciones realizadas.
-  const done = useMemo(() => items.filter(i => i.estado === 'realizada'), [items])
-  const planned = items.filter(i => i.estado === 'planificada').length
+  const done = useMemo(() => items.filter(cuentaHecha), [items])
+  const planned = items.filter(i => i.estado === 'planificada' && !esAusencia(i.accion)).length
 
   const m = useMemo(() => {
     const total = emptyCounts()

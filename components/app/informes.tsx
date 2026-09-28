@@ -5,7 +5,7 @@ import { FileDown, FileSpreadsheet, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DrillDialog, type DrillRow } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
-import type { AgendaItem, Fed } from '@/lib/agenda'
+import { cuentaHecha, type AgendaItem, type Fed } from '@/lib/agenda'
 import type { Indicador } from '@/lib/informes'
 import type { Persona } from '@/lib/exportar'
 import { cap, errMsg, fmt, parse, itemCorto, ErrorBox } from '@/components/app/comun'
@@ -20,7 +20,7 @@ function imprimirInforme({ titulo, persona, desde, hasta, indicadores, items, fe
   const w = window.open('', '_blank')
   if (!w) throw new Error('El navegador bloqueó la ventana del informe: permití ventanas emergentes para este sitio.')
   const fedName = (id: string) => feds.find(f => f.id === id)?.nombre_completo ?? ''
-  const hechas = [...items].filter(i => i.estado === 'realizada').sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))
+  const hechas = [...items].filter(cuentaHecha).sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))
   const variosResponsables = new Set(hechas.map(i => i.fed_id)).size > 1
   const logo = `${location.origin}/brand/oficial-color.png`
   w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>${esc(titulo)} · ${esc(persona.nombre)}</title>

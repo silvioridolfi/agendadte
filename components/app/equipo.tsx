@@ -8,7 +8,7 @@ import { Camera, Clock, FileBarChart, MapPin } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { titleCase } from '@/lib/format'
 import { franjasDte, textoFranjas } from '@/lib/ddjj'
-import { clubEstado, iniciado, type AgendaItem, type Club, type Fed } from '@/lib/agenda'
+import { clubEstado, cuentaHecha, esAusencia, iniciado, type AgendaItem, type Club, type Fed } from '@/lib/agenda'
 import { fmt, parse, fedColor, initials, Skeleton } from '@/components/app/comun'
 import { hoyAR } from '@/lib/hora'
 
@@ -21,8 +21,8 @@ export function MiEquipoView({ feds, todos, items, clubes, noHabiles, periodo, d
   const hoy = hoyAR()
   const resumen = useMemo(() => new Map(feds.map(f => {
     const propias = (items ?? []).filter(i => i.fed_id === f.id)
-    const realizadas = propias.filter(i => i.estado === 'realizada')
-    const planificadas = propias.filter(i => i.estado === 'planificada' || i.estado === 'reprogramada').length
+    const realizadas = propias.filter(cuentaHecha)
+    const planificadas = propias.filter(i => (i.estado === 'planificada' || i.estado === 'reprogramada') && !esAusencia(i.accion)).length
     const ultima = realizadas.reduce<string | null>((m, i) => (!m || i.fecha > m ? i.fecha : m), null)
     const activos = (clubes ?? []).filter(iniciado).filter(c => c.fed_id === f.id && clubEstado(c, hoy, noHabiles) === 'activo')
     return [f.id, { realizadas: realizadas.length, planificadas, ultima, clubes: activos.filter(c => c.tipo === 'CLUB DE TECNOLOGÍA').length, practicas: activos.filter(c => c.tipo !== 'CLUB DE TECNOLOGÍA').length }]

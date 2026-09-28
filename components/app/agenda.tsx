@@ -7,7 +7,7 @@ import { CalendarX2, Check, ClipboardCheck, Clock, ListChecks, Loader2, Plus, Us
 import { BarraSeleccion, PanelFinDeSemana } from '@/components/app/seleccion'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { CON_ENCUENTRO, ESTADOS, type AgendaItem, type Feriado, type EventoDte, type Estado, type Fed } from '@/lib/agenda'
+import { CON_ENCUENTRO, esAusencia, ESTADOS, type AgendaItem, type Feriado, type EventoDte, type Estado, type Fed } from '@/lib/agenda'
 import { FotosChip } from '@/components/app/fotosconteo'
 import { EventoTag, useEventos } from '@/components/app/eventos'
 import { agruparVisitas } from '@/lib/visita'
@@ -237,7 +237,7 @@ function PendientesCerrar({ fed, reloadKey, onSelect, onRealizar, onCambio }: { 
   const [res, setRes] = useState<{ clave: string, items: AgendaItem[] } | null>(null)
   useEffect(() => {
     let vivo = true
-    getFedItems(fed.id, desde, hasta).then(l => vivo && setRes({ clave, items: l.filter(i => i.fed_id === fed.id && (i.estado === 'planificada' || i.estado === 'reprogramada')) })).catch(() => {})
+    getFedItems(fed.id, desde, hasta).then(l => vivo && setRes({ clave, items: l.filter(i => i.fed_id === fed.id && !esAusencia(i.accion) && (i.estado === 'planificada' || i.estado === 'reprogramada')) })).catch(() => {})
     return () => { vivo = false }
   }, [clave, fed.id, desde, hasta])
   const [abierto, setAbierto] = useState(false)

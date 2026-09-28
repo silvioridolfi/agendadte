@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import * as api from '@/app/actions'
 import { guardarCache, leerCache } from '@/components/app/offline'
 import { titleCase } from '@/lib/format'
-import { etiquetaAccion, nombreAccion, type Accion, type AgendaItem, type Feriado, type Estado, type Fed, type School } from '@/lib/agenda'
+import { esAusencia, etiquetaAccion, nombreAccion, type Accion, type AgendaItem, type Feriado, type Estado, type Fed, type School } from '@/lib/agenda'
 import { anioAR, hoyAR, ZONA } from '@/lib/hora'
 
 // ---- estilos por categoría ----
@@ -59,7 +59,7 @@ export const startOfWeek = (d: Date) => addDays(d, -((d.getDay() + 6) % 7))
 export const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString('es-AR', { timeZone: ZONA, ...opts })
 export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 export const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '')
-export const timeRange = (i: AgendaItem) => (i.hora_inicio ? `${hhmm(i.hora_inicio)}${i.hora_fin ? ` a ${hhmm(i.hora_fin)}` : ''}` : 'Sin horario')
+export const timeRange = (i: AgendaItem) => (i.hora_inicio ? `${hhmm(i.hora_inicio)}${i.hora_fin ? ` a ${hhmm(i.hora_fin)}` : ''}` : esAusencia(i.accion) ? 'Todo el día' : 'Sin horario')
 // "21 – 27 de septiembre de 2026" o "29 de septiembre – 5 de octubre de 2026"
 export function weekTitle(from: Date, to: Date) {
   const sameMonth = from.getMonth() === to.getMonth()
@@ -156,7 +156,7 @@ export function storage<T>(fn: () => T): T | null { try { return fn() } catch { 
 
 // ---- piezas chicas ----
 // Marcar como realizada con un toque: sólo acciones propias, planificadas o reprogramadas, de hoy o días anteriores.
-export const puedeRealizar = (item: AgendaItem, viewer?: string) => !!viewer && item.fed_id === viewer && (item.estado === 'planificada' || item.estado === 'reprogramada') && item.fecha <= hoyAR()
+export const puedeRealizar = (item: AgendaItem, viewer?: string) => !!viewer && item.fed_id === viewer && !esAusencia(item.accion) && (item.estado === 'planificada' || item.estado === 'reprogramada') && item.fecha <= hoyAR()
 export function BotonRealizar({ item, onRealizar, className = '' }: { item: AgendaItem, onRealizar: (item: AgendaItem) => void, className?: string }) {
   const [enviando, setEnviando] = useState(false)
   return <button type="button" disabled={enviando} onClick={async e => { e.stopPropagation(); setEnviando(true); try { await onRealizar(item) } finally { setEnviando(false) } }}
