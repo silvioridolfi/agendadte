@@ -68,14 +68,15 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   const [from, to] = rangeBounds(anchor, range)
   const { items, error, retry } = useItems(() => getAllItems(iso(from), iso(to)), [iso(from), iso(to), reloadKey], `todos:${iso(from)}:${iso(to)}`)
   // Encuentros del período (incluye los que no están vinculados a una acción), para las métricas de participación.
-  const [encs, setEncs] = useState<Encuentro[] | null>(null)
+  const claveEncs = `${iso(from)}:${iso(to)}:${reloadKey}`
+  const [encsRes, setEncsRes] = useState<{ clave: string, encs: Encuentro[] } | null>(null)
   useEffect(() => {
     let alive = true
-    setEncs(null)
-    getEncuentros(iso(from), iso(to)).then(r => alive && setEncs(r)).catch(() => alive && setEncs([]))
+    getEncuentros(iso(from), iso(to)).then(r => alive && setEncsRes({ clave: claveEncs, encs: r })).catch(() => alive && setEncsRes({ clave: claveEncs, encs: [] }))
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [iso(from), iso(to), reloadKey])
+  }, [claveEncs])
+  const encs = encsRes?.clave === claveEncs ? encsRes.encs : null
 
   // Clubes del ciclo (no dependen del período elegido).
   const [clubes, setClubesState] = useState<Club[] | null>(null)
@@ -110,10 +111,11 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   // FEDs en orden alfabético; dentro de cada uno, las acciones de la más nueva a la más antigua (fecha, hora y carga).
   // Primero lo de hoy hacia atrás (lo más reciente arriba); lo planificado a futuro va al final, de lo más próximo a lo más lejano.
   const hoy = hoyAR()
-  const recientePrimero = (a: AgendaItem, b: AgendaItem) => Number(a.fecha > hoy) - Number(b.fecha > hoy)
+  const groups = useMemo(() => {
+    const recientePrimero = (a: AgendaItem, b: AgendaItem) => Number(a.fecha > hoy) - Number(b.fecha > hoy)
     || (a.fecha > hoy ? a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? '') : 0)
     || b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)
-  const groups = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].map(([id, l]) => [id, l.sort(recientePrimero)] as [string, AgendaItem[]]).sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName])
+    const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].map(([id, l]) => [id, l.sort(recientePrimero)] as [string, AgendaItem[]]).sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName, hoy])
   const anyFilter = !!(search || distrito || fedIdElegido || accion || estado)
   // Filtros plegables en mobile (buscador siempre visible).
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)

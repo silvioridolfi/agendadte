@@ -3,7 +3,7 @@
 import { Pill } from '@/components/ui/segmented'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { chequearHorario, franjasDte, textoFranjas } from '@/lib/ddjj'
-import { Check, Clock, Landmark, Loader2, School as SchoolIcon, Search, TriangleAlert } from 'lucide-react'
+import { Check, ChevronDown, Clock, Landmark, Loader2, School as SchoolIcon, Search, Star, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -12,9 +12,11 @@ import { CAT_COLOR } from '@/components/metrics'
 import { etiquetaAccion, nombreAccion, iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, ACCIONES_CED, SOLO_CED, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
 import type { Organismo } from '@/app/actions'
 import { titleCase } from '@/lib/format'
-import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, saveItem, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
+import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
 import { encolarOffline } from '@/components/app/offline'
 import { hoyAR } from '@/lib/hora'
+
+const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
 // =====================================================================
 
@@ -27,21 +29,25 @@ export function SchoolPicker({ value, onChange, onOrganismo }: { value: School |
   const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
-  const seq = useRef(0)
+  // Al escribir: con menos de 2 letras se limpian los resultados; si no, se marca la búsqueda en curso.
+  const buscar = (q: string) => {
+    setQuery(q)
+    if (q.trim().length < 2) { setResults([]); setOrgs([]); setLoading(false) } else { setLoading(true); setFailed(false) }
+  }
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); setOrgs([]); setLoading(false); return }
-    const n = ++seq.current
-    setLoading(true); setFailed(false)
+    if (query.trim().length < 2) return
+    // `vigente`: si la consulta cambió antes de que llegue la respuesta, se descarta.
+    let vigente = true
     const t = setTimeout(() => Promise.all([searchSchools(query), onOrganismo ? buscarOrganismos(query) : Promise.resolve([])])
-      .then(([r, o]) => { if (n === seq.current) { setOrgs(o); setResults([...r].sort((a, b) => az(a.nombre ?? '', b.nombre ?? ''))); setActive(0) } })
-      .catch(() => { if (n === seq.current) { setResults([]); setOrgs([]); setFailed(true) } })
-      .finally(() => { if (n === seq.current) setLoading(false) }), 250)
-    return () => clearTimeout(t)
+      .then(([r, o]) => { if (vigente) { setOrgs(o); setResults([...r].sort((a, b) => az(a.nombre ?? '', b.nombre ?? ''))); setActive(0) } })
+      .catch(() => { if (vigente) { setResults([]); setOrgs([]); setFailed(true) } })
+      .finally(() => { if (vigente) setLoading(false) }), 250)
+    return () => { vigente = false; clearTimeout(t) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query])
   // Opciones: primero las jefaturas que coinciden y después las escuelas.
   const opciones: ({ tipo: 'org', o: Organismo } | { tipo: 'esc', s: School })[] = [...orgs.map(o => ({ tipo: 'org' as const, o })), ...results.map(s => ({ tipo: 'esc' as const, s }))]
-  const pick = (x: typeof opciones[number]) => { if (x.tipo === 'org') onOrganismo?.(`${x.o.nombre} (${x.o.codigo})`); else onChange(x.s); setQuery(''); setOpen(false) }
+  const pick = (x: typeof opciones[number]) => { if (x.tipo === 'org') onOrganismo?.(`${x.o.nombre} (${x.o.codigo})`); else onChange(x.s); buscar(''); setOpen(false) }
 
   if (value) return <div className="flex items-center gap-3 rounded-control border border-pba-celeste/60 bg-pba-celeste/5 p-2.5 pl-3 font-normal">
     <SchoolIcon className="size-4 shrink-0 text-pba-celeste-texto" />
@@ -53,7 +59,7 @@ export function SchoolPicker({ value, onChange, onOrganismo }: { value: School |
   return <div className="relative">
     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" />
     <Input role="combobox" aria-expanded={showList} aria-controls="school-results" aria-autocomplete="list" className="h-11 md:h-10 pl-9 font-normal" placeholder="Nombre, localidad o CUE…" value={query}
-      onChange={e => { setQuery(e.target.value); setOpen(true) }} onFocus={e => { setOpen(true); e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' }) }} onBlur={() => setTimeout(() => setOpen(false), 150)}
+      onChange={e => { buscar(e.target.value); setOpen(true) }} onFocus={e => { setOpen(true); e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' }) }} onBlur={() => setTimeout(() => setOpen(false), 150)}
       onKeyDown={e => {
         if (!showList || !opciones.length) return
         if (e.key === 'ArrowDown') { e.preventDefault(); setActive(a => Math.min(a + 1, opciones.length - 1)) }
@@ -99,6 +105,11 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   // Formación interna y eventos DTE: el lugar es opcional (suelen ser virtuales o en la DTE).
   const esFormacion = form.accion === 'FORMACIÓN INTERNA', esEvento = form.accion === 'EVENTO DTE'
   // Coordinación (CED): sus tareas propias van primero y el lugar es opcional.
+  // Tipos de acción más usados por esta persona: se muestran primero. Se guardan en el dispositivo para tenerlos al instante.
+  const claveFrecuentes = `tipos-frecuentes:${fed.id}`
+  const [frecuentes, setFrecuentes] = useState<Accion[]>(() => { try { return JSON.parse(storage(() => localStorage.getItem(claveFrecuentes)) ?? '[]') } catch { return [] } })
+  useEffect(() => { let vivo = true; misTiposFrecuentes().then(l => { if (!vivo) return; setFrecuentes(l); storage(() => localStorage.setItem(claveFrecuentes, JSON.stringify(l))) }).catch(() => {}); return () => { vivo = false } }, [claveFrecuentes])
+  const [buscaTipo, setBuscaTipo] = useState('')
   const esCed = fed.rol === 'coordinacion', lugarOpcional = esFormacion || esEvento || (!!form.accion && SOLO_CED.includes(form.accion))
   const conSubAccion = !!form.accion && !esClub && !esParo && !esLicencia
   // Clubes del FED (para elegir a cuál corresponde el encuentro). Los finalizados sólo si es el del encuentro que se edita.
@@ -255,15 +266,31 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
           </button>
         }
         const visible = (name: Accion) => (name !== 'EVENTO DTE' || item?.accion === 'EVENTO DTE') && (esCed || !SOLO_CED.includes(name) || item?.accion === name) && (!esCed || !ACCIONES_CED.includes(name))
-        const grupos = <div className="flex flex-col gap-3">{CATEGORIAS.map(c => <div key={c}>
-          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris"><span className="size-2 rounded-sm" style={{ background: CAT_COLOR[c] }} />{CATEGORIA_LABEL[c]}</p>
-          <div className="grid grid-cols-1 gap-1.5 min-[360px]:grid-cols-2 sm:grid-cols-3">{ACCIONES.filter(name => CATEGORIA[name] === c && visible(name)).sort(az).map(boton)}</div>
-        </div>)}</div>
-        if (!esCed) return grupos
+        const grilla = (lista: Accion[]) => <div className="grid grid-cols-1 gap-1.5 min-[360px]:grid-cols-2 sm:grid-cols-3">{lista.map(boton)}</div>
+        const rotulo = 'mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris'
+        const buscador = <div className="relative mb-3"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris" aria-hidden />
+          <Input type="search" value={buscaTipo} onChange={e => setBuscaTipo(e.target.value)} placeholder="Buscar tipo de acción…" aria-label="Buscar tipo de acción" className="pl-9 md:h-10" /></div>
+        // Buscando: lista plana con las coincidencias (sin tildes ni mayúsculas).
+        if (buscaTipo.trim()) {
+          const q = sinTildes(buscaTipo.trim())
+          const hallados = [...(esCed ? ACCIONES_CED : []), ...ACCIONES.filter(visible)].filter(n => sinTildes(`${n} ${nombreAccion(n)}`).includes(q))
+          return <>{buscador}{hallados.length ? grilla(hallados) : <p className="text-sm text-dte-gris">No hay tipos de acción que coincidan con “{buscaTipo.trim()}”.</p>}</>
+        }
+        // Tus más usadas (de tu propia agenda) primero; el resto, por categoría y plegado. Sin historial, todo abierto como antes.
+        const top = esCed ? [] : frecuentes.filter(n => ACCIONES.includes(n) && visible(n)).slice(0, 6)
+        const grupos = <div className="flex flex-col gap-2">{CATEGORIAS.map(c => {
+          const lista = ACCIONES.filter(name => CATEGORIA[name] === c && visible(name)).sort(az)
+          const abierta = !top.length || (!!form.accion && CATEGORIA[form.accion] === c && !top.includes(form.accion))
+          return <details key={`${c}-${abierta}`} open={abierta} className="group rounded-tile border border-dte-linea px-3 py-1">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris md:min-h-9"><span className="size-2 rounded-sm" style={{ background: CAT_COLOR[c] }} />{CATEGORIA_LABEL[c]}<span className="font-normal normal-case tracking-normal">· {lista.length}</span><ChevronDown className="ml-auto size-4 transition group-open:rotate-180" aria-hidden /></summary>
+            <div className="pb-2 pt-1">{grilla(lista)}</div>
+          </details>
+        })}</div>
+        if (!esCed) return <>{buscador}{top.length > 0 && <div className="mb-3"><p className={rotulo}><Star className="size-3.5" aria-hidden />Tus más usadas</p>{grilla(top)}</div>}{grupos}</>
         // Coordinación: primero sus tareas; las acciones territoriales, plegadas (abiertas si ya hay una elegida).
         const territorial = !!form.accion && !ACCIONES_CED.includes(form.accion)
-        return <div className="flex flex-col gap-3">
-          <div><p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Coordinación</p>
+        return <div className="flex flex-col gap-3">{buscador}
+          <div><p className={rotulo}>Coordinación</p>
             <div className="grid grid-cols-1 gap-1.5 min-[360px]:grid-cols-2 sm:grid-cols-3">{ACCIONES_CED.map(boton)}</div></div>
           <details open={territorial} className="rounded-tile border border-dte-linea p-3"><summary className="cursor-pointer text-sm font-semibold text-dte-petroleo">Acciones territoriales (como FED)</summary><div className="mt-3">{grupos}</div></details>
         </div>

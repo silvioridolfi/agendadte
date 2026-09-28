@@ -106,7 +106,9 @@ export function EventosPanel({ onSaved }: { onSaved: (msg: string) => void }) {
   const [error, setError] = useState('')
   const [aQuitar, setAQuitar] = useState<EventoDte | null>(null)
   const cargar = () => { setList(null); listarEventos(year).then(setList).catch(e => { setList([]); setError(errMsg(e)) }) }
-  useEffect(cargar, [year])
+  // Carga al cambiar de año: el estado sólo se actualiza cuando llega la respuesta.
+  useEffect(() => { let vivo = true; listarEventos(year).then(l => vivo && setList(l)).catch(e => { if (vivo) { setList([]); setError(errMsg(e)) } }); return () => { vivo = false } }, [year])
+  const cambiarAnio = (n: number) => { setList(null); setYear(y => y + n) }
   const set = <K extends keyof EventoInput>(k: K, v: EventoInput[K]) => setForm(f => ({ ...f, [k]: v }))
   const setFecha = (i: number, v: string) => setForm(f => ({ ...f, fechas: f.fechas.map((x, j) => (j === i ? v : x)) }))
   async function guardar() {
@@ -121,7 +123,7 @@ export function EventosPanel({ onSaved }: { onSaved: (msg: string) => void }) {
   const editar = (e: EventoDte) => { setEditando(e.id); setForm({ nombre: e.nombre, fechas: e.fechas, hora_inicio: e.hora_inicio?.slice(0, 5) ?? null, hora_fin: e.hora_fin?.slice(0, 5) ?? null, modalidad: e.modalidad, lugar: e.lugar, enlace: e.enlace, descripcion: e.descripcion }); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const lbl = 'flex flex-col gap-1 text-xs font-semibold'
   return <Panel title="Eventos DTE" subtitle="Jornadas y eventos propios de la DTE (por ejemplo, las JED). Aparecen en el calendario de todos, que pueden registrar su participación. Se avisa al equipo al cargarlos."
-    action={<div className="flex items-center gap-1"><Button variant="outline" size="sm" onClick={() => setYear(y => y - 1)}>‹</Button><span className="px-2 text-sm font-bold tabular-nums">{year}</span><Button variant="outline" size="sm" onClick={() => setYear(y => y + 1)}>›</Button></div>}>
+    action={<div className="flex items-center gap-1"><Button variant="outline" size="sm" onClick={() => cambiarAnio(-1)}>‹</Button><span className="px-2 text-sm font-bold tabular-nums">{year}</span><Button variant="outline" size="sm" onClick={() => cambiarAnio(1)}>›</Button></div>}>
     <div className="mb-4 grid gap-2 rounded-tile bg-dte-fondo p-3 sm:grid-cols-2">
       <label className={`${lbl} sm:col-span-2`}>Nombre<Input value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Ej.: JED 2026 · Jornadas de Educación Digital" className="h-11 bg-white md:h-9" /></label>
       <div className={`${lbl} sm:col-span-2`}>Fechas

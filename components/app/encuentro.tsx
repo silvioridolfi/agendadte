@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Field, SchoolPicker } from '@/components/app/formulario'
 import { CLUB_MIN_ENCUENTROS, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEncuentrosRealizados, clubEstado, iniciado, ordenGrupo, type Club, type Fed, type School, type Modalidad, type TipoJornada, type Trayecto } from '@/lib/agenda'
-import { az, errMsg, getClubes, iso, saveItem, selectClass, shortSchoolName, ErrorBox } from '@/components/app/comun'
+import { az, errMsg, getClubes, saveItem, selectClass, shortSchoolName, ErrorBox } from '@/components/app/comun'
 import { hoyAR } from '@/lib/hora'
 
 const OTRA = '__otra'
@@ -20,7 +20,6 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
   const marca = TRAYECTO_MARCA[tipo]
   const hoy = hoyAR()
   const [clubes, setClubes] = useState<Club[] | null>(null)
-  useEffect(() => { getClubes(fed.id).then(setClubes).catch(() => setClubes([])) }, [fed.id])
   // Activos (con inicio y sin finalizar); el club elegido desde su fila se incluye aunque esté por iniciar.
   const opciones = (clubes ?? []).filter(c => c.tipo === tipo && (c.id === clubId || (iniciado(c) && clubEstado(c, hoy) !== 'finalizado')))
     .sort((a, b) => az(etiqueta({ ...a, grupo: null }), etiqueta({ ...b, grupo: null })) || ordenGrupo(a.grupo, b.grupo))
@@ -44,6 +43,8 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
   const diaFecha = new Date(`${fecha}T12:00`).getDay()
   const diasSerie = dias.length ? dias : diaFecha >= 1 && diaFecha <= 5 ? [diaFecha] : []
   const [previstos, setPrevistos] = useState('')
+  // Al cargar los clubes se completan los encuentros previstos del club preseleccionado.
+  useEffect(() => { getClubes(fed.id).then(l => { setClubes(l); const c = l.find(x => x.id === clubId); if (c) setPrevistos(c.encuentros_previstos?.toString() ?? '') }).catch(() => setClubes([])) }, [fed.id, clubId])
   const [jornada, setJornada] = useState<TipoJornada | ''>(tipo === 'CLUB DE TECNOLOGÍA' ? 'Taller' : 'Formación')
   const [modalidad, setModalidad] = useState<Modalidad>('Presencial')
   const [destinatarios, setDestinatarios] = useState('')
@@ -53,8 +54,6 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
   const [errores, setErrores] = useState<{ club?: string, propuesta?: string, hora?: string, serie?: string }>({})
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  useEffect(() => { if (club) setPrevistos(club.encuentros_previstos?.toString() ?? '') }, [club])
-  useEffect(() => { setOtros([]) }, [id])
   const num = (v: string) => (v.trim() === '' ? null : Number(v))
 
   async function guardar(e: React.FormEvent) {
@@ -90,7 +89,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
     <div className={`-mx-4 -mt-2 flex items-center gap-3 px-4 py-2.5 sm:mx-0 sm:rounded-tile ${marca.degradado}`}><img src={marca.logo} alt={marca.nombre} className="h-10 w-auto" /><span className="text-xs font-semibold text-white/95">{marca.nota}</span></div>
 
     <Field id="campo-club" label="¿En qué lugar se realizó?" required error={errores.club} errorId="err-club">
-      <select className={selectClass} value={id} onChange={e => { setId(e.target.value); setErrores(x => ({ ...x, club: undefined })) }} aria-invalid={!!errores.club} aria-describedby={errores.club ? 'err-club' : undefined}>
+      <select className={selectClass} value={id} onChange={e => { const nuevo = e.target.value, c = opciones.find(x => x.id === nuevo); setId(nuevo); setOtros([]); setPrevistos(c?.encuentros_previstos?.toString() ?? ''); setErrores(x => ({ ...x, club: undefined })) }} aria-invalid={!!errores.club} aria-describedby={errores.club ? 'err-club' : undefined}>
         <option value="">{!clubes ? 'Cargando…' : opciones.length ? `Elegí ${marca.corto === 'club' ? 'el club' : 'la práctica'}…` : `No tenés ${marca.corto === 'club' ? 'clubes activos' : 'prácticas activas'}`}</option>
         {opciones.map(c => <option key={c.id} value={c.id}>{etiqueta(c)}</option>)}
       </select>
