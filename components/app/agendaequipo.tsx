@@ -9,6 +9,7 @@ import { titleCase } from '@/lib/format'
 import { EventoTag, useEventos } from '@/components/app/eventos'
 import { actionStyle, addDays, cap, fmt, hhmm, iso, parse, selectClass, siglaEscuela, conGrupo, startOfWeek, toWeekday, firstName, getAllItems, useItems, useFeriados, ActionChip, ErrorBox, FeriadoTag, Skeleton, Vacio, WeekNav } from '@/components/app/comun'
 import { ItemCard } from '@/components/app/agenda'
+import { hoyAR, horaAR, fechaHoyAR } from '@/lib/hora'
 
 type Modo = 'dia' | 'semana' | 'proximas'
 const MODOS = [['dia', 'Día'], ['semana', 'Semana'], ['proximas', 'Próximas']] as const
@@ -24,15 +25,15 @@ const horario = (i: AgendaItem) => (i.hora_inicio ? `${hhmm(i.hora_inicio)}${i.h
 // Agenda del equipo (coordinación): qué hace cada FED en el día, la semana y las próximas visitas a escuelas.
 export function AgendaEquipoView({ feds, reloadKey, onSelect }: { feds: Fed[], reloadKey: number, onSelect: (i: AgendaItem) => void }) {
   const [modo, setModo] = useState<Modo>('dia')
-  const [fecha, setFecha] = useState(() => toWeekday(new Date()))
+  const [fecha, setFecha] = useState(() => toWeekday(fechaHoyAR()))
   const [soloTerritorio, setSoloTerritorio] = useState(true)
   const [distrito, setDistrito] = useState('')
   const [fedId, setFedId] = useState('')
   const [celda, setCelda] = useState<{ fed: Fed, dia: Date } | null>(null)
 
-  const hoy = iso(new Date())
+  const hoy = hoyAR()
   const lunes = startOfWeek(fecha)
-  const [desde, hasta] = modo === 'dia' ? [fecha, fecha] : modo === 'semana' ? [lunes, addDays(lunes, 4)] : [new Date(), addDays(new Date(), 7)]
+  const [desde, hasta] = modo === 'dia' ? [fecha, fecha] : modo === 'semana' ? [lunes, addDays(lunes, 4)] : [fechaHoyAR(), addDays(fechaHoyAR(), 7)]
   const { items, error, retry } = useItems(() => getAllItems(iso(desde), iso(hasta)), [iso(desde), iso(hasta), reloadKey], `todos:${iso(desde)}:${iso(hasta)}`)
   const feriados = useFeriados(iso(desde), iso(hasta), null)
   const eventos = useEventos(iso(desde), iso(hasta))
@@ -65,7 +66,7 @@ export function AgendaEquipoView({ feds, reloadKey, onSelect }: { feds: Fed[], r
     <div className="flex flex-col gap-3 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <Segmented label="Vista de la agenda del equipo" value={modo} options={MODOS} onChange={setModo} />
-        {modo !== 'proximas' && <WeekNav onPrev={() => mover(-1)} onNext={() => mover(1)} onToday={() => setFecha(toWeekday(new Date()))} prevLabel={modo === 'dia' ? 'Día anterior' : 'Semana anterior'} nextLabel={modo === 'dia' ? 'Día siguiente' : 'Semana siguiente'} />}
+        {modo !== 'proximas' && <WeekNav onPrev={() => mover(-1)} onNext={() => mover(1)} onToday={() => setFecha(toWeekday(fechaHoyAR()))} prevLabel={modo === 'dia' ? 'Día anterior' : 'Semana anterior'} nextLabel={modo === 'dia' ? 'Día siguiente' : 'Semana siguiente'} />}
       </div>
       <div className="grid gap-2 sm:grid-cols-[auto_1fr_1fr] sm:items-center">
         <div className="flex flex-wrap gap-1.5"><Pill on={soloTerritorio} onClick={() => setSoloTerritorio(true)} conIcono={false}>En territorio</Pill><Pill on={!soloTerritorio} onClick={() => setSoloTerritorio(false)} conIcono={false}>Todas las acciones</Pill></div>
@@ -109,7 +110,7 @@ function Bloque({ i, onSelect, className = '' }: { i: AgendaItem, onSelect: (i: 
 // Día: en escritorio, línea de tiempo por FED; en mobile, lista agrupada por FED.
 function VistaDia({ equipo, fecha, esHoy, deDia, onSelect }: { equipo: Fed[], fecha: string, esHoy: boolean, deDia: (f: Fed, d: string) => AgendaItem[], onSelect: (i: AgendaItem) => void }) {
   const horas = Array.from({ length: H_FIN - H_INICIO + 1 }, (_, k) => H_INICIO + k)
-  const ahora = new Date(), ahoraStr = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`
+  const ahoraStr = horaAR()
   const orden = [...equipo].sort((a, b) => Number(deDia(b, fecha).length > 0) - Number(deDia(a, fecha).length > 0) || a.nombre_completo.localeCompare(b.nombre_completo))
   return <>
     <div className="hidden overflow-hidden rounded-2xl border border-dte-linea bg-white md:block">

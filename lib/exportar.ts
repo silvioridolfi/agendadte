@@ -1,6 +1,7 @@
 // Exportación a Excel (planilla mensual por FED y consolidado regional). Se genera en el navegador.
 import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, clubEstado, iniciado, ordenGrupo, ultimaActividad, type AgendaItem, type Club, type Encuentro, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
+import { hoyAR, anioAR, ZONA } from '@/lib/hora'
 
 type Datos = { titulo: string, desde: string, hasta: string, items: AgendaItem[], encuentros?: Encuentro[], feds: Fed[], clubes?: Club[], porFed?: boolean }
 
@@ -91,7 +92,7 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
   ], resumen, `${periodo} · cuenta acciones realizadas`)
   if (resumen.length > 1) wsRes.getRow(3 + resumen.length).font = { bold: true }
   if (oficial !== null) wsRes.addImage(oficial, { tl: { col: 0, row: 4 + resumen.length }, ext: { width: 520, height: 72 } })
-  wsRes.getCell(`A${9 + resumen.length}`).value = `© ${new Date().getFullYear()} Dirección de Tecnología Educativa (DTE), Región 1 · Agenda Territorial`
+  wsRes.getCell(`A${9 + resumen.length}`).value = `© ${anioAR()} Dirección de Tecnología Educativa (DTE), Región 1 · Agenda Territorial`
   wsRes.getCell(`A${9 + resumen.length}`).font = { size: 9, color: { argb: 'FF5B6472' } }
 
   tabla('Acciones', colsAcciones, ordenados.map(filaAccion))
@@ -108,7 +109,7 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
   })))
 
   if (clubes?.length) {
-    const hoy = new Date().toISOString().slice(0, 10)
+    const hoy = hoyAR()
     for (const [tipo, nombre] of [['CLUB DE TECNOLOGÍA', 'Clubes'], ['PRÁCTICAS PROFESIONALIZANTES', 'Prácticas']] as const) {
       const l = clubes.filter(c => c.tipo === tipo).sort((a, b) => escuela(a.school, a.lugar).localeCompare(escuela(b.school, b.lugar), 'es', { numeric: true }) || ordenGrupo(a.grupo, b.grupo))
       if (!l.length) continue
@@ -153,7 +154,7 @@ export async function exportarInforme({ titulo, persona, desde, hasta, indicador
   const datos: [string, string][] = [
     [titulo, ''], ['Nombre', persona.nombre], ['Rol', persona.rol], ['Región', 'Región Educativa 1'],
     ['Distritos a cargo', persona.distritos.map(titleCase).join(', ') || '—'], ['Carga horaria', persona.carga ?? '—'],
-    ['Período', `${fecha(desde)} al ${fecha(hasta)}`], ['Emitido', new Date().toLocaleDateString('es-AR')],
+    ['Período', `${fecha(desde)} al ${fecha(hasta)}`], ['Emitido', new Date().toLocaleDateString('es-AR', { timeZone: ZONA })],
   ]
   datos.forEach(([k, v], n) => {
     const row = ws.getRow(n + 3)

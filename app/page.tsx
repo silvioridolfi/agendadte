@@ -20,6 +20,7 @@ import { pendientes, sincronizarPendientes } from '@/components/app/offline'
 import { limpiarCache } from '@/components/app/offline'
 import { ConteoFotosProvider } from '@/components/app/fotosconteo'
 import { iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday, storage, VolverArriba } from '@/components/app/comun'
+import { fechaHoyAR } from '@/lib/hora'
 
 // Botón de la barra inferior mobile (área táctil de 56px de alto).
 function BarraBoton({ activo, onClick, icono: Icono, label }: { activo: boolean, onClick: () => void, icono: LucideIcon, label: string }) {
@@ -137,8 +138,8 @@ export default function Page() {
       : section === 'agenda'
       ? <AgendaView fed={profile} feds={feds ?? []} reloadKey={reloadKey} onNew={fecha => setEditing({ item: null, fecha })} onSelect={setSelected} onCambio={changed} />
       : <CoordinatorView key={profile.id} feds={profile.rol === 'fed' ? [profile] : (feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected}
-          propio={profile.rol === 'fed' ? profile : undefined} onNuevaAccion={preset => setEditing({ item: null, fecha: iso(toWeekday(new Date())), preset })}
-          onNuevaReunion={profile.rol !== 'coordinacion' ? undefined : () => setEditing({ item: null, fecha: iso(toWeekday(new Date())), preset: { accion: 'REUNIÓN', sub_accion: 'Reunión de equipo (CED/FED)', participantes: (feds ?? []).filter(f => f.id !== profile.id).map(f => f.id) } })} />}
+          propio={profile.rol === 'fed' ? profile : undefined} onNuevaAccion={preset => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset })}
+          onNuevaReunion={profile.rol !== 'coordinacion' ? undefined : () => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { accion: 'REUNIÓN', sub_accion: 'Reunión de equipo (CED/FED)', participantes: (feds ?? []).filter(f => f.id !== profile.id).map(f => f.id) } })} />}
 
     <DetailDialog item={selected} feds={feds ?? []} profile={profile} soloLectura={!!vista} onClose={() => setSelected(null)}
       onEdit={item => { setSelected(null); setEditing({ item }) }}
@@ -158,7 +159,7 @@ export default function Page() {
     <nav aria-label="Secciones" className="fixed inset-x-0 bottom-0 z-header border-t border-dte-linea bg-white/95 pb-safe backdrop-blur md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-3 items-center">
         <BarraBoton activo={section === 'agenda'} onClick={() => setSection('agenda')} icono={CalendarDays} label="Mi agenda" />
-        <div className="flex justify-center">{vista ? <span /> : <button type="button" onClick={() => setEditing({ item: null, fecha: iso(toWeekday(new Date())) })} aria-label="Nueva acción" className="-mt-5 flex size-14 items-center justify-center rounded-full bg-dte-magenta text-white shadow-lg ring-4 ring-white transition active:scale-95 hover:bg-dte-magenta-oscuro"><Plus className="size-6" /></button>}</div>
+        <div className="flex justify-center">{vista ? <span /> : <button type="button" onClick={() => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())) })} aria-label="Nueva acción" className="-mt-5 flex size-14 items-center justify-center rounded-full bg-dte-magenta text-white shadow-lg ring-4 ring-white transition active:scale-95 hover:bg-dte-magenta-oscuro"><Plus className="size-6" /></button>}</div>
         <BarraBoton activo={section === 'board'} onClick={() => setSection('board')} icono={LayoutDashboard} label="Tablero" />
       </div>
     </nav>

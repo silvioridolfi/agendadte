@@ -17,6 +17,7 @@ import { FotosChip } from '@/components/app/fotosconteo'
 import { InformeBloque, personaDe } from '@/components/app/informes'
 import { indicadoresCoordinacion, informeFed } from '@/lib/informes'
 import { type ItemPreset, itemCorto, cueLugar, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, schoolPlace, itemTitle, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
+import { hoyAR, fechaHoyAR, anioAR } from '@/lib/hora'
 
 // =====================================================================
 
@@ -54,7 +55,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     e.preventDefault(); tabs[j].focus(); tabs[j].click()
   }
   const [range, setRange] = useState<Range>('month')
-  const [anchor, setAnchor] = useState(() => new Date())
+  const [anchor, setAnchor] = useState(() => fechaHoyAR())
   const [search, setSearch] = useState('')
   const [distrito, setDistrito] = useState('')
   const [fedIdElegido, setFedId] = useState('')
@@ -82,7 +83,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   useEffect(() => { let alive = true; getClubes().then(r => alive && setClubesState(r)).catch(() => alive && setClubesState([])); return () => { alive = false } }, [reloadKey, clubKey])
   // Feriados y recesos del año: no cuentan para "sin actividad" de clubes y prácticas.
   const [noHabiles, setNoHabiles] = useState<Set<string>>(new Set())
-  useEffect(() => { const y = new Date().getFullYear(); getFeriados(`${y}-01-01`, `${y}-12-31`).then(l => setNoHabiles(new Set(l.filter(f => f.tipo !== 'distrital').map(f => f.fecha)))).catch(() => {}) }, [reloadKey])
+  useEffect(() => { const y = anioAR(); getFeriados(`${y}-01-01`, `${y}-12-31`).then(l => setNoHabiles(new Set(l.filter(f => f.tipo !== 'distrital').map(f => f.fecha)))).catch(() => {}) }, [reloadKey])
   const [exportando, setExportando] = useState(false)
   async function exportar() {
     if (!items) return
@@ -108,7 +109,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   const counts = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, base.filter(i => i.estado === e).length])) as Record<Estado, number>, [base])
   // FEDs en orden alfabético; dentro de cada uno, las acciones de la más nueva a la más antigua (fecha, hora y carga).
   // Primero lo de hoy hacia atrás (lo más reciente arriba); lo planificado a futuro va al final, de lo más próximo a lo más lejano.
-  const hoy = new Date().toLocaleDateString('en-CA')
+  const hoy = hoyAR()
   const recientePrimero = (a: AgendaItem, b: AgendaItem) => Number(a.fecha > hoy) - Number(b.fecha > hoy)
     || (a.fecha > hoy ? a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? '') : 0)
     || b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)
@@ -128,7 +129,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
       {tab !== 'agenda' && <div className="flex flex-wrap items-center gap-2">
         <Segmented label="Período" value={range} options={(Object.keys(rangeNames) as Range[]).map(v => [v, rangeNames[v][0]] as const)} onChange={setRange} />
         <Button variant="outline" disabled={!items || exportando} onClick={exportar} title="Descargar planilla regional con los filtros aplicados">{exportando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}{exportando ? 'Generando…' : 'Exportar Excel'}</Button>
-        <WeekNav prevLabel={`${cap(rangeNames[range][1])} anterior`} nextLabel={`${cap(rangeNames[range][1])} siguiente`} onPrev={() => setAnchor(shift(anchor, range, -1))} onToday={() => setAnchor(new Date())} onNext={() => setAnchor(shift(anchor, range, 1))} />
+        <WeekNav prevLabel={`${cap(rangeNames[range][1])} anterior`} nextLabel={`${cap(rangeNames[range][1])} siguiente`} onPrev={() => setAnchor(shift(anchor, range, -1))} onToday={() => setAnchor(fechaHoyAR())} onNext={() => setAnchor(shift(anchor, range, 1))} />
       </div>}
     </div>
 
