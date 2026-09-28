@@ -89,7 +89,7 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
   return <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-32 pt-6 lg:px-10">
     <header className="mb-5 flex items-center gap-3">
       <Avatar className="size-12"><AvatarFallback className={`${fedColor(feds, fed.id)} font-bold text-dte-petroleo-oscuro`}>{initials(fed.nombre_completo)}</AvatarFallback></Avatar>
-      <div className="min-w-0"><p className={eyebrow}>Mi perfil</p><h2 className="truncate text-2xl font-bold tracking-tight">{fed.nombre_completo}</h2></div>
+      <div className="min-w-0"><p className={eyebrow}>Mi perfil</p><h2 className="truncate text-2xl font-bold tracking-tight" title={fed.nombre_completo}>{fed.nombre_completo}</h2></div>
     </header>
 
     <div className="flex flex-col gap-4">

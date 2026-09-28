@@ -40,7 +40,7 @@ export function EventoTag({ e, compact = false, registrar = false }: { e: Evento
   return <>
     <button type="button" onClick={ev => { ev.stopPropagation(); setAbierto(true) }} title={`Evento DTE: ${e.nombre}`}
       className="inline-flex max-w-full items-center gap-1 truncate rounded-md bg-accion-evento-dte px-1.5 py-0.5 text-left text-xs font-semibold text-accion-evento-dte-texto transition hover:bg-accion-evento-dte-hover">
-      <CalendarHeart className="size-3 shrink-0" aria-hidden /><span className="truncate">{compact ? 'Evento DTE' : e.nombre}</span>
+      <CalendarHeart className="size-3 shrink-0" aria-hidden /><span className="truncate" title={compact ? 'Evento DTE' : e.nombre}>{compact ? 'Evento DTE' : e.nombre}</span>
     </button>
     {abierto && <EventoDialog e={e} registrar={registrar} onCerrar={() => setAbierto(false)} />}
   </>

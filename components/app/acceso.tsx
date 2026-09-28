@@ -116,7 +116,7 @@ export function UsuariosView({ miEmail, onVer }: { miEmail: string, onVer: (fedI
         return <li key={u.fedId} className="flex flex-col gap-2 p-3.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="flex flex-wrap items-center gap-2 font-semibold">{u.nombre}{u.esAdmin && <span className="inline-flex items-center gap-1 rounded-full bg-dte-tinte px-2 py-0.5 text-xs text-dte-petroleo"><ShieldCheck className="size-3" />Admin</span>}{u.rol === 'coordinacion' && <span className="rounded-full bg-dte-fondo px-2 py-0.5 text-xs text-dte-gris">Coordinación</span>}</p>
-            <p className="truncate text-sm text-dte-gris">{u.email ?? 'Sin correo cargado'}</p>
+            <p className="truncate text-sm text-dte-gris" title={u.email ?? 'Sin correo cargado'}>{u.email ?? 'Sin correo cargado'}</p>
             <p className="mt-1 flex flex-wrap items-center gap-2 text-xs"><span className={`rounded-full px-2 py-0.5 font-semibold ${ESTADO[u.estado].clase}`}>{ESTADO[u.estado].label}</span>{u.ultimoIngreso && <span className="text-dte-gris">Último ingreso: {new Date(u.ultimoIngreso).toLocaleDateString('es-AR', { timeZone: ZONA, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}</p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
