@@ -7,6 +7,7 @@ import * as api from '@/app/actions'
 import { guardarCache, leerCache } from '@/components/app/offline'
 import { titleCase } from '@/lib/format'
 import { etiquetaAccion, nombreAccion, type Accion, type AgendaItem, type Feriado, type Estado, type Fed, type School } from '@/lib/agenda'
+import { anioAR, ZONA } from '@/lib/hora'
 
 // ---- estilos por categoría ----
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
@@ -51,10 +52,11 @@ export const eyebrow = 'text-xs font-bold uppercase tracking-[0.15em] text-dte-m
 
 // ---- fechas (siempre en hora local, formato YYYY-MM-DD) ----
 export const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-export const parse = (s: string) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d) }
+// Mediodía local: al formatear en hora argentina no se corre de día aunque el dispositivo esté en otra zona.
+export const parse = (s: string) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 12) }
 export const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
 export const startOfWeek = (d: Date) => addDays(d, -((d.getDay() + 6) % 7))
-export const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString('es-AR', opts)
+export const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString('es-AR', { timeZone: ZONA, ...opts })
 export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 export const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '')
 export const timeRange = (i: AgendaItem) => (i.hora_inicio ? `${hhmm(i.hora_inicio)}${i.hora_fin ? ` a ${hhmm(i.hora_fin)}` : ''}` : 'Sin horario')
@@ -275,7 +277,7 @@ export function PieInstitucional({ oscuro = false }: { oscuro?: boolean }) {
   return <footer className={`px-4 pt-8 text-center text-xs ${oscuro ? 'pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-white/85' : 'mt-auto border-t border-dte-linea bg-white pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] text-dte-gris md:pb-8'}`}>
     <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center gap-3">
       <img src={oscuro ? '/brand/oficial-blanco.png' : '/brand/oficial-color.png'} alt="Dirección de Tecnología Educativa · Dirección General de Cultura y Educación · Gobierno de la Provincia de Buenos Aires" width={1200} height={166} className="h-12 w-auto max-w-full object-contain sm:h-16 lg:h-[72px]" />
-      <p>© {new Date().getFullYear()} Dirección de Tecnología Educativa (DTE), Región 1 · Desarrollado por Silvio Ridolfi, Facilitador de Educación Digital</p>
+      <p>© {anioAR()} Dirección de Tecnología Educativa (DTE), Región 1 · Desarrollado por Silvio Ridolfi, Facilitador de Educación Digital</p>
     </div>
   </footer>
 }

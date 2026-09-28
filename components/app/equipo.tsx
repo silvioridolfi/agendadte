@@ -10,6 +10,7 @@ import { titleCase } from '@/lib/format'
 import { franjasDte, textoFranjas } from '@/lib/ddjj'
 import { clubEstado, iniciado, type AgendaItem, type Club, type Fed } from '@/lib/agenda'
 import { fmt, iso, parse, fedColor, initials, Skeleton } from '@/components/app/comun'
+import { hoyAR } from '@/lib/hora'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 
@@ -17,7 +18,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 export function MiEquipoView({ feds, todos, items, clubes, noHabiles, periodo, desde, hasta, onSelect, onVerAcciones }: { feds: Fed[], todos: Fed[], items: AgendaItem[] | null, clubes: Club[] | null, noHabiles: Set<string>, periodo: string, desde: string, hasta: string, onSelect: (i: AgendaItem) => void, onVerAcciones: (fedId: string) => void }) {
   // Informe del período de un FED (el mismo que ve en su tablero), con descarga en Excel o PDF.
   const [informe, setInforme] = useState<Fed | null>(null)
-  const hoy = iso(new Date())
+  const hoy = hoyAR()
   const resumen = useMemo(() => new Map(feds.map(f => {
     const propias = (items ?? []).filter(i => i.fed_id === f.id)
     const realizadas = propias.filter(i => i.estado === 'realizada')

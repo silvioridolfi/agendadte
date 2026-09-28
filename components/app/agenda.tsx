@@ -11,6 +11,7 @@ import { ESTADOS, type AgendaItem, type Feriado, type EventoDte, type Estado, ty
 import { FotosChip } from '@/components/app/fotosconteo'
 import { EventoTag, useEventos } from '@/components/app/eventos'
 import { actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, shortSchoolName, schoolPlace, ddjjFor, itemTitle, itemCorto, cueLugar, firstName, getFedItems, storage, ActionChip, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
+import { hoyAR, fechaHoyAR } from '@/lib/hora'
 
 export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: { fed: Fed, feds: Fed[], reloadKey: number, onNew?: (fecha?: string) => void, onSelect: (item: AgendaItem) => void, onCambio?: (msg: string) => void }) {
   // Selección múltiple (null = apagada): sólo acciones propias, para cambiar estado o eliminar en bloque.
@@ -34,19 +35,19 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
   }
   const [view, setViewState] = useState<CalView>(() => (storage(() => localStorage.getItem(CAL_KEY)) as CalView) || 'week')
   const setView = (v: CalView) => { setViewState(v); storage(() => localStorage.setItem(CAL_KEY, v)) }
-  const [anchor, setAnchor] = useState(() => toWeekday(new Date()))
+  const [anchor, setAnchor] = useState(() => toWeekday(fechaHoyAR()))
   const [from, to] = calBounds(anchor, view)
   const { items, error, retry, desdeCache } = useItems(() => getFedItems(fed.id, iso(from), iso(to)), [fed.id, iso(from), iso(to), reloadKey], `${fed.id}:${iso(from)}:${iso(to)}`)
   const feriados = useFeriados(iso(from), iso(to), fed.rol === 'coordinacion' ? null : fed.distritos_a_cargo)
   // Eventos DTE: en la agenda propia de un FED se puede registrar la participación desde la marca del evento.
   const eventos = useEventos(iso(from), iso(to)), registrar = !!onNew
-  const today = iso(new Date())
+  const today = hoyAR()
   const byDay = useMemo(() => { const m = new Map<string, AgendaItem[]>(); for (const i of items ?? []) m.set(i.fecha, [...(m.get(i.fecha) ?? []), i]); return m }, [items])
   const weekendItems = useMemo(() => (items ?? []).filter(i => !isWeekday(parse(i.fecha))), [items])
   const counts = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, (items ?? []).filter(i => i.estado === e).length])) as Record<Estado, number>, [items])
   const inRange = today >= iso(from) && today <= iso(to)
   const puedeAgregar = (d: Date) => habil(d, feriados.get(iso(d)) ?? [])
-  const suggested = view === 'day' ? iso(anchor) : inRange ? iso(toWeekday(new Date())) : iso(toWeekday(from))
+  const suggested = view === 'day' ? iso(anchor) : inRange ? iso(toWeekday(fechaHoyAR())) : iso(toWeekday(from))
   const goDay = (d: Date) => { setAnchor(d); setView('day') }
   const periodo = { day: 'este día', week: 'esta semana', month: 'este mes', semester: 'estos 6 meses', list: 'este año' }[view]
   const title = view === 'day' ? cap(fmt(anchor, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
@@ -73,7 +74,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
       </div>
       <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
         <Segmented label="Vista" value={view} options={CAL_VIEWS} onChange={setView} />
-        <WeekNav prevLabel="Anterior" nextLabel="Siguiente" onPrev={() => setAnchor(calShift(anchor, view, -1))} onToday={() => setAnchor(toWeekday(new Date()))} onNext={() => setAnchor(calShift(anchor, view, 1))} />
+        <WeekNav prevLabel="Anterior" nextLabel="Siguiente" onPrev={() => setAnchor(calShift(anchor, view, -1))} onToday={() => setAnchor(toWeekday(fechaHoyAR()))} onNext={() => setAnchor(calShift(anchor, view, 1))} />
         <Button size="lg" variant="outline" disabled={!items?.length || exportando} onClick={exportar} title="Descargar la planilla del período en Excel" aria-label="Exportar la planilla del período a Excel" className="h-10 px-3"><FileSpreadsheet />{exportando && <Loader2 className="animate-spin" />}</Button>
         {editable && ['day', 'week', 'list'].includes(view) && <Button size="lg" variant={sel ? 'default' : 'outline'} onClick={() => setSel(s => (s ? null : []))} aria-pressed={!!sel} className={`h-10 px-3 ${sel ? 'bg-dte-petroleo hover:bg-dte-petroleo-oscuro' : ''}`}><ListChecks data-icon="inline-start" />Seleccionar</Button>}
         {onNew && <Button size="lg" variant="marca" onClick={() => onNew(suggested)} className="hidden px-4 md:inline-flex"><Plus data-icon="inline-start" />Nueva acción</Button>}
@@ -183,7 +184,7 @@ export function MiniMonth({ month, byDay, feriados, today, onDay }: { month: Dat
 // Vista Lista de Mi agenda: de la acción más nueva a la más antigua, de a 20.
 export function ListaAcciones({ items, viewer, onSelect, sel, onToggle }: { items: AgendaItem[], viewer: string, onSelect: (i: AgendaItem) => void, sel?: string[] | null, onToggle?: (id: string) => void }) {
   // Orden cronológico hacia adelante: arranca en hoy y sigue con lo próximo; lo anterior se despliega arriba a pedido.
-  const hoy = iso(new Date())
+  const hoy = hoyAR()
   const orden = useMemo(() => [...items].sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '99').localeCompare(b.hora_inicio ?? '99') || a.created_at.localeCompare(b.created_at)), [items])
   const inicioHoy = useMemo(() => { const i = orden.findIndex(x => x.fecha >= hoy); return i === -1 ? orden.length : i }, [orden, hoy])
   const [anteriores, setAnteriores] = useState(0)

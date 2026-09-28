@@ -9,13 +9,14 @@ import { Panel } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
 import { DISTRITOS_REGION, type Feriado } from '@/lib/agenda'
 import { az, cap, errMsg, fmt, parse, selectClass, getFeriados, addFeriado, deleteFeriado, ErrorBox, Skeleton } from '@/components/app/comun'
+import { anioAR } from '@/lib/hora'
 
 const TIPO_FERIADO: Record<Feriado['tipo'], string> = { nacional: 'Nacional', turistico: 'No laborable turístico', distrital: 'Aniversario distrital', receso: 'Receso escolar' }
 
 // Feriados, aniversarios distritales y recesos (sólo administración).
 export function FeriadosView({ autorId, onSaved }: { autorId: string, onSaved: (msg: string) => void }) {
   const distritos = DISTRITOS_REGION
-  const [year, setYear] = useState(new Date().getFullYear())
+  const [year, setYear] = useState(anioAR)
   const [list, setList] = useState<Feriado[] | null>(null)
   const [nuevo, setNuevo] = useState<Omit<Feriado, 'id'>>({ fecha: '', nombre: '', tipo: 'nacional', distrito: null, confirmado: true })
   const [busy, setBusy] = useState('')
