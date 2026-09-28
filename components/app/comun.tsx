@@ -35,6 +35,8 @@ export const actionStyle: Record<Accion, { chip: string, dot: string }> = {
   'SEGUIMIENTO DEL EQUIPO': { chip: 'bg-accion-seguimiento-del-equipo text-accion-seguimiento-del-equipo-texto', dot: 'bg-accion-seguimiento-del-equipo-punto' },
   'INFORME TÉCNICO': { chip: 'bg-accion-informe-tecnico text-accion-informe-tecnico-texto', dot: 'bg-accion-informe-tecnico-punto' },
   'REUNIÓN CON INSPECCIÓN': { chip: 'bg-accion-reunion-con-inspeccion text-accion-reunion-con-inspeccion-texto', dot: 'bg-accion-reunion-con-inspeccion-punto' },
+  'REUNIÓN CON NIVEL CENTRAL': { chip: 'bg-accion-reunion-con-nivel-central text-accion-reunion-con-nivel-central-texto', dot: 'bg-accion-reunion-con-nivel-central-punto' },
+  'ARTICULACIÓN MUNICIPAL': { chip: 'bg-accion-articulacion-municipal text-accion-articulacion-municipal-texto', dot: 'bg-accion-articulacion-municipal-punto' },
 }
 export const statusStyle: Record<Estado, { badge: string, label: string }> = {
   planificada: { badge: 'border-pba-azul/40 bg-pba-azul/10 text-pba-azul', label: 'Planificada' },

@@ -121,7 +121,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const [encPrincipal, setEncPrincipal] = useState<string | undefined>(enc0?.id)
   const esVisita = !!item?.visita || extras.length > 0
   const setExtra = (a: Accion, k: keyof DatosTipo, v: string) => setDatosExtra(d => ({ ...d, [a]: { ...(d[a] ?? datosVacios()), [k]: v } }))
-  const esCed = fed.rol === 'coordinacion', lugarOpcional = esFormacion || esEvento || (!!form.accion && SOLO_CED.includes(form.accion))
+  const esCed = fed.rol === 'coordinacion', lugarOpcional = esFormacion || esEvento || (!!form.accion && (SOLO_CED.includes(form.accion) || form.accion === 'REUNIÓN CON JEFATURA'))
   const conSubAccion = !!form.accion && !esClub && !esParo && !esLicencia
   // Clubes del FED (para elegir a cuál corresponde el encuentro). Los finalizados sólo si es el del encuentro que se edita.
   const [clubes, setClubes] = useState<Club[] | null>(null)
