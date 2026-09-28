@@ -121,7 +121,7 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
         </div>
       </div>
       : <div className="flex flex-col-reverse gap-2 border-t border-dte-linea pt-4 sm:flex-row sm:items-center sm:justify-between">
-        {own ? <Button variant="ghost" className="mt-2 self-start text-peligro sm:mt-0 sm:self-auto hover:bg-peligro-fondo hover:text-peligro" onClick={() => setConfirmDelete(true)}><Trash2 data-icon="inline-start" />Eliminar</Button>
+        {own ? <Button variant="outline" className="mt-2 self-start border-peligro/60 bg-white text-peligro hover:bg-peligro-fondo hover:text-peligro sm:mt-0 sm:self-auto" onClick={() => setConfirmDelete(true)}><Trash2 data-icon="inline-start" />Eliminar</Button>
           : <p className="text-xs text-dte-gris">{soloLectura ? 'Vista de solo lectura.' : `Sólo ${fed ? firstName(fed.nombre_completo) : 'el FED responsable'} puede modificar esta acción.`}</p>}
         <div className="flex gap-2 sm:justify-end"><Button variant="outline" className="flex-1 sm:flex-none" onClick={onClose}>Cerrar</Button>{own && <Button className="flex-1 bg-dte-petroleo hover:bg-dte-petroleo-oscuro sm:flex-none" onClick={() => onEdit(item)}><Pencil data-icon="inline-start" />Editar</Button>}</div>
       </div>}

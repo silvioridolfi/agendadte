@@ -41,7 +41,7 @@ export function BarraSeleccion({ ids, onListo, onCambio }: { ids: string[], onLi
       {ids.length > 0 && <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-xs font-semibold text-dte-gris">Marcar como:</span>
         {ESTADOS.map(e => <button key={e} type="button" disabled={!!busy} onClick={() => estado(e)} className={`inline-flex min-h-11 items-center gap-1 rounded-full border px-3 text-xs font-semibold transition disabled:opacity-50 md:min-h-8 ${statusStyle[e].badge}`}>{busy === e ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}{statusStyle[e].label}</button>)}
-        <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => setBorrar(true)} className="ml-auto text-peligro hover:bg-peligro-fondo hover:text-peligro">{busy === 'borrar' ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Trash2 data-icon="inline-start" />}Eliminar</Button>
+        <Button variant="outline" size="sm" disabled={!!busy} onClick={() => setBorrar(true)} className="ml-auto border-peligro/60 bg-white text-peligro hover:bg-peligro-fondo hover:text-peligro">{busy === 'borrar' ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Trash2 data-icon="inline-start" />}Eliminar</Button>
       </div>}
       {error && <ErrorBox message={error} />}
     </div>
