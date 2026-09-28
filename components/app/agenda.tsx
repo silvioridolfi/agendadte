@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ESTADOS, type AgendaItem, type Feriado, type EventoDte, type Estado, type Fed } from '@/lib/agenda'
 import { FotosChip } from '@/components/app/fotosconteo'
 import { EventoTag, useEventos } from '@/components/app/eventos'
-import { actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, shortSchoolName, schoolPlace, ddjjFor, itemTitle, itemCorto, cueLugar, firstName, getFedItems, storage, ActionChip, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
+import { actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, ddjjFor, itemTitle, itemCorto, cueLugar, firstName, getFedItems, storage, ActionChip, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
 
 export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: { fed: Fed, feds: Fed[], reloadKey: number, onNew?: (fecha?: string) => void, onSelect: (item: AgendaItem) => void, onCambio?: (msg: string) => void }) {
   // Selección múltiple (null = apagada): sólo acciones propias, para cambiar estado o eliminar en bloque.
