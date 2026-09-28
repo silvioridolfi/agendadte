@@ -159,7 +159,7 @@ export type Notificacion = { id: string; tipo: 'etiqueta' | 'modificacion' | 'ca
 
 // Feriados nacionales, días con fines turísticos y aniversarios distritales (tabla public.feriados).
 // distrito null = aplica a todos; si no, sólo a quienes tienen ese distrito a cargo.
-export type Feriado = { id?: string; fecha: string; nombre: string; tipo: 'nacional' | 'turistico' | 'distrital' | 'receso'; distrito: string | null; confirmado: boolean }
+export type Feriado = { id?: string; fecha: string; nombre: string; tipo: 'nacional' | 'provincial' | 'no_laborable' | 'turistico' | 'distrital' | 'receso'; distrito: string | null; confirmado: boolean }
 
 export const MODALIDADES = ['Presencial', 'Virtual', 'Híbrido'] as const
 export type Modalidad = (typeof MODALIDADES)[number]

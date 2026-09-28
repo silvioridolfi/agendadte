@@ -11,7 +11,7 @@ import { DISTRITOS_REGION, type Feriado } from '@/lib/agenda'
 import { az, cap, errMsg, fmt, parse, selectClass, getFeriados, addFeriado, deleteFeriado, ErrorBox, Skeleton } from '@/components/app/comun'
 import { anioAR } from '@/lib/hora'
 
-const TIPO_FERIADO: Record<Feriado['tipo'], string> = { nacional: 'Nacional', turistico: 'No laborable turístico', distrital: 'Aniversario distrital', receso: 'Receso escolar' }
+const TIPO_FERIADO: Record<Feriado['tipo'], string> = { nacional: 'Nacional', provincial: 'Provincial', no_laborable: 'Día no laborable', turistico: 'No laborable turístico', distrital: 'Aniversario distrital', receso: 'Receso escolar' }
 
 // Feriados, aniversarios distritales y recesos (sólo administración).
 export function FeriadosView({ autorId, onSaved }: { autorId: string, onSaved: (msg: string) => void }) {
@@ -37,9 +37,9 @@ export function FeriadosView({ autorId, onSaved }: { autorId: string, onSaved: (
   }
   return <Panel title="Feriados, aniversarios y recesos" subtitle="Se muestran en los calendarios, se saltean en las series y no cuentan para “sin actividad” de clubes y prácticas."
     action={<div className="flex items-center gap-1"><Button variant="outline" size="sm" onClick={() => cambiarAnio(-1)}>‹</Button><span className="px-2 text-sm font-bold tabular-nums">{year}</span><Button variant="outline" size="sm" onClick={() => cambiarAnio(1)}>›</Button></div>}>
-    <div className="mb-4 grid gap-2 rounded-tile bg-dte-fondo p-3 sm:grid-cols-2 sm:items-end lg:grid-cols-[9rem_1fr_12rem_10rem_auto_auto]">
+    <div className="mb-4 grid gap-2 rounded-tile bg-dte-fondo p-3 sm:grid-cols-2 sm:items-end lg:grid-cols-4">
       <label className="flex flex-col gap-1 text-xs font-semibold">Fecha<Input type="date" value={nuevo.fecha} onChange={e => setNuevo(n => ({ ...n, fecha: e.target.value }))} className="h-11 bg-white md:h-9" /></label>
-      <label className="flex flex-col gap-1 text-xs font-semibold">Nombre<Input value={nuevo.nombre} onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))} placeholder="Ej.: Receso invernal" className="h-11 bg-white md:h-9" /></label>
+      <label className="flex flex-col gap-1 text-xs font-semibold lg:col-span-3">Nombre<Input value={nuevo.nombre} onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))} placeholder="Ej.: Visita del Papa" className="h-11 bg-white md:h-9" /></label>
       <label className="flex flex-col gap-1 text-xs font-semibold">Tipo<select className={selectClass} value={nuevo.tipo} onChange={e => setNuevo(n => ({ ...n, tipo: e.target.value as Feriado['tipo'] }))}>{(Object.keys(TIPO_FERIADO) as Feriado['tipo'][]).sort((a, b) => az(TIPO_FERIADO[a], TIPO_FERIADO[b])).map(t => <option key={t} value={t}>{TIPO_FERIADO[t]}</option>)}</select></label>
       <label className="flex flex-col gap-1 text-xs font-semibold">Distrito<select className={selectClass} disabled={nuevo.tipo !== 'distrital'} value={nuevo.distrito ?? ''} onChange={e => setNuevo(n => ({ ...n, distrito: e.target.value || null }))}><option value="">—</option>{distritos.map(d => <option key={d} value={d}>{titleCase(d)}</option>)}</select></label>
       <label className="flex items-center gap-1.5 pb-2 text-xs font-semibold"><input type="checkbox" checked={nuevo.confirmado} onChange={e => setNuevo(n => ({ ...n, confirmado: e.target.checked }))} className="size-4" />Confirmado</label>
