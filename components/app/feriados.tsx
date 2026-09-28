@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Plus, Trash2 } from 'lucide-react'
+import { Check, Loader2, Plus, Trash2 } from 'lucide-react'
 import { Confirmar } from '@/components/ui/confirmar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Panel } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
 import { DISTRITOS_REGION, type Feriado } from '@/lib/agenda'
-import { az, cap, errMsg, fmt, parse, selectClass, getFeriados, addFeriado, deleteFeriado, ErrorBox, Skeleton } from '@/components/app/comun'
+import { az, cap, errMsg, fmt, parse, selectClass, getFeriados, addFeriado, deleteFeriado, confirmarFeriado, ErrorBox, Skeleton } from '@/components/app/comun'
 import { anioAR } from '@/lib/hora'
 
 const TIPO_FERIADO: Record<Feriado['tipo'], string> = { nacional: 'Nacional', provincial: 'Provincial', no_laborable: 'Día no laborable', turistico: 'No laborable turístico', distrital: 'Aniversario distrital', receso: 'Receso escolar' }
@@ -29,6 +29,11 @@ export function FeriadosView({ autorId, onSaved }: { autorId: string, onSaved: (
   async function agregar() {
     setBusy('add'); setError('')
     try { await addFeriado(autorId, nuevo); onSaved('Feriado agregado'); setNuevo(n => ({ ...n, fecha: '', nombre: '' })); cargar() } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
+  }
+  async function confirmar(f: Feriado) {
+    if (!f.id) return
+    setBusy('c' + f.id); setError('')
+    try { await confirmarFeriado(f.id, true); onSaved('Feriado confirmado'); setList(l => l?.map(x => (x.id === f.id ? { ...x, confirmado: true } : x)) ?? l) } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
   }
   async function quitar(f: Feriado) {
     if (!f.id) return
@@ -51,7 +56,8 @@ export function FeriadosView({ autorId, onSaved }: { autorId: string, onSaved: (
       : <ul className="divide-y divide-dte-linea rounded-tile border border-dte-linea">{list.map(f => <li key={f.id ?? f.fecha + f.nombre} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
         <span className="min-w-0"><b className="tabular-nums">{cap(fmt(parse(f.fecha), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))}</b> · {f.nombre}{!f.confirmado && <span className="text-dte-gris"> (a confirmar)</span>}
           <span className="block text-xs text-dte-gris">{TIPO_FERIADO[f.tipo]}{f.distrito ? ` · ${titleCase(f.distrito)}` : ''}</span></span>
-        <Button variant="ghost" size="sm" disabled={busy === f.id} onClick={() => setAQuitar(f)} aria-label={`Eliminar ${f.nombre}`} className="text-peligro hover:bg-peligro-fondo hover:text-peligro">{busy === f.id ? <Loader2 className="animate-spin" /> : <Trash2 className="size-4" />}</Button>
+        <span className="flex shrink-0 items-center gap-1">{!f.confirmado && <Button variant="outline" size="sm" disabled={busy === 'c' + f.id} onClick={() => confirmar(f)} aria-label={`Confirmar ${f.nombre}`}>{busy === 'c' + f.id ? <Loader2 className="animate-spin" /> : <Check data-icon="inline-start" />}Confirmar</Button>}
+        <Button variant="ghost" size="sm" disabled={busy === f.id} onClick={() => setAQuitar(f)} aria-label={`Eliminar ${f.nombre}`} className="text-peligro hover:bg-peligro-fondo hover:text-peligro">{busy === f.id ? <Loader2 className="animate-spin" /> : <Trash2 className="size-4" />}</Button></span>
       </li>)}</ul>}
     <Confirmar abierto={!!aQuitar} peligro titulo="¿Eliminar este feriado?" accion="Eliminar"
       descripcion={aQuitar ? <><b>{aQuitar.nombre}</b> ({cap(fmt(parse(aQuitar.fecha), { weekday: 'long', day: 'numeric', month: 'long' }))}) deja de mostrarse en los calendarios y de saltearse en las series.</> : ''}
