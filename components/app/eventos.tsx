@@ -106,7 +106,6 @@ export function EventosPanel({ onSaved }: { onSaved: (msg: string) => void }) {
   const [error, setError] = useState('')
   const [aQuitar, setAQuitar] = useState<EventoDte | null>(null)
   const cargar = () => { setList(null); listarEventos(year).then(setList).catch(e => { setList([]); setError(errMsg(e)) }) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(cargar, [year])
   const set = <K extends keyof EventoInput>(k: K, v: EventoInput[K]) => setForm(f => ({ ...f, [k]: v }))
   const setFecha = (i: number, v: string) => setForm(f => ({ ...f, fechas: f.fechas.map((x, j) => (j === i ? v : x)) }))

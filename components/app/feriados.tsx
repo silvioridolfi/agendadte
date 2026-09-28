@@ -23,7 +23,6 @@ export function FeriadosView({ autorId, onSaved }: { autorId: string, onSaved: (
   const [error, setError] = useState('')
   const [aQuitar, setAQuitar] = useState<Feriado | null>(null)
   const cargar = () => { setList(null); getFeriados(`${year}-01-01`, `${year}-12-31`).then(setList).catch(e => { setList([]); setError(errMsg(e)) }) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(cargar, [year])
   async function agregar() {
     setBusy('add'); setError('')

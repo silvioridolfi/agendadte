@@ -77,7 +77,6 @@ export function PveEquipoView() {
   const [confirmar, setConfirmar] = useState(false)
   const [aviso, setAviso] = useState('')
   const cargar = () => { setLista(null); setError(''); pveEquipo(mes).then(setLista).catch(e => { setLista([]); setError(errMsg(e)) }) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(cargar, [mes])
   const mover = (n: number) => { const d = parse(mes); d.setMonth(d.getMonth() + n); setMes(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`); setAviso('') }
   const nombreMes = `${MESES[Number(mes.slice(5, 7)) - 1]} ${mes.slice(0, 4)}`
