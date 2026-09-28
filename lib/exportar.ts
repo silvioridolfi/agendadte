@@ -127,8 +127,8 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
     }
   }
 
-  // Una hoja por FED con sus acciones (la planilla mensual de cada uno).
-  if (porFed) for (const f of equipo) tabla(f.nombre_completo, colsAcciones.filter(c => c.key !== 'fed'), ordenados.filter(i => i.fed_id === f.id).map(filaAccion))
+  // Una hoja por FED con sus acciones (la planilla mensual de cada uno). Con un solo FED sería igual a "Acciones", así que se omite.
+  if (porFed && equipo.length > 1) for (const f of equipo) tabla(f.nombre_completo, colsAcciones.filter(c => c.key !== 'fed'), ordenados.filter(i => i.fed_id === f.id).map(filaAccion))
 
   const buf = await wb.xlsx.writeBuffer()
   const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
