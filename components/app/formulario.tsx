@@ -12,8 +12,9 @@ import { CAT_COLOR } from '@/components/metrics'
 import { etiquetaAccion, nombreAccion, iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, ACCIONES_CED, SOLO_CED, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
 import type { Organismo } from '@/app/actions'
 import { titleCase } from '@/lib/format'
-import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
+import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, guardarVisita, ActionChip, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
 import { encolarOffline } from '@/components/app/offline'
+import { alternarTipo, datosVacios, inputDeTipo, type DatosTipo } from '@/lib/visita'
 import { hoyAR } from '@/lib/hora'
 
 const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -110,6 +111,11 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const [frecuentes, setFrecuentes] = useState<Accion[]>(() => { try { return JSON.parse(storage(() => localStorage.getItem(claveFrecuentes)) ?? '[]') } catch { return [] } })
   useEffect(() => { let vivo = true; misTiposFrecuentes().then(l => { if (!vivo) return; setFrecuentes(l); storage(() => localStorage.setItem(claveFrecuentes, JSON.stringify(l))) }).catch(() => {}); return () => { vivo = false } }, [claveFrecuentes])
   const [buscaTipo, setBuscaTipo] = useState('')
+  // Visita con varias acciones (sólo al crear): el primer tipo usa los campos de siempre; los demás, un bloque propio cada uno.
+  const multiple = !item && !modoT
+  const [extras, setExtras] = useState<Accion[]>([])
+  const [datosExtra, setDatosExtra] = useState<Partial<Record<Accion, DatosTipo>>>({})
+  const setExtra = (a: Accion, k: keyof DatosTipo, v: string) => setDatosExtra(d => ({ ...d, [a]: { ...(d[a] ?? datosVacios()), [k]: v } }))
   const esCed = fed.rol === 'coordinacion', lugarOpcional = esFormacion || esEvento || (!!form.accion && SOLO_CED.includes(form.accion))
   const conSubAccion = !!form.accion && !esClub && !esParo && !esLicencia
   // Clubes del FED (para elegir a cuál corresponde el encuentro). Los finalizados sólo si es el del encuentro que se edita.
@@ -193,6 +199,19 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const horario = chequearHorario(ddjjDia, form.hora_inicio, form.hora_fin)
   const fueraDeHorario = horario.fuera || horario.choques.length > 0
 
+  // Tipo principal: el de los campos de siempre (al cambiarlo se reinician club y tipo de jornada).
+  const setPrincipal = (name: Accion | null, datos?: DatosTipo) => setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '',
+    tipo_jornada: name && f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada,
+    ...(datos ? { sub_accion: datos.sub_accion, cantidad: datos.cantidad, detalle: datos.detalle, propuesta: datos.propuesta, encuentro_n: datos.encuentro_n, destinatarios: datos.destinatarios, modalidad: datos.modalidad, inscriptos: datos.inscriptos, asistentes: datos.asistentes } : {}) }))
+  function elegirTipo(name: Accion) {
+    if (!multiple) { setPrincipal(name); return }
+    const actuales = form.accion ? [form.accion, ...extras] : []
+    const nuevos = alternarTipo(actuales, name)
+    // Si se quita el principal, el siguiente pasa a ocupar su lugar con los datos que ya tenía cargados.
+    if (nuevos[0] !== form.accion) setPrincipal(nuevos[0] ?? null, nuevos[0] && extras.includes(nuevos[0]) ? datosExtra[nuevos[0]] ?? datosVacios() : undefined)
+    setExtras(nuevos.slice(1))
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     // Validación: mensaje debajo de cada campo y foco/scroll al primero con error.
@@ -233,6 +252,21 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       encuentro: conEncuentro ? { id: enc0?.id, propuesta: form.propuesta, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: form.destinatarios, inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes),
         ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', grupo: grupo, escuela_origen_id: otroOrigen ? origen?.id ?? null : null, encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
     }
+    // Visita con varias acciones: una por tipo, con los mismos datos comunes y un solo aviso a los acompañantes.
+    if (extras.length) {
+      const inputs = [input, ...extras.map(a => inputDeTipo(input, a, datosExtra[a] ?? datosVacios()))]
+      const offline = () => { for (const i of inputs) encolarOffline(i); onSaved({ creadas: inputs.length, offline: true }) }
+      if (typeof navigator !== 'undefined' && !navigator.onLine) { offline(); return }
+      try {
+        const r = await guardarVisita(inputs)
+        if (r.error && !r.guardadas.length) { setError(`No se pudo guardar ${r.error}`); setSaving(false); return }
+        onSaved({ creadas: r.creadas, mensaje: r.error ? `Se guardaron ${r.guardadas.map(a => a.toLowerCase()).join(', ')}. No se pudo guardar ${r.error}. Cargala de nuevo.` : `Se agregaron ${inputs.length} acciones de la visita` })
+      } catch (err) {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) { offline(); return }
+        setError(errMsg(err)); setSaving(false)
+      }
+      return
+    }
     // Sin conexión: queda en cola en este dispositivo y se envía al volver la señal.
     if (typeof navigator !== 'undefined' && !navigator.onLine) { encolarOffline(input, item?.id); onSaved({ creadas: 1, offline: true }); return }
     try { const r = await saveItem(input, item?.id, alcance); onSaved({ creadas: r.creadas, mensaje: alcance === 'siguientes' && r.creadas > 1 ? `Se actualizaron este encuentro y ${r.creadas - 1} ${r.creadas === 2 ? 'fecha siguiente' : 'fechas siguientes'} de la serie` : undefined }) } catch (err) {
@@ -256,12 +290,13 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
 
     {!modoT && <fieldset id="campo-accion" className="scroll-mt-24" aria-describedby={errores.accion ? 'err-accion' : undefined}>
       <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta" aria-hidden>*</span></legend>
+      {multiple && <p className="-mt-1 mb-2 text-xs text-dte-gris">Si en la misma visita hiciste más de una acción, marcalas todas: se guarda una por tipo, con la misma escuela, fecha y horario.</p>}
       {errores.accion && <p id="err-accion" role="alert" className="-mt-1 mb-2 text-sm font-medium text-peligro">{errores.accion}</p>}
       {(() => {
         // Botón de cada tipo de acción.
         const boton = (name: Accion) => {
-          const on = form.accion === name
-          return <button key={name} type="button" title={nombreAccion(name)} aria-pressed={on} onClick={() => { limpiar('accion'); setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '', tipo_jornada: f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada })) }} className={`flex min-h-11 min-w-0 items-center gap-1.5 rounded-control border px-2 py-2 text-left sm:gap-2 sm:px-2.5 text-xs font-bold uppercase leading-tight tracking-tight sm:tracking-normal break-words hyphens-auto transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
+          const on = form.accion === name || extras.includes(name)
+          return <button key={name} type="button" title={nombreAccion(name)} aria-pressed={on} onClick={() => { limpiar('accion'); elegirTipo(name) }} className={`flex min-h-11 min-w-0 items-center gap-1.5 rounded-control border px-2 py-2 text-left sm:gap-2 sm:px-2.5 text-xs font-bold uppercase leading-tight tracking-tight sm:tracking-normal break-words hyphens-auto transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
             <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span><span className="min-w-0">{etiquetaAccion(name).replace('/', '/\u200b')}</span>
           </button>
         }
@@ -307,6 +342,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       {participantes.length > 0 && <p className="mt-1.5 text-xs text-dte-gris">La acción va a aparecer en el calendario de {participantes.length === 1 ? 'esa persona' : `esas ${participantes.length} personas`} y les llega una notificación. Sólo vos podés editarla.</p>}
     </fieldset>}
 
+    {extras.length > 0 && form.accion && <p className="-mb-2 flex items-center gap-2 text-sm font-semibold">Datos de <ActionChip label={form.accion} /></p>}
     {conSubAccion && <div className={`grid gap-4 ${cat === 'tecnica' ? 'sm:grid-cols-[1fr_9rem]' : ''}`}>
       <Field label={esFormacion ? 'Tema' : esEvento ? 'Evento' : 'Sub-acción'} hint="(opcional)"><Input list="sub-acciones" placeholder={esFormacion ? 'Ej.: Inteligencia artificial en el aula' : esEvento ? 'Ej.: JED 2026' : form.accion && SUB_ACCIONES[form.accion] ? `Ej.: ${SUB_ACCIONES[form.accion]!.slice(0, 2).join(', ')}` : 'Ej.: revisión de equipamiento'} value={form.sub_accion} onChange={e => set('sub_accion', e.target.value)} className="md:h-10" /></Field>
       {cat === 'tecnica' && <Field label="Cantidad" hint="(equipos)"><Input type="number" min={0} inputMode="numeric" placeholder="0" value={form.cantidad} onChange={e => set('cantidad', e.target.value)} className="md:h-10" /></Field>}
@@ -360,6 +396,26 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     </fieldset>}
     {!aDefinir && !modoT && !esParo && <Field label={esLicencia ? 'Motivo' : 'Detalle'} hint="(opcional)"><Textarea placeholder={esLicencia ? 'Ej.: enfermedad, razones particulares (sin datos sensibles)' : 'Información útil para el seguimiento: con quién, qué se acordó, pendientes…'} rows={3} value={form.detalle} onChange={e => set('detalle', e.target.value)} /></Field>}
 
+    {extras.map(a => { const d = datosExtra[a] ?? datosVacios(), sug = SUB_ACCIONES[a]; return <fieldset key={a} className="flex flex-col gap-3 rounded-tile border border-dte-linea p-3">
+      <legend className="flex items-center gap-2 px-1 text-sm font-semibold">Datos de <ActionChip label={a} /></legend>
+      <div className={`grid gap-4 ${CATEGORIA[a] === 'tecnica' ? 'sm:grid-cols-[1fr_9rem]' : ''}`}>
+        <Field label="Sub-acción" hint="(opcional)"><Input list={`sub-${a}`} value={d.sub_accion} onChange={e => setExtra(a, 'sub_accion', e.target.value)} placeholder={sug ? `Ej.: ${sug.slice(0, 2).join(', ')}` : 'Ej.: revisión de equipamiento'} className="md:h-10" /></Field>
+        {CATEGORIA[a] === 'tecnica' && <Field label="Cantidad" hint="(equipos)"><Input type="number" min={0} inputMode="numeric" placeholder="0" value={d.cantidad} onChange={e => setExtra(a, 'cantidad', e.target.value)} className="md:h-10" /></Field>}
+      </div>
+      <datalist id={`sub-${a}`}>{[...(sug ?? [])].sort(az).map(o => <option key={o} value={o} />)}</datalist>
+      {sug && <div className="-mt-1 flex flex-wrap items-center gap-1.5"><span className="mr-0.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Sugerencias</span>{[...sug].sort(az).map(o => { const cur = d.sub_accion.split(',').map(x => x.trim()).filter(Boolean), on = cur.includes(o); return <Pill key={o} on={on} onClick={() => setExtra(a, 'sub_accion', (on ? cur.filter(x => x !== o) : [...cur, o]).join(', '))}>{o}</Pill> })}</div>}
+      {CON_ENCUENTRO.includes(a) && <div className="grid gap-4 rounded-tile bg-dte-fondo p-3 sm:grid-cols-6">
+        <Field label="Propuesta" className="sm:col-span-4"><Input placeholder="Ej.: Ciudadanía digital en el aula" value={d.propuesta} onChange={e => setExtra(a, 'propuesta', e.target.value)} className="h-10 bg-white" /></Field>
+        <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={d.encuentro_n} onChange={e => setExtra(a, 'encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
+        <Field label="Destinatarios" className="sm:col-span-4"><Input placeholder="Ej.: estudiantes de 6° A, docentes" value={d.destinatarios} onChange={e => setExtra(a, 'destinatarios', e.target.value)} className="h-10 bg-white" /></Field>
+        <Field label="Modalidad" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={d.modalidad} onChange={e => setExtra(a, 'modalidad', e.target.value)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>
+        <Field label="Inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={d.inscriptos} onChange={e => setExtra(a, 'inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
+        <Field label="Asistentes" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={d.asistentes} onChange={e => setExtra(a, 'asistentes', e.target.value)} className="h-10 bg-white" /></Field>
+      </div>}
+      <Field label="Detalle" hint="(opcional)"><Textarea rows={2} value={d.detalle} onChange={e => setExtra(a, 'detalle', e.target.value)} placeholder="Información útil para el seguimiento de esta acción" /></Field>
+      <Button type="button" variant="ghost" size="sm" className="self-start text-peligro hover:bg-peligro-fondo hover:text-peligro" onClick={() => elegirTipo(a)}>Quitar {etiquetaAccion(a).toLowerCase()} de la visita</Button>
+    </fieldset> })}
+
     {!aDefinir && item && !modoT && <fieldset><legend className="mb-2 text-sm font-semibold">Estado</legend><div className="flex flex-wrap gap-2">{(item ? ESTADOS : (['planificada', 'realizada'] as const)).map(e => <button key={e} type="button" aria-pressed={form.estado === e} onClick={() => set('estado', e)} className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition md:min-h-8 md:text-xs ${form.estado === e ? statusStyle[e].badge : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{form.estado === e && <Check className="size-3" />}{statusStyle[e].label}</button>)}</div></fieldset>}
 
     {!aDefinir && !item && !esParo && !esLicencia && form.accion && <fieldset id="campo-serie" className="scroll-mt-24 rounded-tile border border-dte-linea p-3">
@@ -379,7 +435,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     {error && <ErrorBox message={error} />}
     <div className="sticky -bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] -mx-4 -mb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex gap-2 border-t border-dte-linea bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:-bottom-4 sm:-mb-4 sm:justify-end sm:pb-3">
       <Button variant="outline" type="button" size="lg" className="flex-1 sm:flex-none" onClick={onCancel}>Cancelar</Button>
-      <Button type="submit" size="lg" disabled={saving} className="flex-1 bg-dte-petroleo px-4 sm:flex-none font-semibold hover:bg-dte-petroleo-oscuro">{saving && <Loader2 className="animate-spin" data-icon="inline-start" />}{item ? 'Guardar cambios' : aDefinir ? 'Guardar como “por iniciar”' : 'Agregar a mi agenda'}</Button>
+      <Button type="submit" size="lg" disabled={saving} className="flex-1 bg-dte-petroleo px-4 sm:flex-none font-semibold hover:bg-dte-petroleo-oscuro">{saving && <Loader2 className="animate-spin" data-icon="inline-start" />}{item ? 'Guardar cambios' : aDefinir ? 'Guardar como “por iniciar”' : extras.length ? `Agregar ${extras.length + 1} acciones` : 'Agregar a mi agenda'}</Button>
     </div>
     <Dialog open={preguntarSerie} onOpenChange={setPreguntarSerie}>
       <DialogContent className="bg-white sm:max-w-md">
