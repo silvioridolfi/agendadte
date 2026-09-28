@@ -542,6 +542,15 @@ export const cambiarEstadoVarias = async (ids: string[], estado: AgendaItemInput
 export const eliminarVarias = async (ids: string[]) => conUsuario(yo => eliminarVariasImpl(ids, yo.fed.id))
 export const moverFinDeSemana = async (ids: string[], destino: 'viernes' | 'lunes') => conUsuario(yo => moverFinDeSemanaImpl(ids, yo.fed.id, destino))
 export const getFeriados = async (from: string, to: string) => conUsuario(() => getFeriadosImpl(from, to))
+// Tipos de acción que más carga cada uno en el último año (para mostrarlos primero en el formulario).
+export const misTiposFrecuentes = async () => conUsuario(async yo => {
+  const desde = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10)
+  const { data, error } = await supabaseServer().from('agenda_items').select('accion').eq('fed_id', yo.fed.id).gte('fecha', desde).limit(5000)
+  if (error) throw new Error(error.message)
+  const n = new Map<string, number>()
+  for (const r of data ?? []) n.set(r.accion as string, (n.get(r.accion as string) ?? 0) + 1)
+  return [...n.entries()].sort((a, b) => b[1] - a[1]).map(([accion]) => accion as AgendaItemInput['accion'])
+})
 
 // ---- Eventos DTE: los carga administración; cada FED registra su participación (acción "EVENTO DTE" vinculada).
 const EVENTO_COLS = 'id, nombre, fechas, hora_inicio, hora_fin, modalidad, lugar, enlace, descripcion'
