@@ -7,7 +7,8 @@ import type { AgendaItem, AgendaItemInput } from '@/lib/agenda'
 
 const COLA = 'agenda-territorial:pendientes'
 const CACHE = 'agenda-territorial:cache:'
-type Pendiente = { input: AgendaItemInput, id?: string, ts: number }
+// `visita`: visita con varias acciones cargada sin señal; se envía junta para que quede como una sola.
+type Pendiente = { input: AgendaItemInput, id?: string, visita?: AgendaItemInput[], ts: number }
 
 function leer<T>(key: string, fallback: T): T {
   try { const v = localStorage.getItem(key); return v ? (JSON.parse(v) as T) : fallback } catch { return fallback }
@@ -37,6 +38,11 @@ export function encolarOffline(input: AgendaItemInput, id?: string) {
   window.dispatchEvent(new Event('agenda-pendientes'))
 }
 
+export function encolarVisitaOffline(inputs: AgendaItemInput[]) {
+  escribir(COLA, [...leer<Pendiente[]>(COLA, []), { input: inputs[0], visita: inputs, ts: Date.now() }])
+  window.dispatchEvent(new Event('agenda-pendientes'))
+}
+
 export const pendientes = () => leer<Pendiente[]>(COLA, []).length
 
 // Envía la cola en orden. Las que fallan por un error del servidor quedan para revisar; las de red se reintentan después.
@@ -47,6 +53,13 @@ export async function sincronizarPendientes(): Promise<{ enviadas: number, falli
   let enviadas = 0
   for (const p of cola) {
     try {
+      if (p.visita) {
+        // Si una acción de la visita falla, las anteriores ya quedaron guardadas: no se reintenta para no duplicarlas.
+        const r = await api.guardarVisita(p.visita)
+        if (!r.ok) fallidas.push(`Visita del ${p.input.fecha}: ${r.error}`)
+        else { enviadas += r.data.guardadas.length; if (r.data.error) fallidas.push(`Visita del ${p.input.fecha}: no se pudo guardar ${r.data.error}`) }
+        continue
+      }
       const r = await api.saveItem(p.input, p.id)
       if (r.ok) enviadas++
       else { fallidas.push(`${p.input.accion} del ${p.input.fecha}: ${r.error}`) }
