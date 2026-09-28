@@ -33,7 +33,7 @@ export function BarraSeleccion({ ids, onListo, onCambio }: { ids: string[], onLi
     try { const n = await eliminarVarias(ids); onCambio(`Se ${n === 1 ? 'eliminó 1 acción' : `eliminaron ${n} acciones`}`); onListo() } catch (err) { setError(errMsg(err)) } finally { setBusy('') }
   }
   return <div role="region" aria-label="Acciones sobre la selección" className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-header px-3 md:bottom-4">
-    <div className="mx-auto flex max-w-3xl flex-col gap-2 rounded-2xl border border-dte-linea bg-white p-3 shadow-xl">
+    <div className="mx-auto flex max-w-3xl flex-col gap-2 rounded-card border border-dte-linea bg-white p-3 shadow-e3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-bold">{ids.length ? plural(ids.length, 'acción seleccionada', 'acciones seleccionadas') : 'Tocá las acciones para seleccionarlas'}</p>
         <Button variant="ghost" size="sm" onClick={onListo}><X data-icon="inline-start" />Listo</Button>
@@ -69,7 +69,7 @@ export function PanelFinDeSemana({ items, viewer, editable, onSelect, onCambio }
     } catch (err) { setError(errMsg(err)) } finally { setBusy('') }
   }
   const textos = { borrar: ['Eliminar', `¿Eliminar ${plural(sel.length, 'acción', 'acciones')}?`, 'Se borran definitivamente. No se puede deshacer.'], viernes: ['Mover al viernes', `¿Mover ${plural(sel.length, 'acción', 'acciones')} al viernes anterior?`, 'Cada acción pasa al viernes previo a su fecha, con el mismo horario.'], lunes: ['Mover al lunes', `¿Mover ${plural(sel.length, 'acción', 'acciones')} al lunes siguiente?`, 'Cada acción pasa al lunes posterior a su fecha, con el mismo horario.'] } as const
-  return <details className="mt-4 rounded-2xl border border-aviso-borde bg-aviso-fondo p-3">
+  return <details className="mt-4 rounded-card border border-aviso-borde bg-aviso-fondo p-3">
     <summary className="cursor-pointer text-sm font-semibold text-aviso-fuerte">{plural(items.length, 'acción cargada', 'acciones cargadas')} en fin de semana</summary>
     {editable && propias.length > 0 && <div className="mt-3 flex flex-wrap items-center gap-2">
       <label className="flex min-h-11 md:min-h-10 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={todas} onChange={() => setSel(todas ? [] : propias.map(i => i.id))} className="size-5" />Seleccionar todas</label>

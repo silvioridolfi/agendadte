@@ -23,7 +23,7 @@ function Legend() {
 }
 
 export function Panel({ title, subtitle, children, action }: { title: string, subtitle?: string, children: React.ReactNode, action?: React.ReactNode }) {
-  return <section className="min-w-0 rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5">
+  return <section className="min-w-0 rounded-card border border-dte-linea bg-white p-4 shadow-e1 sm:p-5">
     <div className="mb-4 flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-bold">{title}</h3>{subtitle && <p className="text-xs text-dte-gris">{subtitle}</p>}</div>{action}</div>
     {children}
   </section>
@@ -36,8 +36,8 @@ export function Kpi({ label, value, hint, color, onClick, active }: { label: str
     <p className="mt-1 text-2xl font-bold tabular-nums sm:text-3xl">{value}</p>
     {hint && <p className="text-xs text-dte-gris">{hint}</p>}
   </>
-  if (!onClick) return <div className="rounded-2xl border border-dte-linea bg-white px-4 py-3">{body}</div>
-  return <button type="button" onClick={onClick} aria-pressed={active} title="Ver el listado" className={`group rounded-2xl border bg-white px-4 py-3 text-left transition hover:-translate-y-0.5 hover:border-dte-petroleo/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dte-petroleo/30 ${active ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>{body}</button>
+  if (!onClick) return <div className="rounded-card border border-dte-linea bg-white px-4 py-3">{body}</div>
+  return <button type="button" onClick={onClick} aria-pressed={active} title="Ver el listado" className={`group rounded-card border bg-white px-4 py-3 text-left transition hover:-translate-y-0.5 hover:border-dte-petroleo/40 hover:shadow-e2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dte-petroleo/30 ${active ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>{body}</button>
 }
 
 // Listado de detalle que abre un indicador.
@@ -46,7 +46,7 @@ export function DrillDialog({ drill, onClose }: { drill: { title: string, subtit
   return <Dialog open={!!drill} onOpenChange={o => !o && onClose()}>
     <DialogContent className="max-h-[85vh] overflow-y-auto bg-white sm:max-w-xl">
       <DialogHeader><DialogTitle className="text-lg">{drill?.title}</DialogTitle><DialogDescription>{drill?.subtitle ?? `${drill?.rows.length ?? 0} en total`}</DialogDescription></DialogHeader>
-      {drill && (drill.rows.length ? <ul className="divide-y divide-dte-linea rounded-xl border border-dte-linea">{drill.rows.map(r => {
+      {drill && (drill.rows.length ? <ul className="divide-y divide-dte-linea rounded-tile border border-dte-linea">{drill.rows.map(r => {
         const inner = <><span className="min-w-0"><span className="block truncate font-semibold">{r.title}</span>{r.sub && <span className="block truncate text-xs text-dte-gris">{r.sub}</span>}</span>{r.right && <span className="shrink-0 text-xs tabular-nums text-dte-gris">{r.right}</span>}</>
         return <li key={r.key}>{r.onClick ? <button type="button" onClick={r.onClick} className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition hover:bg-dte-tinte">{inner}</button> : <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">{inner}</div>}</li>
       })}</ul> : <p className="py-6 text-center text-sm text-dte-gris">No hay elementos para mostrar.</p>)}
@@ -146,7 +146,7 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
   const cellMax = Math.max(1, ...[...m.byDistrict.values()].flatMap(r => [...r.values()]))
   const districts = [...m.byDistrict.keys()].sort(ordenGrupos)
 
-  if (!totalDone) return <div className="flex flex-col gap-4"><div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-10 text-center">
+  if (!totalDone) return <div className="flex flex-col gap-4"><div className="rounded-card border border-dashed border-dte-linea bg-white/60 p-10 text-center">
     <p className="font-semibold">Todavía no hay acciones realizadas en este período</p>
     <p className="mt-1 text-sm text-dte-gris">Las métricas cuentan las acciones marcadas como realizadas{planned ? ` (hay ${planned} planificadas)` : ''}.</p>
   </div></div>
@@ -202,9 +202,9 @@ export function MetricsView({ items, encuentros, feds, onSelect }: { items: Agen
 
       <Panel title="Clubes, talleres y prácticas" subtitle="Encuentros realizados y participación">
         <div className="mb-4 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-dte-fondo p-2"><p className="text-xl font-bold tabular-nums">{nf.format(m.enc.count)}</p><p className="text-xs text-dte-gris">encuentros</p></div>
-          <div className="rounded-xl bg-dte-fondo p-2"><p className="text-xl font-bold tabular-nums">{nf.format(m.enc.asistentes)}</p><p className="text-xs text-dte-gris">asistentes</p></div>
-          <div className="rounded-xl bg-dte-fondo p-2" title="Asistentes sobre inscriptos, sólo en encuentros que tienen ambos datos"><p className="text-xl font-bold tabular-nums">{m.enc.inscriptosP ? `${pct(m.enc.asistentesP, m.enc.inscriptosP)}%` : '—'}</p><p className="text-xs text-dte-gris">asistencia</p></div>
+          <div className="rounded-tile bg-dte-fondo p-2"><p className="text-xl font-bold tabular-nums">{nf.format(m.enc.count)}</p><p className="text-xs text-dte-gris">encuentros</p></div>
+          <div className="rounded-tile bg-dte-fondo p-2"><p className="text-xl font-bold tabular-nums">{nf.format(m.enc.asistentes)}</p><p className="text-xs text-dte-gris">asistentes</p></div>
+          <div className="rounded-tile bg-dte-fondo p-2" title="Asistentes sobre inscriptos, sólo en encuentros que tienen ambos datos"><p className="text-xl font-bold tabular-nums">{m.enc.inscriptosP ? `${pct(m.enc.asistentesP, m.enc.inscriptosP)}%` : '—'}</p><p className="text-xs text-dte-gris">asistencia</p></div>
         </div>
         {m.byPropuesta.length > 0 && <><p className="mb-2 text-xs font-semibold uppercase tracking-wider text-dte-gris">Asistentes por propuesta</p><ul className="flex flex-col gap-2.5">{m.byPropuesta.slice(0, 6).map(([k, v]) => <HBar key={k} label={k} value={v} max={m.byPropuesta[0][1]} color={CAT_COLOR.pedagogica} />)}</ul></>}
         {m.encByDistrict.length > 0 && <><p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-dte-gris">Asistentes por distrito</p><ul className="flex flex-col gap-2.5">{m.encByDistrict.map(([k, v]) => <HBar key={k} label={etiqueta(k)} value={v} max={m.encByDistrict[0][1]} color={CAT_COLOR.pedagogica} />)}</ul></>}

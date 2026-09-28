@@ -18,7 +18,7 @@ function Marco({ titulo, texto, children }: { titulo: string, texto: string, chi
       <div className="mb-8 flex items-center gap-3"><img src="/brand/dte1-160.png" alt="DTE Región 1" width={56} height={56} className="size-14 shrink-0 drop-shadow-lg" /><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-dte-celeste">Equipo FED</p><h1 className="text-xl font-bold">Agenda Territorial</h1></div></div>
       <h2 className="text-3xl font-bold tracking-tight">{titulo}</h2>
       <p className="mt-2 text-white/85">{texto}</p>
-      <div className="mt-6 rounded-2xl bg-white p-5 text-dte-tinta shadow-xl">{children}</div>
+      <div className="mt-6 rounded-card bg-white p-5 text-dte-tinta shadow-e3">{children}</div>
     </div>
     <div className="relative mt-12 w-full"><PieInstitucional oscuro /></div>
   </main>
@@ -46,7 +46,7 @@ export function Ingreso({ onIngreso }: { onIngreso: () => void }) {
     <form onSubmit={enviar} className="flex flex-col gap-4">
       <label htmlFor="email" className="flex flex-col gap-1.5 text-sm font-semibold">Correo<Input id="email" type="email" autoComplete="username" inputMode="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="usuario@abc.gob.ar" /></label>
       <CampoPassword id="password" label="Contraseña" value={password} onChange={setPassword} autoComplete="current-password" />
-      {error && <p role="alert" className="rounded-lg bg-peligro-fondo px-3 py-2 text-sm font-medium text-peligro">{error}</p>}
+      {error && <p role="alert" className="rounded-control bg-peligro-fondo px-3 py-2 text-sm font-medium text-peligro">{error}</p>}
       <Button type="submit" size="lg" disabled={busy} className="bg-dte-petroleo font-semibold hover:bg-dte-petroleo-oscuro">{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <LogIn data-icon="inline-start" />}Ingresar</Button>
       <p className="text-xs text-dte-gris">¿Olvidaste la contraseña? Pedile a administración que te genere una temporal.</p>
     </form>
@@ -69,7 +69,7 @@ export function CambiarPassword({ obligatorio, onListo, onCancelar }: { obligato
     <CampoPassword id="nueva" label="Nueva contraseña" value={nueva} onChange={setNueva} autoComplete="new-password" />
     <CampoPassword id="repetir" label="Repetila" value={repetir} onChange={setRepetir} autoComplete="new-password" />
     <ul className="text-xs text-dte-gris"><li>Al menos 10 caracteres, con letras y números.</li><li>Sin tu usuario de correo ni secuencias obvias.</li></ul>
-    {error && <p role="alert" className="rounded-lg bg-peligro-fondo px-3 py-2 text-sm font-medium text-peligro">{error}</p>}
+    {error && <p role="alert" className="rounded-control bg-peligro-fondo px-3 py-2 text-sm font-medium text-peligro">{error}</p>}
     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
       {onCancelar && <Button type="button" variant="outline" size="lg" onClick={onCancelar}>Cancelar</Button>}
       <Button type="submit" size="lg" disabled={busy} className="bg-dte-petroleo font-semibold hover:bg-dte-petroleo-oscuro">{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <KeyRound data-icon="inline-start" />}Guardar contraseña</Button>
@@ -111,7 +111,7 @@ export function UsuariosView({ miEmail, onVer }: { miEmail: string, onVer: (fedI
     <p className="mt-1.5 text-sm text-dte-gris">Creá la cuenta de cada integrante o generale una contraseña temporal nueva. La temporal se muestra una sola vez: pasásela por un canal privado.</p>
     {error && <div className="mt-4"><ErrorBox message={error} onRetry={cargar} /></div>}
     {!lista ? <div className="mt-5 flex flex-col gap-2">{[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-16" />)}</div>
-      : <ul className="mt-5 divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white">{lista.map(u => {
+      : <ul className="mt-5 divide-y divide-dte-linea overflow-hidden rounded-card border border-dte-linea bg-white">{lista.map(u => {
         const yo = u.email?.toLowerCase() === miEmail.toLowerCase()
         return <li key={u.fedId} className="flex flex-col gap-2 p-3.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
@@ -138,7 +138,7 @@ export function UsuariosView({ miEmail, onVer }: { miEmail: string, onVer: (fedI
     <Dialog open={!!temporal} onOpenChange={o => !o && setTemporal(null)}>
       <DialogContent className="bg-white sm:max-w-md">
         <DialogHeader><DialogTitle className="text-lg">Contraseña temporal de {temporal?.nombre}</DialogTitle><DialogDescription>Se muestra una sola vez. Al ingresar le vamos a pedir que la cambie.</DialogDescription></DialogHeader>
-        <dl className="rounded-xl border border-dte-linea bg-dte-fondo p-3 text-sm"><dt className="text-xs text-dte-gris">Usuario</dt><dd className="mb-2 font-semibold">{temporal?.email}</dd><dt className="text-xs text-dte-gris">Contraseña temporal</dt><dd className="select-all font-mono text-lg font-bold tracking-wide">{temporal?.password}</dd></dl>
+        <dl className="rounded-tile border border-dte-linea bg-dte-fondo p-3 text-sm"><dt className="text-xs text-dte-gris">Usuario</dt><dd className="mb-2 font-semibold">{temporal?.email}</dd><dt className="text-xs text-dte-gris">Contraseña temporal</dt><dd className="select-all font-mono text-lg font-bold tracking-wide">{temporal?.password}</dd></dl>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button variant="outline" onClick={() => setTemporal(null)}>Listo</Button><Button onClick={copiar} className="bg-dte-petroleo hover:bg-dte-petroleo-oscuro">{copiado ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado ? 'Copiado' : 'Copiar mensaje'}</Button></div>
       </DialogContent>
     </Dialog>

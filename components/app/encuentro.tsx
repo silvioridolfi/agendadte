@@ -87,7 +87,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
   }
 
   return <form onSubmit={guardar} className="flex flex-col gap-4">
-    <div className={`-mx-4 -mt-2 flex items-center gap-3 px-4 py-2.5 sm:mx-0 sm:rounded-xl ${marca.degradado}`}><img src={marca.logo} alt={marca.nombre} className="h-10 w-auto" /><span className="text-xs font-semibold text-white/95">{marca.nota}</span></div>
+    <div className={`-mx-4 -mt-2 flex items-center gap-3 px-4 py-2.5 sm:mx-0 sm:rounded-tile ${marca.degradado}`}><img src={marca.logo} alt={marca.nombre} className="h-10 w-auto" /><span className="text-xs font-semibold text-white/95">{marca.nota}</span></div>
 
     <Field id="campo-club" label="¿En qué lugar se realizó?" required error={errores.club} errorId="err-club">
       <select className={selectClass} value={id} onChange={e => { setId(e.target.value); setErrores(x => ({ ...x, club: undefined })) }} aria-invalid={!!errores.club} aria-describedby={errores.club ? 'err-club' : undefined}>
@@ -129,7 +129,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
       <Field label="Desde" hint="(opcional)"><Input type="time" value={desde} onChange={e => setDesde(e.target.value)} /></Field>
       <Field label="Hasta" hint="(opcional)" error={errores.hora} errorId="err-hora"><Input type="time" value={hasta} onChange={e => setHasta(e.target.value)} /></Field>
     </div>
-    <fieldset className="rounded-xl border border-dte-linea bg-dte-fondo/60 p-3">
+    <fieldset className="rounded-tile border border-dte-linea bg-dte-fondo/60 p-3">
       <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={repetir} onChange={e => setRepetir(e.target.checked)} className="size-5" style={{ accentColor: marca.acento }} />Se repite cada semana <span className="font-normal text-dte-gris">(agenda los próximos encuentros)</span></label>
       {repetir && <div className="mt-3 flex flex-col gap-3">
         <div><p className="mb-1.5 text-sm font-semibold">Días</p><div className="flex flex-wrap gap-1.5">{DIAS.map((d, k) => <Pill key={d} conIcono={false} on={diasSerie.includes(k + 1)} onClick={() => setDias(l => { const base = l.length ? l : diasSerie; return base.includes(k + 1) ? base.filter(x => x !== k + 1) : [...base, k + 1].sort() })}>{d}</Pill>)}</div></div>
@@ -143,7 +143,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
       <Field label="Cantidad de participantes reales"><Input type="number" min={0} inputMode="numeric" value={asistentes} onChange={e => setAsistentes(e.target.value)} /></Field>
     </div>
     <Field label="Breve descripción de lo realizado"><Textarea rows={3} placeholder="Qué se trabajó, con qué recursos, cómo participó el grupo…" value={descripcion} onChange={e => setDescripcion(e.target.value)} /></Field>
-    {fecha > hoy && <p className="rounded-lg border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso">La fecha todavía no llegó: el encuentro queda <b>planificado</b> en tu agenda.</p>}
+    {fecha > hoy && <p className="rounded-control border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso">La fecha todavía no llegó: el encuentro queda <b>planificado</b> en tu agenda.</p>}
 
     {error && <ErrorBox message={error} />}
     <div className="sticky -bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] -mx-4 -mb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex gap-2 border-t border-dte-linea bg-white px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 sm:-bottom-4 sm:-mb-4 sm:justify-end">

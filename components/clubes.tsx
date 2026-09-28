@@ -138,7 +138,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
     <Confirmar abierto={!!aFinalizar} titulo={`¿Finalizar ${tipo === 'CLUB DE TECNOLOGÍA' ? 'este club' : 'esta práctica'}?`} accion="Finalizar"
       descripcion={aFinalizar ? <><b>{nombre(aFinalizar.c)}</b> se cierra con fecha {corta(aFinalizar.fecha)} (último encuentro). Podés reactivarlo después.</> : ''}
       onConfirmar={() => aFinalizar && cierre(aFinalizar.c, aFinalizar.fecha)} onCerrar={() => setAFinalizar(null)} />
-    <div className={`relative overflow-hidden rounded-2xl px-5 py-4 text-white shadow-xs ${marca.degradado}`}>
+    <div className={`relative overflow-hidden rounded-card px-5 py-4 text-white shadow-e1 ${marca.degradado}`}>
       <div className="flex flex-wrap items-center gap-4">
         <img src={marca.logo} alt={marca.nombre} className="h-14 w-auto drop-shadow" />
         <div><p className="text-xs font-semibold uppercase tracking-wider text-white/85">{tipo === 'CLUB DE TECNOLOGÍA' ? 'Línea prioritaria DTE 2025–2027' : marca.nombre} · {periodo}</p><p className="mt-0.5 text-sm text-white/95">{tipo === 'CLUB DE TECNOLOGÍA' ? `Mínimo ${CLUB_MIN_ENCUENTROS} encuentros por club y hasta ${CLUB_MAX_PARTICIPANTES} participantes. Cada grado es un club. ` : 'Cada grupo de estudiantes es una práctica con inicio y cierre. '}Pasa a “sin actividad” tras {CLUB_DIAS_SIN_ACTIVIDAD} días hábiles sin encuentros (sin contar el receso invernal).</p></div>
@@ -176,7 +176,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
               [tipo === 'CLUB DE TECNOLOGÍA' ? 'Finalizados' : 'Finalizadas', 'finalizados', 'con cierre registrado'],
             ] as const).map(([label, key, hint]) => <tr key={key}>
               <td className="py-2 pr-3"><span className="font-semibold">{label}</span><span className="block text-xs text-dte-gris">{hint}</span></td>
-              {ciclo.map(t => <td key={t.k} className="py-2 pr-3 text-right"><button type="button" onClick={() => verCiclo(label, t.label, t[key])} className={`inline-flex min-h-11 min-w-10 items-center justify-end rounded-lg px-2 py-1 tabular-nums transition md:min-h-0 md:min-w-0 hover:bg-dte-tinte ${t.k === 'ciclo' ? 'text-lg font-bold' : 'font-semibold'}`}>{nf.format(t[key].length)}</button></td>)}
+              {ciclo.map(t => <td key={t.k} className="py-2 pr-3 text-right"><button type="button" onClick={() => verCiclo(label, t.label, t[key])} className={`inline-flex min-h-11 min-w-10 items-center justify-end rounded-control px-2 py-1 tabular-nums transition md:min-h-0 md:min-w-0 hover:bg-dte-tinte ${t.k === 'ciclo' ? 'text-lg font-bold' : 'font-semibold'}`}>{nf.format(t[key].length)}</button></td>)}
             </tr>)}
             {([['Encuentros realizados', 'encuentros'], ['Estudiantes inscriptos', 'inscriptos'], ['Escuelas y sedes', 'escuelas']] as const).map(([label, key]) => <tr key={key}>
               <td className="py-2 pr-3 font-semibold">{label}</td>

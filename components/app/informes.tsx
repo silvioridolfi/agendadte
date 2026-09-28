@@ -98,7 +98,7 @@ export function InformeBloque({ titulo, subtitulo, persona, desde, hasta, indica
     try { const { exportarInforme } = await import('@/lib/exportar'); await exportarInforme({ titulo, persona, desde, hasta, indicadores, items, feds }) } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
   }
   function pdf() { setError(''); try { imprimirInforme({ titulo, persona, desde, hasta, indicadores, items, feds }) } catch (e) { setError(errMsg(e)) } }
-  return <section className="mt-4 rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5" aria-label={titulo}>
+  return <section className="mt-4 rounded-card border border-dte-linea bg-white p-4 shadow-e1 sm:p-5" aria-label={titulo}>
     <DrillDialog drill={drill} onClose={() => setDrill(null)} />
     <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
       <div className="min-w-0"><h3 className="font-bold">{titulo}</h3><p className="text-sm text-dte-gris">{subtitulo}</p></div>
@@ -108,7 +108,7 @@ export function InformeBloque({ titulo, subtitulo, persona, desde, hasta, indica
       </div>
     </div>
     <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">{indicadores.map(x => <li key={x.clave}>
-      <button type="button" onClick={() => ver(x)} disabled={!x.items.length} className="flex h-full w-full flex-col rounded-xl border border-dte-linea p-3 text-left transition hover:border-dte-petroleo hover:bg-dte-tinte disabled:hover:border-dte-linea disabled:hover:bg-transparent">
+      <button type="button" onClick={() => ver(x)} disabled={!x.items.length} className="flex h-full w-full flex-col rounded-tile border border-dte-linea p-3 text-left transition hover:border-dte-petroleo hover:bg-dte-tinte disabled:hover:border-dte-linea disabled:hover:bg-transparent">
         <span className="text-xs leading-snug text-dte-gris">{x.label}</span>
         <span className="mt-1 text-2xl font-bold tabular-nums text-dte-petroleo">{x.valor}</span>
         {x.detalle && <span className="text-xs text-dte-gris">{x.detalle}</span>}

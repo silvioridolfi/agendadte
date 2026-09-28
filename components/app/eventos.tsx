@@ -39,7 +39,7 @@ export function EventoTag({ e, compact = false, registrar = false }: { e: Evento
   const [abierto, setAbierto] = useState(false)
   return <>
     <button type="button" onClick={ev => { ev.stopPropagation(); setAbierto(true) }} title={`Evento DTE: ${e.nombre}`}
-      className="inline-flex max-w-full items-center gap-1 truncate rounded-md bg-[#f3e1f0] px-1.5 py-0.5 text-left text-xs font-semibold text-[#7a2d6e] transition hover:bg-[#ead0e6]">
+      className="inline-flex max-w-full items-center gap-1 truncate rounded-md bg-accion-evento-dte px-1.5 py-0.5 text-left text-xs font-semibold text-accion-evento-dte-texto transition hover:bg-accion-evento-dte-hover">
       <CalendarHeart className="size-3 shrink-0" aria-hidden /><span className="truncate">{compact ? 'Evento DTE' : e.nombre}</span>
     </button>
     {abierto && <EventoDialog e={e} registrar={registrar} onCerrar={() => setAbierto(false)} />}
@@ -65,7 +65,7 @@ function EventoDialog({ e, registrar, onCerrar }: { e: EventoDte, registrar: boo
   return <Dialog open onOpenChange={o => !o && onCerrar()}>
     <DialogContent className="bg-white sm:max-w-md">
       <DialogHeader>
-        <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#7a2d6e]">Evento DTE · {e.modalidad}</p>
+        <p className="text-xs font-bold uppercase tracking-[0.15em] text-accion-evento-dte-texto">Evento DTE · {e.modalidad}</p>
         <DialogTitle className="text-xl">{e.nombre}</DialogTitle>
         <DialogDescription>{diasTexto(e.fechas)}</DialogDescription>
       </DialogHeader>
@@ -75,7 +75,7 @@ function EventoDialog({ e, registrar, onCerrar }: { e: EventoDte, registrar: boo
         {e.enlace && <div className="flex gap-2"><ExternalLink className="mt-0.5 size-4 shrink-0 text-dte-gris-claro" /><dd className="min-w-0"><a href={e.enlace} target="_blank" rel="noopener noreferrer" className="break-all font-semibold text-dte-petroleo underline underline-offset-2">{e.enlace}</a></dd></div>}
         {e.descripcion && <p className="whitespace-pre-line text-dte-tinta">{e.descripcion}</p>}
       </dl>
-      {registrar && <div className="mt-2 rounded-xl border border-dte-linea bg-dte-fondo p-3">
+      {registrar && <div className="mt-2 rounded-tile border border-dte-linea bg-dte-fondo p-3">
         {mias === null ? <Loader2 className="size-4 animate-spin text-dte-gris" />
           : !pendientes.length ? <p className="flex items-center gap-1.5 text-sm font-semibold text-exito"><Check className="size-4" />Tu participación ya está registrada.</p>
           : <>
@@ -122,7 +122,7 @@ export function EventosPanel({ onSaved }: { onSaved: (msg: string) => void }) {
   const lbl = 'flex flex-col gap-1 text-xs font-semibold'
   return <Panel title="Eventos DTE" subtitle="Jornadas y eventos propios de la DTE (por ejemplo, las JED). Aparecen en el calendario de todos, que pueden registrar su participación. Se avisa al equipo al cargarlos."
     action={<div className="flex items-center gap-1"><Button variant="outline" size="sm" onClick={() => setYear(y => y - 1)}>‹</Button><span className="px-2 text-sm font-bold tabular-nums">{year}</span><Button variant="outline" size="sm" onClick={() => setYear(y => y + 1)}>›</Button></div>}>
-    <div className="mb-4 grid gap-2 rounded-xl bg-dte-fondo p-3 sm:grid-cols-2">
+    <div className="mb-4 grid gap-2 rounded-tile bg-dte-fondo p-3 sm:grid-cols-2">
       <label className={`${lbl} sm:col-span-2`}>Nombre<Input value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Ej.: JED 2026 · Jornadas de Educación Digital" className="h-11 bg-white md:h-9" /></label>
       <div className={`${lbl} sm:col-span-2`}>Fechas
         <div className="flex flex-wrap items-center gap-2">{form.fechas.map((f, i) => <span key={i} className="flex items-center gap-1"><Input type="date" aria-label={`Fecha ${i + 1}`} value={f} onChange={e => setFecha(i, e.target.value)} className="h-11 w-40 bg-white md:h-9" />
@@ -143,7 +143,7 @@ export function EventosPanel({ onSaved }: { onSaved: (msg: string) => void }) {
     {error && <div className="mb-3"><ErrorBox message={error} /></div>}
     {!list ? <div className="flex flex-col gap-2" aria-busy="true" aria-label="Cargando eventos"><Skeleton className="h-11" /><Skeleton className="h-11" /></div>
       : !list.length ? <p className="text-sm text-dte-gris">No hay eventos cargados en {year}.</p>
-      : <ul className="divide-y divide-dte-linea rounded-xl border border-dte-linea">{list.map(e => <li key={e.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+      : <ul className="divide-y divide-dte-linea rounded-tile border border-dte-linea">{list.map(e => <li key={e.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
         <span className="min-w-0"><b>{e.nombre}</b><span className="block text-xs text-dte-gris">{diasTexto(e.fechas)} · {e.modalidad}{horario(e) ? ` · ${horario(e)}` : ''}{e.lugar ? ` · ${e.lugar}` : ''}</span></span>
         <span className="flex shrink-0 gap-1">
           <Button variant="ghost" size="sm" onClick={() => editar(e)} aria-label={`Editar ${e.nombre}`}><Pencil className="size-4" /></Button>

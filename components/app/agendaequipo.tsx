@@ -63,7 +63,7 @@ export function AgendaEquipoView({ feds, reloadKey, onSelect }: { feds: Fed[], r
   const ausentes = equipo.filter(f => deDia(f, iso(fecha)).some(ausencia)).length
 
   return <div className="flex flex-col gap-4">
-    <div className="flex flex-col gap-3 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs">
+    <div className="flex flex-col gap-3 rounded-card border border-dte-linea bg-white p-3 shadow-e1">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <Segmented label="Vista de la agenda del equipo" value={modo} options={MODOS} onChange={setModo} />
         {modo !== 'proximas' && <WeekNav onPrev={() => mover(-1)} onNext={() => mover(1)} onToday={() => setFecha(toWeekday(fechaHoyAR()))} prevLabel={modo === 'dia' ? 'Día anterior' : 'Semana anterior'} nextLabel={modo === 'dia' ? 'Día siguiente' : 'Semana siguiente'} />}
@@ -113,7 +113,7 @@ function VistaDia({ equipo, fecha, esHoy, deDia, onSelect }: { equipo: Fed[], fe
   const ahoraStr = horaAR()
   const orden = [...equipo].sort((a, b) => Number(deDia(b, fecha).length > 0) - Number(deDia(a, fecha).length > 0) || a.nombre_completo.localeCompare(b.nombre_completo))
   return <>
-    <div className="hidden overflow-hidden rounded-2xl border border-dte-linea bg-white md:block">
+    <div className="hidden overflow-hidden rounded-card border border-dte-linea bg-white md:block">
       <div className="grid grid-cols-[11rem_1fr] border-b border-dte-linea bg-dte-fondo text-xs text-dte-gris">
         <span className="px-3 py-2 font-semibold">FED</span>
         <div className="relative h-8">{horas.slice(0, -1).map(h => <span key={h} className="absolute top-2 -translate-x-1/2 tabular-nums" style={{ left: `${pos(`${String(h).padStart(2, '0')}:00`)}%` }}>{h}</span>)}</div>
@@ -140,7 +140,7 @@ function VistaDia({ equipo, fecha, esHoy, deDia, onSelect }: { equipo: Fed[], fe
 
     <ul className="flex flex-col gap-3 md:hidden">{orden.map(f => {
       const l = deDia(f, fecha)
-      return <li key={f.id} className={`rounded-2xl border border-dte-linea bg-white p-3 ${l.length ? '' : 'opacity-60'}`}>
+      return <li key={f.id} className={`rounded-card border border-dte-linea bg-white p-3 ${l.length ? '' : 'opacity-60'}`}>
         <p className="mb-1.5 flex items-center justify-between gap-2 font-semibold"><span className="truncate">{f.nombre_completo}</span><span className="shrink-0 text-xs font-normal text-dte-gris">{l.length ? `${l.length} ${l.length === 1 ? 'acción' : 'acciones'}` : 'Sin acciones'}</span></p>
         {l.length > 0 && <ul className="flex flex-col divide-y divide-dte-linea">{l.map(i => <li key={i.id}>
           <button type="button" onClick={() => onSelect(i)} className="grid min-h-11 w-full grid-cols-[4.25rem_1fr] items-center gap-2 py-1.5 text-left text-sm">
@@ -156,7 +156,7 @@ function VistaDia({ equipo, fecha, esHoy, deDia, onSelect }: { equipo: Fed[], fe
 // Semana: grilla FED × día con un punto por acción y, en pantallas anchas, la primera visita.
 function VistaSemana({ equipo, lunes, hoy, deDia, feriados, onCelda }: { equipo: Fed[], lunes: Date, hoy: string, deDia: (f: Fed, d: string) => AgendaItem[], feriados: Map<string, { nombre: string, tipo: string }[]>, onCelda: (f: Fed, d: Date) => void }) {
   const dias = Array.from({ length: 5 }, (_, k) => addDays(lunes, k))
-  return <div className="overflow-hidden rounded-2xl border border-dte-linea bg-white">
+  return <div className="overflow-hidden rounded-card border border-dte-linea bg-white">
     <div className="grid grid-cols-[3rem_repeat(5,minmax(0,1fr))] border-b border-dte-linea bg-dte-fondo text-center text-xs font-semibold text-dte-gris sm:grid-cols-[10rem_repeat(5,minmax(0,1fr))]">
       <span className="py-2 text-left sm:px-3">FED</span>
       {dias.map(d => <span key={iso(d)} className={`py-2 ${iso(d) === hoy ? 'text-dte-petroleo' : ''}`}><span className="block uppercase">{fmt(d, { weekday: 'short' }).replace('.', '')}</span><span className={`mx-auto mt-0.5 flex size-6 items-center justify-center rounded-full text-sm ${iso(d) === hoy ? 'bg-pba-celeste text-white' : 'text-dte-tinta'}`}>{d.getDate()}</span></span>)}
@@ -188,7 +188,7 @@ function VistaProximas({ equipo, delFed, feds, onSelect }: { equipo: Fed[], delF
   if (!lista.length) return <Vacio icono={CalendarClock} titulo="No hay visitas planificadas en los próximos 7 días" texto="Cuando el equipo cargue acciones en escuelas, van a aparecer acá." />
   return <div className="flex flex-col gap-4">{[...porDia.entries()].map(([d, l]) => <section key={d} aria-label={fmt(parse(d), { weekday: 'long', day: 'numeric', month: 'long' })}>
     <h4 className="mb-2 text-sm font-bold capitalize">{fmt(parse(d), { weekday: 'long', day: 'numeric', month: 'long' })} <span className="font-normal text-dte-gris">· {l.length}</span></h4>
-    <ul className="divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white">{l.map(i => <li key={i.id}>
+    <ul className="divide-y divide-dte-linea overflow-hidden rounded-card border border-dte-linea bg-white">{l.map(i => <li key={i.id}>
       <button type="button" onClick={() => onSelect(i)} className="grid w-full grid-cols-[3.5rem_1fr] gap-x-3 gap-y-1 p-3 text-left transition hover:bg-dte-tinte sm:grid-cols-[4rem_1fr_auto] sm:items-center">
         <span className="row-span-2 text-sm font-semibold tabular-nums sm:row-span-1">{i.hora_inicio ? hhmm(i.hora_inicio) : '—'}</span>
         <span className="min-w-0"><span className="block truncate font-semibold">{lugar(i)}</span><span className="flex items-center gap-1 truncate text-xs text-dte-gris">{i.school?.distrito && <><MapPin className="size-3 shrink-0" />{titleCase(i.school.distrito)} · </>}{[nombre(i.fed_id), ...i.participantes.filter(p => p.respuesta !== 'rechaza').map(p => firstName(nombre(p.fed_id)))].filter(Boolean).join(', ')}</span></span>
