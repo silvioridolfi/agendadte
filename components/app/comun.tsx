@@ -116,6 +116,7 @@ export const getEncuentros = call(api.getEncuentros)
 export const getFeriados = call(api.getFeriados)
 export const misTiposFrecuentes = call(api.misTiposFrecuentes)
 export const guardarVisita = call(api.guardarVisita)
+export const editarVisita = call(api.editarVisita)
 export const getEventos = call(api.getEventos)
 export const listarEventos = call(api.listarEventos)
 export const guardarEvento = call(api.guardarEvento)
@@ -153,6 +154,10 @@ export const errMsg = (e: unknown) => (e instanceof Error ? e.message : 'Error i
 export function storage<T>(fn: () => T): T | null { try { return fn() } catch { return null } }
 
 // ---- piezas chicas ----
+// Etiquetas de una acción o, si es una visita con varias, de todas sus acciones.
+export function EtiquetasAccion({ item }: { item: AgendaItem }) {
+  return <>{(item.visita ?? [item]).map(v => <ActionChip key={v.id} label={v.accion} />)}</>
+}
 export function ActionChip({ label, className = '' }: { label: Accion, className?: string }) {
   return <span title={nombreAccion(label)} className={`inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs font-bold uppercase leading-tight tracking-[0.04em] ${actionStyle[label]?.chip ?? 'bg-muted text-muted-foreground'} ${className}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[label]?.dot ?? 'bg-current'}`} />{etiquetaAccion(label)}</span>
 }

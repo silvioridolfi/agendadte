@@ -179,8 +179,8 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
     if (error) throw new Error(error.message)
   }
 
-  // Cambios en una acción compartida: se avisa a los compañeros.
-  if (antes) {
+  // Cambios en una acción compartida: se avisa a los compañeros (en una visita, sólo desde la primera acción).
+  if (antes && avisar) {
     const cambios: string[] = []
     if (antes.fecha !== row.fecha) cambios.push(`fecha ${fechaCorta(antes.fecha)} → ${fechaCorta(row.fecha)}`)
     if ((antes.hora_inicio ?? '').slice(0, 5) !== (row.hora_inicio ?? '').slice(0, 5) || (antes.hora_fin ?? '').slice(0, 5) !== (row.hora_fin ?? '').slice(0, 5)) cambios.push('horario')
@@ -346,9 +346,20 @@ async function setClubCierreImpl(id: string, fecha: string | null): Promise<void
 }
 
 // Cambio rápido de estado desde el detalle; sólo sobre items del propio FED.
+// Acciones de la misma visita (propias); si no es parte de una visita, sólo ésta.
+async function idsDeVisita(id: string, fedId: string): Promise<string[]> {
+  const db = supabaseServer()
+  const { data: it } = await db.from('agenda_items').select('visita_id').eq('id', id).eq('fed_id', fedId).maybeSingle()
+  if (!it?.visita_id) return [id]
+  const { data } = await db.from('agenda_items').select('id').eq('visita_id', it.visita_id).eq('fed_id', fedId)
+  return (data ?? []).map(x => x.id as string)
+}
+
 async function setItemStatusImpl(id: string, fedId: string, estado: AgendaItemInput['estado']): Promise<void> {
   if (!ESTADOS.includes(estado)) throw new Error('Estado inválido')
-  const { data, error } = await supabaseServer().from('agenda_items').update({ estado }).eq('id', id).eq('fed_id', fedId).select('id')
+  // En una visita con varias acciones, el estado es uno solo: se aplica a todas.
+  const ids = await idsDeVisita(id, fedId)
+  const { data, error } = await supabaseServer().from('agenda_items').update({ estado }).in('id', ids).eq('fed_id', fedId).select('id')
   if (error) throw new Error(error.message)
   if (!data?.length) throw new Error('Sólo quien creó la acción puede cambiar su estado')
   if (estado === 'cancelada') await avisarParticipantes(id, fedId, 'cancelacion', 'Canceló la acción')
@@ -359,12 +370,14 @@ async function setItemStatusImpl(id: string, fedId: string, estado: AgendaItemIn
 // Eliminar una acción; con `serie`, también las siguientes planificadas de la misma serie.
 async function deleteItemImpl(id: string, fedId: string, serie = false): Promise<number> {
   const db = supabaseServer()
-  const { data: item } = await db.from('agenda_items').select('id, fecha, accion, serie_id').eq('id', id).eq('fed_id', fedId).maybeSingle()
+  const { data: item } = await db.from('agenda_items').select('id, fecha, accion, serie_id, visita_id').eq('id', id).eq('fed_id', fedId).maybeSingle()
   if (!item) throw new Error('La acción no existe o no es tuya')
-  let ids = [id]
-  if (serie && item.serie_id) {
-    const { data } = await db.from('agenda_items').select('id').eq('serie_id', item.serie_id).eq('fed_id', fedId).eq('estado', 'planificada').gt('fecha', item.fecha)
-    ids = [id, ...(data ?? []).map(x => x.id as string)]
+  // Una visita se elimina completa (todas sus acciones); con `serie`, también las siguientes de cada tipo.
+  const miembros = item.visita_id ? ((await db.from('agenda_items').select('id, serie_id, fecha').eq('visita_id', item.visita_id).eq('fed_id', fedId)).data ?? []) : [item]
+  let ids = miembros.map(m => m.id as string)
+  if (serie) for (const m of miembros) if (m.serie_id) {
+    const { data } = await db.from('agenda_items').select('id').eq('serie_id', m.serie_id).eq('fed_id', fedId).eq('estado', 'planificada').gt('fecha', m.fecha)
+    ids = [...new Set([...ids, ...(data ?? []).map(x => x.id as string)])]
   }
   await avisarParticipantes(id, fedId, 'cancelacion', `Eliminó ${item.accion.toLowerCase()} del ${fechaCorta(item.fecha)}${ids.length > 1 ? ` y ${ids.length - 1} fechas siguientes` : ''}`, false)
   const { error } = await db.from('agenda_items').delete().in('id', ids).eq('fed_id', fedId)
@@ -544,19 +557,55 @@ export const guardarVisita = async (inputs: AgendaItemInput[]) => conUsuario(asy
   if (!inputs.length || inputs.length > 8) throw new Error('Una visita puede tener entre 1 y 8 acciones')
   const guardadas: AgendaItemInput['accion'][] = []
   let creadas = 0, primera: string | null = null
+  const visitaId = inputs.length > 1 ? crypto.randomUUID() : null
   for (const [k, input] of inputs.entries()) {
     try {
-      const r = await saveItemImpl({ ...input, fed_id: yo.fed.id }, undefined, 'uno', k === 0)
+      const r = await saveItemImpl({ ...input, fed_id: yo.fed.id, visita_id: visitaId }, undefined, 'uno', k === 0)
       creadas += r.creadas; guardadas.push(input.accion); if (k === 0) primera = r.id
     } catch (e) {
       return { creadas, guardadas, error: `${input.accion.toLowerCase()}: ${e instanceof Error ? e.message : String(e)}` }
     }
+  }
+  // Serie: las copias heredaron el mismo visita_id; cada fecha es una visita propia.
+  if (visitaId && inputs[0].repeticion) {
+    const db = supabaseServer()
+    const { data } = await db.from('agenda_items').select('id, fecha').eq('visita_id', visitaId).eq('fed_id', yo.fed.id).neq('fecha', inputs[0].fecha)
+    const porFecha = new Map<string, string[]>()
+    for (const r of data ?? []) porFecha.set(r.fecha as string, [...(porFecha.get(r.fecha as string) ?? []), r.id as string])
+    for (const ids of porFecha.values()) await db.from('agenda_items').update({ visita_id: crypto.randomUUID() }).in('id', ids).eq('fed_id', yo.fed.id)
   }
   if (primera && inputs.length > 1) {
     const lista = inputs.map(i => i.accion.toLowerCase()).join(', ')
     await supabaseServer().from('notificaciones').update({ detalle: `Visita con ${inputs.length} acciones: ${lista}${inputs[0].repeticion ? ' · se repite cada semana' : ''}` }).eq('item_id', primera).eq('tipo', 'etiqueta')
   }
   return { creadas, guardadas, error: null as string | null }
+})
+// Editar una visita (o sumar tipos a una acción suelta): un pedido por tipo marcado, en orden.
+// Los datos comunes se aplican a todas; un tipo desmarcado se elimina; uno nuevo se agrega a la visita.
+export const editarVisita = async (itemId: string, inputs: AgendaItemInput[], alcance: 'uno' | 'siguientes' = 'uno') => conUsuario(async yo => {
+  if (!inputs.length || inputs.length > 8) throw new Error('Una visita puede tener entre 1 y 8 acciones')
+  const db = supabaseServer(), fedId = yo.fed.id
+  const { data: base } = await db.from('agenda_items').select('id, visita_id').eq('id', itemId).eq('fed_id', fedId).maybeSingle()
+  if (!base) throw new Error('La acción no existe o no es tuya')
+  const miembros = base.visita_id ? ((await db.from('agenda_items').select('id, accion, fecha, serie_id').eq('visita_id', base.visita_id).eq('fed_id', fedId)).data ?? []) : ((await db.from('agenda_items').select('id, accion, fecha, serie_id').eq('id', itemId)).data ?? [])
+  const visitaId = inputs.length > 1 ? (base.visita_id as string | null) ?? crypto.randomUUID() : null
+  let creadas = 0
+  for (const [k, input] of inputs.entries()) {
+    const m = miembros.find(x => x.accion === input.accion)
+    const r = m ? await saveItemImpl({ ...input, fed_id: fedId, visita_id: visitaId, repeticion: null }, m.id as string, alcance, k === 0)
+      : await saveItemImpl({ ...input, fed_id: fedId, visita_id: visitaId, repeticion: null }, undefined, 'uno', false)
+    creadas += r.creadas
+  }
+  // Tipos desmarcados: se eliminan (con "esta y las siguientes", también las fechas planificadas que siguen de ese tipo).
+  const quitar = miembros.filter(x => !inputs.some(i => i.accion === x.accion))
+  for (const q of quitar) {
+    let ids = [q.id as string]
+    if (alcance === 'siguientes' && q.serie_id) ids = [...ids, ...((await db.from('agenda_items').select('id').eq('serie_id', q.serie_id).eq('fed_id', fedId).eq('estado', 'planificada').gt('fecha', q.fecha)).data ?? []).map(x => x.id as string)]
+    const d = await db.from('agenda_items').delete().in('id', ids).eq('fed_id', fedId)
+    if (d.error) throw new Error(d.error.message)
+  }
+  if (quitar.length) await audit('agenda_items', itemId, 'baja', fedId, { visita: visitaId, quitados: quitar.map(q => q.accion) })
+  return { creadas, quitadas: quitar.length }
 })
 export const setItemStatus = async (id: string, _fedId: string, estado: AgendaItemInput['estado']) => conUsuario(yo => setItemStatusImpl(id, yo.fed.id, estado))
 export const deleteItem = async (id: string, _fedId: string, serie = false) => conUsuario(yo => deleteItemImpl(id, yo.fed.id, serie))
