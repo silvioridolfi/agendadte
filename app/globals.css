@@ -62,13 +62,91 @@
   --color-cat-pedagogica: #d41c6c;
   --color-cat-institucional: #6f5fc2;
 
+
+  /* Paleta de tipos de acción: fondo, texto (contraste AA sobre su fondo) y punto de acento. Única fuente: actionStyle en comun.tsx. */
+  --color-accion-visita-tecnica: #dcebf5;
+  --color-accion-visita-tecnica-texto: #1d5a7d;
+  --color-accion-visita-tecnica-punto: #2f7fae;
+  --color-accion-visita-pedagogica: #e8e2f6;
+  --color-accion-visita-pedagogica-texto: #553f86;
+  --color-accion-visita-pedagogica-punto: #705ccb;
+  --color-accion-reunion: #f8ebc6;
+  --color-accion-reunion-texto: #7a5a0c;
+  --color-accion-reunion-punto: #d9a520;
+  --color-accion-club-de-tecnologia: #dbefe2;
+  --color-accion-club-de-tecnologia-texto: #2c6644;
+  --color-accion-club-de-tecnologia-punto: #3f9a64;
+  --color-accion-practicas-profesionalizantes: #f8dfe9;
+  --color-accion-practicas-profesionalizantes-texto: #8e3b61;
+  --color-accion-practicas-profesionalizantes-punto: #d576ab;
+  --color-accion-taller-capacitacion: #f9e2d3;
+  --color-accion-taller-capacitacion-texto: #86491f;
+  --color-accion-taller-capacitacion-punto: #e0874a;
+  --color-accion-asistencia-remota: #d9f1f5;
+  --color-accion-asistencia-remota-texto: #0d6573;
+  --color-accion-asistencia-remota-punto: #00aec3;
+  --color-accion-conectividad: #e7ebcb;
+  --color-accion-conectividad-texto: #5a661b;
+  --color-accion-conectividad-punto: #99a832;
+  --color-accion-administrativo: #eaeaee;
+  --color-accion-administrativo-texto: #4f5461;
+  --color-accion-administrativo-punto: #8d95a3;
+  --color-accion-oficina-r1: #e1e9f1;
+  --color-accion-oficina-r1-texto: #2f5577;
+  --color-accion-oficina-r1-punto: #417099;
+  --color-accion-paro: #fbdde8;
+  --color-accion-paro-texto: #a3164f;
+  --color-accion-paro-punto: #e81f76;
+  --color-accion-entrega-de-equipamiento: #dbe6f4;
+  --color-accion-entrega-de-equipamiento-texto: #244f86;
+  --color-accion-entrega-de-equipamiento-punto: #2a6fb0;
+  --color-accion-planificacion: #ece9f7;
+  --color-accion-planificacion-texto: #4e4390;
+  --color-accion-planificacion-punto: #6f5fc2;
+  --color-accion-licencia: #eeeaee;
+  --color-accion-licencia-texto: #5c5160;
+  --color-accion-licencia-punto: #9a8f9d;
+  --color-accion-evento-dte: #f3e1f0;
+  --color-accion-evento-dte-texto: #7a2d6e;
+  --color-accion-evento-dte-punto: #b8469f;
+  --color-accion-formacion-interna: #e0eef0;
+  --color-accion-formacion-interna-texto: #245e66;
+  --color-accion-formacion-interna-punto: #3b8f99;
+  --color-accion-reunion-con-jefatura: #f5e6d8;
+  --color-accion-reunion-con-jefatura-texto: #7a4a1c;
+  --color-accion-reunion-con-jefatura-punto: #c07a3a;
+  --color-accion-acompanamiento-a-fed: #e3ecdf;
+  --color-accion-acompanamiento-a-fed-texto: #3d5e2e;
+  --color-accion-acompanamiento-a-fed-punto: #6a9a52;
+  --color-accion-gestion-institucional: #e6e4f0;
+  --color-accion-gestion-institucional-texto: #44407a;
+  --color-accion-gestion-institucional-punto: #6560a8;
+  --color-accion-seguimiento-del-equipo: #f1e4ea;
+  --color-accion-seguimiento-del-equipo-texto: #6e3350;
+  --color-accion-seguimiento-del-equipo-punto: #a3587c;
+  --color-accion-informe-tecnico: #e4eaf0;
+  --color-accion-informe-tecnico-texto: #35506b;
+  --color-accion-informe-tecnico-punto: #5a7a99;
+  --color-accion-reunion-con-inspeccion: #f3eadb;
+  --color-accion-reunion-con-inspeccion-texto: #6e5220;
+  --color-accion-reunion-con-inspeccion-punto: #b08a3e;
+  --color-accion-evento-dte-hover: #ead0e6;
+  /* Fondos de avatar por persona */
+  --color-avatar-1: #dff3f8;
+  --color-avatar-2: #e9e5f8;
+  --color-avatar-3: #fbe3ee;
+  --color-avatar-4: #dde8f0;
+  --color-avatar-5: #f1e4f0;
+  --color-avatar-6: #fde8f1;
+
   /* Escala tipográfica: el mínimo legible es text-xs (12px); text-2xs sólo para micro-rótulos en mayúsculas. */
   --text-2xs: 0.75rem;
   --text-2xs--line-height: 1rem;
 
   /* Radios semánticos */
   --radius-control: 0.625rem;  /* inputs, selects, botones */
-  --radius-card: 1rem;         /* tarjetas y paneles */
+  --radius-tile: 0.875rem;     /* bloques internos: indicadores, avisos, ítems */
+  --radius-card: 1.125rem;     /* tarjetas y paneles */
   --radius-pill: 9999px;       /* chips y badges */
 
   /* Elevación (3 niveles) */

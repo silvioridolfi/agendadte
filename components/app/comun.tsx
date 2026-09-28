@@ -13,28 +13,28 @@ import { anioAR, ZONA } from '@/lib/hora'
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
 // Paleta de categorías de acción: mapa único (texto con contraste AA sobre su fondo). No duplicar estos colores fuera de acá.
 export const actionStyle: Record<Accion, { chip: string, dot: string }> = {
-  'VISITA TÉCNICA': { chip: 'bg-[#dcebf5] text-[#1d5a7d]', dot: 'bg-[#2f7fae]' },
-  'VISITA PEDAGÓGICA': { chip: 'bg-[#e8e2f6] text-[#553f86]', dot: 'bg-[#705ccb]' },
-  'REUNIÓN': { chip: 'bg-[#f8ebc6] text-[#7a5a0c]', dot: 'bg-[#d9a520]' },
-  'CLUB DE TECNOLOGÍA': { chip: 'bg-[#dbefe2] text-[#2c6644]', dot: 'bg-[#3f9a64]' },
-  'PRÁCTICAS PROFESIONALIZANTES': { chip: 'bg-[#f8dfe9] text-[#8e3b61]', dot: 'bg-[#d576ab]' },
-  'TALLER/CAPACITACIÓN': { chip: 'bg-[#f9e2d3] text-[#86491f]', dot: 'bg-[#e0874a]' },
-  'ASISTENCIA REMOTA': { chip: 'bg-[#d9f1f5] text-[#0d6573]', dot: 'bg-[#00aec3]' },
-  'CONECTIVIDAD': { chip: 'bg-[#e7ebcb] text-[#5a661b]', dot: 'bg-[#99a832]' },
-  'ADMINISTRATIVO': { chip: 'bg-[#eaeaee] text-[#4f5461]', dot: 'bg-[#8d95a3]' },
-  'OFICINA R1': { chip: 'bg-[#e1e9f1] text-[#2f5577]', dot: 'bg-[#417099]' },
-  'PARO': { chip: 'bg-[#fbdde8] text-[#a3164f]', dot: 'bg-[#e81f76]' },
-  'ENTREGA DE EQUIPAMIENTO': { chip: 'bg-[#dbe6f4] text-[#244f86]', dot: 'bg-[#2a6fb0]' },
-  'PLANIFICACIÓN': { chip: 'bg-[#ece9f7] text-[#4e4390]', dot: 'bg-[#6f5fc2]' },
-  'LICENCIA': { chip: 'bg-[#eeeaee] text-[#5c5160]', dot: 'bg-[#9a8f9d]' },
-  'EVENTO DTE': { chip: 'bg-[#f3e1f0] text-[#7a2d6e]', dot: 'bg-[#b8469f]' },
-  'FORMACIÓN INTERNA': { chip: 'bg-[#e0eef0] text-[#245e66]', dot: 'bg-[#3b8f99]' },
-  'REUNIÓN CON JEFATURA': { chip: 'bg-[#f5e6d8] text-[#7a4a1c]', dot: 'bg-[#c07a3a]' },
-  'ACOMPAÑAMIENTO A FED': { chip: 'bg-[#e3ecdf] text-[#3d5e2e]', dot: 'bg-[#6a9a52]' },
-  'GESTIÓN INSTITUCIONAL': { chip: 'bg-[#e6e4f0] text-[#44407a]', dot: 'bg-[#6560a8]' },
-  'SEGUIMIENTO DEL EQUIPO': { chip: 'bg-[#f1e4ea] text-[#6e3350]', dot: 'bg-[#a3587c]' },
-  'INFORME TÉCNICO': { chip: 'bg-[#e4eaf0] text-[#35506b]', dot: 'bg-[#5a7a99]' },
-  'REUNIÓN CON INSPECCIÓN': { chip: 'bg-[#f3eadb] text-[#6e5220]', dot: 'bg-[#b08a3e]' },
+  'VISITA TÉCNICA': { chip: 'bg-accion-visita-tecnica text-accion-visita-tecnica-texto', dot: 'bg-accion-visita-tecnica-punto' },
+  'VISITA PEDAGÓGICA': { chip: 'bg-accion-visita-pedagogica text-accion-visita-pedagogica-texto', dot: 'bg-accion-visita-pedagogica-punto' },
+  'REUNIÓN': { chip: 'bg-accion-reunion text-accion-reunion-texto', dot: 'bg-accion-reunion-punto' },
+  'CLUB DE TECNOLOGÍA': { chip: 'bg-accion-club-de-tecnologia text-accion-club-de-tecnologia-texto', dot: 'bg-accion-club-de-tecnologia-punto' },
+  'PRÁCTICAS PROFESIONALIZANTES': { chip: 'bg-accion-practicas-profesionalizantes text-accion-practicas-profesionalizantes-texto', dot: 'bg-accion-practicas-profesionalizantes-punto' },
+  'TALLER/CAPACITACIÓN': { chip: 'bg-accion-taller-capacitacion text-accion-taller-capacitacion-texto', dot: 'bg-accion-taller-capacitacion-punto' },
+  'ASISTENCIA REMOTA': { chip: 'bg-accion-asistencia-remota text-accion-asistencia-remota-texto', dot: 'bg-accion-asistencia-remota-punto' },
+  'CONECTIVIDAD': { chip: 'bg-accion-conectividad text-accion-conectividad-texto', dot: 'bg-accion-conectividad-punto' },
+  'ADMINISTRATIVO': { chip: 'bg-accion-administrativo text-accion-administrativo-texto', dot: 'bg-accion-administrativo-punto' },
+  'OFICINA R1': { chip: 'bg-accion-oficina-r1 text-accion-oficina-r1-texto', dot: 'bg-accion-oficina-r1-punto' },
+  'PARO': { chip: 'bg-accion-paro text-accion-paro-texto', dot: 'bg-accion-paro-punto' },
+  'ENTREGA DE EQUIPAMIENTO': { chip: 'bg-accion-entrega-de-equipamiento text-accion-entrega-de-equipamiento-texto', dot: 'bg-accion-entrega-de-equipamiento-punto' },
+  'PLANIFICACIÓN': { chip: 'bg-accion-planificacion text-accion-planificacion-texto', dot: 'bg-accion-planificacion-punto' },
+  'LICENCIA': { chip: 'bg-accion-licencia text-accion-licencia-texto', dot: 'bg-accion-licencia-punto' },
+  'EVENTO DTE': { chip: 'bg-accion-evento-dte text-accion-evento-dte-texto', dot: 'bg-accion-evento-dte-punto' },
+  'FORMACIÓN INTERNA': { chip: 'bg-accion-formacion-interna text-accion-formacion-interna-texto', dot: 'bg-accion-formacion-interna-punto' },
+  'REUNIÓN CON JEFATURA': { chip: 'bg-accion-reunion-con-jefatura text-accion-reunion-con-jefatura-texto', dot: 'bg-accion-reunion-con-jefatura-punto' },
+  'ACOMPAÑAMIENTO A FED': { chip: 'bg-accion-acompanamiento-a-fed text-accion-acompanamiento-a-fed-texto', dot: 'bg-accion-acompanamiento-a-fed-punto' },
+  'GESTIÓN INSTITUCIONAL': { chip: 'bg-accion-gestion-institucional text-accion-gestion-institucional-texto', dot: 'bg-accion-gestion-institucional-punto' },
+  'SEGUIMIENTO DEL EQUIPO': { chip: 'bg-accion-seguimiento-del-equipo text-accion-seguimiento-del-equipo-texto', dot: 'bg-accion-seguimiento-del-equipo-punto' },
+  'INFORME TÉCNICO': { chip: 'bg-accion-informe-tecnico text-accion-informe-tecnico-texto', dot: 'bg-accion-informe-tecnico-punto' },
+  'REUNIÓN CON INSPECCIÓN': { chip: 'bg-accion-reunion-con-inspeccion text-accion-reunion-con-inspeccion-texto', dot: 'bg-accion-reunion-con-inspeccion-punto' },
 }
 export const statusStyle: Record<Estado, { badge: string, label: string }> = {
   planificada: { badge: 'border-pba-azul/40 bg-pba-azul/10 text-pba-azul', label: 'Planificada' },
@@ -42,12 +42,12 @@ export const statusStyle: Record<Estado, { badge: string, label: string }> = {
   reprogramada: { badge: 'border-aviso-borde bg-aviso-fondo text-aviso-fuerte', label: 'Reprogramada' },
   cancelada: { badge: 'border-pba-fucsia/40 bg-pba-fucsia/10 text-dte-magenta-oscuro', label: 'Cancelada' },
 }
-export const avatarColors = ['bg-[#dff3f8]', 'bg-[#e9e5f8]', 'bg-[#fbe3ee]', 'bg-[#dde8f0]', 'bg-[#f1e4f0]', 'bg-[#fde8f1]']
+export const avatarColors = ['bg-avatar-1', 'bg-avatar-2', 'bg-avatar-3', 'bg-avatar-4', 'bg-avatar-5', 'bg-avatar-6']
 // Orden alfabético de la A a la Z para todas las listas (con números en orden natural: N° 2 antes que N° 10).
 export const az = (a: string, b: string) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })
 export const azOtroAlFinal = (a: string, b: string) => (a === 'Otro' ? 1 : b === 'Otro' ? -1 : az(a, b))
 // Select nativo: 44px y 16px en mobile (sin zoom en iOS), compacto desde md.
-export const selectClass = 'h-11 w-full rounded-lg border border-input bg-white px-2.5 text-base text-dte-tinta md:h-9 md:text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+export const selectClass = 'h-11 w-full rounded-control border border-input bg-white px-2.5 text-base text-dte-tinta md:h-9 md:text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
 export const eyebrow = 'text-xs font-bold uppercase tracking-[0.15em] text-dte-magenta'
 
 // ---- fechas (siempre en hora local, formato YYYY-MM-DD) ----
@@ -158,24 +158,24 @@ export function StatusBadge({ status }: { status: Estado }) {
   return <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusStyle[status]?.badge ?? ''}`}>{statusStyle[status]?.label ?? status}</span>
 }
 export function ErrorBox({ message, onRetry }: { message: string, onRetry?: () => void }) {
-  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p className="flex min-w-0 items-start gap-2"><CircleAlert className="mt-px size-4 shrink-0" aria-hidden /><span className="min-w-0 [overflow-wrap:anywhere]"><span className="font-semibold">No se pudo completar la operación.</span> {message}</span></p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>}</div>
+  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-tile border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p className="flex min-w-0 items-start gap-2"><CircleAlert className="mt-px size-4 shrink-0" aria-hidden /><span className="min-w-0 [overflow-wrap:anywhere]"><span className="font-semibold">No se pudo completar la operación.</span> {message}</span></p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>}</div>
 }
 // Estado vacío común: ícono, mensaje y, si corresponde, una acción para salir de él.
 export function Vacio({ icono: Icono, titulo, texto, children }: { icono: React.ComponentType<{ className?: string }>, titulo: string, texto?: string, children?: React.ReactNode }) {
-  return <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-dte-linea bg-white/60 px-6 py-10 text-center">
+  return <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-dte-linea bg-white/60 px-6 py-10 text-center">
     <span className="flex size-12 items-center justify-center rounded-full bg-dte-fondo text-dte-gris"><Icono className="size-6" /></span>
     <p className="font-semibold text-dte-tinta">{titulo}</p>{texto && <p className="max-w-sm text-sm text-dte-gris">{texto}</p>}
     {children && <div className="mt-2">{children}</div>}
   </div>
 }
-export function Skeleton({ className = '' }: { className?: string }) { return <div className={`animate-pulse rounded-xl bg-dte-linea/70 ${className}`} /> }
+export function Skeleton({ className = '' }: { className?: string }) { return <div className={`animate-pulse rounded-tile bg-dte-linea/70 ${className}`} /> }
 
 export function Toast({ message, onDone }: { message: string, onDone: () => void }) {
   // Tiempo suficiente para leerlo; se pausa mientras el puntero o el foco están encima.
   const [pausa, setPausa] = useState(false)
   useEffect(() => { if (pausa) return; const t = setTimeout(onDone, 5000); return () => clearTimeout(t) }, [message, onDone, pausa])
   return <div role="status" aria-live="polite" aria-atomic="true" className="pointer-events-none fixed inset-x-0 bottom-safe-24 z-toast flex justify-center px-4 sm:bottom-8">
-    <div onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)} onFocus={() => setPausa(true)} onBlur={() => setPausa(false)} className="pointer-events-auto flex max-w-full items-center gap-2 rounded-2xl bg-dte-tinta py-1 pl-4 pr-1 text-sm font-medium text-white shadow-lg">
+    <div onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)} onFocus={() => setPausa(true)} onBlur={() => setPausa(false)} className="pointer-events-auto flex max-w-full items-center gap-2 rounded-card bg-dte-tinta py-1 pl-4 pr-1 text-sm font-medium text-white shadow-e2">
       <Check className="size-4 shrink-0 text-dte-celeste" aria-hidden /><span className="min-w-0">{message}</span>
       <button onClick={onDone} aria-label="Cerrar aviso" className="flex size-11 shrink-0 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white md:size-8"><X className="size-4" /></button>
     </div>
@@ -211,7 +211,7 @@ export type ItemPreset = { accion?: Accion, sub_accion?: string, participantes?:
 // =====================================================================
 
 export function WeekNav({ onPrev, onToday, onNext, prevLabel, nextLabel }: { onPrev: () => void, onToday: () => void, onNext: () => void, prevLabel: string, nextLabel: string }) {
-  return <div className="flex items-center rounded-lg border border-dte-linea bg-white shadow-xs">
+  return <div className="flex items-center rounded-control border border-dte-linea bg-white shadow-e1">
     <Button variant="ghost" size="icon-lg" aria-label={prevLabel} onClick={onPrev}><ChevronLeft /></Button>
     <Button variant="ghost" size="lg" className="rounded-none border-x border-dte-linea px-4 font-semibold" onClick={onToday}>Hoy</Button>
     <Button variant="ghost" size="icon-lg" aria-label={nextLabel} onClick={onNext}><ChevronRight /></Button>
@@ -292,7 +292,7 @@ export function VolverArriba({ alto = false }: { alto?: boolean }) {
   }, [])
   if (!ver) return null
   return <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Volver arriba" title="Volver arriba"
-    className={`fixed right-4 z-fab flex size-11 items-center justify-center rounded-full border border-dte-linea bg-white/95 text-dte-petroleo shadow-lg backdrop-blur transition hover:bg-dte-tinte md:right-6 ${alto ? 'bottom-[calc(10rem+env(safe-area-inset-bottom,0px))] md:bottom-24' : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:bottom-6'}`}>
+    className={`fixed right-4 z-fab flex size-11 items-center justify-center rounded-full border border-dte-linea bg-white/95 text-dte-petroleo shadow-e2 backdrop-blur transition hover:bg-dte-tinte md:right-6 ${alto ? 'bottom-[calc(10rem+env(safe-area-inset-bottom,0px))] md:bottom-24' : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:bottom-6'}`}>
     <ArrowUp className="size-5" aria-hidden />
   </button>
 }
