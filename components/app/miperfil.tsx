@@ -35,7 +35,7 @@ export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onFer
       <span className="hidden md:block"><span className="block text-sm font-semibold leading-tight">{profile.nombre_completo}</span><span className="block text-xs text-dte-gris">{profile.rol === 'coordinacion' ? 'Coordinación' : 'FED'}</span></span>
       <ChevronDown className={`hidden size-4 text-dte-gris transition md:block ${open ? 'rotate-180' : ''}`} />
     </button>
-    {open && <div role="menu" aria-label="Opciones de perfil" className="absolute right-0 top-12 z-modal w-60 overflow-hidden rounded-2xl border border-dte-linea bg-white py-1 shadow-xl">
+    {open && <div role="menu" aria-label="Opciones de perfil" className="absolute right-0 top-12 z-modal w-60 overflow-hidden rounded-card border border-dte-linea bg-white py-1 shadow-e3">
       <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
       {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
@@ -84,7 +84,7 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
     try { await updateMiPerfil(fed.id, datos); setBase(firma()); onSaved({ ...fed, ...datos }) } catch (e) { setError(errMsg(e)) } finally { setBusy(false) }
   }
 
-  const panel = 'rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5'
+  const panel = 'rounded-card border border-dte-linea bg-white p-4 shadow-e1 sm:p-5'
   const time = 'h-11 min-w-0 px-2 tabular-nums md:h-9'
   return <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-32 pt-6 lg:px-10">
     <header className="mb-5 flex items-center gap-3">
@@ -129,7 +129,7 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
       <section className={panel} aria-labelledby="t-cargos">
         <h3 id="t-cargos" className="flex items-center gap-1.5 font-bold"><Briefcase className="size-4 text-dte-petroleo" />Otros cargos</h3>
         <p className="mb-3 text-sm text-dte-gris">Si tenés horas en otra institución, cargalas para que la agenda te avise si una acción se superpone.</p>
-        {cargos.length > 0 && <ul className="mb-3 flex flex-col gap-3">{cargos.map((c, i) => <li key={c.key} className="flex flex-col gap-3 rounded-xl border border-dte-linea bg-dte-fondo/60 p-3">
+        {cargos.length > 0 && <ul className="mb-3 flex flex-col gap-3">{cargos.map((c, i) => <li key={c.key} className="flex flex-col gap-3 rounded-tile border border-dte-linea bg-dte-fondo/60 p-3">
           <div className="flex items-end gap-2">
             <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm font-semibold">Institución o cargo<Input value={c.nombre} onChange={e => setCargo(c.key, { nombre: e.target.value })} placeholder="Ej.: EP N° 5 · Maestra de grado" maxLength={80} /></label>
             <Button variant="ghost" size="icon" onClick={() => setCargos(l => l.filter(x => x.key !== c.key))} aria-label={`Quitar ${c.nombre || `cargo ${i + 1}`}`} className="text-dte-gris hover:bg-peligro-fondo hover:text-peligro"><Trash2 /></Button>
@@ -145,10 +145,10 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
         </li>)}</ul>}
         <Button variant="outline" onClick={() => setCargos(l => [...l, { key: Date.now(), nombre: '', dias: [], desde: '', hasta: '' }])}><Plus data-icon="inline-start" />Agregar cargo</Button>
 
-        {Object.keys(notas).length > 0 && <div className="mt-4 rounded-xl border border-aviso-borde bg-aviso-fondo p-3 text-sm text-aviso">
+        {Object.keys(notas).length > 0 && <div className="mt-4 rounded-tile border border-aviso-borde bg-aviso-fondo p-3 text-sm text-aviso">
           <p className="mb-1.5 font-semibold">Notas de la planilla anterior</p>
           <p className="mb-2">Pasalas a “Otros cargos” y después quitalas.</p>
-          <ul className="flex flex-col gap-1.5">{Object.entries(notas).map(([dia, t]) => <li key={dia} className="flex items-center justify-between gap-2 rounded-lg bg-white/70 px-2.5 py-1.5 text-dte-tinta">
+          <ul className="flex flex-col gap-1.5">{Object.entries(notas).map(([dia, t]) => <li key={dia} className="flex items-center justify-between gap-2 rounded-control bg-white/70 px-2.5 py-1.5 text-dte-tinta">
             <span className="min-w-0"><b>{DIAS[Number(dia) - 1]}:</b> {t}</span>
             <Button variant="ghost" size="icon-sm" onClick={() => setNotas(n => { const c = { ...n }; delete c[Number(dia)]; return c })} aria-label={`Quitar nota del ${DIAS[Number(dia) - 1].toLowerCase()}`}><X /></Button>
           </li>)}</ul>
@@ -158,7 +158,7 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
       <SeccionFotos />
       {fed.rol === 'fed' && <SeccionPve />}
 
-      {errores.length > 0 && <div ref={erroresRef} role="alert" className="rounded-xl border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p className="mb-1 font-semibold">Revisá estos datos:</p><ul className="list-disc pl-5">{errores.map(e => <li key={e}>{e}</li>)}</ul></div>}
+      {errores.length > 0 && <div ref={erroresRef} role="alert" className="rounded-tile border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p className="mb-1 font-semibold">Revisá estos datos:</p><ul className="list-disc pl-5">{errores.map(e => <li key={e}>{e}</li>)}</ul></div>}
       {error && <ErrorBox message={error} />}
     </div>
 

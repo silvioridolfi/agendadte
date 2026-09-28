@@ -82,19 +82,19 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
     </div>
 
     <div className="mt-6">
-      {desdeCache && <p role="status" className="mb-3 flex items-center gap-2 rounded-xl border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso"><WifiOff className="size-4 shrink-0" />Sin conexión: estás viendo la copia guardada el {new Date(desdeCache).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. Lo que cargues se envía al volver la señal.</p>}
+      {desdeCache && <p role="status" className="mb-3 flex items-center gap-2 rounded-tile border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso"><WifiOff className="size-4 shrink-0" />Sin conexión: estás viendo la copia guardada el {new Date(desdeCache).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. Lo que cargues se envía al volver la señal.</p>}
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? <Skeleton className="h-72" />
-        : view === 'day' ? <section className="rounded-2xl border border-dte-linea bg-white p-4">
+        : view === 'day' ? <section className="rounded-card border border-dte-linea bg-white p-4">
             <header className="mb-3 flex flex-wrap items-center justify-between gap-2">{dayHeader(anchor, true)}{sel && (byDay.get(iso(anchor)) ?? []).some(i => i.fed_id === fed.id) && <Button variant="outline" size="sm" onClick={() => selDia(iso(anchor))}><ListChecks data-icon="inline-start" />Todo el día</Button>}<div className="flex flex-wrap gap-1.5">{(feriados.get(iso(anchor)) ?? []).map(f => <FeriadoTag key={f.nombre} f={f} />)}{(eventos.get(iso(anchor)) ?? []).map(e => <EventoTag key={e.id} e={e} registrar={registrar} />)}</div></header>
             {(byDay.get(iso(anchor)) ?? []).length
               ? <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{(byDay.get(iso(anchor)) ?? []).map(card)}</div>
-              : !onNew || !puedeAgregar(anchor) ? <p className="rounded-xl border border-dashed border-dte-linea py-10 text-center text-sm text-dte-gris">Sin acciones</p> : <button onClick={() => onNew(iso(anchor))} className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed border-dte-linea py-10 text-sm text-dte-gris hover:border-dte-magenta hover:text-dte-magenta"><Plus />Sin acciones · agregar una</button>}
+              : !onNew || !puedeAgregar(anchor) ? <p className="rounded-tile border border-dashed border-dte-linea py-10 text-center text-sm text-dte-gris">Sin acciones</p> : <button onClick={() => onNew(iso(anchor))} className="flex w-full flex-col items-center gap-2 rounded-tile border border-dashed border-dte-linea py-10 text-sm text-dte-gris hover:border-dte-magenta hover:text-dte-magenta"><Plus />Sin acciones · agregar una</button>}
           </section>
         : view === 'week' ? <div className="grid gap-3 lg:grid-cols-5">
             {Array.from({ length: 5 }, (_, i) => addDays(from, i)).map(d => {
               const key = iso(d), list = byDay.get(key) ?? [], fer = feriados.get(key) ?? []
-              return <section key={key} aria-label={cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))} className={`group/day flex flex-col rounded-2xl border p-2.5 lg:min-h-72 ${key === today ? 'border-pba-celeste bg-white shadow-[0_0_0_1px] shadow-pba-celeste' : fer.length ? 'border-feriado-borde bg-feriado-fondo' : 'border-dte-linea bg-white'}`}>
+              return <section key={key} aria-label={cap(fmt(d, { weekday: 'long', day: 'numeric', month: 'long' }))} className={`group/day flex flex-col rounded-card border p-2.5 lg:min-h-72 ${key === today ? 'border-pba-celeste bg-white shadow-[0_0_0_1px] shadow-pba-celeste' : fer.length ? 'border-feriado-borde bg-feriado-fondo' : 'border-dte-linea bg-white'}`}>
                 <header className="mb-2 flex items-center justify-between px-1">{dayHeader(d)}{sel ? (list.some(i => i.fed_id === fed.id) && <Button variant="ghost" size="sm" onClick={() => selDia(key)} className="text-dte-petroleo">Todo el día</Button>) : onNew && puedeAgregar(d) && <Button variant="ghost" size="icon-sm" aria-label={`Agregar acción el ${fmt(d, { weekday: 'long', day: 'numeric' })}`} onClick={() => onNew(key)} className="text-dte-gris hover:text-dte-magenta lg:opacity-0 lg:group-hover/day:opacity-100 lg:focus-visible:opacity-100"><Plus /></Button>}</header>
                 {fer.length > 0 && <div className="mb-2 flex flex-col gap-1 px-1">{fer.map(f => <FeriadoTag key={f.nombre} f={f} />)}</div>}
                 {(eventos.get(key) ?? []).length > 0 && <div className="mb-2 flex flex-col gap-1 px-1">{eventos.get(key)!.map(e => <EventoTag key={e.id} e={e} registrar={registrar} />)}</div>}
@@ -125,7 +125,7 @@ export function MonthGrid({ month, byDay, feriados, eventos, registrar = false, 
   // En móvil, tocar un día abre una hoja con sus acciones y el atajo para agregar.
   const [dia, setDia] = useState<Date | null>(null)
   const diaKey = dia ? iso(dia) : '', diaList = dia ? byDay.get(diaKey) ?? [] : [], diaFer = dia ? feriados.get(diaKey) ?? [] : []
-  return <><div className="overflow-hidden rounded-2xl border border-dte-linea bg-white">
+  return <><div className="overflow-hidden rounded-card border border-dte-linea bg-white">
     <div className="grid grid-cols-5 border-b border-dte-linea bg-dte-fondo text-center text-xs font-bold uppercase tracking-wider text-dte-gris">{DIAS_HABILES.map(d => <div key={d} className="py-2">{d}</div>)}</div>
     {monthWeeks(month).map((week, wi) => <div key={wi} className="grid grid-cols-5 border-b border-dte-linea last:border-b-0">
       {week.map((d, di) => {
@@ -163,7 +163,7 @@ export function MonthGrid({ month, byDay, feriados, eventos, registrar = false, 
 
 export function MiniMonth({ month, byDay, feriados, today, onDay }: { month: Date, byDay: Map<string, AgendaItem[]>, feriados: Map<string, Feriado[]>, today: string, onDay: (d: Date) => void }) {
   const total = monthWeeks(month).flat().reduce((a, d) => a + (d ? (byDay.get(iso(d))?.length ?? 0) : 0), 0)
-  return <section className="rounded-2xl border border-dte-linea bg-white p-3">
+  return <section className="rounded-card border border-dte-linea bg-white p-3">
     <header className="mb-2 flex items-baseline justify-between"><h3 className="font-bold capitalize">{fmt(month, { month: 'long', year: 'numeric' })}</h3><span className="text-xs text-dte-gris">{total} {total === 1 ? 'acción' : 'acciones'}</span></header>
     <div className="grid grid-cols-5 gap-1 text-center text-xs font-bold uppercase text-dte-gris-claro">{DIAS_HABILES.map(d => <div key={d}>{d}</div>)}</div>
     {monthWeeks(month).map((week, wi) => <div key={wi} className="mt-1 grid grid-cols-5 gap-1">
@@ -193,8 +193,8 @@ export function ListaAcciones({ items, viewer, onSelect, sel, onToggle }: { item
   const desde = Math.max(0, inicioHoy - anteriores), visibles = orden.slice(desde, inicioHoy + n)
   return <div className="flex flex-col gap-3">
     {desde > 0 && <div className="flex items-center justify-center gap-2"><Button variant="outline" size="sm" onClick={() => setAnteriores(a => a + 20)}>Ver {Math.min(20, desde)} anteriores</Button><span className="text-xs text-dte-gris">{desde} acciones antes de hoy</span></div>}
-    {!visibles.length ? <p className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-6 text-center text-sm text-dte-gris">No hay acciones de hoy en adelante.</p>
-    : <ul className="divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xs">{visibles.map(item =>
+    {!visibles.length ? <p className="rounded-card border border-dashed border-dte-linea bg-white/60 p-6 text-center text-sm text-dte-gris">No hay acciones de hoy en adelante.</p>
+    : <ul className="divide-y divide-dte-linea overflow-hidden rounded-card border border-dte-linea bg-white shadow-e1">{visibles.map(item =>
       <li key={item.id}><button onClick={() => (sel && onToggle && item.fed_id === viewer ? onToggle(item.id) : onSelect(item))} aria-pressed={sel && item.fed_id === viewer ? sel.includes(item.id) : undefined} className={`grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte sm:grid-cols-[6.5rem_1fr_auto] sm:items-center ${sel?.includes(item.id) ? 'bg-dte-tinte ring-2 ring-inset ring-dte-petroleo' : ''}`}>
         <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize">{fmt(parse(item.fecha), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')}</span><span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span></span>
         <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemCorto(item)}</span><span className="block truncate text-xs text-dte-gris">{[cueLugar(item.school), item.sub_accion].filter(Boolean).join(' · ') || ' '}</span></span>
@@ -207,7 +207,7 @@ export function ListaAcciones({ items, viewer, onSelect, sel, onToggle }: { item
 // `seleccionado` (definido): la tarjeta está en modo selección y muestra su casilla.
 export function ItemCard({ item, onClick, viewer, seleccionado }: { item: AgendaItem, onClick: () => void, viewer?: string, seleccionado?: boolean }) {
   const muted = item.estado === 'cancelada'
-  return <button onClick={onClick} aria-pressed={seleccionado} title={item.school ? schoolName(item.school) : undefined} className={`relative w-full ${seleccionado ? 'ring-2 ring-dte-petroleo border-dte-petroleo' : ''} overflow-hidden rounded-xl border border-dte-linea bg-white p-2.5 pl-3.5 text-left transition hover:border-pba-celeste hover:shadow-md focus-visible:border-pba-celeste focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-pba-celeste/30 ${muted ? 'opacity-65' : ''}`}>
+  return <button onClick={onClick} aria-pressed={seleccionado} title={item.school ? schoolName(item.school) : undefined} className={`relative w-full ${seleccionado ? 'ring-2 ring-dte-petroleo border-dte-petroleo' : ''} overflow-hidden rounded-tile border border-dte-linea bg-white p-2.5 pl-3.5 text-left transition hover:border-pba-celeste hover:shadow-e2 focus-visible:border-pba-celeste focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-pba-celeste/30 ${muted ? 'opacity-65' : ''}`}>
     {seleccionado !== undefined && <span aria-hidden className={`absolute right-2 top-2 flex size-5 items-center justify-center rounded-md border ${seleccionado ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-gris-claro bg-white'}`}>{seleccionado && <Check className="size-3.5" />}</span>}
     <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${actionStyle[item.accion]?.dot}`} />
     <span className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-dte-gris"><Clock className="size-3 shrink-0" />{timeRange(item)}</span>

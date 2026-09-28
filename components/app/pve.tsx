@@ -39,22 +39,22 @@ export function SeccionPve() {
     try { const url = await abrirCarpetaPve(m.mes); if (w) w.location.href = url; else window.location.href = url; cargar() }
     catch (e) { w?.close(); setError(errMsg(e)) } finally { setAbriendo('') }
   }
-  return <section className="rounded-2xl border border-dte-linea bg-white p-4 shadow-xs sm:p-5" aria-labelledby="t-pve">
+  return <section className="rounded-card border border-dte-linea bg-white p-4 shadow-e1 sm:p-5" aria-labelledby="t-pve">
     <h3 id="t-pve" className="flex items-center gap-1.5 font-bold"><FileText className="size-4 text-dte-petroleo" />Planillas de Visita (PVE)</h3>
     <p className="mb-3 text-sm text-dte-gris">Subí tu PVE del mes, <b>firmada y en un solo PDF</b>, a la carpeta de ese mes. Vence el <b>5.º día hábil del mes siguiente</b>. Tocá <b>Subir</b> en el mes: se crea su carpeta en tu Drive y se abre. La agenda le pone el nombre correcto y se la deja lista a la coordinación.</p>
     {!datos ? (error ? <ErrorBox message={error} /> : <Loader2 className="size-5 animate-spin text-dte-gris" />)
-      : !datos.conectada ? <p className="rounded-lg border border-dashed border-dte-linea px-3 py-3 text-sm text-dte-gris">Primero conectá tu carpeta de Drive en “Fotos de las acciones”: las PVE usan la misma carpeta.</p>
+      : !datos.conectada ? <p className="rounded-control border border-dashed border-dte-linea px-3 py-3 text-sm text-dte-gris">Primero conectá tu carpeta de Drive en “Fotos de las acciones”: las PVE usan la misma carpeta.</p>
       : <>
-        <ul className="divide-y divide-dte-linea rounded-xl border border-dte-linea">{datos.meses.map(m => <li key={m.mes} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm">
+        <ul className="divide-y divide-dte-linea rounded-tile border border-dte-linea">{datos.meses.map(m => <li key={m.mes} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm">
           <span className="min-w-0"><b className="capitalize">{m.nombreMes.toLowerCase()}</b>
             {pendienteCorreccion(m) ? <span className="flex items-center gap-1 text-xs font-semibold text-aviso"><Undo2 className="size-3" />Devuelta para corregir</span>
               : <span className={`flex items-center gap-1 text-xs ${m.entregada ? 'text-exito' : 'text-dte-gris'}`}>{m.enviada ? <><Send className="size-3" />Enviada a Nivel Central</> : m.reentregada ? <><Check className="size-3" />Corregida y reentregada el {fecha(m.reentregada)}</> : m.entregada ? <><Check className="size-3" />Entregada el {fecha(m.entregada)}</> : <>Pendiente · vence el {fechaCorta(m.vence)}</>}</span>}
             <Historial h={m.historial} /></span>
           <span className="flex flex-wrap gap-1.5">
-            {m.archivoUrl && <a href={m.archivoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-dte-linea px-3 text-sm md:px-2.5 md:text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><ExternalLink className="size-3.5" />Ver</a>}
-            {!m.enviada && <button type="button" disabled={abriendo === m.mes} onClick={() => subir(m)} className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-dte-linea px-3 text-sm md:px-2.5 md:text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8">{abriendo === m.mes ? <Loader2 className="size-3.5 animate-spin" /> : <FolderOpen className="size-3.5" />}{pendienteCorreccion(m) ? 'Subir corregida' : m.entregada ? 'Carpeta' : 'Subir'}</button>}
+            {m.archivoUrl && <a href={m.archivoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 rounded-control border border-dte-linea px-3 text-sm md:px-2.5 md:text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><ExternalLink className="size-3.5" />Ver</a>}
+            {!m.enviada && <button type="button" disabled={abriendo === m.mes} onClick={() => subir(m)} className="inline-flex min-h-11 items-center gap-1 rounded-control border border-dte-linea px-3 text-sm md:px-2.5 md:text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8">{abriendo === m.mes ? <Loader2 className="size-3.5 animate-spin" /> : <FolderOpen className="size-3.5" />}{pendienteCorreccion(m) ? 'Subir corregida' : m.entregada ? 'Carpeta' : 'Subir'}</button>}
           </span>
-          {pendienteCorreccion(m) && <p className="w-full rounded-lg bg-aviso-fondo px-3 py-2 text-xs text-aviso"><b>Motivo:</b> {m.motivo}. Subí el PDF corregido a la misma carpeta: la versión anterior queda guardada aparte.</p>}
+          {pendienteCorreccion(m) && <p className="w-full rounded-control bg-aviso-fondo px-3 py-2 text-xs text-aviso"><b>Motivo:</b> {m.motivo}. Subí el PDF corregido a la misma carpeta: la versión anterior queda guardada aparte.</p>}
         </li>)}</ul>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" disabled={busy} onClick={() => cargar(true)}>{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}Revisar ahora</Button>
@@ -102,19 +102,19 @@ export function PveEquipoView() {
     {error && <div className="mt-3"><ErrorBox message={error} /></div>}
     {!lista ? <div className="mt-4 flex flex-col gap-2"><Skeleton className="h-14" /><Skeleton className="h-14" /><Skeleton className="h-14" /></div> : <>
       <p className="mt-4 text-sm">Vence el <b>{lista[0] ? fechaCorta(lista[0].vence) : '—'}</b> (5.º día hábil del mes siguiente) · <b>{entregadas.length}</b> de {lista.length} entregadas{pendientes.length ? <> · faltan: {pendientes.map(f => f.nombre.split(' ')[0]).join(', ')}</> : ''}</p>
-      <ul className="mt-2 divide-y divide-dte-linea rounded-2xl border border-dte-linea bg-white shadow-xs">{lista.map(f => <li key={f.fedId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm">
+      <ul className="mt-2 divide-y divide-dte-linea rounded-card border border-dte-linea bg-white shadow-e1">{lista.map(f => <li key={f.fedId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm">
         <span className="min-w-0"><b>{f.nombre}</b>
           {pendienteCorreccion(f) ? <span className="block text-xs text-aviso"><span className="flex items-center gap-1 font-semibold"><Undo2 className="size-3" />Devuelta para corregir</span>{f.motivo}</span>
             : <span className={`flex items-center gap-1 text-xs ${f.entregada ? 'text-exito' : 'text-dte-gris'}`}>{f.enviada ? <><Send className="size-3" />Enviada</> : f.reentregada ? <><FileCheck2 className="size-3" />Reentregada corregida el {fecha(f.reentregada)}</> : f.entregada ? <><FileCheck2 className="size-3" />Entregada el {fecha(f.entregada)}</> : f.conectada ? 'Pendiente' : 'Sin carpeta de Drive conectada'}</span>}
           <Historial h={f.historial} /></span>
         <span className="flex flex-wrap gap-1.5">
-          {f.archivoUrl && <a href={f.archivoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-dte-linea px-3 text-sm md:px-2.5 md:text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><ExternalLink className="size-3.5" />Ver</a>}
-          {f.entregada && !pendienteCorreccion(f) && <button type="button" onClick={() => { setDevolver(f); setMotivo('') }} className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-dte-linea px-3 text-sm md:px-2.5 md:text-xs font-semibold text-aviso hover:bg-aviso-fondo md:min-h-8"><Undo2 className="size-3.5" />Devolver</button>}
+          {f.archivoUrl && <a href={f.archivoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 rounded-control border border-dte-linea px-3 text-sm md:px-2.5 md:text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><ExternalLink className="size-3.5" />Ver</a>}
+          {f.entregada && !pendienteCorreccion(f) && <button type="button" onClick={() => { setDevolver(f); setMotivo('') }} className="inline-flex min-h-11 items-center gap-1 rounded-control border border-dte-linea px-3 text-sm md:px-2.5 md:text-xs font-semibold text-aviso hover:bg-aviso-fondo md:min-h-8"><Undo2 className="size-3.5" />Devolver</button>}
         </span>
       </li>)}</ul>
       <div className="mt-3 flex flex-wrap gap-2">
-        {entregadas.length > 0 && <a href={`/api/pve/zip?mes=${mes}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-dte-petroleo px-4 text-sm font-semibold text-white hover:bg-dte-petroleo-oscuro md:min-h-9"><Download className="size-4" />Descargar todas ({entregadas.length})</a>}
-        {corregidas.length > 0 && <a href={`/api/pve/zip?mes=${mes}&solo=corregidas`} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-dte-petroleo px-4 text-sm font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-9"><Download className="size-4" />Descargar corregidas ({corregidas.length})</a>}
+        {entregadas.length > 0 && <a href={`/api/pve/zip?mes=${mes}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-control bg-dte-petroleo px-4 text-sm font-semibold text-white hover:bg-dte-petroleo-oscuro md:min-h-9"><Download className="size-4" />Descargar todas ({entregadas.length})</a>}
+        {corregidas.length > 0 && <a href={`/api/pve/zip?mes=${mes}&solo=corregidas`} className="inline-flex min-h-11 items-center gap-1.5 rounded-control border border-dte-petroleo px-4 text-sm font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-9"><Download className="size-4" />Descargar corregidas ({corregidas.length})</a>}
         {sinEnviar.length > 0 && <Button variant="outline" disabled={busy} onClick={() => setConfirmar(true)}>{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Send data-icon="inline-start" />}Marcar como enviadas</Button>}
       </div>
       {aviso && <p role="status" className="mt-2 text-sm text-exito">{aviso}</p>}

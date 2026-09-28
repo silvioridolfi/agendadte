@@ -33,7 +33,7 @@ export function MiEquipoView({ feds, todos, items, clubes, noHabiles, periodo, d
     <p className="text-sm text-dte-gris">Datos declarados por cada FED y resumen de {periodo.toLowerCase()}. Solo lectura.</p>
     <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{feds.map(f => {
       const r = resumen.get(f.id)!
-      return <li key={f.id} className="flex min-w-0 flex-col gap-3 rounded-2xl border border-dte-linea bg-white p-4 shadow-xs">
+      return <li key={f.id} className="flex min-w-0 flex-col gap-3 rounded-card border border-dte-linea bg-white p-4 shadow-e1">
         <header className="flex items-center gap-3">
           <Avatar className="size-10"><AvatarFallback className={`${fedColor(feds, f.id)} text-sm font-bold text-dte-petroleo-oscuro`}>{initials(f.nombre_completo)}</AvatarFallback></Avatar>
           <div className="min-w-0">
@@ -45,26 +45,26 @@ export function MiEquipoView({ feds, todos, items, clubes, noHabiles, periodo, d
 
         <dl className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
           {([['Realizadas', r.realizadas], ['Planificadas', r.planificadas], ['Clubes', r.clubes], ['Prácticas', r.practicas]] as const).map(([l, n]) =>
-            <div key={l} className="rounded-xl bg-dte-fondo px-2 py-2"><dt className="text-xs text-dte-gris">{l}</dt><dd className="text-lg font-bold tabular-nums">{n}</dd></div>)}
+            <div key={l} className="rounded-tile bg-dte-fondo px-2 py-2"><dt className="text-xs text-dte-gris">{l}</dt><dd className="text-lg font-bold tabular-nums">{n}</dd></div>)}
         </dl>
         <p className="text-xs text-dte-gris">{r.ultima ? <>Última acción realizada: <b className="text-dte-tinta">{fmt(parse(r.ultima), { weekday: 'long', day: 'numeric', month: 'long' })}</b></> : 'Sin acciones realizadas en el período.'}</p>
 
         <div>
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Horarios (DD.JJ.)</p>
-          {f.ddjj?.length ? <ul className="divide-y divide-dte-linea rounded-xl border border-dte-linea text-sm">{DIAS.map((d, i) => {
+          {f.ddjj?.length ? <ul className="divide-y divide-dte-linea rounded-tile border border-dte-linea text-sm">{DIAS.map((d, i) => {
             const dj = f.ddjj.find(x => x.dia === i + 1)
             const fr = franjasDte(dj), dte = fr.length ? textoFranjas(fr) : dj?.dte ?? ''
             return <li key={d} className="grid grid-cols-[2.5rem_1fr] gap-2 px-3 py-1.5">
               <span className="font-semibold">{d}</span>
               <span className="min-w-0">{dte ? <span className="block tabular-nums">DTE {dte}</span> : <span className="block text-dte-gris-claro">Sin horario DTE</span>}{dj?.cargos?.map(c => <span key={c.nombre + c.desde} className="block text-xs text-dte-gris">{c.nombre}: {c.desde} a {c.hasta}</span>)}{dj?.externo && <span className="block text-xs text-dte-gris">Nota: {dj.externo}</span>}</span>
             </li>
-          })}</ul> : <p className="rounded-xl border border-dashed border-dte-linea px-3 py-3 text-sm text-dte-gris">Todavía no cargó su DD.JJ. de horarios.</p>}
+          })}</ul> : <p className="rounded-tile border border-dashed border-dte-linea px-3 py-3 text-sm text-dte-gris">Todavía no cargó su DD.JJ. de horarios.</p>}
         </div>
 
         <div className="mt-auto flex gap-2">
-          <button type="button" onClick={() => setInforme(f)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-dte-linea px-3 text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9"><FileBarChart className="size-4" />Informe</button>
-          <button type="button" onClick={() => onVerAcciones(f.id)} className="min-h-11 flex-1 rounded-lg border border-dte-linea text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9">Ver acciones del período</button>
-          {f.carpeta_fotos_url ? <a href={f.carpeta_fotos_url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-dte-linea px-3 text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9"><Camera className="size-4" />Fotos</a>
+          <button type="button" onClick={() => setInforme(f)} className="inline-flex min-h-11 items-center gap-1.5 rounded-control border border-dte-linea px-3 text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9"><FileBarChart className="size-4" />Informe</button>
+          <button type="button" onClick={() => onVerAcciones(f.id)} className="min-h-11 flex-1 rounded-control border border-dte-linea text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9">Ver acciones del período</button>
+          {f.carpeta_fotos_url ? <a href={f.carpeta_fotos_url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 rounded-control border border-dte-linea px-3 text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9"><Camera className="size-4" />Fotos</a>
             : <span className="inline-flex min-h-11 items-center px-2 text-xs text-dte-gris md:min-h-9">Sin carpeta de fotos</span>}
         </div>
       </li>

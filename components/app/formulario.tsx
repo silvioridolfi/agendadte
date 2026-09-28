@@ -43,7 +43,7 @@ export function SchoolPicker({ value, onChange, onOrganismo }: { value: School |
   const opciones: ({ tipo: 'org', o: Organismo } | { tipo: 'esc', s: School })[] = [...orgs.map(o => ({ tipo: 'org' as const, o })), ...results.map(s => ({ tipo: 'esc' as const, s }))]
   const pick = (x: typeof opciones[number]) => { if (x.tipo === 'org') onOrganismo?.(`${x.o.nombre} (${x.o.codigo})`); else onChange(x.s); setQuery(''); setOpen(false) }
 
-  if (value) return <div className="flex items-center gap-3 rounded-lg border border-pba-celeste/60 bg-pba-celeste/5 p-2.5 pl-3 font-normal">
+  if (value) return <div className="flex items-center gap-3 rounded-control border border-pba-celeste/60 bg-pba-celeste/5 p-2.5 pl-3 font-normal">
     <SchoolIcon className="size-4 shrink-0 text-pba-celeste-texto" />
     <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{schoolName(value)}</p><p className="truncate text-xs text-dte-gris">CUE {value.cue ?? '—'}{schoolPlace(value) ? ` · ${schoolPlace(value)}` : ''}</p></div>
     <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)}>Cambiar</Button>
@@ -61,11 +61,11 @@ export function SchoolPicker({ value, onChange, onOrganismo }: { value: School |
         else if (e.key === 'Enter') { e.preventDefault(); pick(opciones[active]) }
         else if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
       }} />
-    {showList && <div id="school-results" role="listbox" className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-dte-linea bg-white p-1 text-sm font-normal text-dte-tinta shadow-xl">
+    {showList && <div id="school-results" role="listbox" className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-tile border border-dte-linea bg-white p-1 text-sm font-normal text-dte-tinta shadow-e3">
       {loading ? <p className="flex items-center gap-2 p-3 text-dte-gris"><Loader2 className="size-4 animate-spin" />Buscando…</p>
         : failed ? <p className="p-3 text-peligro">No se pudo buscar. Probá de nuevo.</p>
         : !opciones.length ? <p className="p-3 text-dte-gris">Sin resultados para “{query.trim()}”.</p>
-        : opciones.map((x, i) => <button key={x.tipo === 'org' ? `o-${x.o.id}` : x.s.id} type="button" role="option" aria-selected={i === active} onMouseDown={e => e.preventDefault()} onMouseEnter={() => setActive(i)} onClick={() => pick(x)} className={`block w-full rounded-lg px-3 py-2 text-left ${i === active ? 'bg-dte-tinte' : ''}`}>
+        : opciones.map((x, i) => <button key={x.tipo === 'org' ? `o-${x.o.id}` : x.s.id} type="button" role="option" aria-selected={i === active} onMouseDown={e => e.preventDefault()} onMouseEnter={() => setActive(i)} onClick={() => pick(x)} className={`block w-full rounded-control px-3 py-2 text-left ${i === active ? 'bg-dte-tinte' : ''}`}>
           {x.tipo === 'org' ? <><span className="flex items-center gap-1.5 font-semibold leading-snug"><Landmark className="size-3.5 shrink-0 text-dte-violeta" aria-hidden />{x.o.nombre.split(' | ').map(titleCase).join(' · ')}</span>
             <span className="block text-xs text-dte-gris">Código {x.o.codigo}{x.o.localidad ? ` · ${titleCase(x.o.localidad)}` : ''}</span></>
           : <><span className="block font-semibold leading-snug">{schoolName(x.s)}</span>
@@ -233,7 +233,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   return <form onSubmit={submit} className="flex flex-col gap-5">
     {!esParo && !esLicencia && <div id="campo-establecimiento" className="flex scroll-mt-24 flex-col gap-1.5"><span className="text-sm font-semibold">Establecimiento {!lugarOpcional && <span className="text-dte-magenta">*</span>} <span className="font-normal text-dte-gris">{modoT ? '(sede donde se desarrolla)' : lugarOpcional ? '(opcional)' : '(escuela o lugar; no hace falta para Licencia ni Paro)'}</span></span><SchoolPicker value={school} onChange={v => { setSchool(v); limpiar('establecimiento') }} onOrganismo={l => { set('lugar', l); limpiar('establecimiento') }} />{!school && <Input placeholder="Otro lugar, si no aparece en la búsqueda (ej.: Feria de Ciencias)" value={form.lugar} onChange={e => { set('lugar', e.target.value); limpiar('establecimiento') }} aria-invalid={!!errores.establecimiento || undefined} aria-describedby={errores.establecimiento ? 'err-establecimiento' : undefined} className="md:h-10" aria-label="Lugar" />}{errores.establecimiento && <p id="err-establecimiento" role="alert" className="text-sm font-medium text-peligro">{errores.establecimiento}</p>}</div>}
 
-    {modoT === 'nuevo' && <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-dte-fondo p-2.5 text-sm"><input type="checkbox" checked={aDefinirMarcado} onChange={e => setADefinir(e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Fecha a definir.</b> {marca.corto === 'club' ? 'El club queda' : 'La práctica queda'} “por iniciar” y no se agrega a tu agenda hasta que programes el primer encuentro.</span></label>}
+    {modoT === 'nuevo' && <label className="flex items-start gap-2.5 rounded-control border border-dte-linea bg-dte-fondo p-2.5 text-sm"><input type="checkbox" checked={aDefinirMarcado} onChange={e => setADefinir(e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Fecha a definir.</b> {marca.corto === 'club' ? 'El club queda' : 'La práctica queda'} “por iniciar” y no se agrega a tu agenda hasta que programes el primer encuentro.</span></label>}
     {!aDefinir && <div className="grid gap-4 sm:grid-cols-3">
       <Field id="campo-fecha" label={modoT === 'nuevo' ? 'Fecha del primer encuentro' : 'Fecha'} required className="scroll-mt-24" error={fechaError} errorId="err-fecha"><Input type="date" required value={form.fecha} onChange={e => set('fecha', e.target.value)} aria-invalid={!!fechaError || undefined} aria-describedby={fechaError ? 'err-fecha' : undefined} className="md:h-10" /></Field>
       {!esParo && <><Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="md:h-10" /></Field>
@@ -250,7 +250,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         // Botón de cada tipo de acción.
         const boton = (name: Accion) => {
           const on = form.accion === name
-          return <button key={name} type="button" title={nombreAccion(name)} aria-pressed={on} onClick={() => { limpiar('accion'); setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '', tipo_jornada: f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada })) }} className={`flex min-h-11 min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs font-bold uppercase leading-tight break-words hyphens-auto transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
+          return <button key={name} type="button" title={nombreAccion(name)} aria-pressed={on} onClick={() => { limpiar('accion'); setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '', tipo_jornada: f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada })) }} className={`flex min-h-11 min-w-0 items-center gap-2 rounded-control border px-2.5 py-2 text-left text-xs font-bold uppercase leading-tight break-words hyphens-auto transition ${on ? `${actionStyle[name].chip} border-current ring-1 ring-current` : 'border-dte-linea bg-white text-dte-gris hover:border-dte-gris-claro hover:text-dte-tinta'}`}>
             <span className={`flex size-4 shrink-0 items-center justify-center rounded-full ${on ? actionStyle[name].dot : 'border border-dte-linea'}`}>{on && <Check className="size-3 text-white" />}</span><span className="min-w-0 [overflow-wrap:anywhere]">{etiquetaAccion(name)}</span>
           </button>
         }
@@ -265,12 +265,12 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         return <div className="flex flex-col gap-3">
           <div><p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Coordinación</p>
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{ACCIONES_CED.map(boton)}</div></div>
-          <details open={territorial} className="rounded-xl border border-dte-linea p-3"><summary className="cursor-pointer text-sm font-semibold text-dte-petroleo">Acciones territoriales (como FED)</summary><div className="mt-3">{grupos}</div></details>
+          <details open={territorial} className="rounded-tile border border-dte-linea p-3"><summary className="cursor-pointer text-sm font-semibold text-dte-petroleo">Acciones territoriales (como FED)</summary><div className="mt-3">{grupos}</div></details>
         </div>
       })()}
     </fieldset>}
-    {esParo && <p className="rounded-lg border border-dte-linea bg-dte-fondo px-3 py-2 text-sm text-dte-gris">Adhesión a paro gremial/docente. Se registra en la <b className="text-dte-tinta">Dirección de Tecnología Educativa</b> (lugar de trabajo); no hace falta completar nada más.</p>}
-    {esLicencia && <p className="rounded-lg border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso"><b>Recordatorio:</b> {RECORDATORIO_LICENCIA}</p>}
+    {esParo && <p className="rounded-control border border-dte-linea bg-dte-fondo px-3 py-2 text-sm text-dte-gris">Adhesión a paro gremial/docente. Se registra en la <b className="text-dte-tinta">Dirección de Tecnología Educativa</b> (lugar de trabajo); no hace falta completar nada más.</p>}
+    {esLicencia && <p className="rounded-control border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso"><b>Recordatorio:</b> {RECORDATORIO_LICENCIA}</p>}
 
 
     {!aDefinir && !esParo && !esLicencia && companeros.length > 0 && <fieldset>
@@ -292,7 +292,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     <datalist id="sub-acciones">{[...(form.accion ? SUB_ACCIONES[form.accion] ?? [] : [])].sort(az).map(o => <option key={o} value={o} />)}</datalist>
     {conSubAccion && form.accion && SUB_ACCIONES[form.accion] && <div className="-mt-3 flex flex-wrap items-center gap-1.5"><span className="mr-0.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Sugerencias</span>{[...SUB_ACCIONES[form.accion]!].sort(az).map(o => { const on = form.sub_accion.split(',').map(x => x.trim()).includes(o); return <Pill key={o} on={on} onClick={() => { const cur = form.sub_accion.split(',').map(x => x.trim()).filter(Boolean); set('sub_accion', (on ? cur.filter(x => x !== o) : [...cur, o]).join(', ')) }}>{o}</Pill> })}</div>}
 
-    {esClub && <fieldset className="grid gap-4 overflow-hidden rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
+    {esClub && <fieldset className="grid gap-4 overflow-hidden rounded-tile border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
       <legend className="sr-only">Registro: {marca.nombre}</legend>
       <div className={`-m-3 mb-0 flex items-center gap-3 px-3 py-2.5 sm:col-span-6 ${marca.degradado}`}><img src={marca.logo} alt={marca.nombre} className="h-10 w-auto" /><span className="text-xs font-semibold text-white/95">{marca.nota}</span></div>
       {modoT !== 'nuevo' && <Field id="campo-club" label={`¿A qué ${marca.corto} corresponde?`} required className="scroll-mt-24 sm:col-span-6" error={errores.club} errorId="err-club"><select className={`${selectClass} h-11 md:h-10`} value={form.club_id} onChange={e => { pickClub(e.target.value); limpiar('club') }} aria-invalid={!!errores.club || undefined} aria-describedby={errores.club ? 'err-club' : undefined} disabled={!clubes}>
@@ -300,8 +300,8 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         {[...clubOpts].sort((a, b) => az(a.school ? shortSchoolName(a.school) : a.lugar ?? '', b.school ? shortSchoolName(b.school) : b.lugar ?? '') || ordenGrupo(a.grupo, b.grupo)).map(c => <option key={c.id} value={c.id}>{clubLabel(c)}</option>)}
         {!modoT && <option value="nuevo">{marca.corto === 'club' ? '+ Iniciar un club nuevo' : '+ Iniciar una práctica nueva'} (comienza en esta fecha)</option>}
       </select></Field>}
-      {form.club_id === 'nuevo' && <div className="grid gap-3 rounded-lg border border-dashed border-club-lila/50 bg-white p-3 sm:col-span-6 sm:grid-cols-6">
-        {!item && !modoT && <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-dte-fondo p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={aDefinirMarcado} onChange={e => setADefinir(e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Fecha a definir.</b> {marca.corto === 'club' ? 'El club queda' : 'La práctica queda'} “por iniciar” y no se agrega a tu agenda hasta que programes el primer encuentro.</span></label>}
+      {form.club_id === 'nuevo' && <div className="grid gap-3 rounded-control border border-dashed border-club-lila/50 bg-white p-3 sm:col-span-6 sm:grid-cols-6">
+        {!item && !modoT && <label className="flex items-start gap-2.5 rounded-control border border-dte-linea bg-dte-fondo p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={aDefinirMarcado} onChange={e => setADefinir(e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Fecha a definir.</b> {marca.corto === 'club' ? 'El club queda' : 'La práctica queda'} “por iniciar” y no se agrega a tu agenda hasta que programes el primer encuentro.</span></label>}
         <p className="text-xs text-dte-gris sm:col-span-6">Cada grado o curso es {marca.corto === 'club' ? 'un club' : 'una práctica'} en sí mismo. {school ? 'El nivel se sugiere según la escuela; podés cambiarlo.' : 'Elegí primero la escuela para sugerir el nivel.'}</p>
         <Field label="Nivel / modalidad" className="sm:col-span-3"><select className={`${selectClass} h-11 md:h-10`} value={nivel.id} onChange={e => setForm(f => ({ ...f, nivel: e.target.value, curso: '' }))}>{[...NIVELES].sort((a, b) => az(a.label, b.label)).map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select></Field>
         <Field id="campo-curso" label={nivel.cursoLabel} required className="scroll-mt-24 sm:col-span-2" error={errores.curso} errorId="err-curso"><select className={`${selectClass} h-11 md:h-10`} value={form.curso} onChange={e => { set('curso', e.target.value); limpiar('curso') }} aria-invalid={!!errores.curso || undefined} aria-describedby={errores.curso ? 'err-curso' : undefined}><option value="">Elegí…</option>{nivel.cursos.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
@@ -320,9 +320,9 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       {!aDefinir && (!modoT || form.estado === 'realizada') && <Field label="Cantidad de inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>}
       {!aDefinir && (!modoT || form.estado === 'realizada') && <Field label="Participantes reales" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>}
       {!aDefinir && (!modoT || form.estado === 'realizada') && <Field label="Breve descripción de lo realizado" className="sm:col-span-6"><Textarea rows={3} placeholder="Qué se trabajó, con qué recursos, cómo participó el grupo…" value={form.descripcion} onChange={e => set('descripcion', e.target.value)} className="bg-white" /></Field>}
-      {!aDefinir && (!modoT || form.estado === 'realizada') && <label className="flex items-start gap-2.5 rounded-lg border border-dte-linea bg-white p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={form.es_cierre} onChange={e => set('es_cierre', e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Este es el encuentro de cierre {marca.corto === 'club' ? 'del club' : 'de la práctica'}</b><span className="block text-xs text-dte-gris">{marca.corto === 'club' ? 'El club queda finalizado' : 'La práctica queda finalizada'} con esta fecha y deja de figurar entre los activos.</span></span></label>}
+      {!aDefinir && (!modoT || form.estado === 'realizada') && <label className="flex items-start gap-2.5 rounded-control border border-dte-linea bg-white p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={form.es_cierre} onChange={e => set('es_cierre', e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Este es el encuentro de cierre {marca.corto === 'club' ? 'del club' : 'de la práctica'}</b><span className="block text-xs text-dte-gris">{marca.corto === 'club' ? 'El club queda finalizado' : 'La práctica queda finalizada'} con esta fecha y deja de figurar entre los activos.</span></span></label>}
     </fieldset>}
-    {conEncuentro && !esClub && <fieldset className="grid gap-4 rounded-xl border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
+    {conEncuentro && !esClub && <fieldset className="grid gap-4 rounded-tile border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
       <legend className="px-1 text-sm font-semibold">Datos del encuentro <span className="font-normal text-dte-gris">(para las métricas de participación)</span></legend>
       <Field label="Propuesta" className="sm:col-span-4"><Input placeholder={form.accion === 'CLUB DE TECNOLOGÍA' ? 'Club de Tecnología' : 'Ej.: Ciudadanía digital en el aula'} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
@@ -335,7 +335,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
 
     {!aDefinir && item && !modoT && <fieldset><legend className="mb-2 text-sm font-semibold">Estado</legend><div className="flex flex-wrap gap-2">{(item ? ESTADOS : (['planificada', 'realizada'] as const)).map(e => <button key={e} type="button" aria-pressed={form.estado === e} onClick={() => set('estado', e)} className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition md:min-h-8 md:text-xs ${form.estado === e ? statusStyle[e].badge : 'border-dte-linea text-dte-gris hover:text-dte-tinta'}`}>{form.estado === e && <Check className="size-3" />}{statusStyle[e].label}</button>)}</div></fieldset>}
 
-    {!aDefinir && !item && !esParo && !esLicencia && form.accion && <fieldset id="campo-serie" className="scroll-mt-24 rounded-xl border border-dte-linea p-3">
+    {!aDefinir && !item && !esParo && !esLicencia && form.accion && <fieldset id="campo-serie" className="scroll-mt-24 rounded-tile border border-dte-linea p-3">
       <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={repetir} onChange={e => { setRepetir(e.target.checked); limpiar('serie') }} className="size-5" />Se repite cada semana <span className="font-normal text-dte-gris">(ej.: el club todos los miércoles)</span></label>
       {repetir && <div className="mt-3 flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-1.5"><span className="mr-1 text-xs font-semibold uppercase tracking-wider text-dte-gris">Días</span>{DIAS_HABILES.map((d, i) => { const n = i + 1, on = diasSerie.includes(n); return <Pill key={d} on={on} conIcono={false} className="min-w-11 justify-center font-semibold" onClick={() => setDias((on ? diasSerie.filter(x => x !== n) : [...diasSerie, n]).sort())}>{d}</Pill> })}</div>
@@ -345,7 +345,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       </div>}
     </fieldset>}
 
-    {!aDefinir && avisos.length > 0 && <div role="status" className="rounded-xl border border-aviso-borde bg-aviso-fondo px-3 py-2.5 text-sm text-aviso">
+    {!aDefinir && avisos.length > 0 && <div role="status" className="rounded-tile border border-aviso-borde bg-aviso-fondo px-3 py-2.5 text-sm text-aviso">
       <p className="mb-1 flex items-center gap-1.5 font-semibold"><TriangleAlert className="size-4" />Revisá antes de guardar</p>
       <ul className="list-disc pl-5 text-sm">{avisos.map(a => <li key={a}>{a}</li>)}</ul>
     </div>}

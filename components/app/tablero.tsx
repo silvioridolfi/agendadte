@@ -135,18 +135,18 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
 
     {/* Pestañas: en mobile, grilla fija de botones (sin desplazamiento lateral); en escritorio, subrayadas. */}
     <div role="tablist" aria-label="Vista del tablero" onKeyDown={teclaPestana} className="mt-6 grid grid-cols-2 gap-1.5 md:flex md:gap-1 md:border-b md:border-dte-linea">
-      {((propio ? [['resumen', 'Resumen y métricas'], ['clubes', 'Mis clubes'], ['practicas', 'Mis prácticas (PEAT)'], ['acciones', 'Mis acciones']] as const : [['resumen', 'Resumen y métricas'], ['agenda', 'Agenda del equipo'], ['equipo', 'Mi equipo'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo']] as const)).map(([k, l]) => <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="panel-tablero" tabIndex={tab === k ? 0 : -1} data-tab={k} onClick={() => { setTab(k) }} className={`flex min-h-11 min-w-0 items-center justify-center rounded-lg border px-2 text-center text-sm font-semibold leading-tight transition md:-mb-px md:shrink-0 md:justify-start md:whitespace-nowrap md:rounded-none md:border-0 md:border-b-2 md:bg-transparent md:px-3 ${tab === k ? 'border-dte-petroleo bg-dte-petroleo text-white md:border-dte-magenta md:text-dte-tinta' : 'border-dte-linea bg-white text-dte-gris hover:text-dte-tinta md:border-transparent'}`}>{l}</button>)}
+      {((propio ? [['resumen', 'Resumen y métricas'], ['clubes', 'Mis clubes'], ['practicas', 'Mis prácticas (PEAT)'], ['acciones', 'Mis acciones']] as const : [['resumen', 'Resumen y métricas'], ['agenda', 'Agenda del equipo'], ['equipo', 'Mi equipo'], ['clubes', 'Clubes de Tecnología'], ['practicas', 'Prácticas (PEAT)'], ['acciones', 'Acciones del equipo']] as const)).map(([k, l]) => <button key={k} id={`tab-${k}`} role="tab" aria-selected={tab === k} aria-controls="panel-tablero" tabIndex={tab === k ? 0 : -1} data-tab={k} onClick={() => { setTab(k) }} className={`flex min-h-11 min-w-0 items-center justify-center rounded-control border px-2 text-center text-sm font-semibold leading-tight transition md:-mb-px md:shrink-0 md:justify-start md:whitespace-nowrap md:rounded-none md:border-0 md:border-b-2 md:bg-transparent md:px-3 ${tab === k ? 'border-dte-petroleo bg-dte-petroleo text-white md:border-dte-magenta md:text-dte-tinta' : 'border-dte-linea bg-white text-dte-gris hover:text-dte-tinta md:border-transparent'}`}>{l}</button>)}
     </div>
 
     <div id="panel-tablero" role="tabpanel" aria-labelledby={`tab-${tab}`}>
     {tab === 'acciones' && <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-      {ESTADOS.map(e => <button key={e} onClick={() => setEstado(estado === e ? '' : e)} aria-pressed={estado === e} className={`rounded-2xl border bg-white px-4 py-3 text-left transition hover:shadow-md ${estado === e ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>
+      {ESTADOS.map(e => <button key={e} onClick={() => setEstado(estado === e ? '' : e)} aria-pressed={estado === e} className={`rounded-card border bg-white px-4 py-3 text-left transition hover:shadow-e2 ${estado === e ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>
         <span className="text-xs font-semibold text-dte-gris">{statusStyle[e].label}s</span>
         <span className="mt-1 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums sm:text-3xl">{items ? counts[e] : '–'}</span>{estado === e && <span className="text-xs font-semibold text-dte-petroleo">Filtrando</span>}</span>
       </button>)}
     </div>}
 
-    {tab !== 'equipo' && tab !== 'agenda' && <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-dte-linea bg-white p-3 shadow-xs md:flex-row md:flex-wrap md:items-center">
+    {tab !== 'equipo' && tab !== 'agenda' && <div className="mt-4 flex flex-col gap-2 rounded-card border border-dte-linea bg-white p-3 shadow-e1 md:flex-row md:flex-wrap md:items-center">
       <div className="flex gap-2 md:contents">
       <div className="relative min-w-0 flex-1 md:min-w-56"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar escuela, localidad, CUE o FED…" aria-label="Buscar" className="h-11 bg-dte-fondo pl-9 md:h-9" /></div>
       <Button type="button" variant="outline" onClick={() => setFiltrosAbiertos(o => !o)} aria-expanded={filtrosAbiertos} aria-controls="filtros-tablero" className="shrink-0 md:hidden"><SlidersHorizontal data-icon="inline-start" />Filtros{filtrosActivos > 0 && <span className="ml-0.5 rounded-full bg-dte-petroleo px-1.5 text-xs text-white">{filtrosActivos}</span>}</Button>
@@ -177,7 +177,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
             <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-bold">{fedName(id)}</h3><p className="text-xs text-dte-gris">{group.length} {group.length === 1 ? 'acción' : 'acciones'} · {group.filter(i => i.estado === 'realizada').length} realizadas</p></div>
             {!fedId && groups.length > 1 && <Button variant="ghost" size="sm" onClick={() => setFedId(id)} className="text-dte-petroleo">Ver sólo este FED</Button>}
           </div>
-          <ul className="divide-y divide-dte-linea overflow-hidden rounded-2xl border border-dte-linea bg-white shadow-xs">{group.slice(0, visibles(id)).map(item =>
+          <ul className="divide-y divide-dte-linea overflow-hidden rounded-card border border-dte-linea bg-white shadow-e1">{group.slice(0, visibles(id)).map(item =>
             <li key={item.id}><button className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte focus-visible:bg-dte-tinte focus-visible:outline-none sm:grid-cols-[6.5rem_1fr_auto] sm:items-center" onClick={() => onSelect(item)}>
               <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize text-dte-tinta">{range === 'day' ? (hhmm(item.hora_inicio) || '—') : fmt(parse(item.fecha), range === 'week' ? { weekday: 'short', day: 'numeric' } : { day: 'numeric', month: 'short' }).replace('.', '')}</span>{range !== 'day' && <span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span>}</span>
               <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemCorto(item)}</span><span className="block truncate text-xs text-dte-gris">{[cueLugar(item.school), item.school ? item.sub_accion : null].filter(Boolean).join(' · ') || ' '}</span></span>
@@ -190,7 +190,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
             <span className="text-xs text-dte-gris">Mostrando {Math.min(visibles(id), group.length)} de {group.length}</span>
           </div>}
         </section>)}
-      {fedsSinAcciones.length > 0 && <div className="rounded-2xl border border-dashed border-dte-linea bg-white/60 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-dte-gris">Sin acciones cargadas en {rangeNames[range][2]}</p><div className="mt-2 flex flex-wrap gap-2">{fedsSinAcciones.map(f => <span key={f.id} className="rounded-full bg-white px-3 py-1 text-sm ring-1 ring-dte-linea">{f.nombre_completo}</span>)}</div></div>}
+      {fedsSinAcciones.length > 0 && <div className="rounded-card border border-dashed border-dte-linea bg-white/60 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-dte-gris">Sin acciones cargadas en {rangeNames[range][2]}</p><div className="mt-2 flex flex-wrap gap-2">{fedsSinAcciones.map(f => <span key={f.id} className="rounded-full bg-white px-3 py-1 text-sm ring-1 ring-dte-linea">{f.nombre_completo}</span>)}</div></div>}
     </div>}
     </div>
   </main>
