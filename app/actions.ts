@@ -157,7 +157,7 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
     : await db.from('agenda_items').insert(rowSinSerie).select('id').single()
   if (res.error) throw new Error(res.error.message)
   const itemId = res.data.id as string
-  if (input.participantes) await syncParticipantes(itemId, row.fed_id, input.participantes)
+  const cambiosPart = input.participantes ? await syncParticipantes(itemId, row.fed_id, input.participantes) : { sumar: [], quitar: [] }
 
   // Encuentro: se edita el que se mostró en el formulario (puede ser uno importado) o se crea uno nuevo.
   // Si la acción deja de ser club/taller/prácticas, sólo se borra el encuentro creado desde la app; los importados se conservan.
@@ -215,7 +215,7 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
     }
   }
   // Edición de una serie: "este y los siguientes" aplica horario, club/grupo y datos de la propuesta a las fechas planificadas que siguen
-  // (no cambia la fecha de cada una ni los datos de participación, que son propios de cada encuentro).
+  // y los acompañantes sumados o quitados (no cambia la fecha de cada una ni los datos de participación, que son propios de cada encuentro).
   if (id && alcance === 'siguientes' && antes?.serie_id) {
     const { data: sig } = await db.from('agenda_items').select('id').eq('serie_id', antes.serie_id).eq('fed_id', row.fed_id).eq('estado', 'planificada').gt('fecha', row.fecha)
     const ids = (sig ?? []).map(x => x.id as string)
@@ -227,15 +227,25 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
         const e = await db.from('agenda_encuentros').update({ propuesta: enc.propuesta, tipo_jornada: enc.tipo_jornada ?? null, modalidad: enc.modalidad, destinatarios: enc.destinatarios, school_id: row.school_id, lugar: row.lugar, ...(clubId ? { club_id: clubId } : {}) }).in('agenda_item_id', ids)
         if (e.error) throw new Error(e.error.message)
       }
+      // Acompañantes: quienes se suman o se quitan en esta fecha también en las siguientes, con un solo aviso por serie.
+      if (cambiosPart.quitar.length) {
+        const q = await db.from('agenda_participantes').delete().in('item_id', ids).in('fed_id', cambiosPart.quitar)
+        if (q.error) throw new Error(q.error.message)
+      }
+      if (cambiosPart.sumar.length) {
+        const a = await db.from('agenda_participantes').upsert(ids.flatMap(item_id => cambiosPart.sumar.map(fed_id => ({ item_id, fed_id }))), { onConflict: 'item_id,fed_id', ignoreDuplicates: true })
+        if (a.error) throw new Error(a.error.message)
+        await db.from('notificaciones').update({ detalle: `Incluye esta fecha y ${ids.length} siguientes de la serie` }).eq('item_id', itemId).eq('tipo', 'etiqueta').in('fed_id', cambiosPart.sumar)
+      }
       creadas += ids.length
-      await audit('agenda_items', itemId, 'modificacion', row.fed_id, { serie: antes.serie_id, siguientes: ids.length })
+      await audit('agenda_items', itemId, 'modificacion', row.fed_id, { serie: antes.serie_id, siguientes: ids.length, sumados: cambiosPart.sumar, quitados: cambiosPart.quitar })
     }
   }
   return { id: itemId, creadas }
 }
 
 // Compañeros etiquetados: se reemplaza la lista y se notifica a quienes se suman.
-async function syncParticipantes(itemId: string, autorId: string, fedIds: string[]) {
+async function syncParticipantes(itemId: string, autorId: string, fedIds: string[]): Promise<{ sumar: string[], quitar: string[] }> {
   const db = supabaseServer()
   const quiero = [...new Set(fedIds.filter(f => f && f !== autorId))]
   const { data: actuales, error } = await db.from('agenda_participantes').select('fed_id').eq('item_id', itemId)
@@ -249,6 +259,7 @@ async function syncParticipantes(itemId: string, autorId: string, fedIds: string
     const n = await db.from('notificaciones').insert(sumar.map(fed_id => ({ fed_id, item_id: itemId, autor_id: autorId, tipo: 'etiqueta' })))
     if (n.error) throw new Error(n.error.message)
   }
+  return { sumar, quitar }
 }
 
 async function getNotificacionesImpl(fedId: string): Promise<Notificacion[]> {
