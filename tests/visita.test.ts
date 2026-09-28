@@ -34,3 +34,24 @@ describe('visita con varias acciones', () => {
     expect(inputDeTipo(base, 'VISITA PEDAGÓGICA', datosVacios()).encuentro).toBeNull()
   })
 })
+
+import { agruparVisitas } from '../lib/visita'
+import type { AgendaItem } from '../lib/agenda'
+const it_ = (o: Partial<AgendaItem>) => ({ id: Math.random().toString(), fed_id: 'f1', fecha: '2026-10-01', hora_inicio: null, hora_fin: null, school_id: 's1', lugar: null, accion: 'VISITA TÉCNICA', estado: 'planificada', created_at: '2026-09-28T10:00:00Z', ...o }) as AgendaItem
+
+describe('agrupar visitas', () => {
+  it('junta las acciones del mismo FED, día, horario y lugar', () => {
+    const r = agruparVisitas([it_({ accion: 'VISITA TÉCNICA' }), it_({ accion: 'CONECTIVIDAD', created_at: '2026-09-28T10:00:01Z' })])
+    expect(r).toHaveLength(1)
+    expect(r[0].visita?.map(v => v.accion)).toEqual(['VISITA TÉCNICA', 'CONECTIVIDAD'])
+  })
+  it('no junta si cambia el horario, el lugar, el FED o si una no tiene horario', () => {
+    expect(agruparVisitas([it_({ hora_inicio: '09:00' }), it_({ accion: 'CONECTIVIDAD' })])).toHaveLength(2)
+    expect(agruparVisitas([it_({}), it_({ accion: 'CONECTIVIDAD', school_id: 's2' })])).toHaveLength(2)
+    expect(agruparVisitas([it_({}), it_({ accion: 'CONECTIVIDAD', fed_id: 'f2' })])).toHaveLength(2)
+  })
+  it('clubes y licencias no se agrupan', () => {
+    expect(agruparVisitas([it_({ accion: 'CLUB DE TECNOLOGÍA' }), it_({ accion: 'CLUB DE TECNOLOGÍA' })])).toHaveLength(2)
+    expect(agruparVisitas([it_({ accion: 'LICENCIA', school_id: null, lugar: null }), it_({ accion: 'LICENCIA', school_id: null, lugar: null })])).toHaveLength(2)
+  })
+})
