@@ -111,8 +111,8 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
           return <li key={dia} className="grid gap-2 py-3 sm:grid-cols-[6.5rem_1fr] sm:items-start">
             <div className="flex items-center justify-between gap-2 sm:pt-2"><span className="text-sm font-semibold">{nombre}</span>
               {f.length === 1
-                ? <button type="button" onClick={() => setFranjas(s => ({ ...s, [dia]: [...s[dia], { desde: '', hasta: '' }] }))} className="-my-2 inline-flex min-h-10 items-center gap-1 px-1 text-xs font-semibold text-dte-petroleo hover:opacity-80 sm:hidden"><Plus className="size-3.5" />Segunda franja</button>
-                : <button type="button" onClick={() => setFranjas(s => ({ ...s, [dia]: s[dia].slice(0, 1) }))} className="-my-2 inline-flex min-h-10 items-center gap-1 px-1 text-xs font-semibold text-dte-gris hover:text-peligro sm:hidden"><X className="size-3.5" />Quitar segunda franja</button>}
+                ? <button type="button" onClick={() => setFranjas(s => ({ ...s, [dia]: [...s[dia], { desde: '', hasta: '' }] }))} className="-my-2 inline-flex min-h-11 md:min-h-10 items-center gap-1 px-1 text-xs font-semibold text-dte-petroleo hover:opacity-80 sm:hidden"><Plus className="size-3.5" />Segunda franja</button>
+                : <button type="button" onClick={() => setFranjas(s => ({ ...s, [dia]: s[dia].slice(0, 1) }))} className="-my-2 inline-flex min-h-11 md:min-h-10 items-center gap-1 px-1 text-xs font-semibold text-dte-gris hover:text-peligro sm:hidden"><X className="size-3.5" />Quitar segunda franja</button>}
             </div>
             <div className="flex flex-col gap-2">{f.map((x, j) => <div key={j} className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto]">
               <Input type="time" aria-label={`${nombre}, franja ${j + 1}, desde`} value={x.desde} onChange={e => setFranja(dia, j, { desde: e.target.value })} className={time} />

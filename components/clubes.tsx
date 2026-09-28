@@ -175,7 +175,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
               [tipo === 'CLUB DE TECNOLOGÍA' ? 'Finalizados' : 'Finalizadas', 'finalizados', 'con cierre registrado'],
             ] as const).map(([label, key, hint]) => <tr key={key}>
               <td className="py-2 pr-3"><span className="font-semibold">{label}</span><span className="block text-xs text-dte-gris">{hint}</span></td>
-              {ciclo.map(t => <td key={t.k} className="py-2 pr-3 text-right"><button type="button" onClick={() => verCiclo(label, t.label, t[key])} className={`inline-flex min-h-10 min-w-10 items-center justify-end rounded-lg px-2 py-1 tabular-nums transition md:min-h-0 md:min-w-0 hover:bg-dte-tinte ${t.k === 'ciclo' ? 'text-lg font-bold' : 'font-semibold'}`}>{nf.format(t[key].length)}</button></td>)}
+              {ciclo.map(t => <td key={t.k} className="py-2 pr-3 text-right"><button type="button" onClick={() => verCiclo(label, t.label, t[key])} className={`inline-flex min-h-11 min-w-10 items-center justify-end rounded-lg px-2 py-1 tabular-nums transition md:min-h-0 md:min-w-0 hover:bg-dte-tinte ${t.k === 'ciclo' ? 'text-lg font-bold' : 'font-semibold'}`}>{nf.format(t[key].length)}</button></td>)}
             </tr>)}
             {([['Encuentros realizados', 'encuentros'], ['Estudiantes inscriptos', 'inscriptos'], ['Escuelas y sedes', 'escuelas']] as const).map(([label, key]) => <tr key={key}>
               <td className="py-2 pr-3 font-semibold">{label}</td>
