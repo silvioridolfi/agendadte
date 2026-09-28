@@ -7,15 +7,16 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ESTADOS, type AgendaItem, type Estado, type Fed } from '@/lib/agenda'
 import type { Ubicacion } from '@/app/actions'
 import { titleCase } from '@/lib/format'
-import { ubicacionDe, statusStyle, parse, fmt, cap, timeRange, schoolPlace, itemTitle, firstName, setItemStatus, deleteItem, responder, getHistorial, fotosDelDia, errMsg, ActionChip, StatusBadge, ErrorBox } from '@/components/app/comun'
+import { ubicacionDe, statusStyle, parse, fmt, cap, timeRange, schoolPlace, itemTitle, firstName, setItemStatus, cambiarEstadoVarias, deleteItem, responder, getHistorial, fotosDelDia, errMsg, ActionChip, StatusBadge, ErrorBox } from '@/components/app/comun'
 import { ZONA } from '@/lib/hora'
+import { hoyAR } from '@/lib/hora'
 
 // =====================================================================
 
 // El estado del detalle (errores, confirmaciones, historial, fotos, dirección) se reinicia al cambiar de acción: se remonta con key.
 export function DetailDialog(props: Parameters<typeof DetalleAccion>[0]) { return <DetalleAccion key={props.item?.id ?? ''} {...props} /> }
 
-function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onChanged }: { item: AgendaItem | null, feds: Fed[], profile: Fed, soloLectura?: boolean, onClose: () => void, onEdit: (item: AgendaItem) => void, onChanged: (msg: string, updated: AgendaItem | null) => void }) {
+function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onChanged, onVer }: { item: AgendaItem | null, feds: Fed[], profile: Fed, soloLectura?: boolean, onClose: () => void, onEdit: (item: AgendaItem) => void, onChanged: (msg: string, updated: AgendaItem | null) => void, onVer?: (item: AgendaItem) => void }) {
   const [busy, setBusy] = useState<string>('')
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -55,6 +56,17 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
     } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
   }
 
+  // Visita con varias acciones: se ve cada una y se puede marcar toda como realizada de una vez.
+  const visita = item?.visita
+  async function visitaRealizada() {
+    if (!visita || !item) return
+    setBusy('visita'); setError('')
+    try {
+      await cambiarEstadoVarias(visita.map(v => v.id), 'realizada')
+      const nueva = visita.map(v => ({ ...v, estado: 'realizada' as Estado }))
+      onChanged(`Se marcaron ${visita.length} acciones de la visita como realizadas`, { ...item, estado: 'realizada', visita: nueva.map(v => ({ ...v, visita: undefined })) })
+    } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
+  }
   async function changeStatus(estado: Estado) {
     if (!item) return
     setBusy(estado); setError('')
@@ -87,6 +99,15 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
         {row(Users, 'Acompañado por', item.participantes?.length ? <ul className="flex flex-col gap-0.5">{item.participantes.map(p => <li key={p.fed_id} className="flex items-center gap-1.5">{nombre(p.fed_id)}<span className={`rounded-full px-1.5 text-xs font-semibold ${p.respuesta === 'acepta' ? 'bg-exito-fondo text-exito' : p.respuesta === 'rechaza' ? 'bg-peligro-suave text-peligro' : 'bg-dte-tinte text-dte-gris'}`}>{p.respuesta === 'acepta' ? 'Confirmó' : p.respuesta === 'rechaza' ? 'No puede' : 'Sin respuesta'}</span></li>)}</ul> : null)}
         {row(Repeat, 'Serie', item.serie_id ? 'Forma parte de una serie semanal' : null)}
       </dl>
+      {visita && <section aria-label="Acciones de esta visita" className="flex flex-col gap-2 rounded-tile border border-dte-linea p-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-dte-gris">En esta visita · {visita.length} acciones</p>
+        <ul className="flex flex-col gap-1.5">{visita.map(v => <li key={v.id}><button type="button" disabled={v.id === item.id} onClick={() => onVer?.({ ...v, visita })} aria-current={v.id === item.id ? 'true' : undefined}
+          className={`flex min-h-11 w-full flex-wrap items-center gap-2 rounded-control border px-2.5 py-1.5 text-left text-sm transition ${v.id === item.id ? 'border-dte-petroleo bg-dte-tinte' : 'border-dte-linea hover:border-dte-petroleo hover:bg-dte-tinte'}`}>
+          <ActionChip label={v.accion} /><StatusBadge status={v.estado} />{v.sub_accion && <span className="min-w-0 truncate text-xs text-dte-gris" title={v.sub_accion}>{v.sub_accion}</span>}
+          {v.id === item.id && <span className="ml-auto text-xs font-semibold text-dte-petroleo">Viendo</span>}
+        </button></li>)}</ul>
+        {own && item.fecha <= hoyAR() && visita.some(v => v.estado !== 'realizada') && <Button variant="outline" disabled={!!busy} onClick={visitaRealizada} className="self-start">{busy === 'visita' && <Loader2 className="animate-spin" data-icon="inline-start" />}Marcar toda la visita como realizada</Button>}
+      </section>}
       {mio && !soloLectura && <div className="flex flex-wrap items-center justify-between gap-2 rounded-tile border border-dte-linea p-3">
         <p className="text-sm"><b>{fed ? firstName(fed.nombre_completo) : 'Un compañero'}</b> te sumó a esta acción. {mio.respuesta === 'acepta' ? 'Confirmaste.' : mio.respuesta === 'rechaza' ? 'Avisaste que no podés.' : '¿Participás?'}</p>
         <div className="flex gap-2"><Button size="sm" variant={mio.respuesta === 'acepta' ? 'default' : 'outline'} disabled={!!busy} onClick={() => responderInv('acepta')} className={mio.respuesta === 'acepta' ? 'bg-dte-petroleo' : ''}>{busy === 'acepta' ? <Loader2 className="animate-spin" /> : <Check data-icon="inline-start" />}Participo</Button><Button size="sm" variant="outline" disabled={!!busy} onClick={() => responderInv('rechaza')} className={mio.respuesta === 'rechaza' ? 'border-peligro text-peligro' : ''}>{busy === 'rechaza' ? <Loader2 className="animate-spin" /> : <X data-icon="inline-start" />}No puedo</Button></div>

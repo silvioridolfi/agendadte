@@ -143,7 +143,7 @@ export default function Page() {
 
     <DetailDialog item={selected} feds={feds ?? []} profile={profile} soloLectura={!!vista} onClose={() => setSelected(null)}
       onEdit={item => { setSelected(null); setEditing({ item }) }}
-      onChanged={(msg, updated) => { changed(msg); setSelected(updated) }} />
+      onChanged={(msg, updated) => { changed(msg); setSelected(updated) }} onVer={setSelected} />
 
     <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
       <DialogContent className="bg-white sm:max-w-2xl">
