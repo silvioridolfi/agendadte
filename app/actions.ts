@@ -439,6 +439,13 @@ async function deleteFeriadoImpl(autorId: string, id: string): Promise<void> {
   await audit('feriados', id, 'baja', autorId)
 }
 
+async function confirmarFeriadoImpl(autorId: string, id: string, confirmado: boolean): Promise<void> {
+  await esCoordinacion(autorId)
+  const { error } = await supabaseServer().from('feriados').update({ confirmado }).eq('id', id)
+  if (error) throw new Error(error.message)
+  await audit('feriados', id, 'modificacion', autorId, { confirmado })
+}
+
 async function getFeriadosImpl(from: string, to: string): Promise<Feriado[]> {
   const { data, error } = await supabaseServer().from('feriados').select('id, fecha, nombre, tipo, distrito, confirmado').gte('fecha', from).lte('fecha', to).order('fecha')
   if (error) throw new Error(error.message)
@@ -704,6 +711,7 @@ export const crearClubPorIniciar = async (c: ClubPorIniciarInput) => conUsuario(
 export const updateMiPerfil = async (_fedId: string, datos: Pick<Fed, 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => conUsuario(yo => updateMiPerfilImpl(yo.fed.id, datos))
 export const addFeriado = async (_autorId: string, f: Omit<Feriado, 'id'>) => conUsuario(yo => addFeriadoImpl(yo.fed.id, f))
 export const deleteFeriado = async (_autorId: string, id: string) => conUsuario(yo => deleteFeriadoImpl(yo.fed.id, id))
+export const confirmarFeriado = async (id: string, confirmado: boolean) => conUsuario(yo => confirmarFeriadoImpl(yo.fed.id, id, confirmado))
 
 // ---- Fotos en Google Drive: carpeta propia de cada FED, ordenada por día por la cuenta técnica.
 export type EstadoFotos = { configurado: boolean, cuentaTecnica: string, url: string | null, nombre: string | null, puedeEditar: boolean, error: string | null }
