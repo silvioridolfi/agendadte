@@ -90,6 +90,8 @@ export type EncuentroInput = Pick<Encuentro, 'propuesta' | 'encuentro_n' | 'moda
 // Fila de public.establecimientos (misma fuente que el buscador DTE).
 export type School = { id: string; cue: number | null; nombre: string | null; distrito: string | null; ciudad: string | null }
 export type AgendaItem = {
+  // Sólo en pantalla: acciones de la misma visita (mismo FED, día, horario y lugar), incluida ésta.
+  visita?: AgendaItem[]
   id: string
   fed_id: string
   school_id: string | null
