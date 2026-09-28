@@ -44,6 +44,23 @@ export const statusStyle: Record<Estado, { badge: string, label: string }> = {
   reprogramada: { badge: 'border-aviso-borde bg-aviso-fondo text-aviso-fuerte', label: 'Reprogramada' },
   cancelada: { badge: 'border-pba-fucsia/40 bg-pba-fucsia/10 text-dte-magenta-oscuro', label: 'Cancelada' },
 }
+// Borde de las tarjetas según el estado (la franja izquierda sigue indicando el tipo de acción).
+// Pendiente de cerrar: planificada o reprogramada con fecha pasada, en ámbar punteado.
+export const pendienteDeCerrar = (i: AgendaItem) => (i.estado === 'planificada' || i.estado === 'reprogramada') && i.fecha < hoyAR() && !esAusencia(i.accion)
+const BORDE_ESTADO: Record<Estado, string> = {
+  planificada: 'border-pba-azul/45',
+  realizada: 'border-pba-celeste ring-1 ring-inset ring-pba-celeste/50',
+  reprogramada: 'border-estado-reprogramada',
+  cancelada: 'border-pba-fucsia/45',
+}
+const LINEA_ESTADO: Record<Estado, string> = {
+  planificada: 'border-pba-azul/45', realizada: 'border-pba-celeste', reprogramada: 'border-estado-reprogramada', cancelada: 'border-pba-fucsia/45',
+}
+export const bordeEstado = (i: AgendaItem) => (pendienteDeCerrar(i) ? 'border-dashed border-estado-reprogramada' : BORDE_ESTADO[i.estado] ?? 'border-dte-linea')
+// Filas de listas: línea izquierda del color del estado.
+export function LineaEstado({ item }: { item: AgendaItem }) {
+  return <span aria-hidden className={`pointer-events-none absolute inset-y-0 left-0 w-0 border-l-4 ${pendienteDeCerrar(item) ? 'border-dashed border-estado-reprogramada' : LINEA_ESTADO[item.estado] ?? 'border-dte-linea'}`} />
+}
 export const avatarColors = ['bg-avatar-1', 'bg-avatar-2', 'bg-avatar-3', 'bg-avatar-4', 'bg-avatar-5', 'bg-avatar-6']
 // Orden alfabético de la A a la Z para todas las listas (con números en orden natural: N° 2 antes que N° 10).
 export const az = (a: string, b: string) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })

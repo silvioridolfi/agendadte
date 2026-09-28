@@ -56,6 +56,7 @@
   --color-club-lila: #7d5a95;
   --color-peat-magenta: #c21d6a;
   --color-estado-sin-actividad: #b07400;
+  --color-estado-reprogramada: #d9a520;  /* borde de tarjetas reprogramadas y pendientes de cerrar */
 
   /* Categorías de acción (paleta validada para gráficos, CVD y contraste) */
   --color-cat-tecnica: #2a6fb0;
