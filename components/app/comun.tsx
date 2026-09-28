@@ -212,13 +212,13 @@ export function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[], cac
   const [retry, setRetry] = useState(0)
   // Cada resultado queda asociado a la consulta que lo pidió: al cambiar de período se descarta el anterior sin resetear el estado en el efecto.
   const clave = JSON.stringify([...deps, retry])
-  const [res, setRes] = useState<{ clave: string, items: AgendaItem[] | null, error: string, desdeCache: number | null } | null>(null)
+  const [res, setRes] = useState<{ clave: string, cacheKey?: string, items: AgendaItem[] | null, error: string, desdeCache: number | null } | null>(null)
   useEffect(() => {
     let alive = true
-    load().then(r => { if (!alive) return; setRes({ clave, items: r, error: '', desdeCache: null }); if (cacheKey) guardarCache(cacheKey, r) }).catch(e => {
+    load().then(r => { if (!alive) return; setRes({ clave, cacheKey, items: r, error: '', desdeCache: null }); if (cacheKey) guardarCache(cacheKey, r) }).catch(e => {
       if (!alive) return
       const c = cacheKey ? leerCache(cacheKey) : null
-      setRes(c ? { clave, items: c.items, error: '', desdeCache: c.ts } : { clave, items: null, error: errMsg(e), desdeCache: null })
+      setRes(c ? { clave, cacheKey, items: c.items, error: '', desdeCache: c.ts } : { clave, cacheKey, items: null, error: errMsg(e), desdeCache: null })
     })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -226,7 +226,9 @@ export function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[], cac
   // Mientras llega la respuesta se muestra la última copia guardada en el dispositivo (si hay).
   const enCache = useMemo(() => (cacheKey ? leerCache(cacheKey)?.items ?? null : null), [cacheKey])
   const actual = res?.clave === clave ? res : null
-  return { items: actual ? actual.items : enCache, error: actual?.error ?? '', retry: () => setRetry(n => n + 1), desdeCache: actual?.desdeCache ?? null }
+  // Al recargar el mismo período (tras marcar, deshacer o editar) se sigue mostrando lo último en pantalla, no la copia vieja.
+  const previo = !actual && cacheKey && res?.cacheKey === cacheKey ? res.items : null
+  return { items: actual ? actual.items : previo ?? enCache, error: actual?.error ?? '', retry: () => setRetry(n => n + 1), desdeCache: actual?.desdeCache ?? null }
 }
 
 // =====================================================================

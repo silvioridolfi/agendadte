@@ -243,7 +243,9 @@ function PendientesCerrar({ fed, reloadKey, onSelect, onRealizar, onCambio }: { 
   const [abierto, setAbierto] = useState(false)
   const [confirmar, setConfirmar] = useState(false)
   const [error, setError] = useState('')
-  const pendientes = useMemo(() => agruparVisitas([...(res?.clave === clave ? res.items : [])].sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))), [res, clave])
+  // Mientras recarga se mantiene la lista anterior del mismo período, para que el aviso no parpadee.
+  const base = `${fed.id}:${desde}:`
+  const pendientes = useMemo(() => agruparVisitas([...(res?.clave.startsWith(base) ? res.items : [])].sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))), [res, base])
   if (!pendientes.length) return null
   const ids = pendientes.flatMap(i => i.visita?.map(v => v.id) ?? [i.id])
   async function todas() {
