@@ -12,9 +12,9 @@ import { CAT_COLOR } from '@/components/metrics'
 import { etiquetaAccion, nombreAccion, iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, ACCIONES_CED, SOLO_CED, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
 import type { Organismo } from '@/app/actions'
 import { titleCase } from '@/lib/format'
-import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, guardarVisita, ActionChip, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
+import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, guardarVisita, editarVisita, ActionChip, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
 import { encolarOffline } from '@/components/app/offline'
-import { alternarTipo, datosVacios, inputDeTipo, type DatosTipo } from '@/lib/visita'
+import { alternarTipo, datosDeAccion, datosVacios, inputDeTipo, type DatosTipo } from '@/lib/visita'
 import { hoyAR } from '@/lib/hora'
 
 const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -111,10 +111,15 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const [frecuentes, setFrecuentes] = useState<Accion[]>(() => { try { return JSON.parse(storage(() => localStorage.getItem(claveFrecuentes)) ?? '[]') } catch { return [] } })
   useEffect(() => { let vivo = true; misTiposFrecuentes().then(l => { if (!vivo) return; setFrecuentes(l); storage(() => localStorage.setItem(claveFrecuentes, JSON.stringify(l))) }).catch(() => {}); return () => { vivo = false } }, [claveFrecuentes])
   const [buscaTipo, setBuscaTipo] = useState('')
-  // Visita con varias acciones (sólo al crear): el primer tipo usa los campos de siempre; los demás, un bloque propio cada uno.
-  const multiple = !item && !modoT
-  const [extras, setExtras] = useState<Accion[]>([])
-  const [datosExtra, setDatosExtra] = useState<Partial<Record<Accion, DatosTipo>>>({})
+  // Visita con varias acciones: el primer tipo usa los campos de siempre; los demás, un bloque propio cada uno.
+  // Al editar una visita se abre con todos sus tipos marcados y sus datos.
+  const multiple = !modoT
+  const otrosDeVisita = (item?.visita ?? []).filter(v => v.id !== item?.id)
+  const [extras, setExtras] = useState<Accion[]>(() => otrosDeVisita.map(v => v.accion))
+  const [datosExtra, setDatosExtra] = useState<Partial<Record<Accion, DatosTipo>>>(() => Object.fromEntries(otrosDeVisita.map(v => [v.accion, datosDeAccion(v)])))
+  // Encuentro guardado del tipo principal (cambia si se quita el principal y otro ocupa su lugar).
+  const [encPrincipal, setEncPrincipal] = useState<string | undefined>(enc0?.id)
+  const esVisita = !!item?.visita || extras.length > 0
   const setExtra = (a: Accion, k: keyof DatosTipo, v: string) => setDatosExtra(d => ({ ...d, [a]: { ...(d[a] ?? datosVacios()), [k]: v } }))
   const esCed = fed.rol === 'coordinacion', lugarOpcional = esFormacion || esEvento || (!!form.accion && SOLO_CED.includes(form.accion))
   const conSubAccion = !!form.accion && !esClub && !esParo && !esLicencia
@@ -200,9 +205,9 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const fueraDeHorario = horario.fuera || horario.choques.length > 0
 
   // Tipo principal: el de los campos de siempre (al cambiarlo se reinician club y tipo de jornada).
-  const setPrincipal = (name: Accion | null, datos?: DatosTipo) => setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '',
+  const setPrincipal = (name: Accion | null, datos?: DatosTipo) => { if (datos || name !== form.accion) setEncPrincipal(datos?.enc_id); setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '',
     tipo_jornada: name && f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada,
-    ...(datos ? { sub_accion: datos.sub_accion, cantidad: datos.cantidad, detalle: datos.detalle, propuesta: datos.propuesta, encuentro_n: datos.encuentro_n, destinatarios: datos.destinatarios, modalidad: datos.modalidad, inscriptos: datos.inscriptos, asistentes: datos.asistentes } : {}) }))
+    ...(datos ? { sub_accion: datos.sub_accion, cantidad: datos.cantidad, detalle: datos.detalle, propuesta: datos.propuesta, encuentro_n: datos.encuentro_n, destinatarios: datos.destinatarios, modalidad: datos.modalidad, inscriptos: datos.inscriptos, asistentes: datos.asistentes } : {}) })) }
   function elegirTipo(name: Accion) {
     if (!multiple) { setPrincipal(name); return }
     const actuales = form.accion ? [form.accion, ...extras] : []
@@ -249,8 +254,18 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       modalidad: lugarOpcional ? form.modalidad_ev : null, rol_formacion: esFormacion ? form.rol_formacion : null, dictada_por: esFormacion ? form.dictada_por : null,
       cantidad: cat === 'tecnica' ? toNum(form.cantidad) : null,
       participantes: esParo || esLicencia ? [] : participantes,
-      encuentro: conEncuentro ? { id: enc0?.id, propuesta: form.propuesta, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: form.destinatarios, inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes),
+      encuentro: conEncuentro ? { id: encPrincipal, propuesta: form.propuesta, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: form.destinatarios, inscriptos: toNum(form.inscriptos), asistentes: toNum(form.asistentes),
         ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', grupo: grupo, escuela_origen_id: otroOrigen ? origen?.id ?? null : null, encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
+    }
+    // Editar una visita (o sumar tipos a una acción): los datos comunes van a todas; los tipos desmarcados se eliminan.
+    if (item && esVisita) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) { setError('Para editar una visita con varias acciones necesitás conexión.'); setSaving(false); return }
+      try {
+        const inputs = [input, ...extras.map(a => inputDeTipo(input, a, datosExtra[a] ?? datosVacios()))]
+        const r = await editarVisita(item.id, inputs, alcance)
+        onSaved({ creadas: r.creadas, mensaje: `Visita actualizada${r.quitadas ? ` (se quitaron ${r.quitadas} ${r.quitadas === 1 ? 'acción' : 'acciones'})` : ''}` })
+      } catch (err) { setError(errMsg(err)); setSaving(false) }
+      return
     }
     // Visita con varias acciones: una por tipo, con los mismos datos comunes y un solo aviso a los acompañantes.
     if (extras.length) {

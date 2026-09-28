@@ -7,9 +7,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { CATEGORIA, DISTRITOS_REGION, type AgendaItem, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
 import { EventoTag, useEventos } from '@/components/app/eventos'
-import { actionStyle, addDays, cap, fmt, hhmm, iso, parse, selectClass, siglaEscuela, conGrupo, startOfWeek, toWeekday, firstName, getAllItems, useItems, useFeriados, ActionChip, ErrorBox, FeriadoTag, Skeleton, Vacio, WeekNav } from '@/components/app/comun'
+import { actionStyle, addDays, cap, fmt, hhmm, iso, parse, selectClass, siglaEscuela, conGrupo, startOfWeek, toWeekday, firstName, getAllItems, useItems, useFeriados, EtiquetasAccion, ErrorBox, FeriadoTag, Skeleton, Vacio, WeekNav } from '@/components/app/comun'
 import { ItemCard } from '@/components/app/agenda'
 import { hoyAR, horaAR, fechaHoyAR } from '@/lib/hora'
+import { agruparVisitas } from '@/lib/visita'
 
 type Modo = 'dia' | 'semana' | 'proximas'
 const MODOS = [['dia', 'Día'], ['semana', 'Semana'], ['proximas', 'Próximas']] as const
@@ -42,7 +43,8 @@ export function AgendaEquipoView({ feds, reloadKey, onSelect }: { feds: Fed[], r
   // Acciones de cada FED: las propias y aquellas en las que participa (salvo que haya rechazado la invitación).
   const delFed = useMemo(() => {
     const m = new Map<string, AgendaItem[]>(feds.map(f => [f.id, []]))
-    for (const i of items ?? []) {
+    // Una visita con varias acciones se muestra como una sola.
+    for (const i of agruparVisitas(items ?? [])) {
       if (i.estado === 'cancelada') continue
       if (!ausencia(i) && soloTerritorio && !enTerritorio(i)) continue
       if (distrito && i.school && i.school.distrito?.toUpperCase() !== distrito && !ausencia(i)) continue
@@ -192,7 +194,7 @@ function VistaProximas({ equipo, delFed, feds, onSelect }: { equipo: Fed[], delF
       <button type="button" onClick={() => onSelect(i)} className="grid w-full grid-cols-[3.5rem_1fr] gap-x-3 gap-y-1 p-3 text-left transition hover:bg-dte-tinte sm:grid-cols-[4rem_1fr_auto] sm:items-center">
         <span className="row-span-2 text-sm font-semibold tabular-nums sm:row-span-1">{i.hora_inicio ? hhmm(i.hora_inicio) : '—'}</span>
         <span className="min-w-0"><span className="block truncate font-semibold" title={lugar(i)}>{lugar(i)}</span><span className="flex items-center gap-1 truncate text-xs text-dte-gris">{i.school?.distrito && <><MapPin className="size-3 shrink-0" />{titleCase(i.school.distrito)} · </>}{[nombre(i.fed_id), ...i.participantes.filter(p => p.respuesta !== 'rechaza').map(p => firstName(nombre(p.fed_id)))].filter(Boolean).join(', ')}</span></span>
-        <span className="sm:justify-self-end"><ActionChip label={i.accion} /></span>
+        <span className="flex flex-wrap gap-1 sm:justify-self-end"><EtiquetasAccion item={i} /></span>
       </button>
     </li>)}</ul>
   </section>)}</div>

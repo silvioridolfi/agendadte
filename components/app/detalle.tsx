@@ -7,16 +7,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ESTADOS, type AgendaItem, type Estado, type Fed } from '@/lib/agenda'
 import type { Ubicacion } from '@/app/actions'
 import { titleCase } from '@/lib/format'
-import { ubicacionDe, statusStyle, parse, fmt, cap, timeRange, schoolPlace, itemTitle, firstName, setItemStatus, cambiarEstadoVarias, deleteItem, responder, getHistorial, fotosDelDia, errMsg, ActionChip, StatusBadge, ErrorBox } from '@/components/app/comun'
+import { ubicacionDe, statusStyle, parse, fmt, cap, timeRange, schoolPlace, itemTitle, firstName, setItemStatus, deleteItem, responder, getHistorial, fotosDelDia, errMsg, ActionChip, StatusBadge, ErrorBox } from '@/components/app/comun'
 import { ZONA } from '@/lib/hora'
-import { hoyAR } from '@/lib/hora'
 
 // =====================================================================
 
 // El estado del detalle (errores, confirmaciones, historial, fotos, dirección) se reinicia al cambiar de acción: se remonta con key.
 export function DetailDialog(props: Parameters<typeof DetalleAccion>[0]) { return <DetalleAccion key={props.item?.id ?? ''} {...props} /> }
 
-function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onChanged, onVer }: { item: AgendaItem | null, feds: Fed[], profile: Fed, soloLectura?: boolean, onClose: () => void, onEdit: (item: AgendaItem) => void, onChanged: (msg: string, updated: AgendaItem | null) => void, onVer?: (item: AgendaItem) => void }) {
+function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onChanged }: { item: AgendaItem | null, feds: Fed[], profile: Fed, soloLectura?: boolean, onClose: () => void, onEdit: (item: AgendaItem) => void, onChanged: (msg: string, updated: AgendaItem | null) => void }) {
   const [busy, setBusy] = useState<string>('')
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -56,26 +55,17 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
     } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
   }
 
-  // Visita con varias acciones: se ve cada una y se puede marcar toda como realizada de una vez.
+  // Visita con varias acciones: se ve como una sola (etiquetas juntas, un estado, un bloque por tipo).
   const visita = item?.visita
-  async function visitaRealizada() {
-    if (!visita || !item) return
-    setBusy('visita'); setError('')
-    try {
-      await cambiarEstadoVarias(visita.map(v => v.id), 'realizada')
-      const nueva = visita.map(v => ({ ...v, estado: 'realizada' as Estado }))
-      onChanged(`Se marcaron ${visita.length} acciones de la visita como realizadas`, { ...item, estado: 'realizada', visita: nueva.map(v => ({ ...v, visita: undefined })) })
-    } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
-  }
   async function changeStatus(estado: Estado) {
     if (!item) return
     setBusy(estado); setError('')
-    try { await setItemStatus(item.id, profile.id, estado); onChanged(`Marcada como ${statusStyle[estado].label.toLowerCase()}`, { ...item, estado }) } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
+    try { await setItemStatus(item.id, profile.id, estado); onChanged(visita ? `Visita marcada como ${statusStyle[estado].label.toLowerCase()}` : `Marcada como ${statusStyle[estado].label.toLowerCase()}`, { ...item, estado, visita: visita?.map(v => ({ ...v, estado })) }) } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
   }
   async function remove(serie = false) {
     if (!item) return
     setBusy(serie ? 'delete-serie' : 'delete'); setError('')
-    try { const n = await deleteItem(item.id, profile.id, serie); onChanged(n > 1 ? `Se eliminaron ${n} acciones de la serie` : 'Acción eliminada', null) } catch (e) { setError(errMsg(e)); setBusy('') }
+    try { const n = await deleteItem(item.id, profile.id, serie); onChanged(visita ? `Visita eliminada (${n} acciones)` : n > 1 ? `Se eliminaron ${n} acciones de la serie` : 'Acción eliminada', null) } catch (e) { setError(errMsg(e)); setBusy('') }
   }
 
   const row = (Icon: typeof Clock, label: string, value: React.ReactNode) => value ? <div className="flex gap-3"><Icon className="mt-0.5 size-4 shrink-0 text-dte-gris-claro" /><div className="min-w-0"><dt className="text-xs font-semibold uppercase tracking-wider text-dte-gris">{label}</dt><dd className="text-sm">{value}</dd></div></div> : null
@@ -83,7 +73,7 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
   return <Dialog open onOpenChange={o => !o && onClose()}>
     <DialogContent className="bg-white sm:max-w-lg">
       <DialogHeader>
-        <div className="flex flex-wrap items-center gap-2"><ActionChip label={item.accion} /><StatusBadge status={item.estado} /></div>
+        <div className="flex flex-wrap items-center gap-2">{(visita ?? [item]).map(v => <ActionChip key={v.id} label={v.accion} />)}<StatusBadge status={item.estado} /></div>
         <DialogTitle className="pt-1 text-lg leading-snug">{itemTitle(item)}</DialogTitle>
         <DialogDescription>{cap(fmt(parse(item.fecha), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))} · {timeRange(item)}</DialogDescription>
       </DialogHeader>
@@ -92,22 +82,22 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
         {row(GraduationCap, item.accion === 'FORMACIÓN INTERNA' ? 'Formación' : 'Modalidad', (item.modalidad || item.rol_formacion || item.dictada_por) && [item.rol_formacion, item.modalidad, item.dictada_por ? `dictada por ${item.dictada_por}` : null].filter(Boolean).join(' · '))}
         {row(SchoolIcon, 'Escuela', item.school && <>CUE {item.school.cue ?? '—'}{schoolPlace(item.school) ? ` · ${schoolPlace(item.school)}` : ''}</>)}
         {row(Navigation, 'Dirección', (textoDir || mapa) && <>{textoDir}{mapa && <> {textoDir ? '· ' : ''}<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapa)}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Cómo llegar</a></>}</>)}
+        {!visita && <>
         {row(ClipboardList, 'Sub-acción', item.sub_accion && <>{item.sub_accion}{item.cantidad ? <span className="text-dte-gris"> · {item.cantidad} equipos</span> : null}</>)}
         {row(UserRound, item.encuentros?.length > 1 ? `Encuentros (${item.encuentros.length})` : 'Encuentro', item.encuentros?.length ? <ul className="flex flex-col gap-1.5">{item.encuentros.map(e => <li key={e.id}>{[e.propuesta, e.encuentro_n ? `Encuentro N° ${e.encuentro_n}` : null, e.modalidad].filter(Boolean).join(' · ')}<span className="block text-xs text-dte-gris">{[e.destinatarios, e.inscriptos != null ? `${e.inscriptos} inscriptos` : null, e.asistentes != null ? `${e.asistentes} asistentes` : null].filter(Boolean).join(' · ')}{e.fotos_url && <> · <a href={e.fotos_url} target="_blank" rel="noreferrer" className="text-dte-petroleo underline">fotos</a></>}</span></li>)}</ul> : null)}
         {row(Pencil, 'Detalle', item.detalle && <span className="whitespace-pre-wrap">{item.detalle}</span>)}
+        </>}
         {row(UserRound, 'Creada por', fed?.nombre_completo ?? '—')}
         {row(Users, 'Acompañado por', item.participantes?.length ? <ul className="flex flex-col gap-0.5">{item.participantes.map(p => <li key={p.fed_id} className="flex items-center gap-1.5">{nombre(p.fed_id)}<span className={`rounded-full px-1.5 text-xs font-semibold ${p.respuesta === 'acepta' ? 'bg-exito-fondo text-exito' : p.respuesta === 'rechaza' ? 'bg-peligro-suave text-peligro' : 'bg-dte-tinte text-dte-gris'}`}>{p.respuesta === 'acepta' ? 'Confirmó' : p.respuesta === 'rechaza' ? 'No puede' : 'Sin respuesta'}</span></li>)}</ul> : null)}
         {row(Repeat, 'Serie', item.serie_id ? 'Forma parte de una serie semanal' : null)}
       </dl>
-      {visita && <section aria-label="Acciones de esta visita" className="flex flex-col gap-2 rounded-tile border border-dte-linea p-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-dte-gris">En esta visita · {visita.length} acciones</p>
-        <ul className="flex flex-col gap-1.5">{visita.map(v => <li key={v.id}><button type="button" disabled={v.id === item.id} onClick={() => onVer?.({ ...v, visita })} aria-current={v.id === item.id ? 'true' : undefined}
-          className={`flex min-h-11 w-full flex-wrap items-center gap-2 rounded-control border px-2.5 py-1.5 text-left text-sm transition ${v.id === item.id ? 'border-dte-petroleo bg-dte-tinte' : 'border-dte-linea hover:border-dte-petroleo hover:bg-dte-tinte'}`}>
-          <ActionChip label={v.accion} /><StatusBadge status={v.estado} />{v.sub_accion && <span className="min-w-0 truncate text-xs text-dte-gris" title={v.sub_accion}>{v.sub_accion}</span>}
-          {v.id === item.id && <span className="ml-auto text-xs font-semibold text-dte-petroleo">Viendo</span>}
-        </button></li>)}</ul>
-        {own && item.fecha <= hoyAR() && visita.some(v => v.estado !== 'realizada') && <Button variant="outline" disabled={!!busy} onClick={visitaRealizada} className="self-start">{busy === 'visita' && <Loader2 className="animate-spin" data-icon="inline-start" />}Marcar toda la visita como realizada</Button>}
-      </section>}
+      {visita && <section aria-label="Acciones de la visita" className="flex flex-col gap-2">{visita.map(v => <div key={v.id} className="rounded-tile border border-dte-linea p-3 text-sm">
+        <ActionChip label={v.accion} />
+        {(v.sub_accion || !!v.cantidad) && <p className="mt-1.5">{v.sub_accion}{v.cantidad ? <span className="text-dte-gris">{v.sub_accion ? ' · ' : ''}{v.cantidad} equipos</span> : null}</p>}
+        {v.encuentros?.map(e => <p key={e.id} className="mt-1 text-dte-gris">{[e.propuesta, e.destinatarios, e.inscriptos != null ? `${e.inscriptos} inscriptos` : null, e.asistentes != null ? `${e.asistentes} asistentes` : null].filter(Boolean).join(' · ')}</p>)}
+        {v.detalle && <p className="mt-1 whitespace-pre-wrap text-dte-gris">{v.detalle}</p>}
+        {!v.sub_accion && !v.cantidad && !v.detalle && !v.encuentros?.length && <p className="mt-1 text-xs text-dte-gris">Sin datos adicionales.</p>}
+      </div>)}</section>}
       {mio && !soloLectura && <div className="flex flex-wrap items-center justify-between gap-2 rounded-tile border border-dte-linea p-3">
         <p className="text-sm"><b>{fed ? firstName(fed.nombre_completo) : 'Un compañero'}</b> te sumó a esta acción. {mio.respuesta === 'acepta' ? 'Confirmaste.' : mio.respuesta === 'rechaza' ? 'Avisaste que no podés.' : '¿Participás?'}</p>
         <div className="flex gap-2"><Button size="sm" variant={mio.respuesta === 'acepta' ? 'default' : 'outline'} disabled={!!busy} onClick={() => responderInv('acepta')} className={mio.respuesta === 'acepta' ? 'bg-dte-petroleo' : ''}>{busy === 'acepta' ? <Loader2 className="animate-spin" /> : <Check data-icon="inline-start" />}Participo</Button><Button size="sm" variant="outline" disabled={!!busy} onClick={() => responderInv('rechaza')} className={mio.respuesta === 'rechaza' ? 'border-peligro text-peligro' : ''}>{busy === 'rechaza' ? <Loader2 className="animate-spin" /> : <X data-icon="inline-start" />}No puedo</Button></div>
@@ -123,7 +113,7 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
       </div>}
       {error && <ErrorBox message={error} />}
       {own && confirmDelete ? <div role="alertdialog" aria-label="Confirmar eliminación" className="flex flex-col gap-3 rounded-tile border border-peligro-borde bg-peligro-fondo p-3">
-        <p className="text-sm font-semibold text-peligro">¿Eliminar definitivamente?{item.serie_id && <span className="block font-normal">Es parte de una serie: elegí si borrás sólo esta fecha o también las planificadas que siguen.</span>}</p>
+        <p className="text-sm font-semibold text-peligro">¿Eliminar definitivamente?{visita && <span className="block font-normal">Se elimina la visita completa ({visita.length} acciones). Si sólo una no se hizo, editá la visita y desmarcala.</span>}{item.serie_id && <span className="block font-normal">Es parte de una serie: elegí si borrás sólo esta fecha o también las planificadas que siguen.</span>}</p>
         <div className={`grid gap-2 ${item.serie_id ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
           <Button variant="outline" disabled={!!busy} onClick={() => setConfirmDelete(false)} className="bg-white">No, volver</Button>
           <Button disabled={!!busy} onClick={() => remove()} className="bg-peligro text-white hover:bg-peligro/90">{busy === 'delete' && <Loader2 className="animate-spin" data-icon="inline-start" />}{item.serie_id ? 'Sólo esta' : 'Sí, eliminar'}</Button>

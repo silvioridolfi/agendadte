@@ -16,8 +16,9 @@ import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type F
 import { FotosChip } from '@/components/app/fotosconteo'
 import { InformeBloque, personaDe } from '@/components/app/informes'
 import { indicadoresCoordinacion, informeFed } from '@/lib/informes'
-import { type ItemPreset, itemCorto, cueLugar, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, ActionChip, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
+import { EtiquetasAccion, type ItemPreset, itemCorto, cueLugar, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
 import { hoyAR, fechaHoyAR, anioAR } from '@/lib/hora'
+import { agruparVisitas } from '@/lib/visita'
 
 // =====================================================================
 
@@ -115,7 +116,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     const recientePrimero = (a: AgendaItem, b: AgendaItem) => Number(a.fecha > hoy) - Number(b.fecha > hoy)
     || (a.fecha > hoy ? a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? '') : 0)
     || b.fecha.localeCompare(a.fecha) || (b.hora_inicio ?? '').localeCompare(a.hora_inicio ?? '') || b.created_at.localeCompare(a.created_at)
-    const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].map(([id, l]) => [id, l.sort(recientePrimero)] as [string, AgendaItem[]]).sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName, hoy])
+    const m = new Map<string, AgendaItem[]>(); for (const i of filtered) m.set(i.fed_id, [...(m.get(i.fed_id) ?? []), i]); return [...m.entries()].map(([id, l]) => [id, agruparVisitas(l.sort(recientePrimero))] as [string, AgendaItem[]]).sort((a, b) => fedName(a[0]).localeCompare(fedName(b[0]))) }, [filtered, fedName, hoy])
   const anyFilter = !!(search || distrito || fedIdElegido || accion || estado)
   // Filtros plegables en mobile (buscador siempre visible).
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
@@ -183,7 +184,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
             <li key={item.id}><button className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte focus-visible:bg-dte-tinte focus-visible:outline-none sm:grid-cols-[6.5rem_1fr_auto] sm:items-center" onClick={() => onSelect(item)}>
               <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize text-dte-tinta">{range === 'day' ? (hhmm(item.hora_inicio) || '—') : fmt(parse(item.fecha), range === 'week' ? { weekday: 'short', day: 'numeric' } : { day: 'numeric', month: 'short' }).replace('.', '')}</span>{range !== 'day' && <span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span>}</span>
               <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemCorto(item)}</span><span className="block truncate text-xs text-dte-gris" title={[cueLugar(item.school), item.school ? item.sub_accion : null].filter(Boolean).join(' · ') || ' '}>{[cueLugar(item.school), item.school ? item.sub_accion : null].filter(Boolean).join(' · ') || ' '}</span></span>
-              <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ActionChip label={item.accion} /><StatusBadge status={item.estado} /><FotosChip item={item} /></span>
+              <span className="flex flex-wrap items-center gap-2 sm:justify-end"><EtiquetasAccion item={item} /><StatusBadge status={item.estado} /><FotosChip item={item} /></span>
             </button></li>)}</ul>
           {group.length > LISTA_INICIAL && <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm">
             {visibles(id) < group.length && <Button variant="outline" size="sm" onClick={() => setMostrar(m => ({ ...m, [id]: visibles(id) + LISTA_PASO }))}>Ver {Math.min(LISTA_PASO, group.length - visibles(id))} más</Button>}
