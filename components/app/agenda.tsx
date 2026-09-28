@@ -75,8 +75,8 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
       <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
         <Segmented label="Vista" value={view} options={CAL_VIEWS} onChange={setView} />
         <WeekNav prevLabel="Anterior" nextLabel="Siguiente" onPrev={() => setAnchor(calShift(anchor, view, -1))} onToday={() => setAnchor(toWeekday(fechaHoyAR()))} onNext={() => setAnchor(calShift(anchor, view, 1))} />
-        <Button size="lg" variant="outline" disabled={!items?.length || exportando} onClick={exportar} title="Descargar la planilla del período en Excel" aria-label="Exportar la planilla del período a Excel" className="h-10 px-3"><FileSpreadsheet />{exportando && <Loader2 className="animate-spin" />}</Button>
-        {editable && ['day', 'week', 'list'].includes(view) && <Button size="lg" variant={sel ? 'default' : 'outline'} onClick={() => setSel(s => (s ? null : []))} aria-pressed={!!sel} className={`h-10 px-3 ${sel ? 'bg-dte-petroleo hover:bg-dte-petroleo-oscuro' : ''}`}><ListChecks data-icon="inline-start" />Seleccionar</Button>}
+        <Button size="lg" variant="outline" disabled={!items?.length || exportando} onClick={exportar} title="Descargar la planilla del período en Excel" aria-label="Exportar la planilla del período a Excel" className="px-3 md:h-10"><FileSpreadsheet />{exportando && <Loader2 className="animate-spin" />}</Button>
+        {editable && ['day', 'week', 'list'].includes(view) && <Button size="lg" variant={sel ? 'default' : 'outline'} onClick={() => setSel(s => (s ? null : []))} aria-pressed={!!sel} className={`px-3 md:h-10 ${sel ? 'bg-dte-petroleo hover:bg-dte-petroleo-oscuro' : ''}`}><ListChecks data-icon="inline-start" />Seleccionar</Button>}
         {onNew && <Button size="lg" variant="marca" onClick={() => onNew(suggested)} className="hidden px-4 md:inline-flex"><Plus data-icon="inline-start" />Nueva acción</Button>}
       </div>
     </div>

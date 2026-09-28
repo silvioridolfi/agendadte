@@ -16,7 +16,7 @@ export function Segmented<T extends string>({ label, value, options, onChange, c
 // 40px de alto en mobile (con separación de 6px) y 32px desde md.
 export function Pill({ on, onClick, children, conIcono = true, className }: { on: boolean, onClick: () => void, children: React.ReactNode, conIcono?: boolean, className?: string }) {
   return <button type="button" aria-pressed={on} onClick={onClick}
-    className={cn('inline-flex min-h-10 items-center gap-1 rounded-full border px-3 text-sm font-medium transition active:scale-[0.97] md:min-h-8 md:px-2.5 md:text-xs',
+    className={cn('inline-flex min-h-11 items-center gap-1 rounded-full border px-3 text-sm font-medium transition active:scale-[0.97] md:min-h-8 md:px-2.5 md:text-xs',
       on ? 'border-dte-petroleo bg-dte-petroleo text-white shadow-xs' : 'border-dte-petroleo/20 bg-dte-petroleo/[0.06] text-dte-petroleo hover:border-dte-petroleo/40 hover:bg-dte-petroleo/[0.12]', className)}>
     {conIcono && (on ? <Check className="size-3.5" /> : <Plus className="size-3.5 opacity-70" />)}{children}
   </button>

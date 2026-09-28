@@ -56,7 +56,7 @@ export function SeccionFotos() {
         </ul>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://drive.google.com/drive/folders/…" aria-label="Enlace de la carpeta de Drive" className="min-w-0 flex-1" />
+        <Input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://drive.google.com/drive/folders/…" aria-label="Enlace de la carpeta de Drive" className="min-w-0 sm:flex-1" />
         <Button onClick={guardar} disabled={!!busy} className="bg-dte-petroleo hover:bg-dte-petroleo-oscuro">{busy === 'guardar' ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Guardar y verificar</Button>
       </div>
 
@@ -64,7 +64,7 @@ export function SeccionFotos() {
         <span className="flex items-start gap-1.5">{listo ? <Check className="mt-0.5 size-4 shrink-0" /> : <TriangleAlert className="mt-0.5 size-4 shrink-0" />}
           {listo ? <>Conectada: <b>{estado.nombre}</b>. Las fotos se ordenan cada noche.</> : estado.error ?? (estado.nombre ? 'La cuenta de la agenda puede ver la carpeta pero no editarla: compartila como Editor.' : 'Verificando…')}</span>
         <span className="flex flex-wrap gap-2">
-          <a href={estado.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-dte-linea bg-white px-3 text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><ExternalLink className="size-3.5" />Abrir carpeta</a>
+          <a href={estado.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-dte-linea bg-white px-3 text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><ExternalLink className="size-3.5" />Abrir carpeta</a>
           {listo && <Button variant="outline" size="sm" onClick={ordenar} disabled={!!busy} className="bg-white">{busy === 'ordenar' ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FolderSync data-icon="inline-start" />}Ordenar ahora</Button>}
         </span>
       </div>}

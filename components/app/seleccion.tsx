@@ -40,7 +40,7 @@ export function BarraSeleccion({ ids, onListo, onCambio }: { ids: string[], onLi
       </div>
       {ids.length > 0 && <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-xs font-semibold text-dte-gris">Marcar como:</span>
-        {ESTADOS.map(e => <button key={e} type="button" disabled={!!busy} onClick={() => estado(e)} className={`inline-flex min-h-10 items-center gap-1 rounded-full border px-3 text-xs font-semibold transition disabled:opacity-50 md:min-h-8 ${statusStyle[e].badge}`}>{busy === e ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}{statusStyle[e].label}</button>)}
+        {ESTADOS.map(e => <button key={e} type="button" disabled={!!busy} onClick={() => estado(e)} className={`inline-flex min-h-11 items-center gap-1 rounded-full border px-3 text-xs font-semibold transition disabled:opacity-50 md:min-h-8 ${statusStyle[e].badge}`}>{busy === e ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}{statusStyle[e].label}</button>)}
         <Button variant="ghost" size="sm" disabled={!!busy} onClick={() => setBorrar(true)} className="ml-auto text-peligro hover:bg-peligro-fondo hover:text-peligro">{busy === 'borrar' ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Trash2 data-icon="inline-start" />}Eliminar</Button>
       </div>}
       {error && <ErrorBox message={error} />}
@@ -72,7 +72,7 @@ export function PanelFinDeSemana({ items, viewer, editable, onSelect, onCambio }
   return <details className="mt-4 rounded-2xl border border-aviso-borde bg-aviso-fondo p-3">
     <summary className="cursor-pointer text-sm font-semibold text-aviso-fuerte">{plural(items.length, 'acción cargada', 'acciones cargadas')} en fin de semana</summary>
     {editable && propias.length > 0 && <div className="mt-3 flex flex-wrap items-center gap-2">
-      <label className="flex min-h-10 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={todas} onChange={() => setSel(todas ? [] : propias.map(i => i.id))} className="size-5" />Seleccionar todas</label>
+      <label className="flex min-h-11 md:min-h-10 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={todas} onChange={() => setSel(todas ? [] : propias.map(i => i.id))} className="size-5" />Seleccionar todas</label>
       {sel.length > 0 && <>
         <Button size="sm" variant="outline" disabled={!!busy} onClick={() => setConfirmar('viernes')} className="bg-white">{busy === 'viernes' && <Loader2 className="animate-spin" data-icon="inline-start" />}Mover al viernes</Button>
         <Button size="sm" variant="outline" disabled={!!busy} onClick={() => setConfirmar('lunes')} className="bg-white">{busy === 'lunes' && <Loader2 className="animate-spin" data-icon="inline-start" />}Mover al lunes</Button>
