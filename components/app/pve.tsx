@@ -29,14 +29,14 @@ export function SeccionPve() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const cargar = (revisar = false) => { setBusy(revisar); setError(''); misPve(revisar).then(setDatos).catch(e => setError(errMsg(e))).finally(() => setBusy(false)) }
-  useEffect(() => { cargar() }, [])
+  useEffect(() => { let vivo = true; misPve(false).then(d => vivo && setDatos(d)).catch(e => vivo && setError(errMsg(e))); return () => { vivo = false } }, [])
   // "Subir": la carpeta del mes se crea recién ahora. La ventana se abre antes de esperar al servidor (si no, el navegador la bloquea).
   const [abriendo, setAbriendo] = useState('')
   async function subir(m: PveMes) {
     if (m.carpetaUrl) { window.open(m.carpetaUrl, '_blank', 'noopener'); return }
     const w = window.open('', '_blank')
     setAbriendo(m.mes); setError('')
-    try { const url = await abrirCarpetaPve(m.mes); if (w) w.location.href = url; else window.location.href = url; cargar() }
+    try { const url = await abrirCarpetaPve(m.mes); if (w) w.location.assign(url); else window.location.assign(url); cargar() }
     catch (e) { w?.close(); setError(errMsg(e)) } finally { setAbriendo('') }
   }
   return <section className="rounded-card border border-dte-linea bg-white p-4 shadow-e1 sm:p-5" aria-labelledby="t-pve">
@@ -77,8 +77,8 @@ export function PveEquipoView() {
   const [confirmar, setConfirmar] = useState(false)
   const [aviso, setAviso] = useState('')
   const cargar = () => { setLista(null); setError(''); pveEquipo(mes).then(setLista).catch(e => { setLista([]); setError(errMsg(e)) }) }
-  useEffect(cargar, [mes])
-  const mover = (n: number) => { const d = parse(mes); d.setMonth(d.getMonth() + n); setMes(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`); setAviso('') }
+  useEffect(() => { let vivo = true; pveEquipo(mes).then(l => vivo && setLista(l)).catch(e => { if (vivo) { setLista([]); setError(errMsg(e)) } }); return () => { vivo = false } }, [mes])
+  const mover = (n: number) => { setLista(null); setError(''); const d = parse(mes); d.setMonth(d.getMonth() + n); setMes(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`); setAviso('') }
   const nombreMes = `${MESES[Number(mes.slice(5, 7)) - 1]} ${mes.slice(0, 4)}`
   const entregadas = (lista ?? []).filter(f => f.entregada), pendientes = (lista ?? []).filter(f => !f.entregada)
   const sinEnviar = entregadas.filter(f => !f.enviada && !pendienteCorreccion(f)), corregidas = entregadas.filter(f => f.reentregada && !f.enviada)
