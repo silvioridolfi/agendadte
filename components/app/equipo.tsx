@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { titleCase } from '@/lib/format'
 import { franjasDte, textoFranjas } from '@/lib/ddjj'
 import { clubEstado, iniciado, type AgendaItem, type Club, type Fed } from '@/lib/agenda'
-import { fmt, iso, parse, fedColor, initials, Skeleton } from '@/components/app/comun'
+import { fmt, parse, fedColor, initials, Skeleton } from '@/components/app/comun'
 import { hoyAR } from '@/lib/hora'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']

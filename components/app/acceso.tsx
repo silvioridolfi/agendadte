@@ -94,7 +94,7 @@ export function UsuariosView({ miEmail, onVer }: { miEmail: string, onVer: (fedI
   const [temporal, setTemporal] = useState<{ nombre: string, email: string, password: string } | null>(null)
   const [copiado, setCopiado] = useState(false)
   const cargar = () => { setError(''); listarUsuarios().then(setLista).catch(e => { setLista([]); setError(errMsg(e)) }) }
-  useEffect(cargar, [])
+  useEffect(() => { let vivo = true; listarUsuarios().then(l => vivo && setLista(l)).catch(e => { if (vivo) { setLista([]); setError(errMsg(e)) } }); return () => { vivo = false } }, [])
 
   async function generar(u: UsuarioEquipo) {
     setConfirmar(null); setBusy(u.fedId); setError('')

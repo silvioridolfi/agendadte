@@ -186,22 +186,24 @@ export function Toast({ message, onDone }: { message: string, onDone: () => void
 // `cacheKey`: guarda lo cargado en el dispositivo. Al abrir se muestra al instante la última copia y se actualiza
 // en segundo plano; si no hay conexión, queda la copia con el aviso de "sin conexión" (`desdeCache`).
 export function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[], cacheKey?: string) {
-  const [items, setItems] = useState<AgendaItem[] | null>(null)
-  const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
-  const [desdeCache, setDesdeCache] = useState<number | null>(null)
+  // Cada resultado queda asociado a la consulta que lo pidió: al cambiar de período se descarta el anterior sin resetear el estado en el efecto.
+  const clave = JSON.stringify([...deps, retry])
+  const [res, setRes] = useState<{ clave: string, items: AgendaItem[] | null, error: string, desdeCache: number | null } | null>(null)
   useEffect(() => {
     let alive = true
-    const c = cacheKey ? leerCache(cacheKey) : null
-    setItems(c?.items ?? null); setError(''); setDesdeCache(null)
-    load().then(r => { if (!alive) return; setItems(r); if (cacheKey) guardarCache(cacheKey, r) }).catch(e => {
+    load().then(r => { if (!alive) return; setRes({ clave, items: r, error: '', desdeCache: null }); if (cacheKey) guardarCache(cacheKey, r) }).catch(e => {
       if (!alive) return
-      if (c) { setItems(c.items); setDesdeCache(c.ts) } else setError(errMsg(e))
+      const c = cacheKey ? leerCache(cacheKey) : null
+      setRes(c ? { clave, items: c.items, error: '', desdeCache: c.ts } : { clave, items: null, error: errMsg(e), desdeCache: null })
     })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, retry])
-  return { items, error, retry: () => setRetry(n => n + 1), desdeCache }
+  }, [clave])
+  // Mientras llega la respuesta se muestra la última copia guardada en el dispositivo (si hay).
+  const enCache = useMemo(() => (cacheKey ? leerCache(cacheKey)?.items ?? null : null), [cacheKey])
+  const actual = res?.clave === clave ? res : null
+  return { items: actual ? actual.items : enCache, error: actual?.error ?? '', retry: () => setRetry(n => n + 1), desdeCache: actual?.desdeCache ?? null }
 }
 
 // =====================================================================

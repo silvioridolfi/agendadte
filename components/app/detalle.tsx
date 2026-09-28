@@ -12,18 +12,19 @@ import { ZONA } from '@/lib/hora'
 
 // =====================================================================
 
-export function DetailDialog({ item, feds, profile, soloLectura, onClose, onEdit, onChanged }: { item: AgendaItem | null, feds: Fed[], profile: Fed, soloLectura?: boolean, onClose: () => void, onEdit: (item: AgendaItem) => void, onChanged: (msg: string, updated: AgendaItem | null) => void }) {
+// El estado del detalle (errores, confirmaciones, historial, fotos, dirección) se reinicia al cambiar de acción: se remonta con key.
+export function DetailDialog(props: Parameters<typeof DetalleAccion>[0]) { return <DetalleAccion key={props.item?.id ?? ''} {...props} /> }
+
+function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onChanged }: { item: AgendaItem | null, feds: Fed[], profile: Fed, soloLectura?: boolean, onClose: () => void, onEdit: (item: AgendaItem) => void, onChanged: (msg: string, updated: AgendaItem | null) => void }) {
   const [busy, setBusy] = useState<string>('')
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [historial, setHistorial] = useState<Awaited<ReturnType<typeof getHistorial>> | null>(null)
   const [verHistorial, setVerHistorial] = useState(false)
-  useEffect(() => { setError(''); setConfirmDelete(false); setBusy(''); setHistorial(null); setVerHistorial(false) }, [item?.id])
   useEffect(() => { if (verHistorial && item && !historial) getHistorial(item.id).then(setHistorial).catch(() => setHistorial([])) }, [verHistorial, item, historial])
   // Fotos del día en Drive (del responsable y de quienes participaron), si ya se ordenaron.
   const [fotos, setFotos] = useState<{ fedId: string, url: string, deAccion: boolean, n: number }[]>([])
   useEffect(() => {
-    setFotos([])
     if (!item) return
     let vivo = true
     fotosDelDia([item.fed_id, ...(item.participantes ?? []).map(p => p.fed_id)], item.fecha, item.id).then(r => vivo && setFotos(r)).catch(() => {})
@@ -32,7 +33,6 @@ export function DetailDialog({ item, feds, profile, soloLectura, onClose, onEdit
   // Dirección de la escuela o jefatura, con enlace a Google Maps (enlace común, sin API ni límites de uso).
   const [ubic, setUbic] = useState<Ubicacion | null>(null)
   useEffect(() => {
-    setUbic(null)
     if (!item || (!item.school_id && !item.lugar)) return
     let vivo = true
     ubicacionDe(item.school_id, item.lugar).then(u => vivo && setUbic(u)).catch(() => {})

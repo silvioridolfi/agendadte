@@ -23,7 +23,9 @@ export function FeriadosView({ autorId, onSaved }: { autorId: string, onSaved: (
   const [error, setError] = useState('')
   const [aQuitar, setAQuitar] = useState<Feriado | null>(null)
   const cargar = () => { setList(null); getFeriados(`${year}-01-01`, `${year}-12-31`).then(setList).catch(e => { setList([]); setError(errMsg(e)) }) }
-  useEffect(cargar, [year])
+  // Carga al cambiar de año: el estado sólo se actualiza cuando llega la respuesta.
+  useEffect(() => { let vivo = true; getFeriados(`${year}-01-01`, `${year}-12-31`).then(l => vivo && setList(l)).catch(e => { if (vivo) { setList([]); setError(errMsg(e)) } }); return () => { vivo = false } }, [year])
+  const cambiarAnio = (n: number) => { setList(null); setYear(y => y + n) }
   async function agregar() {
     setBusy('add'); setError('')
     try { await addFeriado(autorId, nuevo); onSaved('Feriado agregado'); setNuevo(n => ({ ...n, fecha: '', nombre: '' })); cargar() } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
@@ -34,7 +36,7 @@ export function FeriadosView({ autorId, onSaved }: { autorId: string, onSaved: (
     try { await deleteFeriado(autorId, f.id); onSaved('Feriado eliminado'); cargar() } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
   }
   return <Panel title="Feriados, aniversarios y recesos" subtitle="Se muestran en los calendarios, se saltean en las series y no cuentan para “sin actividad” de clubes y prácticas."
-    action={<div className="flex items-center gap-1"><Button variant="outline" size="sm" onClick={() => setYear(y => y - 1)}>‹</Button><span className="px-2 text-sm font-bold tabular-nums">{year}</span><Button variant="outline" size="sm" onClick={() => setYear(y => y + 1)}>›</Button></div>}>
+    action={<div className="flex items-center gap-1"><Button variant="outline" size="sm" onClick={() => cambiarAnio(-1)}>‹</Button><span className="px-2 text-sm font-bold tabular-nums">{year}</span><Button variant="outline" size="sm" onClick={() => cambiarAnio(1)}>›</Button></div>}>
     <div className="mb-4 grid gap-2 rounded-tile bg-dte-fondo p-3 sm:grid-cols-2 sm:items-end lg:grid-cols-[9rem_1fr_12rem_10rem_auto_auto]">
       <label className="flex flex-col gap-1 text-xs font-semibold">Fecha<Input type="date" value={nuevo.fecha} onChange={e => setNuevo(n => ({ ...n, fecha: e.target.value }))} className="h-11 bg-white md:h-9" /></label>
       <label className="flex flex-col gap-1 text-xs font-semibold">Nombre<Input value={nuevo.nombre} onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))} placeholder="Ej.: Receso invernal" className="h-11 bg-white md:h-9" /></label>
