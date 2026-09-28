@@ -10,9 +10,9 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
 import { etiquetaAccion, nombreAccion, iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, esAusencia, ACCIONES_CED, SOLO_CED, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
-import type { Organismo } from '@/app/actions'
+import type { Ocupacion, Organismo } from '@/app/actions'
 import { titleCase } from '@/lib/format'
-import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, cambiarEstadoVarias, guardarVisita, editarVisita, ActionChip, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
+import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, cambiarEstadoVarias, disponibilidad, guardarVisita, editarVisita, ActionChip, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
 import { encolarOffline, encolarVisitaOffline } from '@/components/app/offline'
 import { alternarTipo, datosDeAccion, datosVacios, inputDeTipo, type DatosTipo } from '@/lib/visita'
 import { hoyAR } from '@/lib/hora'
@@ -390,6 +390,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       <legend className="mb-1.5 flex w-full items-center justify-between text-sm font-semibold"><span>Acompañado por <span className="font-normal text-dte-gris">(opcional)</span></span>
         <button type="button" onClick={() => setParticipantes(participantes.length === companeros.length ? [] : companeros.map(c => c.id))} className="-my-2 min-h-11 px-1 text-xs font-semibold text-dte-petroleo hover:opacity-80 md:my-0 md:min-h-0">{participantes.length === companeros.length ? 'Quitar a todos' : 'Todo el equipo'}</button></legend>
       <div className="flex flex-wrap gap-1.5">{companeros.map(c => { const on = participantes.includes(c.id); return <Pill key={c.id} on={on} onClick={() => togglePart(c.id)}>{c.nombre_completo}</Pill> })}</div>
+      {participantes.length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(form.fecha) && <Disponibilidad fecha={form.fecha} desde={form.hora_inicio} hasta={form.hora_fin} personas={companeros.filter(c => participantes.includes(c.id))} excluir={item?.id} />}
       {participantes.length > 0 && <p className="mt-1.5 text-xs text-dte-gris">La acción va a aparecer en el calendario de {participantes.length === 1 ? 'esa persona' : `esas ${participantes.length} personas`} y les llega una notificación. Sólo vos podés editarla.</p>}
     </fieldset>}
 
@@ -498,4 +499,42 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       </DialogContent>
     </Dialog>
   </form>
+}
+
+// Disponibilidad de los acompañantes en la fecha y el horario elegidos: horario DTE (DD.JJ.), otros cargos,
+// otras acciones y licencias. Sólo avisa; no impide guardar.
+function Disponibilidad({ fecha, desde, hasta, personas, excluir }: { fecha: string, desde: string, hasta: string, personas: Fed[], excluir?: string }) {
+  const ids = personas.map(p => p.id).sort().join(',')
+  const clave = `${fecha}|${ids}|${excluir ?? ''}`
+  const [res, setRes] = useState<{ clave: string, ocup: Ocupacion[] } | null>(null)
+  useEffect(() => {
+    let vivo = true
+    const t = setTimeout(() => disponibilidad(fecha, ids.split(','), excluir).then(o => vivo && setRes({ clave, ocup: o })).catch(() => vivo && setRes({ clave, ocup: [] })), 300)
+    return () => { vivo = false; clearTimeout(t) }
+  }, [clave, fecha, ids, excluir])
+  const ocup = res?.clave === clave ? res.ocup : null
+  if (!ocup) return <p className="mt-2 flex items-center gap-1.5 text-xs text-dte-gris"><Loader2 className="size-3.5 animate-spin" />Revisando disponibilidad…</p>
+  const fin = hasta && hasta > desde ? hasta : desde
+  const cruza = (o: Ocupacion) => { const a = hhmm(o.hora_inicio), b = hhmm(o.hora_fin) || a; return !!a && (a === desde || (a < fin && desde < b)) }
+  const rango = (o: Ocupacion) => (o.hora_inicio ? `${hhmm(o.hora_inicio)}${o.hora_fin ? ` a ${hhmm(o.hora_fin)}` : ''}` : 'sin horario')
+  const filas = personas.map(p => {
+    const suyas = ocup.filter(o => o.fed_id === p.id)
+    const aus = suyas.find(o => esAusencia(o.accion))
+    const notas: string[] = []
+    if (aus) return { p, nivel: 2, notas: [aus.accion === 'PARO' ? 'Adhiere al paro ese día' : 'De licencia ese día'] }
+    if (desde) {
+      const h = chequearHorario(ddjjFor(p, fecha), desde, hasta)
+      if (h.fuera) notas.push('Fuera de su horario DTE')
+      for (const c of h.choques) notas.push(`En horario de ${c.nombre}`)
+      for (const o of suyas.filter(cruza)) notas.push(`Tiene ${cap(o.accion.toLowerCase())} ${rango(o)}${o.lugar ? ` · ${titleCase(o.lugar)}` : ''}`)
+    }
+    return { p, nivel: notas.length ? 1 : 0, notas }
+  })
+  const libres = filas.filter(f => f.nivel === 0).length
+  return <div className="mt-2 rounded-control border border-dte-linea bg-dte-fondo p-2.5 text-sm" role="status">
+    <p className="font-semibold">{desde ? `Disponibilidad: ${libres} de ${filas.length} ${filas.length === 1 ? 'persona disponible' : 'disponibles'}` : 'Disponibilidad'}{!desde && <span className="font-normal text-dte-gris"> · cargá el horario para revisar coincidencias</span>}</p>
+    <ul className="mt-1.5 flex flex-col gap-1">{filas.map(({ p, nivel, notas }) => <li key={p.id} className="flex items-start gap-2 text-xs">
+      <span aria-hidden className={`mt-0.5 size-2.5 shrink-0 rounded-full ${nivel === 2 ? 'bg-peligro' : nivel === 1 ? 'bg-aviso-fuerte' : 'bg-exito'}`} />
+      <span><b>{p.nombre_completo}</b>{notas.length ? `: ${notas.join(' · ')}` : desde ? ': disponible' : ''}</span></li>)}</ul>
+  </div>
 }
