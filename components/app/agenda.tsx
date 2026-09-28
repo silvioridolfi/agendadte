@@ -259,7 +259,7 @@ function PendientesCerrar({ fed, reloadKey, onSelect, onRealizar, onCambio }: { 
   return <section aria-label="Pendientes de cerrar" className="mb-4 rounded-card border border-aviso-borde bg-aviso-fondo p-3 text-sm text-aviso">
     <div className="flex flex-wrap items-center gap-2">
       <ClipboardCheck className="size-4 shrink-0" aria-hidden />
-      <p className="min-w-0 flex-1 font-semibold">{pendientes.length === 1 ? 'Tenés 1 acción' : `Tenés ${pendientes.length} acciones`} de los últimos 7 días sin marcar como realizada{pendientes.length === 1 ? '' : 's'}.</p>
+      <p className="min-w-48 flex-1 font-semibold">{pendientes.length === 1 ? 'Tenés 1 acción' : `Tenés ${pendientes.length} acciones`} de los últimos 7 días sin marcar como realizada{pendientes.length === 1 ? '' : 's'}.</p>
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" className="bg-white" aria-expanded={abierto} onClick={() => setAbierto(a => !a)}>{abierto ? 'Ocultar' : 'Revisar'}</Button>
         <Button size="sm" className="bg-dte-petroleo hover:bg-dte-petroleo-oscuro" onClick={() => setConfirmar(true)}><Check data-icon="inline-start" />Marcar todas</Button>
