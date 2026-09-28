@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowUp, Check, ChevronLeft, ChevronRight, CircleAlert, PartyPopper, X } from 'lucide-react'
+import { ArrowUp, Check, Loader2, ChevronLeft, ChevronRight, CircleAlert, PartyPopper, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import * as api from '@/app/actions'
 import { guardarCache, leerCache } from '@/components/app/offline'
 import { titleCase } from '@/lib/format'
 import { etiquetaAccion, nombreAccion, type Accion, type AgendaItem, type Feriado, type Estado, type Fed, type School } from '@/lib/agenda'
-import { anioAR, ZONA } from '@/lib/hora'
+import { anioAR, hoyAR, ZONA } from '@/lib/hora'
 
 // ---- estilos por categoría ----
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
@@ -154,6 +154,16 @@ export const errMsg = (e: unknown) => (e instanceof Error ? e.message : 'Error i
 export function storage<T>(fn: () => T): T | null { try { return fn() } catch { return null } }
 
 // ---- piezas chicas ----
+// Marcar como realizada con un toque: sólo acciones propias, planificadas o reprogramadas, de hoy o días anteriores.
+export const puedeRealizar = (item: AgendaItem, viewer?: string) => !!viewer && item.fed_id === viewer && (item.estado === 'planificada' || item.estado === 'reprogramada') && item.fecha <= hoyAR()
+export function BotonRealizar({ item, onRealizar, className = '' }: { item: AgendaItem, onRealizar: (item: AgendaItem) => void, className?: string }) {
+  const [enviando, setEnviando] = useState(false)
+  return <button type="button" disabled={enviando} onClick={async e => { e.stopPropagation(); setEnviando(true); try { await onRealizar(item) } finally { setEnviando(false) } }}
+    aria-label={`Marcar ${item.visita ? 'la visita' : 'la acción'} como realizada`} title="Marcar como realizada"
+    className={`flex size-11 shrink-0 items-center justify-center rounded-full text-dte-gris transition hover:text-exito focus-visible:opacity-100 md:size-8 ${className}`}>
+    <span className="flex size-7 items-center justify-center rounded-full border-2 border-current bg-white md:size-6">{enviando ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" strokeWidth={3} />}</span>
+  </button>
+}
 // Etiquetas de una acción o, si es una visita con varias, de todas sus acciones.
 export function EtiquetasAccion({ item }: { item: AgendaItem }) {
   return <>{(item.visita ?? [item]).map(v => <ActionChip key={v.id} label={v.accion} />)}</>
@@ -181,13 +191,16 @@ export function Vacio({ icono: Icono, titulo, texto, children }: { icono: React.
 }
 export function Skeleton({ className = '' }: { className?: string }) { return <div className={`animate-pulse rounded-tile bg-dte-linea/70 ${className}`} /> }
 
-export function Toast({ message, onDone }: { message: string, onDone: () => void }) {
+// `acciones`: botones del aviso (p. ej., Deshacer); al tocarlos, el aviso se cierra.
+export type AccionAviso = { label: string, onClick: () => void }
+export function Toast({ message, onDone, acciones = [] }: { message: string, onDone: () => void, acciones?: AccionAviso[] }) {
   // Tiempo suficiente para leerlo; se pausa mientras el puntero o el foco están encima.
   const [pausa, setPausa] = useState(false)
-  useEffect(() => { if (pausa) return; const t = setTimeout(onDone, 5000); return () => clearTimeout(t) }, [message, onDone, pausa])
+  useEffect(() => { if (pausa) return; const t = setTimeout(onDone, acciones.length ? 8000 : 5000); return () => clearTimeout(t) }, [message, onDone, pausa, acciones.length])
   return <div role="status" aria-live="polite" aria-atomic="true" className="pointer-events-none fixed inset-x-0 bottom-safe-24 z-toast flex justify-center px-4 sm:bottom-8">
     <div onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)} onFocus={() => setPausa(true)} onBlur={() => setPausa(false)} className="pointer-events-auto flex max-w-full items-center gap-2 rounded-card bg-dte-tinta py-1 pl-4 pr-1 text-sm font-medium text-white shadow-e2">
       <Check className="size-4 shrink-0 text-dte-celeste" aria-hidden /><span className="min-w-0">{message}</span>
+      {acciones.map(a => <button key={a.label} type="button" onClick={() => { onDone(); a.onClick() }} className="min-h-11 shrink-0 rounded-control px-2 text-sm font-bold text-dte-celeste underline-offset-2 hover:underline md:min-h-8">{a.label}</button>)}
       <button onClick={onDone} aria-label="Cerrar aviso" className="flex size-11 shrink-0 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white md:size-8"><X className="size-4" /></button>
     </div>
   </div>

@@ -2,19 +2,20 @@
 
 import { Segmented } from '@/components/ui/segmented'
 import { exportarPlanilla } from '@/lib/exportar'
-import { useMemo, useState } from 'react'
-import { CalendarX2, Check, Clock, ListChecks, Loader2, Plus, Users, WifiOff, FileSpreadsheet } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { CalendarX2, Check, ClipboardCheck, Clock, ListChecks, Loader2, Plus, Users, WifiOff, FileSpreadsheet } from 'lucide-react'
 import { BarraSeleccion, PanelFinDeSemana } from '@/components/app/seleccion'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ESTADOS, type AgendaItem, type Feriado, type EventoDte, type Estado, type Fed } from '@/lib/agenda'
+import { CON_ENCUENTRO, ESTADOS, type AgendaItem, type Feriado, type EventoDte, type Estado, type Fed } from '@/lib/agenda'
 import { FotosChip } from '@/components/app/fotosconteo'
 import { EventoTag, useEventos } from '@/components/app/eventos'
 import { agruparVisitas } from '@/lib/visita'
-import { EtiquetasAccion, actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, ddjjFor, itemTitle, itemCorto, cueLugar, firstName, getFedItems, storage, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
+import { Confirmar } from '@/components/ui/confirmar'
+import { cambiarEstadoVarias, errMsg, BotonRealizar, puedeRealizar, EtiquetasAccion, actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, ddjjFor, itemTitle, itemCorto, cueLugar, firstName, getFedItems, storage, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
 import { hoyAR, fechaHoyAR } from '@/lib/hora'
 
-export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: { fed: Fed, feds: Fed[], reloadKey: number, onNew?: (fecha?: string) => void, onSelect: (item: AgendaItem) => void, onCambio?: (msg: string) => void }) {
+export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio, onRealizar }: { fed: Fed, feds: Fed[], reloadKey: number, onNew?: (fecha?: string) => void, onSelect: (item: AgendaItem) => void, onCambio?: (msg: string) => void, onRealizar?: (item: AgendaItem) => void }) {
   // Selección múltiple (null = apagada): sólo acciones propias, para cambiar estado o eliminar en bloque.
   const [sel, setSel] = useState<string[] | null>(null)
   const editable = !!onNew && !!onCambio
@@ -22,7 +23,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
   // Una visita (varias acciones en el mismo lugar y horario) se muestra en una sola tarjeta; al seleccionarla, entran todas.
   const card = (item: AgendaItem) => { const ids = item.visita?.map(v => v.id) ?? [item.id]; return sel && item.fed_id === fed.id
     ? <ItemCard key={item.id} item={item} viewer={fed.id} seleccionado={ids.every(id => sel.includes(id))} onClick={() => setSel(l => (l ? (ids.every(id => l.includes(id)) ? l.filter(x => !ids.includes(x)) : [...new Set([...l, ...ids])]) : l))} />
-    : <ItemCard key={item.id} item={item} viewer={fed.id} onClick={() => onSelect(item)} /> }
+    : <ItemCard key={item.id} item={item} viewer={fed.id} onClick={() => onSelect(item)} onRealizar={onRealizar} /> }
   const selDia = (key: string) => { const ids = (byDay.get(key) ?? []).filter(i => i.fed_id === fed.id).map(i => i.id); setSel(l => { const base = l ?? []; const todos = ids.every(id => base.includes(id)); return todos ? base.filter(id => !ids.includes(id)) : [...new Set([...base, ...ids])] }) }
   const [exportando, setExportando] = useState(false)
   // Planilla del período visible: las acciones propias (las compartidas figuran en la planilla de quien las creó).
@@ -107,11 +108,12 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
               </section>
             })}
           </div>
-        : view === 'month' ? <MonthGrid month={from} byDay={byDay} feriados={feriados} eventos={eventos} registrar={registrar} today={today} onDay={goDay} onSelect={onSelect} onNew={onNew} />
-        : view === 'list' ? <ListaAcciones items={items} viewer={fed.id} onSelect={onSelect} sel={sel} onToggle={toggleSel} />
+        : view === 'month' ? <MonthGrid month={from} byDay={byDay} feriados={feriados} eventos={eventos} registrar={registrar} today={today} onDay={goDay} onSelect={onSelect} onNew={onNew} viewer={fed.id} onRealizar={onRealizar} />
+        : view === 'list' ? <ListaAcciones items={items} viewer={fed.id} onSelect={onSelect} sel={sel} onToggle={toggleSel} onRealizar={onRealizar} />
         : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }, (_, i) => monthStart(from, i)).map(m => <MiniMonth key={iso(m)} month={m} byDay={byDay} feriados={feriados} today={today} onDay={goDay} />)}</div>}
     </div>
 
+    {editable && onRealizar && <PendientesCerrar fed={fed} reloadKey={reloadKey} onSelect={onSelect} onRealizar={onRealizar} onCambio={m => onCambio?.(m)} />}
     {items && weekendItems.length > 0 && view !== 'semester' && view !== 'list' && <PanelFinDeSemana key={iso(from)} items={weekendItems} viewer={fed.id} editable={editable} onSelect={onSelect} onCambio={m => onCambio?.(m)} />}
     {sel && <BarraSeleccion ids={sel} onListo={() => setSel(null)} onCambio={m => onCambio?.(m)} />}
 
@@ -123,7 +125,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: 
 // Sólo se agregan acciones en días hábiles (los aniversarios distritales no cortan para todos).
 const habil = (d: Date, fer: Feriado[]) => isWeekday(d) && !fer.some(f => f.tipo !== 'distrital')
 
-export function MonthGrid({ month, byDay, feriados, eventos, registrar = false, today, onDay, onSelect, onNew }: { month: Date, byDay: Map<string, AgendaItem[]>, feriados: Map<string, Feriado[]>, eventos?: Map<string, EventoDte[]>, registrar?: boolean, today: string, onDay: (d: Date) => void, onSelect: (i: AgendaItem) => void, onNew?: (fecha: string) => void }) {
+export function MonthGrid({ month, byDay, feriados, eventos, registrar = false, today, onDay, onSelect, onNew, viewer, onRealizar }: { viewer?: string, onRealizar?: (item: AgendaItem) => void,  month: Date, byDay: Map<string, AgendaItem[]>, feriados: Map<string, Feriado[]>, eventos?: Map<string, EventoDte[]>, registrar?: boolean, today: string, onDay: (d: Date) => void, onSelect: (i: AgendaItem) => void, onNew?: (fecha: string) => void }) {
   // En móvil, tocar un día abre una hoja con sus acciones y el atajo para agregar.
   const [dia, setDia] = useState<Date | null>(null)
   const diaKey = dia ? iso(dia) : '', diaList = dia ? byDay.get(diaKey) ?? [] : [], diaFer = dia ? feriados.get(diaKey) ?? [] : []
@@ -154,7 +156,7 @@ export function MonthGrid({ month, byDay, feriados, eventos, registrar = false, 
       <DialogHeader><DialogTitle className="text-lg">{dia ? cap(fmt(dia, { weekday: 'long', day: 'numeric', month: 'long' })) : ''}</DialogTitle><DialogDescription>{diaList.length ? `${diaList.length} ${diaList.length === 1 ? 'acción' : 'acciones'}` : 'Sin acciones cargadas.'}</DialogDescription></DialogHeader>
       {diaFer.length > 0 && <div className="flex flex-wrap gap-1">{diaFer.map(f => <FeriadoTag key={f.nombre} f={f} />)}</div>}
       {(eventos?.get(diaKey) ?? []).length > 0 && <div className="flex flex-wrap gap-1">{eventos!.get(diaKey)!.map(e => <EventoTag key={e.id} e={e} registrar={registrar} />)}</div>}
-      {diaList.length > 0 && <ul className="flex flex-col gap-2">{agruparVisitas([...diaList].sort((a, b) => (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))).map(i => <li key={i.id}><ItemCard item={i} onClick={() => { setDia(null); onSelect(i) }} /></li>)}</ul>}
+      {diaList.length > 0 && <ul className="flex flex-col gap-2">{agruparVisitas([...diaList].sort((a, b) => (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))).map(i => <li key={i.id}><ItemCard item={i} viewer={viewer} onRealizar={onRealizar} onClick={() => { setDia(null); onSelect(i) }} /></li>)}</ul>}
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
         <Button variant="outline" onClick={() => { const d = dia; setDia(null); if (d) onDay(d) }}>Ver día completo</Button>
         {onNew && dia && habil(dia, diaFer) && <Button variant="marca" onClick={() => { setDia(null); onNew(diaKey) }}><Plus />Agregar acción</Button>}
@@ -184,7 +186,7 @@ export function MiniMonth({ month, byDay, feriados, today, onDay }: { month: Dat
 }
 
 // Vista Lista de Mi agenda: de la acción más nueva a la más antigua, de a 20.
-export function ListaAcciones({ items, viewer, onSelect, sel, onToggle }: { items: AgendaItem[], viewer: string, onSelect: (i: AgendaItem) => void, sel?: string[] | null, onToggle?: (id: string) => void }) {
+export function ListaAcciones({ items, viewer, onSelect, sel, onToggle, onRealizar }: { items: AgendaItem[], viewer: string, onSelect: (i: AgendaItem) => void, sel?: string[] | null, onToggle?: (id: string) => void, onRealizar?: (item: AgendaItem) => void }) {
   // Orden cronológico hacia adelante: arranca en hoy y sigue con lo próximo; lo anterior se despliega arriba a pedido.
   const hoy = hoyAR()
   const orden = useMemo(() => agruparVisitas([...items].sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '99').localeCompare(b.hora_inicio ?? '99') || a.created_at.localeCompare(b.created_at))), [items])
@@ -197,19 +199,20 @@ export function ListaAcciones({ items, viewer, onSelect, sel, onToggle }: { item
     {desde > 0 && <div className="flex items-center justify-center gap-2"><Button variant="outline" size="sm" onClick={() => setAnteriores(a => a + 20)}>Ver {Math.min(20, desde)} anteriores</Button><span className="text-xs text-dte-gris">{desde} acciones antes de hoy</span></div>}
     {!visibles.length ? <p className="rounded-card border border-dashed border-dte-linea bg-white/60 p-6 text-center text-sm text-dte-gris">No hay acciones de hoy en adelante.</p>
     : <ul className="divide-y divide-dte-linea overflow-hidden rounded-card border border-dte-linea bg-white shadow-e1">{visibles.map(item =>
-      <li key={item.id}><button onClick={() => (sel && onToggle && item.fed_id === viewer ? onToggle(item.id) : onSelect(item))} aria-pressed={sel && item.fed_id === viewer ? sel.includes(item.id) : undefined} className={`grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte sm:grid-cols-[6.5rem_1fr_auto] sm:items-center ${sel?.includes(item.id) ? 'bg-dte-tinte ring-2 ring-inset ring-dte-petroleo' : ''}`}>
+      <li key={item.id} className="group/check relative"><button onClick={() => (sel && onToggle && item.fed_id === viewer ? onToggle(item.id) : onSelect(item))} aria-pressed={sel && item.fed_id === viewer ? sel.includes(item.id) : undefined} className={`grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte sm:grid-cols-[6.5rem_1fr_auto] sm:items-center ${sel?.includes(item.id) ? 'bg-dte-tinte ring-2 ring-inset ring-dte-petroleo' : ''}`}>
         <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize">{fmt(parse(item.fecha), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')}</span><span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span></span>
         <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemCorto(item)}</span><span className="block truncate text-xs text-dte-gris" title={[cueLugar(item.school), item.sub_accion].filter(Boolean).join(' · ') || undefined}>{[cueLugar(item.school), item.sub_accion].filter(Boolean).join(' · ') || ' '}</span></span>
         <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ChipsVisita item={item} /><FotosChip item={item} />{item.fed_id !== viewer && <span className="inline-flex items-center gap-0.5 rounded-full bg-dte-tinte px-1.5 py-0.5 text-xs font-semibold text-dte-petroleo"><Users className="size-3" />Compartida</span>}</span>
-      </button></li>)}</ul>}
+      </button>{onRealizar && !sel && puedeRealizar(item, viewer) && <BotonRealizar item={item} onRealizar={onRealizar} className="absolute right-1 top-1 md:opacity-0 md:group-hover/check:opacity-100" />}</li>)}</ul>}
     {orden.length > inicioHoy + n && <div className="flex items-center justify-center gap-2"><Button variant="outline" size="sm" onClick={() => setN(n + 20)}>Ver {Math.min(20, orden.length - inicioHoy - n)} próximas</Button><span className="text-xs text-dte-gris">Mostrando {visibles.length} de {orden.length}</span></div>}
   </div>
 }
 
 // `seleccionado` (definido): la tarjeta está en modo selección y muestra su casilla.
-export function ItemCard({ item, onClick, viewer, seleccionado }: { item: AgendaItem, onClick: () => void, viewer?: string, seleccionado?: boolean }) {
+export function ItemCard({ item, onClick, viewer, seleccionado, onRealizar }: { item: AgendaItem, onClick: () => void, viewer?: string, seleccionado?: boolean, onRealizar?: (item: AgendaItem) => void }) {
   const muted = item.estado === 'cancelada'
-  return <button onClick={onClick} aria-pressed={seleccionado} title={item.school ? schoolName(item.school) : undefined} className={`relative w-full ${seleccionado ? 'ring-2 ring-dte-petroleo border-dte-petroleo' : ''} overflow-hidden rounded-tile border border-dte-linea bg-white p-2.5 pl-3.5 text-left transition hover:border-pba-celeste hover:shadow-e2 focus-visible:border-pba-celeste focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-pba-celeste/30 ${muted ? 'opacity-65' : ''}`}>
+  const conCheck = !!onRealizar && seleccionado === undefined && puedeRealizar(item, viewer)
+  const tarjeta = <button onClick={onClick} aria-pressed={seleccionado} title={item.school ? schoolName(item.school) : undefined} className={`relative w-full ${seleccionado ? 'ring-2 ring-dte-petroleo border-dte-petroleo' : ''} overflow-hidden rounded-tile border border-dte-linea bg-white p-2.5 pl-3.5 text-left transition hover:border-pba-celeste hover:shadow-e2 focus-visible:border-pba-celeste focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-pba-celeste/30 ${muted ? 'opacity-65' : ''}`}>
     {seleccionado !== undefined && <span aria-hidden className={`absolute right-2 top-2 flex size-5 items-center justify-center rounded-md border ${seleccionado ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-gris-claro bg-white'}`}>{seleccionado && <Check className="size-3.5" />}</span>}
     <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${actionStyle[item.accion]?.dot}`} />
     <span className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-dte-gris"><Clock className="size-3 shrink-0" />{timeRange(item)}</span>
@@ -217,10 +220,55 @@ export function ItemCard({ item, onClick, viewer, seleccionado }: { item: Agenda
     {item.school && <p className="mt-0.5 truncate text-xs text-dte-gris" title={cueLugar(item.school)}>{cueLugar(item.school)}</p>}
     <div className="mt-2 flex flex-wrap items-center gap-1.5"><ChipsVisita item={item} /><FotosChip item={item} />{(item.participantes?.length > 0 || (viewer && item.fed_id !== viewer)) && <span title={viewer && item.fed_id !== viewer ? 'Te etiquetaron en esta acción' : 'Con compañeros'} className="inline-flex items-center gap-0.5 rounded-full bg-dte-tinte px-1.5 py-0.5 text-xs font-semibold text-dte-petroleo"><Users className="size-3" />{viewer && item.fed_id !== viewer ? 'Compartida' : `+${item.participantes.length}`}</span>}</div>
   </button>
+  if (!conCheck) return tarjeta
+  return <div className="group/check relative">{tarjeta}<BotonRealizar item={item} onRealizar={onRealizar!} className="absolute right-0.5 top-0.5 md:right-1 md:top-1 md:opacity-0 md:group-hover/check:opacity-100" /></div>
 }
 
 // Etiquetas de una acción o de todas las de su visita; el estado se muestra una vez si coincide.
 function ChipsVisita({ item }: { item: AgendaItem }) {
   const vs = item.visita ?? [item], mismoEstado = vs.every(v => v.estado === item.estado)
   return <><EtiquetasAccion item={item} />{mismoEstado ? <StatusBadge status={item.estado} /> : <span className="text-xs font-semibold text-dte-gris">Estados distintos</span>}</>
+}
+
+// Pendientes de cerrar: acciones propias de los últimos 7 días (sin contar hoy) que siguen planificadas o reprogramadas.
+function PendientesCerrar({ fed, reloadKey, onSelect, onRealizar, onCambio }: { fed: Fed, reloadKey: number, onSelect: (i: AgendaItem) => void, onRealizar: (i: AgendaItem) => void, onCambio: (msg: string) => void }) {
+  const hoy = fechaHoyAR(), desde = iso(addDays(hoy, -7)), hasta = iso(addDays(hoy, -1))
+  const clave = `${fed.id}:${desde}:${reloadKey}`
+  const [res, setRes] = useState<{ clave: string, items: AgendaItem[] } | null>(null)
+  useEffect(() => {
+    let vivo = true
+    getFedItems(fed.id, desde, hasta).then(l => vivo && setRes({ clave, items: l.filter(i => i.fed_id === fed.id && (i.estado === 'planificada' || i.estado === 'reprogramada')) })).catch(() => {})
+    return () => { vivo = false }
+  }, [clave, fed.id, desde, hasta])
+  const [abierto, setAbierto] = useState(false)
+  const [confirmar, setConfirmar] = useState(false)
+  const [error, setError] = useState('')
+  const pendientes = useMemo(() => agruparVisitas([...(res?.clave === clave ? res.items : [])].sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))), [res, clave])
+  if (!pendientes.length) return null
+  const ids = pendientes.flatMap(i => i.visita?.map(v => v.id) ?? [i.id])
+  async function todas() {
+    setError('')
+    try {
+      const r = await cambiarEstadoVarias(ids, 'realizada')
+      const conEncuentro = pendientes.some(i => (i.visita ?? [i]).some(v => CON_ENCUENTRO.includes(v.accion)))
+      onCambio(`Se marcaron ${r.actualizadas} ${r.actualizadas === 1 ? 'acción' : 'acciones'} como realizadas${conEncuentro ? '. Completá los asistentes de los encuentros de clubes, prácticas y talleres.' : ''}`)
+    } catch (e) { setError(errMsg(e)) }
+  }
+  return <section aria-label="Pendientes de cerrar" className="mb-4 rounded-card border border-aviso-borde bg-aviso-fondo p-3 text-sm text-aviso">
+    <div className="flex flex-wrap items-center gap-2">
+      <ClipboardCheck className="size-4 shrink-0" aria-hidden />
+      <p className="min-w-0 flex-1 font-semibold">{pendientes.length === 1 ? 'Tenés 1 acción' : `Tenés ${pendientes.length} acciones`} de los últimos 7 días sin marcar como realizada{pendientes.length === 1 ? '' : 's'}.</p>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" className="bg-white" aria-expanded={abierto} onClick={() => setAbierto(a => !a)}>{abierto ? 'Ocultar' : 'Revisar'}</Button>
+        <Button size="sm" className="bg-dte-petroleo hover:bg-dte-petroleo-oscuro" onClick={() => setConfirmar(true)}><Check data-icon="inline-start" />Marcar todas</Button>
+      </div>
+    </div>
+    {abierto && <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{pendientes.map(i => <li key={i.id}>
+      <p className="mb-1 text-xs font-semibold capitalize text-aviso">{fmt(parse(i.fecha), { weekday: 'long', day: 'numeric', month: 'short' }).replace(/\./g, '')}</p>
+      <ItemCard item={i} viewer={fed.id} onClick={() => onSelect(i)} onRealizar={onRealizar} />
+    </li>)}</ul>}
+    {error && <div className="mt-2"><ErrorBox message={error} /></div>}
+    <Confirmar abierto={confirmar} titulo="¿Marcar todas como realizadas?" accion="Marcar todas" onCerrar={() => setConfirmar(false)} onConfirmar={todas}
+      descripcion={<>Se marcan como realizadas las {pendientes.length} {pendientes.length === 1 ? 'acción' : 'acciones'} pendientes de los últimos 7 días. Si alguna no se hizo, cancelala o reprogramala después.</>} />
+  </section>
 }
