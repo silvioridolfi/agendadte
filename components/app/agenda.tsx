@@ -72,7 +72,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio, on
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
         <p className={eyebrow}>Mi agenda · {CAL_VIEWS.find(v => v[0] === view)?.[1]}</p>
-        <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
+        <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl lg:text-2xl 2xl:text-3xl">{title}</h2>
         <p className="mt-1.5 text-sm text-dte-gris">Hola, {firstName(fed.nombre_completo)}. {items ? (items.length ? `Tenés ${items.length} ${items.length === 1 ? 'acción' : 'acciones'} en ${periodo}${counts.realizada ? `, ${counts.realizada} ${counts.realizada === 1 ? 'realizada' : 'realizadas'}` : ''}.` : `No hay acciones cargadas en ${periodo}.`) : 'Cargando…'}{ddjjFor(fed, today) && <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-xs ring-1 ring-dte-linea"><Clock className="size-3" />Hoy DTE {ddjjFor(fed, today)!.dte}</span>}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">

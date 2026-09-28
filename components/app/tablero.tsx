@@ -26,14 +26,14 @@ export type Range = 'day' | 'week' | 'month' | 'year'
 export function rangeBounds(anchor: Date, range: Range): [Date, Date] {
   if (range === 'day') return [anchor, anchor]
   if (range === 'week') { const s = startOfWeek(anchor); return [s, addDays(s, 6)] }
-  if (range === 'year') return [new Date(anchor.getFullYear(), 0, 1), new Date(anchor.getFullYear(), 11, 31)]
-  return [new Date(anchor.getFullYear(), anchor.getMonth(), 1), new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)]
+  if (range === 'year') return [new Date(anchor.getFullYear(), 0, 1, 12), new Date(anchor.getFullYear(), 11, 31, 12)]
+  return [new Date(anchor.getFullYear(), anchor.getMonth(), 1, 12), new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0, 12)]
 }
 export function shift(anchor: Date, range: Range, dir: number) {
   if (range === 'day') return addDays(anchor, dir)
   if (range === 'week') return addDays(anchor, 7 * dir)
-  if (range === 'year') return new Date(anchor.getFullYear() + dir, 0, 1)
-  return new Date(anchor.getFullYear(), anchor.getMonth() + dir, 1)
+  if (range === 'year') return new Date(anchor.getFullYear() + dir, 0, 1, 12)
+  return new Date(anchor.getFullYear(), anchor.getMonth() + dir, 1, 12)
 }
 export const rangeNames: Record<Range, [string, string, string]> = { day: ['Día', 'día', 'este día'], week: ['Semana', 'semana', 'esta semana'], month: ['Mes', 'mes', 'este mes'], year: ['Año', 'año', 'este año'] }
 

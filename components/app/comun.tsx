@@ -54,7 +54,7 @@ export const eyebrow = 'text-xs font-bold uppercase tracking-[0.15em] text-dte-m
 export const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 // Mediodía local: al formatear en hora argentina no se corre de día aunque el dispositivo esté en otra zona.
 export const parse = (s: string) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 12) }
-export const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
+export const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 12)
 export const startOfWeek = (d: Date) => addDays(d, -((d.getDay() + 6) % 7))
 export const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString('es-AR', { timeZone: ZONA, ...opts })
 export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -253,19 +253,19 @@ export const CAL_KEY = 'agenda-territorial:vista'
 export const DIAS_HABILES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 export const isWeekday = (d: Date) => d.getDay() >= 1 && d.getDay() <= 5
 export const toWeekday = (d: Date, dir = 1) => { let x = d; while (!isWeekday(x)) x = addDays(x, dir); return x }
-export const monthStart = (d: Date, plus = 0) => new Date(d.getFullYear(), d.getMonth() + plus, 1)
-export const monthEnd = (d: Date, plus = 0) => new Date(d.getFullYear(), d.getMonth() + plus + 1, 0)
+export const monthStart = (d: Date, plus = 0) => new Date(d.getFullYear(), d.getMonth() + plus, 1, 12)
+export const monthEnd = (d: Date, plus = 0) => new Date(d.getFullYear(), d.getMonth() + plus + 1, 0, 12)
 export function calBounds(anchor: Date, view: CalView): [Date, Date] {
   if (view === 'day') return [anchor, anchor]
   if (view === 'week') { const s = startOfWeek(anchor); return [s, addDays(s, 4)] }
   if (view === 'month') return [monthStart(anchor), monthEnd(anchor)]
-  if (view === 'list') return [new Date(anchor.getFullYear(), 0, 1), new Date(anchor.getFullYear(), 11, 31)]
+  if (view === 'list') return [new Date(anchor.getFullYear(), 0, 1, 12), new Date(anchor.getFullYear(), 11, 31, 12)]
   return [monthStart(anchor), monthEnd(anchor, 5)]
 }
 export function calShift(anchor: Date, view: CalView, dir: number) {
   if (view === 'day') return toWeekday(addDays(anchor, dir), dir)
   if (view === 'week') return addDays(anchor, 7 * dir)
-  if (view === 'list') return new Date(anchor.getFullYear() + dir, 0, 1)
+  if (view === 'list') return new Date(anchor.getFullYear() + dir, 0, 1, 12)
   return monthStart(anchor, view === 'month' ? dir : 6 * dir)
 }
 // Semanas (lunes a viernes) que cubren un mes; los días de otros meses quedan en null.
