@@ -7,6 +7,7 @@ import { DriveError, cuentaTecnica, driveConfigurado, idDeCarpeta, urlCarpeta, v
 import { ordenarFotos } from '@/lib/fotos'
 import { PRIMER_MES, carpetaDelMes, inicioMes, hoyAR as hoyPve, mesesEntregables, nombreMes, noLaborables, revisarPve, vencimientoPve } from '@/lib/pve'
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
+import { hoyAR } from '@/lib/hora'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
 // así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
@@ -420,7 +421,6 @@ async function getFeriadosImpl(from: string, to: string): Promise<Feriado[]> {
 }
 
 // ---- Acciones en bloque (selección múltiple): sólo sobre acciones propias; un aviso por compañero, no uno por acción.
-const hoyAR = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
 async function propias(ids: string[], fedId: string) {
   if (!ids.length || ids.length > 300) throw new Error('Seleccioná entre 1 y 300 acciones')
   const { data, error } = await supabaseServer().from('agenda_items').select('id, fecha, accion, estado, club_id').in('id', ids).eq('fed_id', fedId)
@@ -589,7 +589,7 @@ export const registrarParticipacion = async (eventoId: string, fechas: string[])
   const { data: ya } = await db.from('agenda_items').select('fecha').eq('evento_id', eventoId).eq('fed_id', yo.fed.id)
   const nuevas = validas.filter(f => !(ya ?? []).some(x => x.fecha === f))
   if (!nuevas.length) return 0
-  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
+  const hoy = hoyAR()
   const { error } = await db.from('agenda_items').insert(nuevas.map(fecha => ({
     fed_id: yo.fed.id, fecha, accion: 'EVENTO DTE', estado: fecha <= hoy ? 'realizada' : 'planificada', evento_id: eventoId,
     hora_inicio: ev.hora_inicio, hora_fin: ev.hora_fin, sub_accion: ev.nombre, modalidad: ev.modalidad,

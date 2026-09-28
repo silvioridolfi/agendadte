@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Field, SchoolPicker } from '@/components/app/formulario'
 import { CLUB_MIN_ENCUENTROS, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEncuentrosRealizados, clubEstado, iniciado, ordenGrupo, type Club, type Fed, type School, type Modalidad, type TipoJornada, type Trayecto } from '@/lib/agenda'
 import { az, errMsg, getClubes, iso, saveItem, selectClass, shortSchoolName, ErrorBox } from '@/components/app/comun'
+import { hoyAR } from '@/lib/hora'
 
 const OTRA = '__otra'
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
@@ -17,7 +18,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 // Se guarda como acción del FED en su agenda (realizada si la fecha ya pasó), vinculada al club.
 export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fed: Fed, tipo: Trayecto, clubId?: string, onCancel: () => void, onSaved: (mensaje: string) => void }) {
   const marca = TRAYECTO_MARCA[tipo]
-  const hoy = iso(new Date())
+  const hoy = hoyAR()
   const [clubes, setClubes] = useState<Club[] | null>(null)
   useEffect(() => { getClubes(fed.id).then(setClubes).catch(() => setClubes([])) }, [fed.id])
   // Activos (con inicio y sin finalizar); el club elegido desde su fila se incluye aunque esté por iniciar.
