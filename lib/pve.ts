@@ -1,6 +1,7 @@
 import 'server-only'
 import { supabaseServer } from '@/lib/supabase-server'
 import { DriveError, carpetaVigente, crearCarpeta, darLectura, esCarpeta, listarHijos, renombrar } from '@/lib/drive'
+import { hoyAR } from '@/lib/hora'
 
 // Planillas de Visita a Escuelas (PVE): cada FED sube un PDF por mes a "PVE MM-AAAA", dentro de la subcarpeta "PVE"
 // de su carpeta de Drive (la misma que usa para las fotos). La agenda lo detecta, lo renombra con el formato del
@@ -19,7 +20,7 @@ export function inicioMes(fecha: string, desplazamiento = 0) {
 export const nombreMes = (mes: string) => `${MESES[Number(mes.slice(5, 7)) - 1]} ${mes.slice(0, 4)}`
 export const carpetaMes = (mes: string) => `PVE ${mes.slice(5, 7)}-${mes.slice(0, 4)}`
 export const nombrePve = (mes: string, fed: string) => `${REGION} - PVE (${nombreMes(mes)}) - ${fed.toUpperCase()}.pdf`
-export const hoyAR = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
+export { hoyAR }
 
 // Meses que se pueden entregar: desde el primero por la agenda hasta el actual.
 export function mesesEntregables(hoy = hoyAR()) {

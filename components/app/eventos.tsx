@@ -11,6 +11,7 @@ import { Panel } from '@/components/metrics'
 import { MODALIDADES_EVENTO, type EventoDte, type ModalidadEvento } from '@/lib/agenda'
 import type { EventoInput } from '@/app/actions'
 import { cap, errMsg, fmt, parse, selectClass, getEventos, listarEventos, guardarEvento, eliminarEvento, miParticipacion, registrarParticipacion, ErrorBox, Skeleton } from '@/components/app/comun'
+import { anioAR } from '@/lib/hora'
 
 // Aviso para que las vistas recarguen sus datos (p. ej., después de registrar la participación en un evento).
 export const RECARGAR = 'agenda-recargar'
@@ -97,7 +98,7 @@ function EventoDialog({ e, registrar, onCerrar }: { e: EventoDte, registrar: boo
 // Administración: alta, edición y baja de eventos DTE.
 const VACIO: EventoInput = { nombre: '', fechas: [''], hora_inicio: null, hora_fin: null, modalidad: 'Presencial', lugar: null, enlace: null, descripcion: null }
 export function EventosPanel({ onSaved }: { onSaved: (msg: string) => void }) {
-  const [year, setYear] = useState(new Date().getFullYear())
+  const [year, setYear] = useState(anioAR)
   const [list, setList] = useState<EventoDte[] | null>(null)
   const [form, setForm] = useState<EventoInput>(VACIO)
   const [editando, setEditando] = useState<string | null>(null)

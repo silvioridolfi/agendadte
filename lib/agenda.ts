@@ -189,6 +189,8 @@ export type Club = {
 export type ClubEstado = 'activo' | 'sin_actividad' | 'finalizado'
 
 // Receso invernal 2026 (PBA), por si todavía no se cargaron los recesos de la tabla de feriados.
+// AAAA-MM-DD con los campos locales de la fecha (mismo criterio que getDay, sin pasar por UTC).
+const ymdLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const RECESO = [['2026-07-20', '2026-07-31']]
 // Días hábiles entre dos fechas (sin contar `desde`). `noHabiles`: feriados y recesos cargados en la tabla.
 export function diasHabilesEntre(desde: string, hasta: string, noHabiles?: Set<string>) {
@@ -196,7 +198,7 @@ export function diasHabilesEntre(desde: string, hasta: string, noHabiles?: Set<s
   let n = 0
   while (d < end) {
     d.setDate(d.getDate() + 1)
-    const s = d.toISOString().slice(0, 10), w = d.getDay()
+    const s = ymdLocal(d), w = d.getDay()
     if (w !== 0 && w !== 6 && !noHabiles?.has(s) && !RECESO.some(([a, b]) => s >= a && s <= b)) n++
   }
   return n
@@ -210,7 +212,7 @@ export function serieFechas(desde: string, dias: number[], hasta: string, noLabo
   while (out.length < 60) {
     d.setDate(d.getDate() + 1)
     if (d > end) break
-    const s = d.toISOString().slice(0, 10)
+    const s = ymdLocal(d)
     if (dias.includes(d.getDay()) && !noLaborables.has(s)) out.push(s)
   }
   return out

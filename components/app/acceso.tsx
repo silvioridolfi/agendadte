@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { UsuarioEquipo } from '@/app/actions'
 import { cambiarPassword, errMsg, eyebrow, generarPasswordTemporal, ingresar, listarUsuarios, ErrorBox, PieInstitucional, Skeleton } from '@/components/app/comun'
+import { ZONA } from '@/lib/hora'
 
 function Marco({ titulo, texto, children }: { titulo: string, texto: string, children: React.ReactNode }) {
   return <main className="bg-dte-degradado relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-5 pt-[calc(3rem+env(safe-area-inset-top,0px))] text-white">
@@ -116,7 +117,7 @@ export function UsuariosView({ miEmail, onVer }: { miEmail: string, onVer: (fedI
           <div className="min-w-0">
             <p className="flex flex-wrap items-center gap-2 font-semibold">{u.nombre}{u.esAdmin && <span className="inline-flex items-center gap-1 rounded-full bg-dte-tinte px-2 py-0.5 text-xs text-dte-petroleo"><ShieldCheck className="size-3" />Admin</span>}{u.rol === 'coordinacion' && <span className="rounded-full bg-dte-fondo px-2 py-0.5 text-xs text-dte-gris">Coordinación</span>}</p>
             <p className="truncate text-sm text-dte-gris">{u.email ?? 'Sin correo cargado'}</p>
-            <p className="mt-1 flex flex-wrap items-center gap-2 text-xs"><span className={`rounded-full px-2 py-0.5 font-semibold ${ESTADO[u.estado].clase}`}>{ESTADO[u.estado].label}</span>{u.ultimoIngreso && <span className="text-dte-gris">Último ingreso: {new Date(u.ultimoIngreso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}</p>
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-xs"><span className={`rounded-full px-2 py-0.5 font-semibold ${ESTADO[u.estado].clase}`}>{ESTADO[u.estado].label}</span>{u.ultimoIngreso && <span className="text-dte-gris">Último ingreso: {new Date(u.ultimoIngreso).toLocaleDateString('es-AR', { timeZone: ZONA, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}</p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
           {!yo && <Button variant="ghost" size="sm" onClick={() => onVer(u.fedId)} className="text-dte-petroleo"><Eye data-icon="inline-start" />Ver su agenda</Button>}
