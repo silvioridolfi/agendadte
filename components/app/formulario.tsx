@@ -13,7 +13,7 @@ import { etiquetaAccion, nombreAccion, iniciado, ordenGrupo, ACCIONES, CATEGORIA
 import type { Organismo } from '@/app/actions'
 import { titleCase } from '@/lib/format'
 import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, guardarVisita, editarVisita, ActionChip, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
-import { encolarOffline } from '@/components/app/offline'
+import { encolarOffline, encolarVisitaOffline } from '@/components/app/offline'
 import { alternarTipo, datosDeAccion, datosVacios, inputDeTipo, type DatosTipo } from '@/lib/visita'
 import { hoyAR } from '@/lib/hora'
 
@@ -270,7 +270,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     // Visita con varias acciones: una por tipo, con los mismos datos comunes y un solo aviso a los acompañantes.
     if (extras.length) {
       const inputs = [input, ...extras.map(a => inputDeTipo(input, a, datosExtra[a] ?? datosVacios()))]
-      const offline = () => { for (const i of inputs) encolarOffline(i); onSaved({ creadas: inputs.length, offline: true }) }
+      const offline = () => { encolarVisitaOffline(inputs); onSaved({ creadas: inputs.length, offline: true }) }
       if (typeof navigator !== 'undefined' && !navigator.onLine) { offline(); return }
       try {
         const r = await guardarVisita(inputs)
