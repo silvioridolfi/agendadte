@@ -9,6 +9,7 @@ import type { AgendaItem, Fed } from '@/lib/agenda'
 import type { Indicador } from '@/lib/informes'
 import type { Persona } from '@/lib/exportar'
 import { cap, errMsg, fmt, parse, itemCorto, ErrorBox } from '@/components/app/comun'
+import { ZONA } from '@/lib/hora'
 
 const fechaAR = (s: string) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}` }
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!))
@@ -66,7 +67,7 @@ tr:nth-child(even) td { background: #f6f5f9; } tr { break-inside: avoid; }
 <div class="datos">
   <div><b>Nombre</b>${esc(persona.nombre)}</div><div><b>Rol</b>${esc(persona.rol)}</div>
   <div><b>Distritos a cargo</b>${esc(persona.distritos.map(titleCase).join(', ') || '—')}</div><div><b>Carga horaria</b>${esc(persona.carga ?? '—')}</div>
-  <div><b>Período</b>${fechaAR(desde)} al ${fechaAR(hasta)}</div><div><b>Emitido</b>${new Date().toLocaleDateString('es-AR')}</div>
+  <div><b>Período</b>${fechaAR(desde)} al ${fechaAR(hasta)}</div><div><b>Emitido</b>${new Date().toLocaleDateString('es-AR', { timeZone: ZONA })}</div>
 </div>
 <h2>Indicadores del período</h2>
 <div class="ind">${indicadores.map(x => `<div><span>${esc(x.label)}</span><strong>${x.valor}</strong>${x.detalle ? `<em>${esc(x.detalle)}</em>` : ''}</div>`).join('')}</div>

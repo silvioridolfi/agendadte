@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react'
 import { Camera, Check, ClipboardList, Clock, History, Loader2, GraduationCap, MapPin, Navigation, Pencil, Repeat, School as SchoolIcon, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed } from '@/lib/agenda'
+import { ESTADOS, type AgendaItem, type Estado, type Fed } from '@/lib/agenda'
 import type { Ubicacion } from '@/app/actions'
 import { titleCase } from '@/lib/format'
 import { ubicacionDe, statusStyle, parse, fmt, cap, timeRange, schoolPlace, itemTitle, firstName, setItemStatus, deleteItem, responder, getHistorial, fotosDelDia, errMsg, ActionChip, StatusBadge, ErrorBox } from '@/components/app/comun'
+import { ZONA } from '@/lib/hora'
 
 // =====================================================================
 
@@ -93,7 +94,7 @@ export function DetailDialog({ item, feds, profile, soloLectura, onClose, onEdit
       <div>
         {fotos.length > 0 && <div className="mb-2 flex flex-wrap items-center gap-2">{fotos.map(f => <a key={f.fedId} href={f.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-dte-linea px-3 text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte md:min-h-8"><Camera className="size-3.5" />{f.deAccion ? 'Fotos de esta acción' : 'Fotos de ese día'}{fotos.length > 1 || f.fedId !== item.fed_id ? ` · ${firstName(feds.find(x => x.id === f.fedId)?.nombre_completo ?? '')}` : ''}</a>)}</div>}
         <button type="button" onClick={() => setVerHistorial(v => !v)} className="flex items-center gap-1.5 text-xs font-semibold text-dte-gris hover:text-dte-tinta"><History className="size-3.5" />{verHistorial ? 'Ocultar historial' : 'Ver historial de cambios'}</button>
-        {verHistorial && <ul className="mt-2 flex flex-col gap-1 text-xs text-dte-gris">{!historial ? <li>Cargando…</li> : !historial.length ? <li>Sin cambios registrados (las acciones importadas de las planillas no tienen historial).</li> : historial.map((h, i) => <li key={i}><b className="text-dte-tinta">{nombre(h.autor_id)}</b> · {{ alta: 'la creó', modificacion: 'la modificó', baja: 'la eliminó', estado: `cambió el estado a ${String(h.datos?.estado ?? '')}` }[h.operacion] ?? h.operacion} · {new Date(h.created_at).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</li>)}</ul>}
+        {verHistorial && <ul className="mt-2 flex flex-col gap-1 text-xs text-dte-gris">{!historial ? <li>Cargando…</li> : !historial.length ? <li>Sin cambios registrados (las acciones importadas de las planillas no tienen historial).</li> : historial.map((h, i) => <li key={i}><b className="text-dte-tinta">{nombre(h.autor_id)}</b> · {{ alta: 'la creó', modificacion: 'la modificó', baja: 'la eliminó', estado: `cambió el estado a ${String(h.datos?.estado ?? '')}` }[h.operacion] ?? h.operacion} · {new Date(h.created_at).toLocaleString('es-AR', { timeZone: ZONA, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</li>)}</ul>}
       </div>
       {own && <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-dte-gris">Cambiar estado</p>

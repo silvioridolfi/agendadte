@@ -9,6 +9,7 @@ import { Confirmar } from '@/components/ui/confirmar'
 import { CalendarPlus, Loader2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ErrorBox, errMsg } from '@/components/app/comun'
+import { hoyAR } from '@/lib/hora'
 
 const nf = new Intl.NumberFormat('es-AR')
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -42,7 +43,7 @@ function participacion(c: Club) {
 // Clubes de Tecnología o Prácticas (PEAT). `desde`/`hasta`: período del tablero; se muestran los trayectos
 // con actividad en el período y se cuentan sólo los encuentros de ese período.
 export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo = 'CLUB DE TECNOLOGÍA', desde, hasta, periodo, noHabiles, onNuevo, onEncuentro }: { clubes: Club[], feds: Fed[], onCierre?: (club: Club, fecha: string | null) => Promise<void>, schoolLabel: (c: Club) => string, tipo?: Trayecto, desde: string, hasta: string, periodo: string, noHabiles?: Set<string>, onNuevo?: () => void, onEncuentro?: (c?: Club) => void }) {
-  const hoy = new Date().toISOString().slice(0, 10)
+  const hoy = hoyAR()
   // Los "por iniciar" (sin fecha) se listan aparte; el resto de las métricas usa sólo los iniciados.
   const todos = useMemo(() => entrada.filter(iniciado), [entrada])
   const pendientes = useMemo(() => entrada.filter(c => !iniciado(c) && c.tipo === tipo && !c.fecha_cierre).sort((a, b) => schoolLabel(a).localeCompare(schoolLabel(b), 'es', { numeric: true }) || ordenGrupo(a.grupo, b.grupo)), [entrada, tipo])

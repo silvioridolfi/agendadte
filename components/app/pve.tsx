@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Confirmar } from '@/components/ui/confirmar'
 import type { PveEvento, PveFed, PveMes } from '@/app/actions'
 import { abrirCarpetaPve, devolverPve, cap, errMsg, eyebrow, fmt, parse, misPve, pveEquipo, marcarPveEnviadas, ErrorBox, Skeleton } from '@/components/app/comun'
+import { fechaHoyAR, ZONA } from '@/lib/hora'
 
 const fecha = (ts: string) => cap(fmt(new Date(ts), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))
 const fechaCorta = (f: string) => cap(fmt(parse(f), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''))
@@ -18,7 +19,7 @@ const EVENTO: Record<PveEvento['tipo'], string> = { entregada: 'Entregada', devu
 // Historial corto: "Entregada 2/10 · Devuelta 8/10 · Reentregada 9/10".
 function Historial({ h }: { h: PveEvento[] }) {
   if (h.length < 2) return null
-  return <span className="block text-xs text-dte-gris">{h.map(e => `${EVENTO[e.tipo]} ${new Date(e.fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' })}`).join(' · ')}</span>
+  return <span className="block text-xs text-dte-gris">{h.map(e => `${EVENTO[e.tipo]} ${new Date(e.fecha).toLocaleDateString('es-AR', { timeZone: ZONA, day: 'numeric', month: 'numeric' })}`).join(' · ')}</span>
 }
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
@@ -67,7 +68,7 @@ export function SeccionPve() {
 
 // Coordinación: estado de entrega del mes, descarga de todas juntas y marca de enviadas a Nivel Central.
 export function PveEquipoView() {
-  const hoy = new Date()
+  const hoy = fechaHoyAR()
   // Las PVE se entregan por la agenda desde septiembre de 2026.
   const [mes, setMes] = useState(() => { const d = new Date(hoy.getFullYear(), hoy.getMonth() - (hoy.getDate() <= 15 ? 1 : 0), 1); const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; return m < PRIMER_MES ? PRIMER_MES : m })
   const [lista, setLista] = useState<PveFed[] | null>(null)
@@ -76,7 +77,6 @@ export function PveEquipoView() {
   const [confirmar, setConfirmar] = useState(false)
   const [aviso, setAviso] = useState('')
   const cargar = () => { setLista(null); setError(''); pveEquipo(mes).then(setLista).catch(e => { setLista([]); setError(errMsg(e)) }) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(cargar, [mes])
   const mover = (n: number) => { const d = parse(mes); d.setMonth(d.getMonth() + n); setMes(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`); setAviso('') }
   const nombreMes = `${MESES[Number(mes.slice(5, 7)) - 1]} ${mes.slice(0, 4)}`

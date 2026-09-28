@@ -147,7 +147,7 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
 
         {Object.keys(notas).length > 0 && <div className="mt-4 rounded-xl border border-aviso-borde bg-aviso-fondo p-3 text-sm text-aviso">
           <p className="mb-1.5 font-semibold">Notas de la planilla anterior</p>
-          <p className="mb-2">Pasalas a "Otros cargos" y después quitalas.</p>
+          <p className="mb-2">Pasalas a “Otros cargos” y después quitalas.</p>
           <ul className="flex flex-col gap-1.5">{Object.entries(notas).map(([dia, t]) => <li key={dia} className="flex items-center justify-between gap-2 rounded-lg bg-white/70 px-2.5 py-1.5 text-dte-tinta">
             <span className="min-w-0"><b>{DIAS[Number(dia) - 1]}:</b> {t}</span>
             <Button variant="ghost" size="icon-sm" onClick={() => setNotas(n => { const c = { ...n }; delete c[Number(dia)]; return c })} aria-label={`Quitar nota del ${DIAS[Number(dia) - 1].toLowerCase()}`}><X /></Button>
