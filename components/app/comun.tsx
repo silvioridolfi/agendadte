@@ -158,11 +158,15 @@ export function storage<T>(fn: () => T): T | null { try { return fn() } catch { 
 export function EtiquetasAccion({ item }: { item: AgendaItem }) {
   return <>{(item.visita ?? [item]).map(v => <ActionChip key={v.id} label={v.accion} />)}</>
 }
+// En desktop las etiquetas son más discretas (en minúscula, sin relleno grande); en mobile, como siempre.
+const SIGLAS = new Set(['PEAT', 'R1', 'DTE', 'CED', 'FED', 'JED'])
+const enFrase = (t: string) => t.toLowerCase().split(' ').map((w, i) => (SIGLAS.has(w.toUpperCase()) ? w.toUpperCase() : i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w)).join(' ')
 export function ActionChip({ label, className = '' }: { label: Accion, className?: string }) {
-  return <span title={nombreAccion(label)} className={`inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs font-bold uppercase leading-tight tracking-[0.04em] ${actionStyle[label]?.chip ?? 'bg-muted text-muted-foreground'} ${className}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[label]?.dot ?? 'bg-current'}`} />{etiquetaAccion(label)}</span>
+  const texto = etiquetaAccion(label)
+  return <span title={nombreAccion(label)} className={`inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs font-bold uppercase leading-tight tracking-[0.04em] md:gap-1 md:px-1.5 md:py-0.5 md:font-semibold md:normal-case md:tracking-normal ${actionStyle[label]?.chip ?? 'bg-muted text-muted-foreground'} ${className}`}><span className={`size-1.5 shrink-0 rounded-full ${actionStyle[label]?.dot ?? 'bg-current'}`} /><span className="md:hidden">{texto}</span><span className="hidden truncate md:inline">{enFrase(texto)}</span></span>
 }
 export function StatusBadge({ status }: { status: Estado }) {
-  return <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusStyle[status]?.badge ?? ''}`}>{statusStyle[status]?.label ?? status}</span>
+  return <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-semibold md:px-1.5 md:py-0 md:font-medium ${statusStyle[status]?.badge ?? ''}`}>{statusStyle[status]?.label ?? status}</span>
 }
 export function ErrorBox({ message, onRetry }: { message: string, onRetry?: () => void }) {
   return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-tile border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p className="flex min-w-0 items-start gap-2"><CircleAlert className="mt-px size-4 shrink-0" aria-hidden /><span className="min-w-0 [overflow-wrap:anywhere]"><span className="font-semibold">No se pudo completar la operación.</span> {message}</span></p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>Reintentar</Button>}</div>
