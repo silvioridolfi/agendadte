@@ -98,7 +98,6 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
         {/* Los distritos los asigna la administración: acá sólo se informan. */}
         <div className="mb-4"><p className="mb-1.5 text-sm font-semibold">Distritos a cargo</p>
           <div className="flex flex-wrap gap-1.5">{distritos.length ? [...distritos].sort().map(d => <span key={d} className="rounded-full bg-dte-tinte px-3 py-1 text-sm font-medium text-dte-petroleo">{titleCase(d)}</span>) : <span className="text-sm text-dte-gris">Sin distritos asignados</span>}</div>
-          <p className="mt-1 text-xs text-dte-gris">Los asigna la administración. Si hay un error, avisá a la coordinación.</p>
         </div>
         <div className="text-sm"><p className="font-semibold">Carga horaria</p><p className="mt-1"><b className="text-base tabular-nums">{textoCarga(horasSemanales(franjas)) ?? 'Sin horario DTE cargado'}</b></p><p className="text-xs text-dte-gris">Se calcula sola con tu horario DTE de abajo.</p></div>
       </section>
