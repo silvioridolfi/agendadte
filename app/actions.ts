@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseServer } from '@/lib/supabase-server'
-import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, DISTRITOS_REGION, MODALIDADES, MODALIDADES_EVENTO, ROLES_FORMACION, type EventoDte, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
+import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, MODALIDADES, MODALIDADES_EVENTO, ROLES_FORMACION, type EventoDte, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
 import { borrarSesion, guardarSesion, passwordTemporal, requerirUsuario, usuarioActual, usuarioDeSesion, validarPassword, type Usuario } from '@/lib/sesion'
 import { DriveError, cuentaTecnica, driveConfigurado, idDeCarpeta, urlCarpeta, verificarCarpeta } from '@/lib/drive'
 import { ordenarFotos } from '@/lib/fotos'
@@ -438,13 +438,13 @@ async function updateMiPerfilImpl(fedId: string, datos: Pick<Fed, 'distritos_a_c
   const db = supabaseServer()
   const { data: fed } = await db.from('feds').select('rol').eq('id', fedId).maybeSingle()
   if (!fed) throw new Error('No se encontró el perfil')
-  const distritos = [...new Set(datos.distritos_a_cargo.map(d => d.trim().toUpperCase()))].filter(d => DISTRITOS_REGION.includes(d))
   const franjas = Object.fromEntries(datos.ddjj.map(d => [d.dia, franjasDte(d)]))
   const errores = validarDdjj(franjas, cargosDe(datos.ddjj))
   if (datos.ddjj.some(d => !Number.isInteger(d.dia) || d.dia < 1 || d.dia > 5)) errores.push('Día de la DD.JJ. inválido')
   if (errores.length) throw new Error(errores[0])
   const ddjj = armarDdjj(franjas, cargosDe(datos.ddjj), Object.fromEntries(datos.ddjj.filter(d => d.externo).map(d => [d.dia, d.externo!.slice(0, 200)])))
-  const patch = { distritos_a_cargo: distritos, carga_horaria: cargaDeDdjj(ddjj), ddjj }
+  // Los distritos a cargo no se modifican desde el perfil: los asigna la administración.
+  const patch = { carga_horaria: cargaDeDdjj(ddjj), ddjj }
   const { error } = await db.from('feds').update(patch).eq('id', fedId)
   if (error) throw new Error(error.message)
   await audit('feds', fedId, 'modificacion', fedId, patch)
