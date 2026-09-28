@@ -68,6 +68,25 @@ async function getFedItemsImpl(fedId: string, from: string, to: string): Promise
     .sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))
 }
 
+// Disponibilidad de compañeros en una fecha: sus acciones de ese día (propias o en las que participan), sin cancelar.
+// A un FED sólo le llega el tipo y el horario; la coordinación ve además la escuela o el lugar.
+export type Ocupacion = { fed_id: string, accion: AgendaItem['accion'], hora_inicio: string | null, hora_fin: string | null, lugar: string | null }
+async function disponibilidadImpl(yo: Usuario, fecha: string, ids: string[], excluir?: string): Promise<Ocupacion[]> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !ids.length) return []
+  const db = supabaseServer(), verLugar = yo.fed.rol === 'coordinacion' || yo.esAdmin
+  const cols = 'id, fed_id, accion, hora_inicio, hora_fin, estado, lugar, school:establecimientos(nombre)'
+  const [propias, compartidas] = await Promise.all([
+    db.from('agenda_items').select(cols).eq('fecha', fecha).in('fed_id', ids.slice(0, 50)).neq('estado', 'cancelada'),
+    db.from('agenda_participantes').select(`fed_id, item:agenda_items!inner(${cols})`).in('fed_id', ids.slice(0, 50)).eq('item.fecha', fecha).neq('item.estado', 'cancelada'),
+  ])
+  type Fila = { id: string, fed_id: string, accion: AgendaItem['accion'], hora_inicio: string | null, hora_fin: string | null, lugar: string | null, school: { nombre: string | null } | null }
+  const out: Ocupacion[] = []
+  const sumar = (fedId: string, i: Fila) => { if (i.id !== excluir) out.push({ fed_id: fedId, accion: i.accion, hora_inicio: i.hora_inicio, hora_fin: i.hora_fin, lugar: verLugar ? i.school?.nombre ?? i.lugar : null }) }
+  for (const i of (propias.data ?? []) as unknown as Fila[]) sumar(i.fed_id, i)
+  for (const p of (compartidas.data ?? []) as unknown as { fed_id: string, item: Fila }[]) if (p.item) sumar(p.fed_id, p.item)
+  return out
+}
+
 async function getAllItemsImpl(from: string, to: string): Promise<AgendaItem[]> {
   return fetchAll<AgendaItem>((a, b) => supabaseServer().from('agenda_items').select(ITEM_COLS)
     .gte('fecha', from).lte('fecha', to).order('fecha').order('hora_inicio', { nullsFirst: true }).order('id').range(a, b))
@@ -562,6 +581,7 @@ export const ubicacionDe = async (schoolId: string | null, lugar: string | null)
 })
 export const getFedItems = async (fedId: string, from: string, to: string) => conUsuario(() => getFedItemsImpl(fedId, from, to))
 export const getAllItems = async (from: string, to: string) => conUsuario(() => getAllItemsImpl(from, to))
+export const disponibilidad = async (fecha: string, ids: string[], excluir?: string) => conUsuario(yo => disponibilidadImpl(yo, fecha, ids, excluir))
 export const getEncuentros = async (from: string, to: string) => conUsuario(() => getEncuentrosImpl(from, to))
 export const saveItem = async (input: AgendaItemInput, id?: string, alcance: 'uno' | 'siguientes' = 'uno') => conUsuario(yo => saveItemImpl({ ...input, fed_id: yo.fed.id }, id, alcance))
 // Visita con varias acciones: una acción por tipo, con la misma escuela, fecha, horario y acompañantes.
