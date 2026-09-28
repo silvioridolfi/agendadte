@@ -90,7 +90,8 @@ export type EncuentroInput = Pick<Encuentro, 'propuesta' | 'encuentro_n' | 'moda
 // Fila de public.establecimientos (misma fuente que el buscador DTE).
 export type School = { id: string; cue: number | null; nombre: string | null; distrito: string | null; ciudad: string | null }
 export type AgendaItem = {
-  // Sólo en pantalla: acciones de la misma visita (mismo FED, día, horario y lugar), incluida ésta.
+  // Visita con varias acciones: todas comparten visita_id. `visita` (sólo en pantalla): las acciones de la visita, incluida ésta.
+  visita_id?: string | null
   visita?: AgendaItem[]
   id: string
   fed_id: string
@@ -150,6 +151,8 @@ export type AgendaItemInput = {
   participantes?: string[]
   // Sólo al crear: repetir la acción los días de semana indicados (1 = lunes … 5 = viernes) hasta `hasta`.
   repeticion?: { dias: number[], hasta: string } | null
+  // Visita con varias acciones (lo asigna el servidor).
+  visita_id?: string | null
 }
 
 export type Notificacion = { id: string; tipo: 'etiqueta' | 'modificacion' | 'cancelacion' | 'respuesta' | 'evento' | 'pve'; detalle: string | null; leida: boolean; created_at: string; autor_id: string | null; item: AgendaItem | null }
