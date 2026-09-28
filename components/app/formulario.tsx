@@ -27,21 +27,25 @@ export function SchoolPicker({ value, onChange, onOrganismo }: { value: School |
   const [failed, setFailed] = useState(false)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
-  const seq = useRef(0)
+  // Al escribir: con menos de 2 letras se limpian los resultados; si no, se marca la búsqueda en curso.
+  const buscar = (q: string) => {
+    setQuery(q)
+    if (q.trim().length < 2) { setResults([]); setOrgs([]); setLoading(false) } else { setLoading(true); setFailed(false) }
+  }
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); setOrgs([]); setLoading(false); return }
-    const n = ++seq.current
-    setLoading(true); setFailed(false)
+    if (query.trim().length < 2) return
+    // `vigente`: si la consulta cambió antes de que llegue la respuesta, se descarta.
+    let vigente = true
     const t = setTimeout(() => Promise.all([searchSchools(query), onOrganismo ? buscarOrganismos(query) : Promise.resolve([])])
-      .then(([r, o]) => { if (n === seq.current) { setOrgs(o); setResults([...r].sort((a, b) => az(a.nombre ?? '', b.nombre ?? ''))); setActive(0) } })
-      .catch(() => { if (n === seq.current) { setResults([]); setOrgs([]); setFailed(true) } })
-      .finally(() => { if (n === seq.current) setLoading(false) }), 250)
-    return () => clearTimeout(t)
+      .then(([r, o]) => { if (vigente) { setOrgs(o); setResults([...r].sort((a, b) => az(a.nombre ?? '', b.nombre ?? ''))); setActive(0) } })
+      .catch(() => { if (vigente) { setResults([]); setOrgs([]); setFailed(true) } })
+      .finally(() => { if (vigente) setLoading(false) }), 250)
+    return () => { vigente = false; clearTimeout(t) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query])
   // Opciones: primero las jefaturas que coinciden y después las escuelas.
   const opciones: ({ tipo: 'org', o: Organismo } | { tipo: 'esc', s: School })[] = [...orgs.map(o => ({ tipo: 'org' as const, o })), ...results.map(s => ({ tipo: 'esc' as const, s }))]
-  const pick = (x: typeof opciones[number]) => { if (x.tipo === 'org') onOrganismo?.(`${x.o.nombre} (${x.o.codigo})`); else onChange(x.s); setQuery(''); setOpen(false) }
+  const pick = (x: typeof opciones[number]) => { if (x.tipo === 'org') onOrganismo?.(`${x.o.nombre} (${x.o.codigo})`); else onChange(x.s); buscar(''); setOpen(false) }
 
   if (value) return <div className="flex items-center gap-3 rounded-control border border-pba-celeste/60 bg-pba-celeste/5 p-2.5 pl-3 font-normal">
     <SchoolIcon className="size-4 shrink-0 text-pba-celeste-texto" />
@@ -53,7 +57,7 @@ export function SchoolPicker({ value, onChange, onOrganismo }: { value: School |
   return <div className="relative">
     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" />
     <Input role="combobox" aria-expanded={showList} aria-controls="school-results" aria-autocomplete="list" className="h-11 md:h-10 pl-9 font-normal" placeholder="Nombre, localidad o CUE…" value={query}
-      onChange={e => { setQuery(e.target.value); setOpen(true) }} onFocus={e => { setOpen(true); e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' }) }} onBlur={() => setTimeout(() => setOpen(false), 150)}
+      onChange={e => { buscar(e.target.value); setOpen(true) }} onFocus={e => { setOpen(true); e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' }) }} onBlur={() => setTimeout(() => setOpen(false), 150)}
       onKeyDown={e => {
         if (!showList || !opciones.length) return
         if (e.key === 'ArrowDown') { e.preventDefault(); setActive(a => Math.min(a + 1, opciones.length - 1)) }
