@@ -11,7 +11,7 @@ import { ESTADOS, type AgendaItem, type Feriado, type EventoDte, type Estado, ty
 import { FotosChip } from '@/components/app/fotosconteo'
 import { EventoTag, useEventos } from '@/components/app/eventos'
 import { agruparVisitas } from '@/lib/visita'
-import { actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, ddjjFor, itemTitle, itemCorto, cueLugar, firstName, getFedItems, storage, ActionChip, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
+import { EtiquetasAccion, actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, ddjjFor, itemTitle, itemCorto, cueLugar, firstName, getFedItems, storage, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
 import { hoyAR, fechaHoyAR } from '@/lib/hora'
 
 export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio }: { fed: Fed, feds: Fed[], reloadKey: number, onNew?: (fecha?: string) => void, onSelect: (item: AgendaItem) => void, onCambio?: (msg: string) => void }) {
@@ -222,5 +222,5 @@ export function ItemCard({ item, onClick, viewer, seleccionado }: { item: Agenda
 // Etiquetas de una acción o de todas las de su visita; el estado se muestra una vez si coincide.
 function ChipsVisita({ item }: { item: AgendaItem }) {
   const vs = item.visita ?? [item], mismoEstado = vs.every(v => v.estado === item.estado)
-  return <>{vs.map(v => <ActionChip key={v.id} label={v.accion} />)}{mismoEstado ? <StatusBadge status={item.estado} /> : <span className="text-xs font-semibold text-dte-gris">Estados distintos</span>}</>
+  return <><EtiquetasAccion item={item} />{mismoEstado ? <StatusBadge status={item.estado} /> : <span className="text-xs font-semibold text-dte-gris">Estados distintos</span>}</>
 }
