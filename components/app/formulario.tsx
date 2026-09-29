@@ -14,7 +14,7 @@ import type { Ocupacion, Organismo } from '@/app/actions'
 import { titleCase } from '@/lib/format'
 import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, cambiarEstadoVarias, disponibilidad, guardarVisita, editarVisita, ActionChip, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
 import { encolarOffline, encolarVisitaOffline } from '@/components/app/offline'
-import { alternarTipo, datosDeAccion, datosVacios, inputDeTipo, type DatosTipo } from '@/lib/visita'
+import { alternarTipo, esSumable, datosDeAccion, datosVacios, inputDeTipo, type DatosTipo } from '@/lib/visita'
 import { hoyAR } from '@/lib/hora'
 
 const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -229,10 +229,14 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const setPrincipal = (name: Accion | null, datos?: DatosTipo) => { if (datos || name !== form.accion) setEncPrincipal(datos?.enc_id); setForm(f => ({ ...f, accion: name, club_id: f.accion === name ? f.club_id : '',
     tipo_jornada: name && f.tipo_jornada && f.accion === name ? f.tipo_jornada : name === 'CLUB DE TECNOLOGÍA' ? 'Taller' : name === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Formación' : f.tipo_jornada,
     ...(datos ? { sub_accion: datos.sub_accion, cantidad: datos.cantidad, detalle: datos.detalle, propuesta: datos.propuesta, encuentro_n: datos.encuentro_n, destinatarios: datos.destinatarios, modalidad: datos.modalidad, inscriptos: datos.inscriptos, asistentes: datos.asistentes } : {}) })) }
+  const [avisoCombinar, setAvisoCombinar] = useState('')
   function elegirTipo(name: Accion) {
     if (!multiple) { setPrincipal(name); return }
     const actuales = form.accion ? [form.accion, ...extras] : []
     const nuevos = alternarTipo(actuales, name)
+    // Un tipo que no se combina reemplaza la selección: se avisa para que no parezca un error.
+    const reemplaza = actuales.length > 0 && !actuales.includes(name) && nuevos.length === 1
+    setAvisoCombinar(reemplaza ? `${nombreAccion(!esSumable(name) ? name : actuales.find(a => !esSumable(a)) ?? name)} no se combina con otras acciones en una misma visita: se carga aparte. Guardá esta y después cargá la otra con la misma escuela, fecha y horario.` : '')
     // Si se quita el principal, el siguiente pasa a ocupar su lugar con los datos que ya tenía cargados.
     if (nuevos[0] !== form.accion) setPrincipal(nuevos[0] ?? null, nuevos[0] && extras.includes(nuevos[0]) ? datosExtra[nuevos[0]] ?? datosVacios() : undefined)
     setExtras(nuevos.slice(1))
@@ -338,6 +342,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     {!modoT && <fieldset id="campo-accion" className="scroll-mt-24" aria-describedby={errores.accion ? 'err-accion' : undefined}>
       <legend className="mb-2 text-sm font-semibold">Tipo de acción <span className="text-dte-magenta" aria-hidden>*</span></legend>
       {multiple && <p className="-mt-1 mb-2 text-xs text-dte-gris">Si en la misma visita hiciste más de una acción, marcalas todas: se guarda una por tipo, con la misma escuela, fecha y horario.</p>}
+      {avisoCombinar && <p role="status" className="-mt-1 mb-2 rounded-control bg-info-fondo px-3 py-2 text-xs text-dte-tinta">{avisoCombinar}</p>}
       {errores.accion && <p id="err-accion" role="alert" className="-mt-1 mb-2 text-sm font-medium text-peligro">{errores.accion}</p>}
       {(() => {
         // Botón de cada tipo de acción.
