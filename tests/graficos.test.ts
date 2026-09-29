@@ -49,12 +49,19 @@ describe('datos', () => {
     const { puntos } = evolucion([item('REUNIÓN', '2026-10-15')], '2026-09-01', '2026-09-30')
     expect(puntos.reduce((a, p) => a + p.total, 0)).toBe(0)
   })
-  it('asistencia: suma asistentes y toma el máximo de inscriptos de cada grupo', () => {
+  it('asistencia: cada grupo aporta el promedio de sus encuentros y su máximo de inscriptos', () => {
     const it1 = item('CLUB DE TECNOLOGÍA', '2026-09-02', { encuentros: [enc('2026-09-02', 30, 20), enc('2026-09-03', 34, 25)] })
     const it2 = item('PRÁCTICAS PROFESIONALIZANTES', '2026-09-03', { encuentros: [enc('2026-09-03', 10, null, 'c2')] })
     const { puntos } = asistencia([it1, it2, item('REUNIÓN', '2026-09-02', { encuentros: [enc('2026-09-02', 99, 99)] })], '2026-09-01', '2026-09-30')
-    expect(puntos[0]).toMatchObject({ asistentes: 45, inscriptos: 44 })
+    expect(puntos[0].asistentes).toBeCloseTo(22.5) // c1: (20 + 25) / 2; c2 no tiene asistentes cargados
+    expect(puntos[0].inscriptos).toBe(44) // c1: 34, c2: 10
     expect(puntos.slice(1).every(p => p.asistentes === 0 && p.inscriptos === 0)).toBe(true)
+  })
+  it('asistencia: más encuentros de un grupo en el mes no inflan el número (comparable con los inscriptos)', () => {
+    const cuatro = item('CLUB DE TECNOLOGÍA', '2026-09-02', { encuentros: ['2026-09-02', '2026-09-09', '2026-09-16', '2026-09-23'].map(f => enc(f, 30, 20)) })
+    const { puntos, totales } = asistencia([cuatro], '2026-03-01', '2026-09-30') // período largo: se agrupa por mes
+    expect(puntos.find(p => p.clave === '2026-09')).toMatchObject({ asistentes: 20, inscriptos: 30 }) // no 80
+    expect(totales).toEqual({ encuentros: 4, grupos: 1, asistentes: 20, inscriptos: 30 })
   })
 })
 
@@ -111,12 +118,15 @@ describe('eje de valores y números', () => {
     expect(g.svg).toContain('>30<') // tope del eje (máximo de inscriptos: 30)
     for (const v of [10, 15, 21]) expect(g.svg).toContain(`>${v}<`) // asistentes de cada mes
   })
-  it('totales de asistencia: un grupo cuenta una vez en inscriptos y todas sus asistencias suman', () => {
+  it('totales de asistencia: promedio por grupo, inscriptos una vez por grupo', () => {
     const its = [item('CLUB DE TECNOLOGÍA', '2026-09-02', { encuentros: [enc('2026-09-02', 30, 20), enc('2026-09-09', 34, 25)] }), item('PRÁCTICAS PROFESIONALIZANTES', '2026-09-16', { encuentros: [enc('2026-09-16', 10, 8, 'c2')] })]
-    expect(asistencia(its, '2026-09-01', '2026-09-30').totales).toEqual({ encuentros: 3, grupos: 2, asistencias: 53, inscriptos: 44 })
+    const { totales } = asistencia(its, '2026-09-01', '2026-09-30')
+    expect(totales).toMatchObject({ encuentros: 3, grupos: 2, inscriptos: 44 })
+    expect(totales.asistentes).toBeCloseTo(30.5) // c1: 22,5 + c2: 8
     const g = graficosInforme({ items: its, desde: '2026-09-01', hasta: '2026-09-30' }).find(x => x.clave === 'asistencia')!
-    expect(g.svg).toContain('3 encuentros · 53 asistencias · 44 inscriptos en 2 grupos')
-    expect(g.svg).toContain('Asistentes (suma de encuentros)')
+    expect(g.svg).toContain('3 encuentros · 2 grupos')
+    expect(g.svg).toContain('Asistencia promedio: 31 de 44 inscriptos (69%)')
+    expect(g.svg).toContain('Asistentes (promedio por encuentro)')
   })
   it('la evolución muestra el total del período', () => {
     const g = graficosInforme({ items: [item('REUNIÓN', '2026-09-02'), item('REUNIÓN', '2026-09-10')], desde: '2026-09-01', hasta: '2026-09-30' }).find(x => x.clave === 'evolucion')!
