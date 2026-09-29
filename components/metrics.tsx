@@ -73,8 +73,8 @@ export function HBar({ label, value, max, sub, color = CAT_COLOR.tecnica }: { la
 }
 
 
-// Una acción cuenta como virtual si todos sus encuentros registrados fueron virtuales.
-const modalidadItem = (i: AgendaItem) => (i.encuentros?.length && i.encuentros.every(e => e.modalidad === 'Virtual') ? 'Virtual' : null)
+// Una acción cuenta como virtual si todos sus encuentros registrados fueron virtuales, o si es una reunión virtual.
+const modalidadItem = (i: AgendaItem) => (i.modalidad === 'Virtual' || (i.encuentros?.length && i.encuentros.every(e => e.modalidad === 'Virtual')) ? 'Virtual' : null)
 const etiqueta = (k: string) => (esGrupoEspecial(k) ? k : titleCase(k))
 
 // `encuentros` llega ya filtrado con los mismos criterios que las acciones (FED, distrito, búsqueda).

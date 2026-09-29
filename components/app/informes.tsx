@@ -79,7 +79,7 @@ tr:nth-child(even) td { background: #f6f5f9; } tr { break-inside: avoid; }
 ${graf.length ? `<section class="graficos"><h2>Gráficos del período</h2><div class="graf">${graf.map(g => g.svg).join('')}</div></section>` : ''}
 <h2>Detalle de acciones realizadas (${hechas.length})</h2>
 ${hechas.length ? `<div class="tabla"><table><thead><tr><th>Fecha</th>${variosResponsables ? '<th>Responsable</th>' : ''}<th>Acción</th><th>Escuela / lugar</th><th>Tema / detalle</th></tr></thead><tbody>
-${hechas.map(i => `<tr><td>${fechaAR(i.fecha)}</td>${variosResponsables ? `<td>${esc(fedName(i.fed_id))}</td>` : ''}<td>${esc(titleCase(i.accion))}</td><td>${esc(i.school?.nombre ? `${titleCase(i.school.nombre)}${i.school.cue ? ` (CUE ${i.school.cue})` : ''}` : i.lugar ?? '')}</td><td>${esc(i.sub_accion ?? '')}</td></tr>`).join('')}
+${hechas.map(i => `<tr><td>${fechaAR(i.fecha)}</td>${variosResponsables ? `<td>${esc(fedName(i.fed_id))}</td>` : ''}<td>${esc(titleCase(i.accion))}</td><td>${esc(i.school?.nombre ? `${titleCase(i.school.nombre)}${i.school.cue ? ` (CUE ${i.school.cue})` : ''}` : i.lugar ?? (i.modalidad === 'Virtual' ? 'Virtual' : ''))}</td><td>${esc(i.sub_accion ?? '')}</td></tr>`).join('')}
 </tbody></table></div>` : '<p>No hay acciones realizadas en el período.</p>'}
 <div class="pie"><img src="${logo}" alt="Dirección de Tecnología Educativa · DGCyE · Gobierno de la Provincia de Buenos Aires"><span>Agenda Territorial · ${esc(persona.nombre)} · ${fechaAR(desde)} al ${fechaAR(hasta)}</span></div>
 <script>

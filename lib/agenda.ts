@@ -124,10 +124,12 @@ export type AgendaItem = {
   club?: { grupo: string | null } | null
   // Evento DTE al que corresponde la acción (participación registrada desde el calendario).
   evento_id?: string | null
-  // Formación interna: modalidad, si asistió o la dictó, y quién la dictó.
+  // Formación interna y reuniones: modalidad; formación interna: si asistió o la dictó, y quién la dictó.
   modalidad?: ModalidadEvento | null
   rol_formacion?: RolFormacion | null
   dictada_por?: string | null
+  // Reuniones virtuales o híbridas: enlace a la videollamada (Meet, Zoom…).
+  enlace?: string | null
 }
 export const MODALIDADES_EVENTO = ['Presencial', 'Virtual', 'Híbrido'] as const
 export type ModalidadEvento = (typeof MODALIDADES_EVENTO)[number]
@@ -150,6 +152,7 @@ export type AgendaItemInput = {
   modalidad?: ModalidadEvento | null
   rol_formacion?: RolFormacion | null
   dictada_por?: string | null
+  enlace?: string | null
   // Datos del encuentro (sólo clubes, talleres y prácticas); se guardan en agenda_encuentros.
   encuentro: EncuentroInput | null
   // FEDs etiquetados (sin incluir a quien la crea).
