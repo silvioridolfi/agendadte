@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import * as api from '@/app/actions'
 import { guardarCache, leerCache } from '@/components/app/offline'
 import { titleCase } from '@/lib/format'
+import { nombreCorto, siglaNombre } from '@/lib/siglas'
 import { esAusencia, etiquetaAccion, nombreAccion, type Accion, type AgendaItem, type Feriado, type Estado, type Fed, type School } from '@/lib/agenda'
 import { anioAR, hoyAR, ZONA } from '@/lib/hora'
 
@@ -69,15 +70,9 @@ export function weekTitle(from: Date, to: Date) {
 }
 
 export const schoolName = (s: School | null) => (s?.nombre ? titleCase(s.nombre) : 'Sin escuela asignada')
-// Siglas usuales de la DGCyE para las tarjetas angostas (el nombre completo se ve en el detalle).
-export const siglas: [RegExp, string][] = [
-  [/^Escuela de Educación Secundaria Técnica/i, 'EEST'], [/^Escuela de Educación Secundaria Agraria/i, 'EESA'], [/^Escuela de Educación Secundaria/i, 'EES'],
-  [/^Escuela de Educación Primaria/i, 'EP'], [/^Escuela de Educación Especial/i, 'EEE'], [/^Jardín de Infantes/i, 'JI'],
-  [/^Instituto Superior de Formación Docente/i, 'ISFD'], [/^Instituto Superior de Formación Técnica/i, 'ISFT'], [/^Centro de Educación Física/i, 'CEF'],
-]
-export const shortSchoolName = (s: School | null) => { const n = schoolName(s); const m = siglas.find(([re]) => re.test(n)); return m ? n.replace(m[0], m[1]) : n }
-// Nombre mínimo para calendarios y tarjetas: sigla y número (ej.: "EES N° 31"); si no tiene número, el nombre abreviado.
-export const siglaEscuela = (s: School | null) => { const n = shortSchoolName(s); const m = n.match(/^(.*?N°\s*\d+)/); return m ? m[1] : n }
+// Siglas y nombre mínimo para calendarios y tarjetas angostas (la lógica está en lib/siglas.ts).
+export const shortSchoolName = (s: School | null) => nombreCorto(schoolName(s))
+export const siglaEscuela = (s: School | null) => siglaNombre(schoolName(s))
 // Segunda línea de las tarjetas: CUE y localidad.
 export const cueLugar = (s: School | null) => (s ? [s.cue ? `CUE ${s.cue}` : null, schoolPlace(s)].filter(Boolean).join(' · ') : '')
 export const schoolPlace = (s: School | null) => (s ? [s.ciudad && s.ciudad !== s.distrito ? titleCase(s.ciudad) : null, s.distrito ? titleCase(s.distrito) : null].filter(Boolean).join(', ') : '')
