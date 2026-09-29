@@ -1,6 +1,8 @@
 // Exportación a Excel (planilla mensual por FED y consolidado regional). Se genera en el navegador.
 import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, clubEstado, cuentaHecha, esAusencia, iniciado, ordenGrupo, ultimaActividad, type AgendaItem, type Club, type Encuentro, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
+import { graficosInforme, type Grafico } from '@/lib/graficos'
+import type { Workbook } from 'exceljs'
 import { hoyAR, anioAR, ZONA } from '@/lib/hora'
 
 type Datos = { titulo: string, desde: string, hasta: string, items: AgendaItem[], encuentros?: Encuentro[], feds: Fed[], clubes?: Club[], porFed?: boolean }
@@ -138,6 +140,55 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
   setTimeout(() => URL.revokeObjectURL(url), 5000)
 }
 
+// SVG de un gráfico a PNG (sólo en el navegador, con un canvas; el doble de resolución para que se vea nítido). Si no se puede, devuelve null.
+export async function svgAPng(g: Pick<Grafico, 'svg' | 'ancho' | 'alto'>, escala = 2): Promise<ArrayBuffer | null> {
+  let url = ''
+  try {
+    url = URL.createObjectURL(new Blob([g.svg], { type: 'image/svg+xml;charset=utf-8' }))
+    const img = new Image()
+    await new Promise<void>((ok, mal) => { img.onload = () => ok(); img.onerror = () => mal(new Error('svg')); img.src = url })
+    const c = document.createElement('canvas')
+    c.width = g.ancho * escala; c.height = g.alto * escala
+    const ctx = c.getContext('2d')
+    if (!ctx) return null
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height)
+    ctx.drawImage(img, 0, 0, c.width, c.height)
+    const blob = await new Promise<Blob | null>(r => c.toBlob(r, 'image/png'))
+    return blob ? await blob.arrayBuffer() : null
+  } catch { return null } finally { if (url) URL.revokeObjectURL(url) }
+}
+
+// Hoja "Gráficos": a la izquierda la imagen de cada gráfico y a su derecha la tabla con los números (para editarlos o rehacer el gráfico en Excel).
+// `pngs`: una imagen por gráfico; si alguna es null la hoja queda con las tablas y un aviso.
+export function agregarHojaGraficos(wb: Workbook, graficos: Grafico[], pngs: (ArrayBuffer | null)[]) {
+  const ws = wb.addWorksheet('Gráficos')
+  ws.properties.defaultRowHeight = 15 // 20 px por fila: sirve para calcular cuánto ocupa cada imagen
+  const COL_TABLA = 9, ESCALA = 1.15, FILA_PX = 20
+  ws.getColumn(COL_TABLA).width = 30
+  for (let c = COL_TABLA + 1; c <= COL_TABLA + 4; c++) ws.getColumn(c).width = 16
+  ws.getCell('A1').value = 'Gráficos del período'
+  ws.getCell('A1').font = { bold: true, size: 14, color: { argb: PETROLEO } }
+  const faltan = graficos.some((_, i) => !pngs[i])
+  if (faltan) { ws.getCell('A2').value = 'Las imágenes de los gráficos no se pudieron generar en este navegador: los datos de cada gráfico están en las tablas.'; ws.getCell('A2').font = { italic: true, color: { argb: 'FF5B6472' } } }
+  let fila = 4
+  graficos.forEach((g, i) => {
+    const alto = Math.round(g.alto * ESCALA), ancho = Math.round(g.ancho * ESCALA)
+    const png = pngs[i]
+    if (png) ws.addImage(wb.addImage({ buffer: png, extension: 'png' }), { tl: { col: 0, row: fila - 1 }, ext: { width: ancho, height: alto } })
+    // Tabla de datos, a la derecha de la imagen.
+    const t = ws.getRow(fila)
+    t.getCell(COL_TABLA).value = g.titulo; t.getCell(COL_TABLA).font = { bold: true, color: { argb: PETROLEO } }
+    const cab = ws.getRow(fila + 1)
+    g.tabla.cabeza.forEach((h, k) => { const c = cab.getCell(COL_TABLA + k); c.value = h; c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PETROLEO } }; c.alignment = { wrapText: true, vertical: 'middle', horizontal: k ? 'right' : 'left' } })
+    g.tabla.filas.forEach((f, n) => {
+      const r = ws.getRow(fila + 2 + n)
+      f.forEach((v, k) => { const c = r.getCell(COL_TABLA + k); c.value = v; c.alignment = { horizontal: k ? 'right' : 'left' }; if (n % 2) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } } })
+    })
+    fila += Math.max(Math.ceil(alto / FILA_PX), g.tabla.filas.length + 3) + 2
+  })
+  return ws
+}
+
 // Informe del período (coordinación o un FED): datos de la persona, indicadores y detalle de acciones.
 export type Persona = { nombre: string, rol: string, distritos: string[], carga: string | null }
 export async function exportarInforme({ titulo, persona, desde, hasta, indicadores, items, feds }: { titulo: string, persona: Persona, desde: string, hasta: string, indicadores: { label: string, valor: number, detalle?: string }[], items: AgendaItem[], feds: Fed[] }) {
@@ -173,6 +224,9 @@ export async function exportarInforme({ titulo, persona, desde, hasta, indicador
     row.getCell(2).font = { bold: true }
     if (n % 2) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } }
   })
+
+  const graf = graficosInforme({ items, desde, hasta })
+  if (graf.length) agregarHojaGraficos(wb, graf, await Promise.all(graf.map(g => svgAPng(g))))
 
   const wd = wb.addWorksheet('Acciones', { views: [{ state: 'frozen', ySplit: 1 }] })
   const cols = [['Fecha', 11], ['Horario', 13], ['Responsable', 24], ['Acción', 26], ['Sub-acción / tema', 30], ['Escuela / lugar', 40], ['CUE', 11], ['Distrito', 14], ['Detalle', 50]] as const
