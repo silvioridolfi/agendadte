@@ -66,28 +66,34 @@ export function evolucion(items: AgendaItem[], desde: string, hasta: string): { 
 }
 
 export type PuntoAsistencia = Bucket & { inscriptos: number, asistentes: number }
-export type TotalesAsistencia = { encuentros: number, grupos: number, asistencias: number, inscriptos: number }
-// Por período: `asistentes` suma las asistencias de todos los encuentros; `inscriptos`, el máximo registrado de cada grupo
-// (un grupo cuenta una vez, como en el indicador del informe). Por eso los asistentes de un mes pueden superar a los inscriptos.
+export type TotalesAsistencia = { encuentros: number, grupos: number, asistentes: number, inscriptos: number }
+const promedio = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0)
+// Cada grupo (club o práctica) aporta el promedio de asistentes de sus encuentros y su máximo de inscriptos (un grupo cuenta una vez, como en
+// el indicador del informe): `asistentes` es el de un encuentro típico de cada grupo sumado, comparable con `inscriptos`. Los encuentros sin
+// asistentes cargados no entran en el promedio. Los valores pueden tener decimales: se redondean al mostrarlos.
 export function asistencia(items: AgendaItem[], desde: string, hasta: string): { g: Granularidad, puntos: PuntoAsistencia[], totales: TotalesAsistencia } {
+  type Grupo = { asistentes: number[], inscriptos: number }
   const { g, lista } = buckets(desde, hasta)
   const puntos = lista.map(b => ({ ...b, inscriptos: 0, asistentes: 0 }))
-  const por = new Map(puntos.map(p => [p.clave, { p, clubes: new Map<string, number>() }]))
-  const grupos = new Map<string, number>(), totales = { encuentros: 0, grupos: 0, asistencias: 0, inscriptos: 0 }
+  const por = new Map(puntos.map(p => [p.clave, { p, grupos: new Map<string, Grupo>() }]))
+  const total = new Map<string, Grupo>()
+  let encuentros = 0
+  const de = (m: Map<string, Grupo>, k: string) => m.get(k) ?? (m.set(k, { asistentes: [], inscriptos: 0 }), m.get(k)!)
   for (const i of hechas(items).filter(x => x.accion === 'CLUB DE TECNOLOGÍA' || x.accion === 'PRÁCTICAS PROFESIONALIZANTES')) {
     for (const e of i.encuentros ?? []) {
       const b = por.get(claveDe(g, e.fecha))
       if (!b) continue
-      b.p.asistentes += e.asistentes ?? 0
       const k = e.club_id ?? i.club_id ?? i.id
-      b.clubes.set(k, Math.max(b.clubes.get(k) ?? 0, e.inscriptos ?? 0))
-      grupos.set(k, Math.max(grupos.get(k) ?? 0, e.inscriptos ?? 0))
-      totales.encuentros++; totales.asistencias += e.asistentes ?? 0
+      for (const gr of [de(b.grupos, k), de(total, k)]) {
+        if (e.asistentes !== null && e.asistentes !== undefined) gr.asistentes.push(e.asistentes)
+        gr.inscriptos = Math.max(gr.inscriptos, e.inscriptos ?? 0)
+      }
+      encuentros++
     }
   }
-  for (const { p, clubes } of por.values()) p.inscriptos = [...clubes.values()].reduce((a, b) => a + b, 0)
-  totales.grupos = grupos.size; totales.inscriptos = [...grupos.values()].reduce((a, b) => a + b, 0)
-  return { g, puntos, totales }
+  const suma = (m: Map<string, Grupo>, f: (x: Grupo) => number) => [...m.values()].reduce((a, x) => a + f(x), 0)
+  for (const { p, grupos } of por.values()) { p.asistentes = suma(grupos, x => promedio(x.asistentes)); p.inscriptos = suma(grupos, x => x.inscriptos) }
+  return { g, puntos, totales: { encuentros, grupos: total.size, asistentes: suma(total, x => promedio(x.asistentes)), inscriptos: suma(total, x => x.inscriptos) } }
 }
 
 // ---- SVG ----
@@ -182,17 +188,22 @@ function asistenciaGrafico(items: AgendaItem[], desde: string, hasta: string): G
   if (puntos.length < 2 || !puntos.some(p => p.inscriptos || p.asistentes)) return null
   const e = eje(puntos.map(p => p.label), Math.max(...puntos.map(p => Math.max(p.inscriptos, p.asistentes))))
   const barras = puntos.map((p, i) => {
-    const m = Math.max(p.inscriptos, p.asistentes)
+    const m = Math.max(p.inscriptos, p.asistentes), num = nf.format(Math.round(p.asistentes))
     if (!m) return ''
     const H = e.h(m), Ha = e.h(p.asistentes)
     return `<rect x="${e.x(i).toFixed(2)}" y="${(Y_BASE - H).toFixed(2)}" width="${e.w.toFixed(2)}" height="${H.toFixed(2)}" fill="${INSCRIPTOS_HEX}"/>` +
       (p.asistentes ? `<rect x="${(e.x(i) + e.w * 0.22).toFixed(2)}" y="${(Y_BASE - Ha).toFixed(2)}" width="${(e.w * 0.56).toFixed(2)}" height="${Ha.toFixed(2)}" fill="${CAT_HEX.tecnica}"/>` : '') +
-      (p.asistentes && e.cabe(nf.format(p.asistentes)) ? t(e.x(i) + e.w / 2, Y_BASE - H - 4, nf.format(p.asistentes), { size: 9, anchor: 'middle' }) : '')
+      (p.asistentes && e.cabe(num) ? t(e.x(i) + e.w / 2, Y_BASE - H - 4, num, { size: 9, anchor: 'middle' }) : '')
   }).join('')
-  const refs = ref(PAD, e.yRef, INSCRIPTOS_HEX, 'Inscriptos (por grupo)') + ref(PAD + 130, e.yRef, CAT_HEX.tecnica, 'Asistentes (suma de encuentros)')
-  const linea = `${nf.format(totales.encuentros)} ${totales.encuentros === 1 ? 'encuentro' : 'encuentros'} · ${nf.format(totales.asistencias)} asistencias · ${nf.format(totales.inscriptos)} inscriptos en ${nf.format(totales.grupos)} ${totales.grupos === 1 ? 'grupo' : 'grupos'}`
+  // Referencias y totales en dos filas cada uno: los textos son largos para una sola línea de 332 px.
+  const refs = ref(PAD, e.yRef, INSCRIPTOS_HEX, 'Inscriptos (por grupo)') + ref(PAD, e.yRef + 16, CAT_HEX.tecnica, 'Asistentes (promedio por encuentro)')
+  const l1 = `${nf.format(totales.encuentros)} ${totales.encuentros === 1 ? 'encuentro' : 'encuentros'} · ${nf.format(totales.grupos)} ${totales.grupos === 1 ? 'grupo' : 'grupos'}`
+  const l2 = `Asistencia promedio: ${nf.format(Math.round(totales.asistentes))} de ${nf.format(Math.round(totales.inscriptos))} inscriptos${totales.inscriptos ? ` (${Math.round((totales.asistentes / totales.inscriptos) * 100)}%)` : ''}`
+  const linea = `${l1}. ${l2}`
+  const totalesSvg = t(PAD, e.yTotal + 16, l1, { size: 10, weight: 700 }) + t(PAD, e.yTotal + 30, l2, { size: 10, weight: 700 })
   const titulo = 'Clubes y prácticas: inscriptos y asistentes'
-  return { clave: 'asistencia', titulo, ancho: W, alto: e.alto, svg: tarjeta('asistencia', titulo, e.alto, barras + e.dibujo + refs + t(PAD, e.yTotal, linea, { size: 10, weight: 700 }), `${linea}. ${puntos.map(p => `${p.label} ${p.asistentes} asistentes, ${p.inscriptos} inscriptos`).join('; ')}`), tabla: { cabeza: [nombreColumna(g), 'Inscriptos', 'Asistentes'], filas: puntos.map(p => [p.label, p.inscriptos, p.asistentes]) } }
+  const r = (n: number) => Math.round(n)
+  return { clave: 'asistencia', titulo, ancho: W, alto: e.alto + 30, svg: tarjeta('asistencia', titulo, e.alto + 30, barras + e.dibujo + refs + totalesSvg, `${linea}. ${puntos.map(p => `${p.label} ${r(p.asistentes)} asistentes en promedio, ${r(p.inscriptos)} inscriptos`).join('; ')}`), tabla: { cabeza: [nombreColumna(g), 'Inscriptos', 'Asistentes (promedio por encuentro)'], filas: puntos.map(p => [p.label, r(p.inscriptos), r(p.asistentes)]) } }
 }
 
 // Los cuatro gráficos del informe (los que no tienen datos se omiten).
