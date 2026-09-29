@@ -171,6 +171,8 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
   if (id && !antes) throw new Error('La acción no existe o no es tuya')
   // Al editar sin cambiar la fecha se respeta lo ya cargado (acciones previas a esta regla).
   if (!antes || antes.fecha !== row.fecha) await exigirDiasHabiles([row.fecha])
+  // Una reprogramada que recibe fecha nueva vuelve a planificada: la etiqueta marca sólo lo pendiente de fecha.
+  if (antes && antes.estado === 'reprogramada' && row.estado === 'reprogramada' && antes.fecha !== row.fecha) row.estado = 'planificada'
   const rowSinSerie = row
   // Al editar, el item debe pertenecer al FED que lo edita.
   const res = id ? await db.from('agenda_items').update(rowSinSerie).eq('id', id).eq('fed_id', row.fed_id).select('id').single()
