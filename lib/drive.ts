@@ -66,8 +66,10 @@ export async function listar(padre: string, soloCarpetas = false): Promise<Archi
 }
 
 // Carpeta usable: existe y no está en la papelera (si el FED la borró, hay que crear otra).
-export async function carpetaVigente(id: string): Promise<boolean> {
-  try { const f = await api<{ trashed?: boolean }>(`files/${id}`, {}, { fields: 'trashed' }); return !f.trashed }
+// Con `padre`, además tiene que seguir dentro de esa carpeta: si el FED la quitó de su Drive (queda sin ubicación
+// porque es de la cuenta de la agenda), cuenta como borrada.
+export async function carpetaVigente(id: string, padre?: string): Promise<boolean> {
+  try { const f = await api<{ trashed?: boolean, parents?: string[] }>(`files/${id}`, {}, { fields: 'trashed,parents' }); return !f.trashed && (!padre || (f.parents ?? []).includes(padre)) }
   catch (e) { if (e instanceof DriveError && (e.status === 404 || e.status === 403)) return false; throw e }
 }
 // Contenido de una carpeta aunque esté en la papelera (para rescatar fotos de carpetas eliminadas).

@@ -84,7 +84,7 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
   // Crea la carpeta o la renombra si cambió lo cargado en la agenda; si fue borrada en Drive, la vuelve a crear.
   async function asegurar(actual: { id: string, nombre: string | null } | undefined, nombre: string, padre: string, guardar: (id: string) => PromiseLike<unknown>) {
     // Si la carpeta guardada fue eliminada (papelera) o ya no existe, se crea una nueva; nunca se mueve nada a la papelera.
-    if (actual && !(await carpetaVigente(actual.id))) { await rescatar(actual.id); actual = undefined }
+    if (actual && !(await carpetaVigente(actual.id, padre))) { await rescatar(actual.id); actual = undefined }
     if (actual) {
       if (actual.nombre === nombre) return actual.id
       try { await renombrar(actual.id, nombre); await guardar(actual.id); actual.nombre = nombre; return actual.id }
@@ -118,7 +118,7 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
   const recientes = [...carpetasDia.keys()].filter(f => f !== SIN_FECHA).sort().slice(-60)
   for (const fecha of recientes) {
     const actual = carpetasDia.get(fecha)!
-    if (await carpetaVigente(actual.id)) { await carpetaDia(fecha); continue }
+    if (await carpetaVigente(actual.id, raiz)) { await carpetaDia(fecha); continue }
     // Carpeta eliminada por el FED: las fotos que tenía vuelven a la carpeta principal y se ordenan de nuevo (no se pierden).
     await rescatar(actual.id)
     await db.from('fotos_dias').delete().eq('fed_id', fedId).eq('fecha', fecha)
