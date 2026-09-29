@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Briefcase, CalendarOff, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
+import { Briefcase, CalendarOff, EyeOff, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,14 +11,29 @@ import { horasSemanales, textoCarga, armarDdjj, cargosDe, franjasDte, validarDdj
 import { titleCase } from '@/lib/format'
 import { SeccionFotos } from '@/components/app/fotos'
 import { SeccionPve } from '@/components/app/pve'
-import { eyebrow, errMsg, fedColor, initials, updateMiPerfil, ErrorBox } from '@/components/app/comun'
+import { eyebrow, errMsg, fedColor, initials, storage, updateMiPerfil, ErrorBox } from '@/components/app/comun'
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
 const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 
 // Menú del avatar: Mi perfil (sólo FED) y cambio de perfil. Se cierra con Escape o tocando afuera.
+const CLAVE_PRESENTACION = 'agenda-territorial:presentacion'
+
 export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onFeriados, onPve, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, onPerfil: () => void, onUsuarios: () => void, onFeriados: () => void, onPve: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
   const [open, setOpen] = useState(false)
+  // Modo presentación (sólo administración): oculta las opciones de administración en este navegador.
+  // Se vuelve a mostrar entrando con #admin en la dirección.
+  const [oculto, setOculto] = useState(false)
+  useEffect(() => {
+    const revisar = () => {
+      if (location.hash === '#admin') { storage(() => localStorage.removeItem(CLAVE_PRESENTACION)); history.replaceState(null, '', location.pathname + location.search); setOculto(false) }
+      else setOculto(storage(() => localStorage.getItem(CLAVE_PRESENTACION)) === '1')
+    }
+    revisar(); addEventListener('hashchange', revisar)
+    return () => removeEventListener('hashchange', revisar)
+  }, [])
+  const admin = esAdmin && !oculto
+  const ocultar = () => { storage(() => localStorage.setItem(CLAVE_PRESENTACION, '1')); setOculto(true); setOpen(false) }
   const ref = useRef<HTMLDivElement>(null), btnRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (!open) return
@@ -37,10 +52,11 @@ export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onFer
     </button>
     {open && <div role="menu" aria-label="Opciones de perfil" className="absolute right-0 top-12 z-modal w-60 overflow-hidden rounded-card border border-dte-linea bg-white py-1 shadow-e3">
       <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>
-      {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
-      {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
-      {(esAdmin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onPve() }} className={item}><FileText className="size-4 text-dte-petroleo" />PVE del equipo</button>}
-      {esAdmin && <button role="menuitem" onClick={() => { setOpen(false); onFeriados() }} className={item}><CalendarOff className="size-4 text-dte-petroleo" />Feriados y eventos</button>}
+      {admin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
+      {admin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
+      {(admin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onPve() }} className={item}><FileText className="size-4 text-dte-petroleo" />PVE del equipo</button>}
+      {admin && <button role="menuitem" onClick={() => { setOpen(false); onFeriados() }} className={item}><CalendarOff className="size-4 text-dte-petroleo" />Feriados y eventos</button>}
+      {admin && <button role="menuitem" onClick={ocultar} className={item}><EyeOff className="size-4 text-dte-petroleo" />Ocultar opciones de administración</button>}
       <button role="menuitem" onClick={() => { setOpen(false); onPassword() }} className={item}><KeyRound className="size-4 text-dte-petroleo" />Cambiar contraseña</button>
       <button role="menuitem" onClick={() => { setOpen(false); onSalir() }} className={`${item} border-t border-dte-linea text-peligro`}><LogOut className="size-4" />Cerrar sesión</button>
     </div>}
