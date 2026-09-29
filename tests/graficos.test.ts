@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { AgendaItem } from '@/lib/agenda'
-import { CAT_HEX, asistencia, buckets, esc, evolucion, granularidad, graficosInforme, lunesDe, porCategoria } from '@/lib/graficos'
+import { CAT_HEX, asistencia, buckets, ejeValores, esc, evolucion, granularidad, graficosInforme, lunesDe, porCategoria } from '@/lib/graficos'
 
 let n = 0
 const item = (accion: string, fecha: string, extra: Record<string, unknown> = {}) => ({ id: `i${++n}`, accion, fecha, estado: 'realizada', fed_id: 'f1', club_id: null, encuentros: [], ...extra }) as unknown as AgendaItem
@@ -93,5 +93,33 @@ describe('SVG de los gráficos', () => {
   it('los colores coinciden con los de la app (globals.css)', () => {
     const css = readFileSync('app/globals.css', 'utf8')
     for (const [k, hex] of Object.entries(CAT_HEX)) expect(css).toContain(`--color-cat-${k}: ${hex};`)
+  })
+})
+
+describe('eje de valores y números', () => {
+  it('el eje usa pasos redondos, enteros y a lo sumo 4 intervalos', () => {
+    expect(ejeValores(75)).toEqual({ tope: 80, valores: [0, 20, 40, 60, 80] })
+    expect(ejeValores(26)).toEqual({ tope: 30, valores: [0, 10, 20, 30] })
+    expect(ejeValores(1)).toEqual({ tope: 1, valores: [0, 1] })
+    expect(ejeValores(0)).toEqual({ tope: 1, valores: [0, 1] })
+    expect(ejeValores(3).valores.every(Number.isInteger)).toBe(true)
+    expect(ejeValores(1234).tope).toBeGreaterThanOrEqual(1234)
+  })
+  const clubes = (n: number) => Array.from({ length: n }, (_, k) => item('CLUB DE TECNOLOGÍA', `2026-${String(k + 1).padStart(2, '0')}-10`, { encuentros: [enc(`2026-${String(k + 1).padStart(2, '0')}-10`, 30, 10 + k)] }))
+  it('con 12 meses igual muestra el eje y el número de cada barra', () => {
+    const g = graficosInforme({ items: clubes(12), desde: '2026-01-01', hasta: '2026-12-31' }).find(x => x.clave === 'asistencia')!
+    expect(g.svg).toContain('>30<') // tope del eje (máximo de inscriptos: 30)
+    for (const v of [10, 15, 21]) expect(g.svg).toContain(`>${v}<`) // asistentes de cada mes
+  })
+  it('totales de asistencia: un grupo cuenta una vez en inscriptos y todas sus asistencias suman', () => {
+    const its = [item('CLUB DE TECNOLOGÍA', '2026-09-02', { encuentros: [enc('2026-09-02', 30, 20), enc('2026-09-09', 34, 25)] }), item('PRÁCTICAS PROFESIONALIZANTES', '2026-09-16', { encuentros: [enc('2026-09-16', 10, 8, 'c2')] })]
+    expect(asistencia(its, '2026-09-01', '2026-09-30').totales).toEqual({ encuentros: 3, grupos: 2, asistencias: 53, inscriptos: 44 })
+    const g = graficosInforme({ items: its, desde: '2026-09-01', hasta: '2026-09-30' }).find(x => x.clave === 'asistencia')!
+    expect(g.svg).toContain('3 encuentros · 53 asistencias · 44 inscriptos en 2 grupos')
+    expect(g.svg).toContain('Asistentes (suma de encuentros)')
+  })
+  it('la evolución muestra el total del período', () => {
+    const g = graficosInforme({ items: [item('REUNIÓN', '2026-09-02'), item('REUNIÓN', '2026-09-10')], desde: '2026-09-01', hasta: '2026-09-30' }).find(x => x.clave === 'evolucion')!
+    expect(g.svg).toContain('Total: 2 acciones realizadas')
   })
 })

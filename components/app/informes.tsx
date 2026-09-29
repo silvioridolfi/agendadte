@@ -41,6 +41,7 @@ h2 { color: #05476e; font-size: 12.5pt; margin: 6mm 0 2mm; }
 .ind span { display: block; font-size: 8pt; color: #5b6474; line-height: 1.3; }
 .ind strong { display: block; font-size: 17pt; color: #05476e; margin-top: 1mm; }
 .ind em { font-style: normal; font-size: 7.5pt; color: #5b6474; }
+.graficos { break-before: page; }
 .graf { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3mm; align-items: start; }
 .graf svg { display: block; width: 100%; height: auto; break-inside: avoid; }
 table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
@@ -75,7 +76,7 @@ tr:nth-child(even) td { background: #f6f5f9; } tr { break-inside: avoid; }
 </div>
 <h2>Indicadores del período</h2>
 <div class="ind">${indicadores.map(x => `<div><span>${esc(x.label)}</span><strong>${x.valor}</strong>${x.detalle ? `<em>${esc(x.detalle)}</em>` : ''}</div>`).join('')}</div>
-${graf.length ? `<h2>Gráficos del período</h2><div class="graf">${graf.map(g => g.svg).join('')}</div>` : ''}
+${graf.length ? `<section class="graficos"><h2>Gráficos del período</h2><div class="graf">${graf.map(g => g.svg).join('')}</div></section>` : ''}
 <h2>Detalle de acciones realizadas (${hechas.length})</h2>
 ${hechas.length ? `<div class="tabla"><table><thead><tr><th>Fecha</th>${variosResponsables ? '<th>Responsable</th>' : ''}<th>Acción</th><th>Escuela / lugar</th><th>Tema / detalle</th></tr></thead><tbody>
 ${hechas.map(i => `<tr><td>${fechaAR(i.fecha)}</td>${variosResponsables ? `<td>${esc(fedName(i.fed_id))}</td>` : ''}<td>${esc(titleCase(i.accion))}</td><td>${esc(i.school?.nombre ? `${titleCase(i.school.nombre)}${i.school.cue ? ` (CUE ${i.school.cue})` : ''}` : i.lugar ?? '')}</td><td>${esc(i.sub_accion ?? '')}</td></tr>`).join('')}
