@@ -1,3 +1,4 @@
+import { esEnero } from '@/lib/receso'
 export const ACCIONES = [
   'VISITA TÉCNICA', 'VISITA PEDAGÓGICA', 'REUNIÓN', 'CLUB DE TECNOLOGÍA', 'PRÁCTICAS PROFESIONALIZANTES', 'TALLER/CAPACITACIÓN',
   'ASISTENCIA REMOTA', 'CONECTIVIDAD', 'ENTREGA DE EQUIPAMIENTO', 'ADMINISTRATIVO', 'PLANIFICACIÓN', 'OFICINA R1',
@@ -208,7 +209,7 @@ export function diasHabilesEntre(desde: string, hasta: string, noHabiles?: Set<s
   while (d < end) {
     d.setDate(d.getDate() + 1)
     const s = ymdLocal(d), w = d.getDay()
-    if (w !== 0 && w !== 6 && !noHabiles?.has(s) && !RECESO.some(([a, b]) => s >= a && s <= b)) n++
+    if (w !== 0 && w !== 6 && !noHabiles?.has(s) && !esEnero(s) && !RECESO.some(([a, b]) => s >= a && s <= b)) n++
   }
   return n
 }
@@ -222,7 +223,7 @@ export function serieFechas(desde: string, dias: number[], hasta: string, noLabo
     d.setDate(d.getDate() + 1)
     if (d > end) break
     const s = ymdLocal(d)
-    if (dias.includes(d.getDay()) && !noLaborables.has(s)) out.push(s)
+    if (dias.includes(d.getDay()) && !noLaborables.has(s) && !esEnero(s)) out.push(s)
   }
   return out
 }
