@@ -22,9 +22,9 @@ export function FeriadosView({ autorId, onSaved }: { autorId: string, onSaved: (
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [aQuitar, setAQuitar] = useState<Feriado | null>(null)
-  const cargar = () => { setList(null); getFeriados(`${year}-01-01`, `${year}-12-31`).then(setList).catch(e => { setList([]); setError(errMsg(e)) }) }
+  const cargar = () => { setList(null); getFeriados(`${year}-01-01`, `${year}-12-31`).then(l => setList(l.filter(f => f.id))).catch(e => { setList([]); setError(errMsg(e)) }) }
   // Carga al cambiar de año: el estado sólo se actualiza cuando llega la respuesta.
-  useEffect(() => { let vivo = true; getFeriados(`${year}-01-01`, `${year}-12-31`).then(l => vivo && setList(l)).catch(e => { if (vivo) { setList([]); setError(errMsg(e)) } }); return () => { vivo = false } }, [year])
+  useEffect(() => { let vivo = true; getFeriados(`${year}-01-01`, `${year}-12-31`).then(l => vivo && setList(l.filter(f => f.id))).catch(e => { if (vivo) { setList([]); setError(errMsg(e)) } }); return () => { vivo = false } }, [year])
   const cambiarAnio = (n: number) => { setList(null); setYear(y => y + n) }
   async function agregar() {
     setBusy('add'); setError('')

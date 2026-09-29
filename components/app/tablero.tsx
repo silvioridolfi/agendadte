@@ -19,6 +19,7 @@ import { indicadoresCoordinacion, informeFed } from '@/lib/informes'
 import { BotonRealizar, puedeRealizar, EtiquetasAccion, type ItemPreset, itemCorto, cueLugar, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
 import { hoyAR, fechaHoyAR, anioAR } from '@/lib/hora'
 import { agruparVisitas } from '@/lib/visita'
+import { inicioAnio } from '@/lib/receso'
 
 // =====================================================================
 
@@ -26,13 +27,13 @@ export type Range = 'day' | 'week' | 'month' | 'year'
 export function rangeBounds(anchor: Date, range: Range): [Date, Date] {
   if (range === 'day') return [anchor, anchor]
   if (range === 'week') { const s = startOfWeek(anchor); return [s, addDays(s, 6)] }
-  if (range === 'year') return [new Date(anchor.getFullYear(), 0, 1, 12), new Date(anchor.getFullYear(), 11, 31, 12)]
+  if (range === 'year') return [inicioAnio(anchor.getFullYear()), new Date(anchor.getFullYear(), 11, 31, 12)]
   return [new Date(anchor.getFullYear(), anchor.getMonth(), 1, 12), new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0, 12)]
 }
 export function shift(anchor: Date, range: Range, dir: number) {
   if (range === 'day') return addDays(anchor, dir)
   if (range === 'week') return addDays(anchor, 7 * dir)
-  if (range === 'year') return new Date(anchor.getFullYear() + dir, 0, 1, 12)
+  if (range === 'year') return inicioAnio(anchor.getFullYear() + dir)
   return new Date(anchor.getFullYear(), anchor.getMonth() + dir, 1, 12)
 }
 export const rangeNames: Record<Range, [string, string, string]> = { day: ['Día', 'día', 'este día'], week: ['Semana', 'semana', 'esta semana'], month: ['Mes', 'mes', 'este mes'], year: ['Año', 'año', 'este año'] }

@@ -10,6 +10,7 @@ import { CalendarPlus, Loader2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ErrorBox, errMsg } from '@/components/app/comun'
 import { hoyAR, ZONA } from '@/lib/hora'
+import { inicioCiclo } from '@/lib/receso'
 
 const nf = new Intl.NumberFormat('es-AR')
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -88,9 +89,9 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
   // Ciclo lectivo: totales por semestre (1.º hasta el receso invernal, 2.º desde agosto), independientes del período elegido.
   const cicloYear = Number(hoy.slice(0, 4))
   const tramos = [
-    { k: 's1', label: '1.er semestre', desde: `${cicloYear}-01-01`, hasta: `${cicloYear}-07-31` },
+    { k: 's1', label: '1.er semestre', desde: inicioCiclo(cicloYear), hasta: `${cicloYear}-07-31` },
     { k: 's2', label: '2.º semestre', desde: `${cicloYear}-08-01`, hasta: `${cicloYear}-12-31` },
-    { k: 'ciclo', label: `Ciclo ${cicloYear}`, desde: `${cicloYear}-01-01`, hasta: `${cicloYear}-12-31` },
+    { k: 'ciclo', label: `Ciclo ${cicloYear}`, desde: inicioCiclo(cicloYear), hasta: `${cicloYear}-12-31` },
   ]
   const ciclo = useMemo(() => {
     const delTipo = todos.filter(c => c.tipo === tipo)

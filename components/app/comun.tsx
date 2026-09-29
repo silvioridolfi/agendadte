@@ -9,6 +9,7 @@ import { titleCase } from '@/lib/format'
 import { nombreCorto, siglaNombre } from '@/lib/siglas'
 import { esAusencia, etiquetaAccion, nombreAccion, type Accion, type AgendaItem, type Feriado, type Estado, type Fed, type School } from '@/lib/agenda'
 import { anioAR, hoyAR, ZONA } from '@/lib/hora'
+import { inicioAnio } from '@/lib/receso'
 
 // ---- estilos por categoría ----
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
@@ -258,13 +259,13 @@ export function calBounds(anchor: Date, view: CalView): [Date, Date] {
   if (view === 'day') return [anchor, anchor]
   if (view === 'week') { const s = startOfWeek(anchor); return [s, addDays(s, 4)] }
   if (view === 'month') return [monthStart(anchor), monthEnd(anchor)]
-  if (view === 'list') return [new Date(anchor.getFullYear(), 0, 1, 12), new Date(anchor.getFullYear(), 11, 31, 12)]
+  if (view === 'list') return [inicioAnio(anchor.getFullYear()), new Date(anchor.getFullYear(), 11, 31, 12)]
   return [monthStart(anchor), monthEnd(anchor, 5)]
 }
 export function calShift(anchor: Date, view: CalView, dir: number) {
   if (view === 'day') return toWeekday(addDays(anchor, dir), dir)
   if (view === 'week') return addDays(anchor, 7 * dir)
-  if (view === 'list') return new Date(anchor.getFullYear() + dir, 0, 1, 12)
+  if (view === 'list') return inicioAnio(anchor.getFullYear() + dir)
   return monthStart(anchor, view === 'month' ? dir : 6 * dir)
 }
 // Semanas (lunes a viernes) que cubren un mes; los días de otros meses quedan en null.

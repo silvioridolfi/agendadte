@@ -1,6 +1,7 @@
 'use server'
 
 import { supabaseServer } from '@/lib/supabase-server'
+import { esEnero, mensajeEnero, recesoEnero } from '@/lib/receso'
 import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, MODALIDADES, MODALIDADES_EVENTO, ROLES_FORMACION, type EventoDte, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
 import { borrarSesion, guardarSesion, passwordTemporal, requerirUsuario, usuarioActual, usuarioDeSesion, validarPassword, type Usuario } from '@/lib/sesion'
 import { DriveError, cuentaTecnica, driveConfigurado, idDeCarpeta, urlCarpeta, verificarCarpeta } from '@/lib/drive'
@@ -137,6 +138,8 @@ const fechaCorta = (f: string) => { const [y, m, d] = f.split('-'); return `${d}
 async function exigirDiasHabiles(fechas: string[]) {
   const finde = fechas.find(f => [0, 6].includes(new Date(`${f}T12:00:00Z`).getUTCDay()))
   if (finde) throw new Error(`El ${fechaCorta(finde)} es fin de semana: sólo se pueden cargar acciones de lunes a viernes.`)
+  const ene = fechas.find(esEnero)
+  if (ene) throw new Error(mensajeEnero(fechaCorta(ene)))
   if (!fechas.length) return
   const { data } = await supabaseServer().from('feriados').select('fecha, nombre, tipo').in('fecha', fechas).neq('tipo', 'distrital').limit(1)
   const f = data?.[0]
@@ -485,7 +488,10 @@ async function confirmarFeriadoImpl(autorId: string, id: string, confirmado: boo
 async function getFeriadosImpl(from: string, to: string): Promise<Feriado[]> {
   const { data, error } = await supabaseServer().from('feriados').select('id, fecha, nombre, tipo, distrito, confirmado').gte('fecha', from).lte('fecha', to).order('fecha')
   if (error) throw new Error(error.message)
-  return (data ?? []) as Feriado[]
+  const reales = (data ?? []) as Feriado[]
+  // Enero es receso de verano: se suma a los feriados cargados (salvo los días que ya tienen uno no distrital).
+  const ocupados = new Set(reales.filter(f => f.tipo !== 'distrital').map(f => f.fecha))
+  return [...reales, ...recesoEnero(from, to).filter(f => !ocupados.has(f.fecha))].sort((a, b) => a.fecha.localeCompare(b.fecha))
 }
 
 // ---- Acciones en bloque (selección múltiple): sólo sobre acciones propias; un aviso por compañero, no uno por acción.
@@ -546,7 +552,7 @@ async function moverFinDeSemanaImpl(ids: string[], fedId: string, destino: 'vier
     // Al día hábil anterior o siguiente (si el viernes o el lunes es feriado, sigue de largo).
     const ymd = () => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     do d.setDate(d.getDate() + (destino === 'viernes' ? -1 : 1))
-    while (d.getDay() === 0 || d.getDay() === 6 || noHabiles.has(ymd()))
+    while (d.getDay() === 0 || d.getDay() === 6 || noHabiles.has(ymd()) || esEnero(ymd()))
     const nueva = ymd()
     const up = await db.from('agenda_items').update({ fecha: nueva }).eq('id', i.id).eq('fed_id', fedId)
     if (up.error) throw new Error(up.error.message)
