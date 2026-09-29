@@ -66,11 +66,14 @@ export function evolucion(items: AgendaItem[], desde: string, hasta: string): { 
 }
 
 export type PuntoAsistencia = Bucket & { inscriptos: number, asistentes: number }
-// Inscriptos: el máximo registrado de cada grupo en el período (un grupo cuenta una vez, como en el indicador del informe).
-export function asistencia(items: AgendaItem[], desde: string, hasta: string): { g: Granularidad, puntos: PuntoAsistencia[] } {
+export type TotalesAsistencia = { encuentros: number, grupos: number, asistencias: number, inscriptos: number }
+// Por período: `asistentes` suma las asistencias de todos los encuentros; `inscriptos`, el máximo registrado de cada grupo
+// (un grupo cuenta una vez, como en el indicador del informe). Por eso los asistentes de un mes pueden superar a los inscriptos.
+export function asistencia(items: AgendaItem[], desde: string, hasta: string): { g: Granularidad, puntos: PuntoAsistencia[], totales: TotalesAsistencia } {
   const { g, lista } = buckets(desde, hasta)
   const puntos = lista.map(b => ({ ...b, inscriptos: 0, asistentes: 0 }))
   const por = new Map(puntos.map(p => [p.clave, { p, clubes: new Map<string, number>() }]))
+  const grupos = new Map<string, number>(), totales = { encuentros: 0, grupos: 0, asistencias: 0, inscriptos: 0 }
   for (const i of hechas(items).filter(x => x.accion === 'CLUB DE TECNOLOGÍA' || x.accion === 'PRÁCTICAS PROFESIONALIZANTES')) {
     for (const e of i.encuentros ?? []) {
       const b = por.get(claveDe(g, e.fecha))
@@ -78,10 +81,13 @@ export function asistencia(items: AgendaItem[], desde: string, hasta: string): {
       b.p.asistentes += e.asistentes ?? 0
       const k = e.club_id ?? i.club_id ?? i.id
       b.clubes.set(k, Math.max(b.clubes.get(k) ?? 0, e.inscriptos ?? 0))
+      grupos.set(k, Math.max(grupos.get(k) ?? 0, e.inscriptos ?? 0))
+      totales.encuentros++; totales.asistencias += e.asistentes ?? 0
     }
   }
   for (const { p, clubes } of por.values()) p.inscriptos = [...clubes.values()].reduce((a, b) => a + b, 0)
-  return { g, puntos }
+  totales.grupos = grupos.size; totales.inscriptos = [...grupos.values()].reduce((a, b) => a + b, 0)
+  return { g, puntos, totales }
 }
 
 // ---- SVG ----
@@ -126,15 +132,29 @@ function tipos(items: AgendaItem[]): Grafico | null {
   return { clave: 'tipos', titulo: 'Acciones por tipo', ancho: W, alto, svg: tarjeta('tipos', 'Acciones por tipo', alto, cuerpo, filas.map(([k, v]) => `${k} ${v}`).join(', ')), tabla: { cabeza: ['Tipo', 'Acciones'], filas } }
 }
 
-// Eje de columnas: `n` barras repartidas en el ancho útil; los rótulos se inclinan si no entran.
-const ALTO_COL = 118, Y_BASE = 46 + 14 + ALTO_COL // 14 = lugar para el número sobre la barra más alta
-function eje(labels: string[]) {
-  const n = labels.length, larga = Math.max(...labels.map(l => l.length)) * 5.4, inclinar = larga > IW / n
-  const izq = inclinar ? 16 : 0 // los rótulos inclinados se extienden hacia la izquierda: se deja lugar para el primero
+// Eje vertical: hasta 4 intervalos con paso "redondo" (1, 2, 5 × 10ⁿ) y siempre enteros.
+export function ejeValores(max: number): { tope: number, valores: number[] } {
+  const bruto = Math.max(max, 1) / 4, mag = 10 ** Math.floor(Math.log10(bruto))
+  const paso = Math.max(1, [1, 2, 5, 10].map(m => m * mag).find(p => p >= bruto)!)
+  const tope = Math.ceil(Math.max(max, 1) / paso) * paso
+  return { tope, valores: Array.from({ length: Math.round(tope / paso) + 1 }, (_, i) => i * paso) }
+}
+
+// Columnas con eje de valores y líneas de referencia; `n` barras repartidas en el ancho útil (los rótulos se inclinan si no entran).
+const ALTO_COL = 118, Y_BASE = 46 + 14 + ALTO_COL, EJE_Y = 30 // 14 = lugar para el número sobre la barra más alta; EJE_Y = ancho de los valores del eje
+function eje(labels: string[], max: number) {
+  const { tope, valores } = ejeValores(max)
+  const n = labels.length, larga = Math.max(...labels.map(l => l.length)) * 5.4
+  const inclinar = larga > (IW - EJE_Y) / n
+  const izq = EJE_Y + (inclinar ? 16 : 0) // los rótulos inclinados se extienden hacia la izquierda
   const paso = (IW - izq) / n, w = paso - 3
   const x = (i: number) => PAD + izq + i * paso + 1.5
+  const h = (v: number) => (v / tope) * ALTO_COL
+  const x0 = PAD + izq - 4
+  const rejilla = valores.map(v => `<line x1="${x0}" y1="${(Y_BASE - h(v)).toFixed(2)}" x2="${W - PAD}" y2="${(Y_BASE - h(v)).toFixed(2)}" stroke="${v ? LINEA : GRIS}"/>` + t(x0 - 4, Y_BASE - h(v) + 3, nf.format(v), { size: 9, fill: GRIS, anchor: 'end' })).join('')
   const rotulos = labels.map((l, i) => inclinar ? t(x(i) + w / 2 + 3, Y_BASE + 12, l, { size: 9.5, fill: GRIS, anchor: 'end', rotar: -45 }) : t(x(i) + w / 2, Y_BASE + 13, l, { size: 9.5, fill: GRIS, anchor: 'middle' })).join('')
-  return { w, x, dibujo: `<line x1="${PAD}" y1="${Y_BASE}" x2="${W - PAD}" y2="${Y_BASE}" stroke="${GRIS}"/>${rotulos}`, alto: Y_BASE + 20 + (inclinar ? 16 : 0) + 30, yRef: Y_BASE + 20 + (inclinar ? 16 : 0) + 14 }
+  const base = Y_BASE + 20 + (inclinar ? 16 : 0)
+  return { w, x, h, cabe: (s: string) => s.length * 4.8 + 1 <= paso, dibujo: rejilla + rotulos, yRef: base + 14, yTotal: base + 32, alto: base + 30 + 20 }
 }
 const nombreColumna = (g: Granularidad) => (g === 'semana' ? 'Semana del' : 'Mes')
 
@@ -142,35 +162,37 @@ const nombreColumna = (g: Granularidad) => (g === 'semana' ? 'Semana del' : 'Mes
 function evolucionGrafico(items: AgendaItem[], desde: string, hasta: string): Grafico | null {
   const { g, puntos } = evolucion(items, desde, hasta)
   if (puntos.length < 2 || !puntos.some(p => p.total)) return null
-  const max = Math.max(...puntos.map(p => p.total)), e = eje(puntos.map(p => p.label)), nums = puntos.length <= 14
+  const e = eje(puntos.map(p => p.label), Math.max(...puntos.map(p => p.total))), total = puntos.reduce((a, p) => a + p.total, 0)
   const barras = puntos.map((p, i) => {
     if (!p.total) return ''
-    const con = CATEGORIAS.filter(k => p.counts[k]), H = (p.total / max) * ALTO_COL, gap = H >= 10 * con.length ? 2 : 0, util = H - gap * (con.length - 1)
+    const con = CATEGORIAS.filter(k => p.counts[k]), H = e.h(p.total), gap = H >= 10 * con.length ? 2 : 0, util = H - gap * (con.length - 1)
     let y = Y_BASE
-    const segs = con.map(k => { const h = (p.counts[k] / p.total) * util; y -= h; const r = `<rect x="${e.x(i).toFixed(2)}" y="${y.toFixed(2)}" width="${e.w.toFixed(2)}" height="${h.toFixed(2)}" fill="${CAT_HEX[k]}"/>`; y -= gap; return r }).join('')
-    return segs + (nums ? t(e.x(i) + e.w / 2, Y_BASE - H - 4, String(p.total), { size: 9, anchor: 'middle' }) : '')
+    const segs = con.map(k => { const hh = (p.counts[k] / p.total) * util; y -= hh; const r = `<rect x="${e.x(i).toFixed(2)}" y="${y.toFixed(2)}" width="${e.w.toFixed(2)}" height="${hh.toFixed(2)}" fill="${CAT_HEX[k]}"/>`; y -= gap; return r }).join('')
+    return segs + (e.cabe(String(p.total)) ? t(e.x(i) + e.w / 2, Y_BASE - H - 4, String(p.total), { size: 9, anchor: 'middle' }) : '')
   }).join('')
   const refs = CATEGORIAS.map((k, j) => ref(PAD + [0, 84, 182][j], e.yRef, CAT_HEX[k], CATEGORIA_LABEL[k])).join('')
+  const resumen = t(PAD, e.yTotal, `Total: ${nf.format(total)} ${total === 1 ? 'acción realizada' : 'acciones realizadas'}`, { size: 10.5, weight: 700 })
   const titulo = `Acciones por ${g}`
-  return { clave: 'evolucion', titulo, ancho: W, alto: e.alto, svg: tarjeta('evolucion', titulo, e.alto, barras + e.dibujo + refs, puntos.map(p => `${p.label} ${p.total}`).join(', ')), tabla: { cabeza: [nombreColumna(g), ...CATEGORIAS.map(k => CATEGORIA_LABEL[k]), 'Total'], filas: puntos.map(p => [p.label, ...CATEGORIAS.map(k => p.counts[k]), p.total]) } }
+  return { clave: 'evolucion', titulo, ancho: W, alto: e.alto, svg: tarjeta('evolucion', titulo, e.alto, barras + e.dibujo + refs + resumen, puntos.map(p => `${p.label} ${p.total}`).join(', ')), tabla: { cabeza: [nombreColumna(g), ...CATEGORIAS.map(k => CATEGORIA_LABEL[k]), 'Total'], filas: puntos.map(p => [p.label, ...CATEGORIAS.map(k => p.counts[k]), p.total]) } }
 }
 
 // 4. Clubes y prácticas: inscriptos (ancho, claro) y asistentes (angosto, sólido), mismo azul.
 function asistenciaGrafico(items: AgendaItem[], desde: string, hasta: string): Grafico | null {
-  const { g, puntos } = asistencia(items, desde, hasta)
+  const { g, puntos, totales } = asistencia(items, desde, hasta)
   if (puntos.length < 2 || !puntos.some(p => p.inscriptos || p.asistentes)) return null
-  const max = Math.max(...puntos.map(p => Math.max(p.inscriptos, p.asistentes))), e = eje(puntos.map(p => p.label)), nums = puntos.length <= 10
+  const e = eje(puntos.map(p => p.label), Math.max(...puntos.map(p => Math.max(p.inscriptos, p.asistentes))))
   const barras = puntos.map((p, i) => {
     const m = Math.max(p.inscriptos, p.asistentes)
     if (!m) return ''
-    const H = (m / max) * ALTO_COL, Ha = (p.asistentes / max) * ALTO_COL
+    const H = e.h(m), Ha = e.h(p.asistentes)
     return `<rect x="${e.x(i).toFixed(2)}" y="${(Y_BASE - H).toFixed(2)}" width="${e.w.toFixed(2)}" height="${H.toFixed(2)}" fill="${INSCRIPTOS_HEX}"/>` +
       (p.asistentes ? `<rect x="${(e.x(i) + e.w * 0.22).toFixed(2)}" y="${(Y_BASE - Ha).toFixed(2)}" width="${(e.w * 0.56).toFixed(2)}" height="${Ha.toFixed(2)}" fill="${CAT_HEX.tecnica}"/>` : '') +
-      (nums && p.asistentes ? t(e.x(i) + e.w / 2, Y_BASE - H - 4, nf.format(p.asistentes), { size: 9, anchor: 'middle' }) : '')
+      (p.asistentes && e.cabe(nf.format(p.asistentes)) ? t(e.x(i) + e.w / 2, Y_BASE - H - 4, nf.format(p.asistentes), { size: 9, anchor: 'middle' }) : '')
   }).join('')
-  const refs = ref(PAD, e.yRef, INSCRIPTOS_HEX, 'Inscriptos') + ref(PAD + 84, e.yRef, CAT_HEX.tecnica, 'Asistentes')
+  const refs = ref(PAD, e.yRef, INSCRIPTOS_HEX, 'Inscriptos (por grupo)') + ref(PAD + 130, e.yRef, CAT_HEX.tecnica, 'Asistentes (suma de encuentros)')
+  const linea = `${nf.format(totales.encuentros)} ${totales.encuentros === 1 ? 'encuentro' : 'encuentros'} · ${nf.format(totales.asistencias)} asistencias · ${nf.format(totales.inscriptos)} inscriptos en ${nf.format(totales.grupos)} ${totales.grupos === 1 ? 'grupo' : 'grupos'}`
   const titulo = 'Clubes y prácticas: inscriptos y asistentes'
-  return { clave: 'asistencia', titulo, ancho: W, alto: e.alto, svg: tarjeta('asistencia', titulo, e.alto, barras + e.dibujo + refs, puntos.map(p => `${p.label} ${p.asistentes} de ${p.inscriptos}`).join(', ')), tabla: { cabeza: [nombreColumna(g), 'Inscriptos', 'Asistentes'], filas: puntos.map(p => [p.label, p.inscriptos, p.asistentes]) } }
+  return { clave: 'asistencia', titulo, ancho: W, alto: e.alto, svg: tarjeta('asistencia', titulo, e.alto, barras + e.dibujo + refs + t(PAD, e.yTotal, linea, { size: 10, weight: 700 }), `${linea}. ${puntos.map(p => `${p.label} ${p.asistentes} asistentes, ${p.inscriptos} inscriptos`).join('; ')}`), tabla: { cabeza: [nombreColumna(g), 'Inscriptos', 'Asistentes'], filas: puntos.map(p => [p.label, p.inscriptos, p.asistentes]) } }
 }
 
 // Los cuatro gráficos del informe (los que no tienen datos se omiten).
