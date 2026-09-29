@@ -129,13 +129,17 @@ function VistaDia({ equipo, fecha, esHoy, deDia, onSelect }: { equipo: Fed[], fe
             {sinHora.map(i => <Bloque key={i.id} i={i} onSelect={onSelect} className="max-w-full" />)}
             {!l.length && <span className="text-xs text-dte-gris">Sin acciones</span>}
           </div>
-          <div className="relative min-h-14 border-l border-dte-linea">
-            {horas.map(h => <span key={h} aria-hidden className="absolute inset-y-0 w-px bg-dte-linea/60" style={{ left: `${pos(`${String(h).padStart(2, '0')}:00`)}%` }} />)}
-            {esHoy && <span aria-hidden className="absolute inset-y-0 z-[1] w-0.5 bg-dte-magenta" style={{ left: `${pos(ahoraStr)}%` }} title="Ahora" />}
-            {conHora.map((i, k) => { const ini = hhmm(i.hora_inicio), fin = hhmm(i.hora_fin) || `${String(Math.min(H_FIN, Number(ini.slice(0, 2)) + 1)).padStart(2, '0')}:${ini.slice(3)}`
-              const solapa = conHora.slice(0, k).some(o => hhmm(o.hora_inicio) < fin && (hhmm(o.hora_fin) || hhmm(o.hora_inicio)) > ini)
-              return <div key={i.id} className={`absolute p-0.5 ${solapa ? 'top-1/2 bottom-0' : conHora.some((o, m) => m > k && hhmm(o.hora_inicio) < fin && (hhmm(o.hora_fin) || hhmm(o.hora_inicio)) > ini) ? 'top-0 bottom-1/2' : 'inset-y-1'}`} style={{ left: `${pos(ini)}%`, width: `${Math.max(4, pos(fin) - pos(ini))}%` }}><Bloque i={i} onSelect={onSelect} className="h-full w-full" /></div> })}
-          </div>
+          {(() => {
+            // Carriles: cada acción va al primer carril libre; la fila crece con los solapamientos.
+            const rangos = [...conHora].sort((a, b) => hhmm(a.hora_inicio).localeCompare(hhmm(b.hora_inicio))).map(i => { const ini = hhmm(i.hora_inicio); return { i, ini, fin: hhmm(i.hora_fin) || `${String(Math.min(H_FIN, Number(ini.slice(0, 2)) + 1)).padStart(2, '0')}:${ini.slice(3)}` } })
+            const finCarril: string[] = []
+            const ubicados = rangos.map(r => { let c = finCarril.findIndex(f => f <= r.ini); if (c < 0) c = finCarril.length; finCarril[c] = r.fin; return { ...r, c } })
+            return <div className="relative border-l border-dte-linea" style={{ minHeight: `${Math.max(1, finCarril.length) * 3 + 0.5}rem` }}>
+              {horas.map(h => <span key={h} aria-hidden className="absolute inset-y-0 w-px bg-dte-linea/60" style={{ left: `${pos(`${String(h).padStart(2, '0')}:00`)}%` }} />)}
+              {esHoy && <span aria-hidden className="absolute inset-y-0 z-[1] w-0.5 bg-dte-magenta" style={{ left: `${pos(ahoraStr)}%` }} title="Ahora" />}
+              {ubicados.map(({ i, ini, fin, c }) => <div key={i.id} className="absolute h-12 p-0.5" style={{ top: `${c * 3 + 0.25}rem`, left: `${pos(ini)}%`, width: `${Math.max(4, pos(fin) - pos(ini))}%` }}><Bloque i={i} onSelect={onSelect} className="h-full w-full" /></div>)}
+            </div>
+          })()}
         </li>
       })}</ul>
     </div>
