@@ -65,7 +65,9 @@ export default function Page() {
   const [toastAcciones, setToastAcciones] = useState<AccionAviso[]>([])
 
   const cargarSesion = useCallback(() => {
-    miSesion().then(s => {
+    // Si el servidor de sesiones falla un momento, se reintenta antes de mandar al ingreso.
+    const conReintento = (n: number): ReturnType<typeof miSesion> => miSesion().catch(e => { if (n <= 0) throw e; return new Promise(r => setTimeout(r, 3000)).then(() => conReintento(n - 1)) })
+    conReintento(4).then(s => {
       setSesion(s)
       // Coordinación entra al Tablero (vistazo general del equipo); cada FED, a su agenda.
       if (s) { const previa = storage(() => sessionStorage.getItem(SECCION_KEY)) as Seccion | null; setSection(previa && SECCIONES.includes(previa) ? previa : s.fed.rol === 'coordinacion' ? 'board' : 'agenda'); if (!s.debeCambiar) getFeds().then(setFeds).catch(() => setFeds([])) }
