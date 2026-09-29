@@ -10,6 +10,7 @@ import { nombreCorto, siglaNombre } from '@/lib/siglas'
 import { esAusencia, etiquetaAccion, nombreAccion, type Accion, type AgendaItem, type Feriado, type Estado, type Fed, type School } from '@/lib/agenda'
 import { anioAR, hoyAR, ZONA } from '@/lib/hora'
 import { inicioAnio } from '@/lib/receso'
+import { esReunion } from '@/lib/reunion'
 
 // ---- estilos por categoría ----
 // Colores de acción: distinguibles entre sí, texto con contraste AA sobre su fondo. `dot` se usa como acento.
@@ -81,7 +82,9 @@ export const schoolPlace = (s: School | null) => (s ? [s.ciudad && s.ciudad !== 
 export const ddjjFor = (fed: Fed, fecha: string) => { const d = parse(fecha).getDay(); return d >= 1 && d <= 5 ? fed.ddjj?.find(x => x.dia === d) : undefined }
 // Título de la acción; en clubes y prácticas se agrega el grado/grupo (ej.: "EP N° 5 · 4° A").
 export const conGrupo = (i: AgendaItem, t: string) => (i.club?.grupo ? `${t} · ${i.club.grupo}` : t)
-export const itemTitle = (i: AgendaItem) => conGrupo(i, i.school ? schoolName(i.school) : i.lugar || i.sub_accion || cap(i.accion.toLowerCase()))
+export const itemTitle = (i: AgendaItem) => conGrupo(i, i.school ? schoolName(i.school) : i.lugar || i.sub_accion || (i.modalidad === 'Virtual' ? `${cap(i.accion.toLowerCase())} virtual` : cap(i.accion.toLowerCase())))
+// Reunión virtual o híbrida: se marca en las tarjetas ("Virtual" / "Híbrido").
+export const marcaModalidad = (i: AgendaItem) => (esReunion(i.accion) && i.modalidad && i.modalidad !== 'Presencial' ? i.modalidad : null)
 export const itemCorto = (i: AgendaItem) => (i.school ? conGrupo(i, siglaEscuela(i.school)) : itemTitle(i))
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 export const firstName = (name: string) => name.split(/\s+/)[0]

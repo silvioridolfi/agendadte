@@ -65,7 +65,7 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
   ]
   const filaAccion = (i: AgendaItem) => ({
     fecha: fecha(i.fecha), horario: hora(i), fed: fedName(i.fed_id), distrito: i.school?.distrito ? titleCase(i.school.distrito) : '', cue: i.school?.cue ?? '',
-    escuela: escuela(i.school, i.lugar), accion: titleCase(i.accion), categoria: CATEGORIA_LABEL[CATEGORIA[i.accion]], sub: i.sub_accion ?? '',
+    escuela: escuela(i.school, i.lugar || (i.modalidad === 'Virtual' ? 'Virtual' : null)), accion: titleCase(i.accion), categoria: CATEGORIA_LABEL[CATEGORIA[i.accion]], sub: i.sub_accion ?? '',
     cantidad: i.cantidad ?? '', estado: ESTADO_LABEL[i.estado] ?? i.estado, con: (i.participantes ?? []).map(p => fedName(p.fed_id)).join(', '), detalle: i.detalle ?? '',
   })
 

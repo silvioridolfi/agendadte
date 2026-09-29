@@ -2,6 +2,7 @@
 
 import { supabaseServer } from '@/lib/supabase-server'
 import { esEnero, mensajeEnero, recesoEnero } from '@/lib/receso'
+import { enlaceDe, esReunion } from '@/lib/reunion'
 import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, MODALIDADES, MODALIDADES_EVENTO, ROLES_FORMACION, type EventoDte, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
 import { borrarSesion, guardarSesion, passwordTemporal, requerirUsuario, usuarioActual, usuarioDeSesion, validarPassword, type Usuario } from '@/lib/sesion'
 import { DriveError, cuentaTecnica, driveConfigurado, idDeCarpeta, urlCarpeta, verificarCarpeta } from '@/lib/drive'
@@ -112,11 +113,13 @@ function clean(input: AgendaItemInput) {
   if (!input.fed_id || !/^\d{4}-\d{2}-\d{2}$/.test(input.fecha)) throw new Error('FED y fecha son obligatorios')
   if (!ACCIONES.includes(input.accion) || !ESTADOS.includes(input.estado)) throw new Error('Acción o estado inválido')
   const { encuentro: _encuentro, participantes: _participantes, repeticion: _repeticion, ...row } = input
+  // Modalidad: formación interna, eventos DTE y reuniones (las virtuales o híbridas pueden llevar el enlace de la videollamada).
+  const modalidad = (input.accion === 'FORMACIÓN INTERNA' || input.accion === 'EVENTO DTE' || esReunion(input.accion)) && input.modalidad && MODALIDADES_EVENTO.includes(input.modalidad) ? input.modalidad : null
   return {
     ...row, school_id: opt(input.school_id), hora_inicio: opt(input.hora_inicio), hora_fin: opt(input.hora_fin), sub_accion: opt(input.sub_accion),
     detalle: opt(input.detalle), cantidad: num(input.cantidad), lugar: opt(input.lugar),
     // Datos propios de la formación interna (en otras acciones quedan vacíos).
-    modalidad: (input.accion === 'FORMACIÓN INTERNA' || input.accion === 'EVENTO DTE') && input.modalidad && MODALIDADES_EVENTO.includes(input.modalidad) ? input.modalidad : null,
+    modalidad, enlace: enlaceDe(input.accion, modalidad, input.enlace),
     rol_formacion: input.accion === 'FORMACIÓN INTERNA' && input.rol_formacion && ROLES_FORMACION.includes(input.rol_formacion) ? input.rol_formacion : null,
     dictada_por: input.accion === 'FORMACIÓN INTERNA' ? opt(input.dictada_por ?? null) : null,
   }
@@ -261,7 +264,7 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
     const ids = (sig ?? []).map(x => x.id as string)
     if (ids.length) {
       // El club/grupo también se aplica a las siguientes (p. ej., corregir 4° → 5° en toda la serie).
-      const up = await db.from('agenda_items').update({ hora_inicio: row.hora_inicio, hora_fin: row.hora_fin, school_id: row.school_id, lugar: row.lugar, sub_accion: row.sub_accion, ...(clubId ? { club_id: clubId } : {}) }).in('id', ids).eq('fed_id', row.fed_id)
+      const up = await db.from('agenda_items').update({ hora_inicio: row.hora_inicio, hora_fin: row.hora_fin, school_id: row.school_id, lugar: row.lugar, sub_accion: row.sub_accion, ...(esReunion(row.accion) ? { modalidad: row.modalidad, enlace: row.enlace } : {}), ...(clubId ? { club_id: clubId } : {}) }).in('id', ids).eq('fed_id', row.fed_id)
       if (up.error) throw new Error(up.error.message)
       if (enc) {
         const e = await db.from('agenda_encuentros').update({ propuesta: enc.propuesta, tipo_jornada: enc.tipo_jornada ?? null, modalidad: enc.modalidad, destinatarios: enc.destinatarios, school_id: row.school_id, lugar: row.lugar, ...(clubId ? { club_id: clubId } : {}) }).in('agenda_item_id', ids)
