@@ -85,6 +85,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio, on
     </div>
 
     <div className="mt-6">
+      {editable && onRealizar && <PendientesCerrar fed={fed} reloadKey={reloadKey} onSelect={onSelect} onRealizar={onRealizar} onCambio={m => onCambio?.(m)} />}
       {desdeCache && <p role="status" className="mb-3 flex items-center gap-2 rounded-tile border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso"><WifiOff className="size-4 shrink-0" />Sin conexión: estás viendo la copia guardada el {new Date(desdeCache).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. Lo que cargues se envía al volver la señal.</p>}
       {error ? <ErrorBox message={error} onRetry={retry} />
         : !items ? <Skeleton className="h-72" />
@@ -113,7 +114,6 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio, on
         : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }, (_, i) => monthStart(from, i)).map(m => <MiniMonth key={iso(m)} month={m} byDay={byDay} feriados={feriados} today={today} onDay={goDay} />)}</div>}
     </div>
 
-    {editable && onRealizar && <PendientesCerrar fed={fed} reloadKey={reloadKey} onSelect={onSelect} onRealizar={onRealizar} onCambio={m => onCambio?.(m)} />}
     {items && weekendItems.length > 0 && view !== 'semester' && view !== 'list' && <PanelFinDeSemana key={iso(from)} items={weekendItems} viewer={fed.id} editable={editable} onSelect={onSelect} onCambio={m => onCambio?.(m)} />}
     {sel && <BarraSeleccion ids={sel} onListo={() => setSel(null)} onCambio={m => onCambio?.(m)} />}
 
