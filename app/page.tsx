@@ -7,7 +7,8 @@ import { CON_ENCUENTRO, esTrayecto, type AgendaItem, type Fed, type Trayecto } f
 import { NotificacionesBell } from '@/components/app/notificaciones'
 import { CambiarPassword, Ingreso, UsuariosView } from '@/components/app/acceso'
 import { FeriadosView } from '@/components/app/feriados'
-import { PveEquipoView } from '@/components/app/pve'
+import { PveEquipoView, SeccionPve } from '@/components/app/pve'
+import { SeccionFotos } from '@/components/app/fotos'
 import { EventosPanel, RECARGAR } from '@/components/app/eventos'
 import type { Sesion } from '@/app/actions'
 import { AgendaView } from '@/components/app/agenda'
@@ -38,7 +39,7 @@ function tituloForm(e: { item: AgendaItem | null, preset?: ItemPreset } | null) 
   return 'Nueva acción'
 }
 
-const SECCIONES = ['agenda', 'board', 'perfil', 'usuarios', 'feriados', 'pve'] as const
+const SECCIONES = ['agenda', 'board', 'perfil', 'fotos', 'mispve', 'usuarios', 'feriados', 'pve'] as const
 type Seccion = typeof SECCIONES[number]
 const SECCION_KEY = 'agenda-territorial:seccion'
 
@@ -129,7 +130,7 @@ export default function Page() {
         <div className="flex shrink-0 items-center gap-1">
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <NotificacionesBell profile={profile} feds={feds ?? []} reloadKey={reloadKey} onOpen={setSelected} />
-        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} onPerfil={() => { setVista(null); irA('perfil') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
+        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
         </div>
       </div>
     </header>
@@ -141,6 +142,8 @@ export default function Page() {
     {section === 'pve' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <PveEquipoView />
       : section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><div className="flex flex-col gap-4"><EventosPanel onSaved={changed} /><FeriadosView autorId={profile.id} onSaved={changed} /></div></main>
       : section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); irA('agenda') } }} />
+      : section === 'fotos' ? <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-32 pt-6 lg:px-10"><SeccionFotos /></main>
+      : section === 'mispve' && profile.rol === 'fed' ? <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-32 pt-6 lg:px-10"><SeccionPve /></main>
       : section === 'perfil'
       ? <MiPerfilView key={profile.id} fed={profile} feds={feds ?? []} onSaved={f => { setProfile(f); setFeds(l => l && l.map(x => (x.id === f.id ? f : x))); setToast('Se guardó tu perfil'); irA('agenda') }} />
       : vista?.tipo === 'fed'
