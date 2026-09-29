@@ -173,6 +173,14 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
   if (!antes || antes.fecha !== row.fecha) await exigirDiasHabiles([row.fecha])
   // Una reprogramada que recibe fecha nueva vuelve a planificada: la etiqueta marca sólo lo pendiente de fecha.
   if (antes && antes.estado === 'reprogramada' && row.estado === 'reprogramada' && antes.fecha !== row.fecha) row.estado = 'planificada'
+  // Acción nueva con fecha pasada: se registra como realizada (carga retroactiva de lo ya hecho).
+  if (!id && row.fecha < hoyAR() && row.estado === 'planificada') row.estado = 'realizada'
+  // Club o práctica que ya vino de la planilla (CAPACITACIONES): no se duplica el encuentro.
+  if (esTrayecto(row.accion) && (!antes || antes.fecha !== row.fecha || antes.school_id !== row.school_id)) {
+    let q = db.from('agenda_encuentros').select('id').eq('fed_id', row.fed_id).eq('fecha', row.fecha).eq('tipo', row.accion).eq('origen', 'planilla').is('agenda_item_id', null).limit(1)
+    q = row.school_id ? q.eq('school_id', row.school_id) : q.eq('lugar', row.lugar ?? '')
+    if ((await q).data?.length) throw new Error('Este encuentro ya está registrado desde la planilla (pestaña CAPACITACIONES) y ya cuenta en las métricas. No hace falta cargarlo de nuevo.')
+  }
   const rowSinSerie = row
   // Al editar, el item debe pertenecer al FED que lo edita.
   const res = id ? await db.from('agenda_items').update(rowSinSerie).eq('id', id).eq('fed_id', row.fed_id).select('id').single()
