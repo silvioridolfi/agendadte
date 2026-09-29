@@ -28,7 +28,18 @@ export function SeccionPve() {
   const [datos, setDatos] = useState<{ conectada: boolean, meses: PveMes[], error: string | null } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const cargar = (revisar = false) => { setBusy(revisar); setError(''); misPve(revisar).then(setDatos).catch(e => setError(errMsg(e))).finally(() => setBusy(false)) }
+  const [aviso, setAviso] = useState('')
+  // Tras "Revisar ahora" se informa si apareció una entrega nueva o si no hubo cambios.
+  const cargar = (revisar = false) => {
+    setBusy(revisar); setError(''); setAviso('')
+    const antes = new Map((datos?.meses ?? []).map(m => [m.mes, m.entregada]))
+    misPve(revisar).then(d => {
+      setDatos(d)
+      if (!revisar) return
+      const nuevas = d.meses.filter(m => m.entregada && m.entregada !== antes.get(m.mes)).map(m => cap(m.nombreMes.toLowerCase()))
+      setAviso(nuevas.length ? `Listo: se registró la PVE de ${nuevas.join(' y ')}.` : 'Revisado: no hay planillas nuevas en tus carpetas de PVE.')
+    }).catch(e => setError(errMsg(e))).finally(() => setBusy(false))
+  }
   useEffect(() => { let vivo = true; misPve(false).then(d => vivo && setDatos(d)).catch(e => vivo && setError(errMsg(e))); return () => { vivo = false } }, [])
   // "Subir": la carpeta del mes se crea recién ahora. La ventana se abre antes de esperar al servidor (si no, el navegador la bloquea).
   const [abriendo, setAbriendo] = useState('')
@@ -60,6 +71,7 @@ export function SeccionPve() {
           <Button variant="outline" size="sm" disabled={busy} onClick={() => cargar(true)}>{busy ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}Revisar ahora</Button>
           <span className="text-xs text-dte-gris">También se revisa sola cada noche. Si subís otra versión, vale la última.</span>
         </div>
+        {aviso && <p role="status" className="mt-2 flex items-center gap-1.5 rounded-control bg-exito-fondo px-3 py-2 text-sm text-exito"><Check className="size-4 shrink-0" />{aviso}</p>}
         {datos.error && <p className="mt-2 flex items-center gap-1.5 text-xs text-aviso"><TriangleAlert className="size-3.5" />{datos.error}</p>}
       </>}
     {datos && error && <div className="mt-2"><ErrorBox message={error} /></div>}
