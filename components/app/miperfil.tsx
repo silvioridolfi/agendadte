@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Briefcase, CalendarOff, EyeOff, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
+import { Briefcase, Camera, CalendarOff, EyeOff, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,8 +9,6 @@ import { Pill } from '@/components/ui/segmented'
 import { type Fed } from '@/lib/agenda'
 import { horasSemanales, textoCarga, armarDdjj, cargosDe, franjasDte, validarDdjj, type Cargo, type Franja } from '@/lib/ddjj'
 import { titleCase } from '@/lib/format'
-import { SeccionFotos } from '@/components/app/fotos'
-import { SeccionPve } from '@/components/app/pve'
 import { eyebrow, errMsg, fedColor, initials, storage, updateMiPerfil, ErrorBox } from '@/components/app/comun'
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
@@ -19,7 +17,7 @@ const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 // Menú del avatar: Mi perfil (sólo FED) y cambio de perfil. Se cierra con Escape o tocando afuera.
 const CLAVE_PRESENTACION = 'agenda-territorial:presentacion'
 
-export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onFeriados, onPve, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, onPerfil: () => void, onUsuarios: () => void, onFeriados: () => void, onPve: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
+export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onFotos, onMisPve, onUsuarios, onFeriados, onPve, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, onPerfil: () => void, onFotos: () => void, onMisPve: () => void, onUsuarios: () => void, onFeriados: () => void, onPve: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
   const [open, setOpen] = useState(false)
   // Modo presentación (sólo administración): oculta las opciones de administración en este navegador.
   // Se vuelve a mostrar entrando con #admin en la dirección.
@@ -52,6 +50,8 @@ export function MenuPerfil({ profile, feds, esAdmin, onPerfil, onUsuarios, onFer
     </button>
     {open && <div role="menu" aria-label="Opciones de perfil" className="absolute right-0 top-12 z-modal w-60 overflow-hidden rounded-card border border-dte-linea bg-white py-1 shadow-e3">
       <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>
+      <button role="menuitem" onClick={() => { setOpen(false); onFotos() }} className={item}><Camera className="size-4 text-dte-petroleo" />Fotos de las acciones</button>
+      {profile.rol === 'fed' && <button role="menuitem" onClick={() => { setOpen(false); onMisPve() }} className={item}><FileText className="size-4 text-dte-petroleo" />Planillas de Visita (PVE)</button>}
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
       {(admin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onPve() }} className={item}><FileText className="size-4 text-dte-petroleo" />PVE del equipo</button>}
@@ -172,8 +172,6 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
         </div>}
       </section>
 
-      <SeccionFotos />
-      {fed.rol === 'fed' && <SeccionPve />}
 
       {errores.length > 0 && <div ref={erroresRef} role="alert" className="rounded-tile border border-peligro-borde bg-peligro-fondo p-4 text-sm text-peligro"><p className="mb-1 font-semibold">Revisá estos datos:</p><ul className="list-disc pl-5">{errores.map(e => <li key={e}>{e}</li>)}</ul></div>}
       {error && <ErrorBox message={error} />}
