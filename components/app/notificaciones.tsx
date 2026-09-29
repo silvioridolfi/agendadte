@@ -5,14 +5,20 @@ import { Bell } from 'lucide-react'
 import { type AgendaItem, type Fed, type Notificacion } from '@/lib/agenda'
 import { parse, fmt, cap, itemTitle, getNotificaciones, marcarLeidas } from '@/components/app/comun'
 
-// Notificaciones del perfil: etiquetas en acciones de compañeros o de coordinación. Se revisan cada minuto.
+// Notificaciones del perfil: etiquetas en acciones de compañeros o de coordinación. Se revisan cada 20 s y al volver a la pestaña o a la app.
 export function NotificacionesBell({ profile, feds, reloadKey, onOpen }: { profile: Fed, feds: Fed[], reloadKey: number, onOpen: (item: AgendaItem) => void }) {
   const [list, setList] = useState<Notificacion[]>([])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLButtonElement>(null), panelRef = useRef<HTMLDivElement>(null)
   const load = useCallback(() => { getNotificaciones(profile.id).then(setList).catch(() => {}) }, [profile.id])
-  useEffect(() => { load(); const t = setInterval(load, 60_000); return () => clearInterval(t) }, [load, reloadKey])
+  useEffect(() => {
+    load()
+    const t = setInterval(() => { if (document.visibilityState === 'visible') load() }, 20_000)
+    const alVolver = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', alVolver); window.addEventListener('focus', alVolver)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', alVolver); window.removeEventListener('focus', alVolver) }
+  }, [load, reloadKey])
   useEffect(() => {
     if (!open) return
     const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }

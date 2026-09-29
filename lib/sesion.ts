@@ -8,6 +8,9 @@ import type { Fed } from '@/lib/agenda'
 // El perfil (FED o coordinación) se resuelve siempre en el servidor a partir del correo de la cuenta.
 const COOKIE = 'agenda_sesion'
 export const SESION_VENCIDA = 'SESION_VENCIDA'
+export const SIN_CONEXION = 'No pudimos conectar con el servidor. Probá de nuevo en unos segundos: tu sesión sigue abierta.'
+// Falla momentánea del servicio de sesiones (red, 5xx o límite): no se debe cerrar la sesión por eso.
+const caido = (e: { status?: number, name?: string } | null) => !!e && (e.name === 'AuthRetryableFetchError' || !e.status || e.status >= 500 || e.status === 429)
 export type Usuario = { fed: Fed, userId: string, email: string, esAdmin: boolean, debeCambiar: boolean }
 
 export async function guardarSesion(s: Session) {
@@ -27,9 +30,12 @@ export async function usuarioActual(): Promise<Usuario | null> {
   try { tokens = JSON.parse(raw) } catch { return null }
   if (!tokens.a || !tokens.r) return null
   const db = supabaseServer()
-  let { data: { user } } = await db.auth.getUser(tokens.a)
+  const got = await db.auth.getUser(tokens.a)
+  if (caido(got.error)) throw new Error(SIN_CONEXION)
+  let user = got.data.user
   if (!user) {
     const { data, error } = await db.auth.refreshSession({ refresh_token: tokens.r })
+    if (caido(error)) throw new Error(SIN_CONEXION)
     if (error || !data.session || !data.user) return null
     try { await guardarSesion(data.session) } catch { /* fuera de una acción no se puede reescribir la cookie */ }
     user = data.user
