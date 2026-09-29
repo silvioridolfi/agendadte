@@ -52,7 +52,6 @@ export function SeccionFotos() {
           <li>Subilas <b>directo desde la galería del celular a la carpeta de Drive</b> (app de Drive: <b>+ → Subir</b>, o desde Fotos: <b>Compartir → Drive</b>).</li>
           <li><b>No las pases por WhatsApp ni Telegram:</b> borran la fecha y hora en que se sacaron y quedan en “Sin fecha”.</li>
           <li>Cargá el <b>horario</b> de tus acciones en la agenda: así cada foto va a la carpeta de su acción.</li>
-          <li>Activá la <b>ubicación</b> en la cámara del celular: ayuda a ubicar la foto en la acción correcta cuando el horario no alcanza (la ubicación sólo se usa para ordenar).</li>
           <li>Los videos se ordenan por el día en que los subís: conviene subirlos el mismo día que los grabaste.</li>
         </ul>
       </div>
