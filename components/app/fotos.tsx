@@ -5,6 +5,7 @@ import { Camera, Check, Copy, ExternalLink, FolderSync, Loader2, TriangleAlert }
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { EstadoFotos } from '@/app/actions'
+import { RECARGAR } from '@/components/app/eventos'
 import { errMsg, estadoFotos, guardarCarpetaFotos, ordenarMisFotos, ErrorBox, Skeleton } from '@/components/app/comun'
 
 // Mi perfil → Fotos de las acciones: enlace a la carpeta de Drive del FED, verificación de acceso y orden por día.
@@ -26,6 +27,7 @@ export function SeccionFotos() {
     setBusy('ordenar'); setError(''); setAviso('')
     try {
       const r = await ordenarMisFotos()
+      window.dispatchEvent(new Event(RECARGAR)) // la agenda vuelve a leer qué acciones tienen fotos
       const total = r.ordenadas + r.atajos
       const rescate = r.rescatadas ? `Se reacomodaron ${r.rescatadas} ${r.rescatadas === 1 ? 'foto' : 'fotos'}. ` : ''
       setAviso(rescate + (total ? `Se ordenaron ${total} ${total === 1 ? 'archivo' : 'archivos'}${r.porAccion ? ` (${r.porAccion} en la carpeta de su acción según la hora)` : ' por día'}${r.sinFecha ? ` (${r.sinFecha} sin fecha de captura, en “Sin fecha”)` : ''}${r.pendientes ? `. Quedan ${r.pendientes}: tocá de nuevo para seguir.` : '.'}` : 'No había fotos sueltas para ordenar.'))
