@@ -7,12 +7,12 @@ import { DrillDialog, type DrillRow } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
 import { cuentaHecha, type AgendaItem, type Fed } from '@/lib/agenda'
 import type { Indicador } from '@/lib/informes'
+import { esc, graficosInforme } from '@/lib/graficos'
 import type { Persona } from '@/lib/exportar'
 import { cap, errMsg, fmt, parse, itemCorto, ErrorBox } from '@/components/app/comun'
 import { ZONA } from '@/lib/hora'
 
 const fechaAR = (s: string) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}` }
-const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!))
 export const personaDe = (f: Fed): Persona => ({ nombre: f.nombre_completo, rol: f.rol === 'coordinacion' ? 'Coordinador de Educación Digital (CED)' : 'Facilitador de Educación Digital (FED)', distritos: f.distritos_a_cargo, carga: f.carga_horaria })
 
 // PDF: una página de informe con la identidad DTE que se guarda con "Imprimir → Guardar como PDF" del navegador.
@@ -23,6 +23,7 @@ function imprimirInforme({ titulo, persona, desde, hasta, indicadores, items, fe
   const hechas = [...items].filter(cuentaHecha).sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))
   const variosResponsables = new Set(hechas.map(i => i.fed_id)).size > 1
   const logo = `${location.origin}/brand/oficial-color.png`
+  const graf = graficosInforme({ items, desde, hasta })
   w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>${esc(titulo)} · ${esc(persona.nombre)}</title>
 <style>
 @font-face { font-family: 'Encode Sans'; font-weight: 100 900; src: url(${location.origin}/fonts/EncodeSans-Variable.woff2) format('woff2'); }
@@ -40,6 +41,8 @@ h2 { color: #05476e; font-size: 12.5pt; margin: 6mm 0 2mm; }
 .ind span { display: block; font-size: 8pt; color: #5b6474; line-height: 1.3; }
 .ind strong { display: block; font-size: 17pt; color: #05476e; margin-top: 1mm; }
 .ind em { font-style: normal; font-size: 7.5pt; color: #5b6474; }
+.graf { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3mm; align-items: start; }
+.graf svg { display: block; width: 100%; height: auto; break-inside: avoid; }
 table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
 th { background: #05476e; color: #fff; text-align: left; padding: 1.8mm 2mm; }
 td { padding: 1.6mm 2mm; border-bottom: 1px solid #e3e1ea; vertical-align: top; }
@@ -57,6 +60,7 @@ tr:nth-child(even) td { background: #f6f5f9; } tr { break-inside: avoid; }
   .barra button { flex: 1; }
   .datos { grid-template-columns: 1fr; }
   .ind { grid-template-columns: repeat(2, 1fr); }
+  .graf { grid-template-columns: 1fr; }
   .tabla table { min-width: 560px; }
   .pie { flex-direction: column; align-items: flex-start; }
 }
@@ -71,6 +75,7 @@ tr:nth-child(even) td { background: #f6f5f9; } tr { break-inside: avoid; }
 </div>
 <h2>Indicadores del período</h2>
 <div class="ind">${indicadores.map(x => `<div><span>${esc(x.label)}</span><strong>${x.valor}</strong>${x.detalle ? `<em>${esc(x.detalle)}</em>` : ''}</div>`).join('')}</div>
+${graf.length ? `<h2>Gráficos del período</h2><div class="graf">${graf.map(g => g.svg).join('')}</div>` : ''}
 <h2>Detalle de acciones realizadas (${hechas.length})</h2>
 ${hechas.length ? `<div class="tabla"><table><thead><tr><th>Fecha</th>${variosResponsables ? '<th>Responsable</th>' : ''}<th>Acción</th><th>Escuela / lugar</th><th>Tema / detalle</th></tr></thead><tbody>
 ${hechas.map(i => `<tr><td>${fechaAR(i.fecha)}</td>${variosResponsables ? `<td>${esc(fedName(i.fed_id))}</td>` : ''}<td>${esc(titleCase(i.accion))}</td><td>${esc(i.school?.nombre ? `${titleCase(i.school.nombre)}${i.school.cue ? ` (CUE ${i.school.cue})` : ''}` : i.lugar ?? '')}</td><td>${esc(i.sub_accion ?? '')}</td></tr>`).join('')}
