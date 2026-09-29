@@ -138,3 +138,24 @@ describe('fotos por hora de captura', () => {
     expect(accionPorHora([club4, { id: 'otro', hora_inicio: '12:00:00', hora_fin: '13:00:00' }], m('12:30'))).toBeNull()
   })
 })
+
+import { accionPorFoto } from '@/lib/horas'
+describe('fotos por hora y ubicación', () => {
+  const ep4 = { lat: -34.87, lon: -57.88 }, ees31 = { lat: -34.92, lon: -57.95 }
+  const a = { id: 'a', hora_inicio: '12:00:00', hora_fin: '13:00:00', school: ep4 }
+  const b = { id: 'b', hora_inicio: '12:00:00', hora_fin: '13:00:00', school: ees31 }
+  const sinHora = { id: 's', hora_inicio: null, hora_fin: null, school: ees31 }
+  const m = (h: string) => { const [x, y] = h.split(':').map(Number); return x * 60 + y }
+  const cerca = (p: { lat: number, lon: number }) => ({ lat: p.lat + 0.001, lon: p.lon })
+  it('desempata por ubicación dos acciones a la misma hora', () => {
+    expect(accionPorFoto([a, b], m('12:30'), cerca(ees31))?.id).toBe('b')
+    expect(accionPorFoto([a, b], m('12:30'), null)).toBeNull()
+  })
+  it('sin coincidencia de hora, usa la escuela cercana', () => {
+    expect(accionPorFoto([a, sinHora], m('16:00'), cerca(ees31))?.id).toBe('s')
+    expect(accionPorFoto([a, sinHora], m('16:00'), { lat: -35.5, lon: -58 })).toBeNull()
+  })
+  it('la hora manda aunque la foto esté lejos', () => {
+    expect(accionPorFoto([a, sinHora], m('12:30'), cerca(ees31))?.id).toBe('a')
+  })
+})

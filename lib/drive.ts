@@ -39,7 +39,7 @@ async function api<T>(path: string, init: RequestInit = {}, params: Record<strin
   return res.status === 204 ? (undefined as T) : res.json() as Promise<T>
 }
 
-export type ArchivoDrive = { id: string, name: string, mimeType: string, createdTime?: string, imageMediaMetadata?: { time?: string }, shortcutDetails?: { targetId?: string } }
+export type ArchivoDrive = { id: string, name: string, mimeType: string, createdTime?: string, imageMediaMetadata?: { time?: string, location?: { latitude?: number, longitude?: number } }, shortcutDetails?: { targetId?: string } }
 const CARPETA = 'application/vnd.google-apps.folder'
 
 // Id de carpeta a partir del enlace que pega el FED (…/folders/<id> o ?id=<id>).
@@ -59,7 +59,7 @@ export async function listar(padre: string, soloCarpetas = false): Promise<Archi
   let pageToken = ''
   do {
     const q = `'${padre}' in parents and trashed = false${soloCarpetas ? ` and mimeType = '${CARPETA}'` : ` and mimeType != '${CARPETA}'`}`
-    const r = await api<{ files: ArchivoDrive[], nextPageToken?: string }>('files', {}, { q, pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,createdTime,imageMediaMetadata(time))', includeItemsFromAllDrives: 'true', ...(pageToken ? { pageToken } : {}) })
+    const r = await api<{ files: ArchivoDrive[], nextPageToken?: string }>('files', {}, { q, pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,createdTime,imageMediaMetadata(time,location))', includeItemsFromAllDrives: 'true', ...(pageToken ? { pageToken } : {}) })
     out.push(...r.files); pageToken = r.nextPageToken ?? ''
   } while (pageToken && out.length < 1000)
   return out
@@ -81,7 +81,7 @@ export async function listarHijos(padre: string): Promise<ArchivoDrive[]> {
   const out: ArchivoDrive[] = []
   let pageToken = ''
   do {
-    const r = await api<{ files: ArchivoDrive[], nextPageToken?: string }>('files', {}, { q: `'${padre}' in parents and trashed = false`, pageSize: '500', fields: 'nextPageToken,files(id,name,mimeType,createdTime,imageMediaMetadata(time),shortcutDetails(targetId))', includeItemsFromAllDrives: 'true', ...(pageToken ? { pageToken } : {}) })
+    const r = await api<{ files: ArchivoDrive[], nextPageToken?: string }>('files', {}, { q: `'${padre}' in parents and trashed = false`, pageSize: '500', fields: 'nextPageToken,files(id,name,mimeType,createdTime,imageMediaMetadata(time,location),shortcutDetails(targetId))', includeItemsFromAllDrives: 'true', ...(pageToken ? { pageToken } : {}) })
     out.push(...r.files); pageToken = r.nextPageToken ?? ''
   } while (pageToken && out.length < 2000)
   return out
@@ -108,6 +108,12 @@ export function fechaDeCaptura(f: ArchivoDrive): string | null {
   const t = f.imageMediaMetadata?.time
   const m = t?.match(/^(\d{4})[:-](\d{2})[:-](\d{2})/)
   return m && m[1] !== '0000' ? `${m[1]}-${m[2]}-${m[3]}` : null
+}
+
+// Lugar de captura (GPS de la cámara), si la foto lo tiene.
+export function ubicacionDeCaptura(f: ArchivoDrive): { lat: number, lon: number } | null {
+  const l = f.imageMediaMetadata?.location
+  return l && typeof l.latitude === 'number' && typeof l.longitude === 'number' && (l.latitude || l.longitude) ? { lat: l.latitude, lon: l.longitude } : null
 }
 
 // Hora de captura en minutos desde la medianoche (hora local de la cámara), o null.

@@ -1,7 +1,7 @@
 import 'server-only'
 import { supabaseServer } from '@/lib/supabase-server'
-import { accionPorHora } from '@/lib/horas'
-import { DriveError, borrar, carpetaVigente, crearCarpeta, esAtajo, listarHijos, esCarpeta, listarTodo, fechaDeCaptura, listar, minutosDeCaptura, mover, renombrar } from '@/lib/drive'
+import { accionPorFoto } from '@/lib/horas'
+import { DriveError, borrar, carpetaVigente, crearCarpeta, esAtajo, listarHijos, esCarpeta, listarTodo, fechaDeCaptura, listar, minutosDeCaptura, ubicacionDeCaptura, mover, renombrar } from '@/lib/drive'
 
 // Orden de fotos: las imágenes y videos sueltos en la carpeta del FED pasan a la carpeta de su día
 // ("30-09-2026 · EP N° 4 (5°) · EES N° 31 (7° Informática - Grupo 1)") y, si la hora de captura coincide con el horario
@@ -22,18 +22,18 @@ function sigla(nombre: string) {
 }
 const TIPO: Record<string, string> = { 'CLUB DE TECNOLOGÍA': 'Club', 'PRÁCTICAS PROFESIONALIZANTES': 'PEAT' }
 
-type ItemDia = { id: string, accion: string, lugar: string | null, hora_inicio: string | null, hora_fin: string | null, school: { nombre: string | null } | null, club: { grupo: string | null } | null }
+type ItemDia = { id: string, accion: string, lugar: string | null, hora_inicio: string | null, hora_fin: string | null, school: { nombre: string | null, lat?: number | null, lon?: number | null } | null, club: { grupo: string | null } | null }
 const lugarDe = (i: ItemDia) => i.school?.nombre ? sigla(i.school.nombre) : i.lugar ?? titulo(i.accion)
 const nombreAccion = (i: ItemDia) => `${i.hora_inicio ? `${i.hora_inicio.slice(0, 5)} · ` : ''}${TIPO[i.accion] ?? titulo(i.accion)} ${lugarDe(i)}${i.club?.grupo ? ` - ${i.club.grupo}` : ''}`.slice(0, 150)
 
 async function itemsDelDia(fedId: string, fecha: string): Promise<ItemDia[]> {
-  const db = supabaseServer(), cols = 'id, accion, lugar, hora_inicio, hora_fin, school:establecimientos(nombre), club:clubes(grupo)'
+  const db = supabaseServer(), cols = 'id, accion, lugar, hora_inicio, hora_fin, school:establecimientos(nombre, lat, lon), club:clubes(grupo)'
   const [{ data: propias }, { data: part }] = await Promise.all([
     db.from('agenda_items').select(cols).eq('fed_id', fedId).eq('fecha', fecha).neq('estado', 'cancelada'),
     db.from('agenda_participantes').select(`item:agenda_items!inner(${cols}, fecha, estado)`).eq('fed_id', fedId).eq('item.fecha', fecha).neq('item.estado', 'cancelada'),
   ])
   // Encuentros importados de la planilla (sin acción en la agenda): cuentan para el nombre del día, sin horario.
-  const { data: importados } = await db.from('agenda_encuentros').select('id, tipo, lugar, school:establecimientos(nombre), club:clubes(grupo)').eq('fed_id', fedId).eq('fecha', fecha).is('agenda_item_id', null)
+  const { data: importados } = await db.from('agenda_encuentros').select('id, tipo, lugar, school:establecimientos(nombre, lat, lon), club:clubes(grupo)').eq('fed_id', fedId).eq('fecha', fecha).is('agenda_item_id', null)
   const extra = ((importados ?? []) as unknown as { id: string, tipo: string, lugar: string | null, school: ItemDia['school'], club: ItemDia['club'] }[])
     .map(e => ({ id: `enc:${e.id}`, accion: e.tipo, lugar: e.lugar, hora_inicio: null, hora_fin: null, school: e.school, club: e.club }))
   const todos = [...(propias ?? []), ...((part ?? []) as unknown as { item: ItemDia }[]).map(p => p.item), ...extra] as unknown as ItemDia[]
@@ -149,7 +149,7 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
       if (!f.mimeType.startsWith('image/') && !f.mimeType.startsWith('video/')) continue
       presentes.add(f.id)
       if (!enDia || f.mimeType.startsWith('video/')) continue
-      const item = accionPorHora(await items(fecha), minutosDeCaptura(f))
+      const item = accionPorFoto(await items(fecha), minutosDeCaptura(f), ubicacionDeCaptura(f))
       if (!item) continue
       const destino = await carpetaAccion(fecha, item)
       if (destino === carpeta) continue
@@ -177,7 +177,7 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
     // Videos: Drive no guarda su fecha de grabación; se usa la fecha en que se subieron (hora argentina) y van a la carpeta del día.
     const esVideo = f.mimeType.startsWith('video/')
     const fecha = fechaDeCaptura(f) ?? (esVideo && f.createdTime ? new Date(f.createdTime).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }) : SIN_FECHA)
-    const item = fecha === SIN_FECHA || esVideo ? null : accionPorHora(await items(fecha), minutosDeCaptura(f))
+    const item = fecha === SIN_FECHA || esVideo ? null : accionPorFoto(await items(fecha), minutosDeCaptura(f), ubicacionDeCaptura(f))
     const destino = item ? await carpetaAccion(fecha, item) : await carpetaDia(fecha)
     // La foto se mueve a su carpeta (sigue siendo del FED). Si se borra una carpeta de la agenda, la próxima pasada
     // devuelve las fotos a la carpeta principal y las vuelve a ordenar.
