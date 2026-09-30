@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { InformeBloque, personaDe } from '@/components/app/informes'
 import { informeFed } from '@/lib/informes'
@@ -9,7 +9,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { titleCase } from '@/lib/format'
 import { franjasDte, textoFranjas } from '@/lib/ddjj'
 import { clubEstado, cuentaHecha, esAusencia, iniciado, type AgendaItem, type Club, type Fed } from '@/lib/agenda'
-import { fmt, parse, fedColor, initials, Skeleton } from '@/components/app/comun'
+import { fmt, parse, fedColor, initials, Skeleton, getActividadEquipo } from '@/components/app/comun'
+import { textoDias, type Actividad } from '@/lib/actividad'
 import { hoyAR } from '@/lib/hora'
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
@@ -18,6 +19,9 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 export function MiEquipoView({ feds, todos, items, clubes, noHabiles, periodo, desde, hasta, onSelect, onVerAcciones }: { feds: Fed[], todos: Fed[], items: AgendaItem[] | null, clubes: Club[] | null, noHabiles: Set<string>, periodo: string, desde: string, hasta: string, onSelect: (i: AgendaItem) => void, onVerAcciones: (fedId: string) => void }) {
   // Informe del período de un FED (el mismo que ve en su tablero), con descarga en Excel o PDF.
   const [informe, setInforme] = useState<Fed | null>(null)
+  // Última actividad de cada FED en la agenda: el servidor sólo la entrega a la coordinación y a la administración (para el resto llega vacía).
+  const [actividad, setActividad] = useState<Map<string, Actividad>>(new Map())
+  useEffect(() => { let vivo = true; getActividadEquipo().then(l => vivo && setActividad(new Map(l.map(a => [a.fed_id, a])))).catch(() => {}); return () => { vivo = false } }, [])
   const hoy = hoyAR()
   const resumen = useMemo(() => new Map(feds.map(f => {
     const propias = (items ?? []).filter(i => i.fed_id === f.id)
@@ -32,7 +36,7 @@ export function MiEquipoView({ feds, todos, items, clubes, noHabiles, periodo, d
   return <div className="flex flex-col gap-3">
     <p className="text-sm text-dte-gris">Datos declarados por cada FED y resumen de {periodo.toLowerCase()}. Solo lectura.</p>
     <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{feds.map(f => {
-      const r = resumen.get(f.id)!
+      const r = resumen.get(f.id)!, act = actividad.get(f.id)
       return <li key={f.id} className="flex min-w-0 flex-col gap-3 rounded-card border border-dte-linea bg-white p-4 shadow-e1">
         <header className="flex items-center gap-3">
           <Avatar className="size-10"><AvatarFallback className={`${fedColor(feds, f.id)} text-sm font-bold text-dte-petroleo-oscuro`}>{initials(f.nombre_completo)}</AvatarFallback></Avatar>
@@ -48,6 +52,10 @@ export function MiEquipoView({ feds, todos, items, clubes, noHabiles, periodo, d
             <div key={l} className="rounded-tile bg-dte-fondo px-2 py-2"><dt className="text-xs text-dte-gris">{l}</dt><dd className="text-lg font-bold tabular-nums">{n}</dd></div>)}
         </dl>
         <p className="text-xs text-dte-gris">{r.ultima ? <>Última acción realizada: <b className="text-dte-tinta">{fmt(parse(r.ultima), { weekday: 'long', day: 'numeric', month: 'long' })}</b></> : 'Sin acciones realizadas en el período.'}</p>
+        {act && <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-dte-gris">
+          {act.ultima ? <span>Última actividad en la agenda: <b className="text-dte-tinta">{fmt(parse(act.ultima), { weekday: 'long', day: 'numeric', month: 'long' })}</b> · {textoDias(act.dias ?? 0)}</span> : <span>Sin actividad registrada en la agenda.</span>}
+          {act.alerta && <span className="rounded-full bg-aviso-fondo-fuerte px-2 py-0.5 font-semibold text-aviso-fuerte">Sin actividad reciente</span>}
+        </p>}
 
         <div>
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Horarios (DD.JJ.)</p>
