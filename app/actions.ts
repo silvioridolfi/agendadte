@@ -10,6 +10,7 @@ import { ordenarFotos } from '@/lib/fotos'
 import { PRIMER_MES, carpetaDelMes, inicioMes, hoyAR as hoyPve, mesesEntregables, nombreMes, noLaborables, revisarPve, vencimientoPve } from '@/lib/pve'
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 import { hoyAR } from '@/lib/hora'
+import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
 // así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
@@ -310,6 +311,54 @@ async function getNotificacionesImpl(fedId: string): Promise<Notificacion[]> {
     .eq('fed_id', fedId).order('created_at', { ascending: false }).limit(30)
   if (error) throw new Error(error.message)
   return (data ?? []) as unknown as Notificacion[]
+}
+
+// ---- Actividad del equipo (sólo CED y administración) ----
+// Última actividad de cada FED: lo último que cargó, editó, cambió de estado o borró en la agenda, según la auditoría (no cuentan
+// ingresos, cambios de perfil ni lo que hacen las migraciones). Días hábiles sin actividad: ver lib/actividad.ts.
+type ActividadFed = Actividad & { ultima_ts: string | null }
+async function actividadEquipoImpl(): Promise<ActividadFed[]> {
+  const db = supabaseServer(), hoy = hoyAR()
+  const { data: feds, error } = await db.from('feds').select('id, rol')
+  if (error) throw new Error(error.message)
+  const ids = (feds ?? []).filter(f => f.rol === 'fed').map(f => f.id as string)
+  if (!ids.length) return []
+  const [ultimas, fer, aus] = await Promise.all([
+    Promise.all(ids.map(async id => {
+      const { data } = await db.from('auditoria').select('created_at').eq('autor_id', id).in('tabla', ['agenda_items', 'clubes']).order('created_at', { ascending: false }).limit(1)
+      return [id, (data?.[0]?.created_at as string | undefined) ?? null] as const
+    })),
+    db.from('feriados').select('fecha').neq('tipo', 'distrital'),
+    db.from('agenda_items').select('fed_id, fecha').in('fed_id', ids).in('accion', ['LICENCIA', 'PARO']).lte('fecha', hoy),
+  ])
+  const noHabiles = new Set((fer.data ?? []).map(f => f.fecha as string))
+  const ausencias = new Map<string, Set<string>>()
+  for (const a of aus.data ?? []) ausencias.set(a.fed_id as string, (ausencias.get(a.fed_id as string) ?? new Set<string>()).add(a.fecha as string))
+  return ultimas.map(([fed_id, ts]) => {
+    const ultima = ts ? fechaAR(ts) : null
+    const dias = diasSinActividad(ultima, hoy, noHabiles, ausencias.get(fed_id))
+    return { fed_id, ultima, ultima_ts: ts, dias, alerta: hayAlerta(dias) }
+  })
+}
+export const getActividadEquipo = async () => conUsuario(async (yo): Promise<Actividad[]> =>
+  yo.esAdmin || yo.fed.rol === 'coordinacion' ? (await actividadEquipoImpl()).map(({ ultima_ts: _ts, ...a }) => a) : [])
+
+// Un único aviso por persona y por período sin actividad, a la coordinación y a la administración (nunca al propio FED ni al resto del equipo).
+// Se revisa cuando alguien de ellos abre la app (como mucho cada 10 minutos); el aviso queda resuelto cuando el FED vuelve a cargar algo.
+let ultimoControlInactividad = 0
+async function avisarInactividad(yo: Usuario) {
+  if (!yo.esAdmin && yo.fed.rol !== 'coordinacion') return
+  if (Date.now() - ultimoControlInactividad < 10 * 60_000) return
+  ultimoControlInactividad = Date.now()
+  const db = supabaseServer()
+  const inactivos = (await actividadEquipoImpl()).filter(a => a.alerta && a.ultima && a.dias !== null)
+  if (!inactivos.length) return
+  const [{ data: dest }, { data: previas }] = await Promise.all([
+    db.from('feds').select('id').or('rol.eq.coordinacion,es_admin.eq.true'),
+    db.from('notificaciones').select('fed_id, autor_id, created_at').eq('tipo', 'inactividad').in('autor_id', inactivos.map(a => a.fed_id)),
+  ])
+  const nuevas = avisosPendientes(inactivos.map(a => ({ fed_id: a.fed_id, ultima: a.ultima!, ultima_ts: a.ultima_ts, dias: a.dias! })), (dest ?? []).map(d => d.id as string), (previas ?? []) as AvisoPrevio[])
+  if (nuevas.length) await db.from('notificaciones').insert(nuevas)
 }
 
 async function marcarLeidasImpl(fedId: string, ids?: string[]): Promise<void> {
@@ -749,7 +798,7 @@ export const setClubCierre = async (id: string, fecha: string | null) => conUsua
   if (!data || (data.fed_id !== yo.fed.id && !yo.esAdmin)) throw new Error('Sólo quien lleva el club puede finalizarlo o reactivarlo')
   return setClubCierreImpl(id, fecha)
 })
-export const getNotificaciones = async (_fedId: string) => conUsuario(yo => getNotificacionesImpl(yo.fed.id))
+export const getNotificaciones = async (_fedId: string) => conUsuario(async yo => { await avisarInactividad(yo).catch(() => {}); return getNotificacionesImpl(yo.fed.id) })
 export const marcarLeidas = async (_fedId: string, ids?: string[]) => conUsuario(yo => marcarLeidasImpl(yo.fed.id, ids))
 export const responder = async (itemId: string, _fedId: string, respuesta: 'acepta' | 'rechaza') => conUsuario(yo => responderImpl(itemId, yo.fed.id, respuesta))
 export const getHistorial = async (itemId: string) => conUsuario(() => getHistorialImpl(itemId))
