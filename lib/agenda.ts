@@ -179,6 +179,7 @@ export const CLUB_MIN_ENCUENTROS = 8
 export const CLUB_MAX_PARTICIPANTES = 20
 export const CLUB_DIAS_SIN_ACTIVIDAD = 30
 export type ClubEncuentro = Pick<Encuentro, 'id' | 'fecha' | 'propuesta' | 'school_id' | 'lugar' | 'school' | 'encuentro_n' | 'inscriptos' | 'asistentes' | 'tipo_jornada' | 'modalidad' | 'destinatarios' | 'es_cierre'>
+  & { agenda_item_id?: string | null, item?: { estado: string } | null }
 export type Club = {
   id: string
   fed_id: string
@@ -239,7 +240,7 @@ export function clubEstado(c: ClubIniciado, hoy: string, noHabiles?: Set<string>
   return diasHabilesEntre(ultimaActividad(c), hoy, noHabiles) > CLUB_DIAS_SIN_ACTIVIDAD ? 'sin_actividad' : 'activo'
 }
 // Encuentros distintos del club (varios registros el mismo día con distintos grupos cuentan como uno).
-export function clubEncuentrosRealizados(c: Club) { return new Set(c.encuentros.map(e => e.fecha)).size }
+export function clubEncuentrosRealizados(c: Club) { return new Set(c.encuentros.filter(e => !['planificada', 'reprogramada', 'cancelada'].includes(e.item?.estado ?? '')).map(e => e.fecha)).size }
 
 // Niveles y modalidades para elegir el grado/curso de un club. Se sugiere según el nombre del establecimiento.
 export type Nivel = { id: string, label: string, cursos: string[], cursoLabel: string }

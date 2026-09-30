@@ -11,9 +11,22 @@ export function textoMinimo(tipo: string | null | undefined, realizados: number)
   return realizados >= min ? `mínimo ${min} · cumplido` : `mínimo ${min} · faltan ${min - realizados}`
 }
 
-// Número del próximo encuentro de un club: el siguiente al mayor número cargado o a la cantidad de fechas distintas (el mismo criterio del servidor).
-export function proximoEncuentro(encuentros: { encuentro_n: number | null, fecha: string }[]): number {
-  return Math.max(encuentros.reduce((m, e) => Math.max(m, e.encuentro_n ?? 0), 0), new Set(encuentros.map(e => e.fecha)).size) + 1
+type EncuentroNum = { encuentro_n: number | null, fecha: string, agenda_item_id?: string | null, item?: { estado: string } | null }
+
+// Un encuentro sin acción asociada (planilla) ya se hizo; con acción, cuenta según su estado. Los cancelados no cuentan.
+const estadoEnc = (e: EncuentroNum) => e.item?.estado ?? 'realizada'
+export const esPendiente = (e: EncuentroNum) => ['planificada', 'reprogramada'].includes(estadoEnc(e))
+
+// Número del encuentro de un club en `fecha`: sigue al último encuentro ya realizado (el mayor número cargado o la cantidad de fechas
+// distintas: dos filas del mismo día son un solo encuentro) y suma las fechas planificadas anteriores (`previas`, además de las del
+// propio club). Los planificados nunca alimentan la cuenta de los realizados, así no se "contagian" números entre grupos ni fechas.
+export function proximoEncuentro(encuentros: EncuentroNum[], fecha?: string, excluirItem?: string, previas: string[] = []): number {
+  const otros = encuentros.filter(e => !excluirItem || e.agenda_item_id !== excluirItem)
+  const hechos = otros.filter(e => !esPendiente(e) && estadoEnc(e) !== 'cancelada' && (!fecha || e.fecha <= fecha))
+  const base = Math.max(hechos.reduce((m, e) => Math.max(m, e.encuentro_n ?? 0), 0), new Set(hechos.map(e => e.fecha)).size)
+  const hechas = new Set(hechos.map(e => e.fecha))
+  const planificadas = new Set([...otros.filter(esPendiente).map(e => e.fecha), ...previas].filter(f => !!fecha && f < fecha && !hechas.has(f)))
+  return base + planificadas.size + 1
 }
 
 // Una acción de club o práctica de hoy o anterior, todavía planificada, pasa a realizada cuando se cargan datos del encuentro
