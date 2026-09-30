@@ -10,6 +10,7 @@ import { Field, SchoolPicker } from '@/components/app/formulario'
 import { CLUB_MIN_ENCUENTROS, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEncuentrosRealizados, clubEstado, iniciado, ordenGrupo, type Club, type Fed, type School, type Modalidad, type TipoJornada, type Trayecto } from '@/lib/agenda'
 import { az, errMsg, getClubes, saveItem, selectClass, shortSchoolName, ErrorBox } from '@/components/app/comun'
 import { hoyAR } from '@/lib/hora'
+import { proximoEncuentro, textoMinimo } from '@/lib/encuentro'
 
 const OTRA = '__otra'
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
@@ -94,7 +95,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
         {opciones.map(c => <option key={c.id} value={c.id}>{etiqueta(c)}</option>)}
       </select>
     </Field>
-    {club && <p className="-mt-2 text-xs text-dte-gris">Próximo encuentro: N° {Math.max(club.encuentros.reduce((m, e) => Math.max(m, e.encuentro_n ?? 0), 0), clubEncuentrosRealizados(club)) + 1} (se numera solo){club.encuentros_previstos ? ` de ${club.encuentros_previstos} previstos` : ''}{club.school?.distrito ? ` · ${club.school.distrito}` : ''}</p>}
+    {club && <p className="-mt-2 text-xs text-dte-gris">Próximo encuentro: N° {proximoEncuentro(club.encuentros)} (se numera solo){textoMinimo(tipo, clubEncuentrosRealizados(club)) ? ` · ${textoMinimo(tipo, clubEncuentrosRealizados(club))}` : ''}{club.school?.distrito ? ` · ${club.school.distrito}` : ''}</p>}
 
     {hermanos.length > 0 && <fieldset><legend className="mb-1.5 text-sm font-semibold">Registrar también para <span className="font-normal text-dte-gris">(mismos datos, otros grupos de la escuela)</span></legend>
       <div className="flex flex-wrap gap-1.5">{hermanos.map(c => <Pill key={c.id} on={otros.includes(c.id)} onClick={() => setOtros(l => (l.includes(c.id) ? l.filter(x => x !== c.id) : [...l, c.id]))}>{c.grupo ?? etiqueta(c)}</Pill>)}</div>
@@ -120,7 +121,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
 
     <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
       <Field label="Fecha" required><Input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} /></Field>
-      <Field label="Cantidad de encuentros de la propuesta"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={previstos} onChange={e => setPrevistos(e.target.value)} /></Field>
+      {tipo === 'CLUB DE TECNOLOGÍA' && <Field label="Encuentros previstos" hint={`(opcional · el mínimo es ${CLUB_MIN_ENCUENTROS})`}><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={previstos} onChange={e => setPrevistos(e.target.value)} /></Field>}
       <Field label="Tipo de jornada"><select className={selectClass} value={jornada} onChange={e => setJornada(e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{[...TIPOS_JORNADA].sort(az).map(t => <option key={t}>{t}</option>)}</select></Field>
       <Field label="Formato de participación"><select className={selectClass} value={modalidad} onChange={e => setModalidad(e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>
     </div>

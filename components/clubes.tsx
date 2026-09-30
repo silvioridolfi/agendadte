@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { ErrorBox, errMsg } from '@/components/app/comun'
 import { hoyAR, ZONA } from '@/lib/hora'
 import { inicioCiclo } from '@/lib/receso'
+import { minEncuentros } from '@/lib/encuentro'
 
 const nf = new Intl.NumberFormat('es-AR')
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -62,7 +63,9 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
     .sort((a, b) => Number(a.estado === 'finalizado') - Number(b.estado === 'finalizado') || schoolLabel(a.c).localeCompare(schoolLabel(b.c), 'es', { numeric: true }) || ordenGrupo(a.c.grupo, b.c.grupo)), [clubes, completos, hoy, noHabiles, schoolLabel])
   const n = (e: ClubEstado) => rows.filter(r => r.estado === e).length
   const encuentros = rows.reduce((a, r) => a + r.realizados, 0)
-  const cumplen = rows.filter(r => r.total >= CLUB_MIN_ENCUENTROS).length
+  // Sólo los clubes tienen mínimo de encuentros (8) y es informativo: después no importa si son más. Las prácticas se cumplen por horas.
+  const min = minEncuentros(tipo)
+  const cumplen = min === null ? 0 : rows.filter(r => r.total >= min).length
   const conIns = rows.filter(r => r.inscriptos > 0 && r.promedio > 0)
   const retencion = pct(conIns.reduce((a, r) => a + r.promedio, 0), conIns.reduce((a, r) => a + r.inscriptos, 0))
   const alcance = rows.reduce((a, r) => a + r.inscriptos, 0)
@@ -159,7 +162,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
         const dias = c.created_at ? Math.round((Date.parse(`${hoy}T12:00:00Z`) - Date.parse(`${new Date(c.created_at).toLocaleDateString('en-CA', { timeZone: ZONA })}T12:00:00Z`)) / 86400000) : 0
         return <li key={c.id} className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold">{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate" title={schoolLabel(c)}>{schoolLabel(c)}</span></p>
-            <p className="text-xs text-dte-gris">{[c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id), c.encuentros_previstos ? `${c.encuentros_previstos} encuentros previstos` : null].filter(Boolean).join(' · ')}</p>
+            <p className="text-xs text-dte-gris">{[c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id), tipo === 'CLUB DE TECNOLOGÍA' && c.encuentros_previstos ? `${c.encuentros_previstos} encuentros previstos` : null].filter(Boolean).join(' · ')}</p>
             {dias > 30 && <p className="text-xs font-semibold text-aviso-fuerte">Hace {dias} días sin fecha: ¿lo programamos?</p>}</div>
           {onEncuentro && <Button variant="outline" size="sm" onClick={() => onEncuentro(c)} className="shrink-0"><CalendarPlus data-icon="inline-start" />Programar primer encuentro</Button>}
         </li>
@@ -192,7 +195,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
       <Kpi label={`${cap(clubesTxt)} activ${tipo === 'CLUB DE TECNOLOGÍA' ? 'os' : 'as'}`} value={nf.format(n('activo'))} hint={`de ${rows.length} con actividad en el período`} color={ESTADO_CLUB.activo.color} onClick={() => verEstado('activo', `${cap(clubesTxt)} activ${tipo === 'CLUB DE TECNOLOGÍA' ? 'os' : 'as'}`)} />
       <Kpi label="Sin actividad" value={nf.format(n('sin_actividad'))} hint="a confirmar cierre" color={ESTADO_CLUB.sin_actividad.color} onClick={() => verEstado('sin_actividad', 'Sin actividad')} />
       <Kpi label={tipo === 'CLUB DE TECNOLOGÍA' ? 'Finalizados' : 'Finalizadas'} value={nf.format(n('finalizado'))} color={ESTADO_CLUB.finalizado.color} onClick={() => verEstado('finalizado', tipo === 'CLUB DE TECNOLOGÍA' ? 'Finalizados' : 'Finalizadas')} />
-      <Kpi label="Encuentros realizados" value={nf.format(encuentros)} hint={`${cumplen} con ${CLUB_MIN_ENCUENTROS} o más en total`} onClick={verEncuentros} />
+      <Kpi label="Encuentros realizados" value={nf.format(encuentros)} hint={min === null ? 'sin mínimo: se cumplen por horas' : `${cumplen} ya cumplieron el mínimo de ${min}`} onClick={verEncuentros} />
       <Kpi label="Participación real" value={conIns.length ? `${retencion}%` : '—'} hint={`promedio por encuentro vs. ${nf.format(alcance)} inscriptos`} onClick={verParticipacion} />
     </div>
 
@@ -208,7 +211,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
             <th className="pb-2 font-semibold">Estado</th>
           </tr></thead>
           <tbody className="divide-y divide-dte-linea">{rows.map(({ c, estado, realizados, total, fechas, ultima, inscriptos, promedio }) => {
-            const st = ESTADO_CLUB[estado], prev = c.encuentros_previstos ?? CLUB_MIN_ENCUENTROS
+            const st = ESTADO_CLUB[estado]
             const fin = c.fecha_cierre ?? ultima
             return <tr key={c.id} className="align-middle">
               <td className="py-2.5 pr-3"><p className="flex max-w-[20rem] items-center gap-1.5 font-semibold" title={c.school?.nombre ?? c.lugar ?? ''}>{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate" title={schoolLabel(c)}>{schoolLabel(c)}</span></p><p className="text-xs text-dte-gris">{[c.escuela_origen ? `Estudiantes de ${schoolLabel({ school: c.escuela_origen, lugar: null } as Club)}` : null, c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id)].filter(Boolean).join(' · ')}</p>{(() => { const n = new Set(completos.get(c.id)!.encuentros.map(e => e.school_id ?? e.lugar)).size; return n > 1 ? <p className="text-xs font-semibold" style={{ color: marca.acento }}>{n} sedes</p> : null })()}</td>
@@ -218,7 +221,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
                 {fechas.map(f => <span key={f} className="absolute top-[3px] h-[14px] w-[2px] rounded bg-white/90" style={{ left: `${pos(f)}%` }} />)}
                 <span className="absolute top-0 h-5 w-px bg-dte-magenta" style={{ left: `${pos(hoy)}%` }} title="Hoy" />
               </div><p className="text-xs text-dte-gris">{corta(c.fecha_inicio)} → {c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : `último ${corta(ultima)}`}</p></td>
-              <td data-label="Encuentros" className="py-2.5 pr-3"><div className="flex items-center gap-2"><div className="h-2 w-20 rounded bg-dte-fondo"><div className="h-full rounded" style={{ width: `${Math.min(100, pct(total, prev))}%`, background: total >= CLUB_MIN_ENCUENTROS ? 'var(--color-pba-celeste-texto)' : 'var(--color-club-lila)' }} /></div><span className="tabular-nums" title={realizados !== total ? `${realizados} en el período` : undefined}><b>{total}</b><span className="text-dte-gris">/{prev}</span></span></div></td>
+              <td data-label="Encuentros" className="py-2.5 pr-3"><div className="flex items-center gap-2">{min !== null && <div className="h-2 w-20 rounded bg-dte-fondo" title={`Mínimo de ${min} encuentros`}><div className="h-full rounded" style={{ width: `${Math.min(100, pct(total, min))}%`, background: total >= min ? 'var(--color-pba-celeste-texto)' : 'var(--color-club-lila)' }} /></div>}<span className="tabular-nums" title={realizados !== total ? `${realizados} en el período` : undefined}><b>{total}</b>{min !== null && <span className="text-dte-gris"> · mín. {min}</span>}</span></div></td>
               <td data-label="Inscriptos" className="en-linea py-2.5 pr-3 text-right tabular-nums"><span>{inscriptos || '—'}{inscriptos > CLUB_MAX_PARTICIPANTES && <span className="ml-1 text-xs text-aviso-fuerte" title={`Supera los ${CLUB_MAX_PARTICIPANTES} sugeridos`}>▲</span>}</span></td>
               <td data-label="Prom. reales" className="en-linea py-2.5 pr-3 text-right tabular-nums">{promedio ? nf.format(Math.round(promedio * 10) / 10) : '—'}</td>
               <td data-label="Estado" className="en-linea py-2.5"><div className="flex flex-col items-end gap-1.5 sm:items-start"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.badge}`}>{st.label}</span>
