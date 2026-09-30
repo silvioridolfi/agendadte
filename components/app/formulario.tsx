@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
 import { enlaceDe, esReunion, conEnlace } from '@/lib/reunion'
+import { estadoAlCompletar, horariosSePisan, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
 import { etiquetaAccion, nombreAccion, iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, PROPUESTAS_CLUB, esAusencia, ACCIONES_CED, SOLO_CED, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
 import type { Ocupacion, Organismo } from '@/app/actions'
 import { titleCase } from '@/lib/format'
@@ -138,7 +139,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   function pickClub(id: string) {
     const c = clubes?.find(x => x.id === id)
     setForm(f => ({ ...f, club_id: id, encuentros_previstos: c?.encuentros_previstos?.toString() ?? f.encuentros_previstos,
-      encuentro_n: !item && c ? String(clubEncuentrosRealizados(c) + 1) : f.encuentro_n }))
+      encuentro_n: !item && c ? String(proximoEncuentro(c.encuentros)) : f.encuentro_n }))
     // La sede del club se sugiere sólo si todavía no se eligió escuela (las prácticas pueden hacerse en otras sedes).
     if (c?.school && !school) setSchool(c.school)
   }
@@ -192,8 +193,8 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     for (const f of delDia.feriados.filter(f => f.tipo === 'distrital')) out.push(`${cap(fmt(parse(f.fecha), { weekday: 'long', day: 'numeric', month: 'long' }))} es ${f.tipo === 'receso' ? 'receso escolar' : 'feriado'}: ${f.nombre}${f.confirmado ? '' : ' (a confirmar)'}.`)
     if (!esParo && d >= 1 && d <= 5 && fed.ddjj?.length && !franjasDte(ddjjFor(fed, form.fecha)).length && !ddjjFor(fed, form.fecha)?.dte) out.push('No tenés horario DTE declarado ese día en la DD.JJ.')
     const solapa = delDia.items.filter(i => i.estado !== 'cancelada' && (
-      (form.hora_inicio && i.hora_inicio && (form.hora_inicio < (hhmm(i.hora_fin) || hhmm(i.hora_inicio)) || form.hora_inicio === hhmm(i.hora_inicio)) && (hhmm(i.hora_inicio) < (form.hora_fin || form.hora_inicio) || form.hora_inicio === hhmm(i.hora_inicio)))
-      || (school && i.school_id === school.id && i.accion === form.accion)))
+      horariosSePisan({ ini: form.hora_inicio, fin: form.hora_fin }, { ini: hhmm(i.hora_inicio), fin: hhmm(i.hora_fin) })
+      || (school && i.school_id === school.id && i.accion === form.accion && !esTrayecto(form.accion))))
     for (const i of solapa) out.push(`Ya tenés ${cap(i.accion.toLowerCase())} ${i.hora_inicio ? `a las ${hhmm(i.hora_inicio)} ` : ''}ese día${i.school ? ` en ${shortSchoolName(i.school)}` : ''}.`)
     if (form.estado === 'realizada' && form.fecha > hoyAR()) out.push('Está marcada como realizada pero la fecha todavía no llegó.')
     return out
@@ -275,9 +276,11 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       } catch (err) { setError(errMsg(err)); setSaving(false) }
       return
     }
+    // Club o práctica de hoy o anterior con datos del encuentro cargados: pasa a realizada.
+    const estadoFinal = estadoAlCompletar({ accion: form.accion, estado: form.estado, fecha: form.fecha, hoy: hoyAR(), inscriptos: form.inscriptos, asistentes: form.asistentes, descripcion: form.descripcion, esCierre: form.es_cierre })
     const input: AgendaItemInput = {
       repeticion: repetir && !item ? { dias: diasSerie, hasta: hastaSerie } : esLicencia && !item && licFin > form.fecha ? { dias: [1, 2, 3, 4, 5], hasta: licFin } : null,
-      fed_id: fed.id, school_id: esLicencia || esParo ? null : school?.id ?? null, lugar: school || esLicencia || esParo ? null : form.lugar || null, fecha: form.fecha, accion: form.accion, estado: form.estado,
+      fed_id: fed.id, school_id: esLicencia || esParo ? null : school?.id ?? null, lugar: school || esLicencia || esParo ? null : form.lugar || null, fecha: form.fecha, accion: form.accion, estado: estadoFinal,
       hora_inicio: esParo || esLicencia ? null : form.hora_inicio || null, hora_fin: esParo || esLicencia ? null : form.hora_fin || null, sub_accion: conSubAccion ? form.sub_accion : null, detalle: form.detalle,
       modalidad: lugarOpcional || esReunion(form.accion) ? form.modalidad_ev : null, enlace: form.enlace.trim() || null, rol_formacion: esFormacion ? form.rol_formacion : null, dictada_por: esFormacion ? form.dictada_por : null,
       cantidad: cat === 'tecnica' ? toNum(form.cantidad) : null,
@@ -321,7 +324,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         onSaved({ creadas: r.creadas, mensaje: `Licencia cargada: ${r.creadas} ${r.creadas === 1 ? 'día hábil' : 'días hábiles'}${ids.length ? ` · ${ids.length} ${ids.length === 1 ? 'acción reprogramada' : 'acciones reprogramadas'}` : ''}` })
         return
       }
-      onSaved({ creadas: r.creadas, mensaje: alcance === 'siguientes' && r.creadas > 1 ? `Se actualizaron este encuentro y ${r.creadas - 1} ${r.creadas === 2 ? 'fecha siguiente' : 'fechas siguientes'} de la serie` : undefined }) } catch (err) {
+      onSaved({ creadas: r.creadas, mensaje: alcance === 'siguientes' && r.creadas > 1 ? `Se actualizaron este encuentro y ${r.creadas - 1} ${r.creadas === 2 ? 'fecha siguiente' : 'fechas siguientes'} de la serie` : estadoFinal !== form.estado ? 'La acción se marcó como realizada' : undefined }) } catch (err) {
       if (typeof navigator !== 'undefined' && !navigator.onLine) { encolarOffline(input, item?.id); onSaved({ creadas: 1, offline: true }); return }
       setError(errMsg(err)); setSaving(false)
     }
@@ -436,17 +439,18 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         {otroOrigen && <div className="flex flex-col gap-1.5 sm:col-span-6"><span className="text-sm font-semibold">Escuela de origen de los estudiantes</span><SchoolPicker value={origen} onChange={setOrigen} /></div>}
         {grupo && <p className="text-xs sm:col-span-6">Se va a registrar como <b>{grupo}</b>{school ? ` · ${shortSchoolName(school)}` : ''}{otroOrigen && origen ? ` · estudiantes de ${shortSchoolName(origen)}` : ''}.</p>}
       </div>}
-      {!aDefinir && club && <p className="-mt-2 text-xs text-dte-gris sm:col-span-6">{clubEncuentrosRealizados(club)} encuentros registrados{club.encuentros_previstos ? ` de ${club.encuentros_previstos} previstos` : ''}{club.escuela_origen ? ` · Estudiantes de ${shortSchoolName(club.escuela_origen)}` : ''}. La escuela o lugar de arriba es donde se hizo este encuentro.</p>}
+      {!aDefinir && club && <p className="-mt-2 text-xs text-dte-gris sm:col-span-6">{clubEncuentrosRealizados(club)} encuentros registrados{textoMinimo(club.tipo, clubEncuentrosRealizados(club)) ? ` · ${textoMinimo(club.tipo, clubEncuentrosRealizados(club))}` : ''}{club.escuela_origen ? ` · Estudiantes de ${shortSchoolName(club.escuela_origen)}` : ''}. La escuela o lugar de arriba es donde se hizo este encuentro.</p>}
       {!aDefinir && <Field label="Propuesta dictada" hint={marca.corto === 'club' ? '(ej.: taller de redes dentro del club)' : undefined} className="sm:col-span-4"><Input placeholder={marca.propuesta} value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" /></Field>}
-      {<Field label="Encuentros previstos" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={form.encuentros_previstos} onChange={e => set('encuentros_previstos', e.target.value)} className="h-10 bg-white" /></Field>}
-      {!aDefinir && !modoT && <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>}
+      {form.accion === 'CLUB DE TECNOLOGÍA' && <Field label="Encuentros previstos" hint="(opcional)" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={form.encuentros_previstos} onChange={e => set('encuentros_previstos', e.target.value)} className="h-10 bg-white" /></Field>}
+      {!aDefinir && <Field label="Encuentro N°" hint={modoT ? '(se asigna solo)' : undefined} className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={modoT ? String(club ? proximoEncuentro(club.encuentros) : 1) : undefined} value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>}
       {!aDefinir && <Field label="Tipo de jornada" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={form.tipo_jornada} onChange={e => set('tipo_jornada', e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{[...TIPOS_JORNADA].sort(azOtroAlFinal).map(t => <option key={t} value={t}>{t}</option>)}</select></Field>}
       {!aDefinir && <Field label="Formato de participación" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>}
       {!aDefinir && <Field label="Destinatarios" className="sm:col-span-6"><Input placeholder="Ej.: estudiantes de 5° y 6°, familias" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" /></Field>}
-      {!aDefinir && (!modoT || form.estado === 'realizada') && <Field label="Cantidad de inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>}
-      {!aDefinir && (!modoT || form.estado === 'realizada') && <Field label="Participantes reales" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>}
-      {!aDefinir && (!modoT || form.estado === 'realizada') && <Field label="Breve descripción de lo realizado" className="sm:col-span-6"><Textarea rows={3} placeholder="Qué se trabajó, con qué recursos, cómo participó el grupo…" value={form.descripcion} onChange={e => set('descripcion', e.target.value)} className="bg-white" /></Field>}
-      {!aDefinir && (!modoT || form.estado === 'realizada') && <label className="flex items-start gap-2.5 rounded-control border border-dte-linea bg-white p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={form.es_cierre} onChange={e => set('es_cierre', e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Este es el encuentro de cierre {marca.corto === 'club' ? 'del club' : 'de la práctica'}</b><span className="block text-xs text-dte-gris">{marca.corto === 'club' ? 'El club queda finalizado' : 'La práctica queda finalizada'} con esta fecha y deja de figurar entre los activos.</span></span></label>}
+      {!aDefinir && modoT && form.estado !== 'realizada' && form.estado !== 'cancelada' && form.fecha <= hoyAR() && <p className="text-xs text-dte-gris sm:col-span-6">Si cargás inscriptos, participantes reales o la descripción, al guardar la acción se marca como realizada.</p>}
+      {!aDefinir && (!modoT || form.estado === 'realizada' || form.fecha <= hoyAR()) && <Field label="Cantidad de inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>}
+      {!aDefinir && (!modoT || form.estado === 'realizada' || form.fecha <= hoyAR()) && <Field label="Participantes reales" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>}
+      {!aDefinir && (!modoT || form.estado === 'realizada' || form.fecha <= hoyAR()) && <Field label="Breve descripción de lo realizado" className="sm:col-span-6"><Textarea rows={3} placeholder="Qué se trabajó, con qué recursos, cómo participó el grupo…" value={form.descripcion} onChange={e => set('descripcion', e.target.value)} className="bg-white" /></Field>}
+      {!aDefinir && (!modoT || form.estado === 'realizada' || form.fecha <= hoyAR()) && <label className="flex items-start gap-2.5 rounded-control border border-dte-linea bg-white p-2.5 text-sm sm:col-span-6"><input type="checkbox" checked={form.es_cierre} onChange={e => set('es_cierre', e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Este es el encuentro de cierre {marca.corto === 'club' ? 'del club' : 'de la práctica'}</b><span className="block text-xs text-dte-gris">{marca.corto === 'club' ? 'El club queda finalizado' : 'La práctica queda finalizada'} con esta fecha y deja de figurar entre los activos.</span></span></label>}
     </fieldset>}
     {conEncuentro && !esClub && <fieldset className="grid gap-4 rounded-tile border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
       <legend className="px-1 text-sm font-semibold">Datos del encuentro <span className="font-normal text-dte-gris">(para las métricas de participación)</span></legend>

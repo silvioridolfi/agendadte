@@ -124,7 +124,7 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
         const est = iniciado(c) ? clubEstado(c, hoy) : null
         return { fed: fedName(c.fed_id), escuela: escuela(c.school, c.lugar), grupo: c.grupo ?? '', origen: c.escuela_origen ? escuela(c.escuela_origen) : '',
           distrito: c.school?.distrito ? titleCase(c.school.distrito) : '', inicio: fecha(c.fecha_inicio), cierre: fecha(c.fecha_cierre), ultimo: iniciado(c) ? fecha(ultimaActividad(c)) : '',
-          estado: !est ? 'Por iniciar' : est === 'activo' ? 'Activo' : est === 'finalizado' ? 'Finalizado' : 'Sin actividad', realizados: new Set(c.encuentros.map(e => e.fecha)).size, previstos: c.encuentros_previstos ?? '' }
+          estado: !est ? 'Por iniciar' : est === 'activo' ? 'Activo' : est === 'finalizado' ? 'Finalizado' : 'Sin actividad', realizados: new Set(c.encuentros.map(e => e.fecha)).size, previstos: c.tipo === 'CLUB DE TECNOLOGÍA' ? c.encuentros_previstos ?? '' : '' }
       }), 'Ciclo lectivo completo · un grupo por fila')
     }
   }
