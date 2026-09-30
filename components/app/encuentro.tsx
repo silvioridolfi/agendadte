@@ -95,7 +95,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
         {opciones.map(c => <option key={c.id} value={c.id}>{etiqueta(c)}</option>)}
       </select>
     </Field>
-    {club && <p className="-mt-2 text-xs text-dte-gris">Próximo encuentro: N° {proximoEncuentro(club.encuentros)} (se numera solo){textoMinimo(tipo, clubEncuentrosRealizados(club)) ? ` · ${textoMinimo(tipo, clubEncuentrosRealizados(club))}` : ''}{club.school?.distrito ? ` · ${club.school.distrito}` : ''}</p>}
+    {club && <p className="-mt-2 text-xs text-dte-gris">Próximo encuentro: N° {proximoEncuentro(club.encuentros, fecha)} (se numera solo){textoMinimo(tipo, clubEncuentrosRealizados(club)) ? ` · ${textoMinimo(tipo, clubEncuentrosRealizados(club))}` : ''}{club.school?.distrito ? ` · ${club.school.distrito}` : ''}</p>}
 
     {hermanos.length > 0 && <fieldset><legend className="mb-1.5 text-sm font-semibold">Registrar también para <span className="font-normal text-dte-gris">(mismos datos, otros grupos de la escuela)</span></legend>
       <div className="flex flex-wrap gap-1.5">{hermanos.map(c => <Pill key={c.id} on={otros.includes(c.id)} onClick={() => setOtros(l => (l.includes(c.id) ? l.filter(x => x !== c.id) : [...l, c.id]))}>{c.grupo ?? etiqueta(c)}</Pill>)}</div>

@@ -17,14 +17,29 @@ describe('mínimo de encuentros (sólo informativo)', () => {
 })
 
 describe('número del próximo encuentro', () => {
+  type E = { encuentro_n: number | null, fecha: string, agenda_item_id?: string, item?: { estado: string } | null }
+  const r = (n: number | null, f: string): E => ({ encuentro_n: n, fecha: f })
+  const p = (n: number | null, f: string, id: string): E => ({ encuentro_n: n, fecha: f, agenda_item_id: id, item: { estado: 'planificada' } })
+  const hechos = [...['2026-08-05', '2026-08-07', '2026-08-14', '2026-09-02', '2026-09-04', '2026-09-09', '2026-09-16', '2026-09-23'].map((f, i) => r(i + 1, f))]
   it('sin encuentros, el 1', () => expect(proximoEncuentro([])).toBe(1))
-  it('sigue al mayor número cargado', () => {
-    const e = (n: number | null, f: string) => ({ encuentro_n: n, fecha: f })
-    expect(proximoEncuentro([e(1, '2026-08-05'), e(2, '2026-08-07'), e(10, '2026-09-28')])).toBe(11)
+  it('sigue al mayor número realizado', () => expect(proximoEncuentro([r(1, '2026-08-05'), r(2, '2026-08-07'), r(10, '2026-09-28')])).toBe(11))
+  it('sin números cargados, cuenta las fechas distintas', () => expect(proximoEncuentro([r(null, '2026-08-05'), r(null, '2026-08-05'), r(null, '2026-08-07')])).toBe(3))
+  it('la fila duplicada del mismo día (planilla + app) cuenta una sola vez', () => {
+    expect(proximoEncuentro([...hechos, r(8, '2026-09-23')], '2026-09-30')).toBe(9)
   })
-  it('sin números cargados, cuenta las fechas distintas (dos grupos el mismo día son un encuentro)', () => {
-    const e = (f: string) => ({ encuentro_n: null, fecha: f })
-    expect(proximoEncuentro([e('2026-08-05'), e('2026-08-05'), e('2026-08-07')])).toBe(3)
+  it('los planificados no contagian: cada grupo toma el 9 el 30/9 aunque otros ya tengan planificado', () => {
+    const otros = [p(10, '2026-09-30', 'a'), p(11, '2026-10-02', 'b')]
+    expect(proximoEncuentro([...hechos, ...otros], '2026-09-30', 'c')).toBe(9)
+  })
+  it('el 2/10 es el 10 si el 30/9 sigue planificado', () => {
+    expect(proximoEncuentro([...hechos, p(9, '2026-09-30', 'a')], '2026-10-02', 'b')).toBe(10)
+    expect(proximoEncuentro(hechos, '2026-10-02', 'b', ['2026-09-30'])).toBe(10)
+  })
+  it('al editar, no se cuenta a sí mismo', () => {
+    expect(proximoEncuentro([...hechos, p(9, '2026-09-30', 'a')], '2026-09-30', 'a')).toBe(9)
+  })
+  it('los cancelados no cuentan', () => {
+    expect(proximoEncuentro([...hechos, { ...p(9, '2026-09-30', 'a'), item: { estado: 'cancelada' } }], '2026-10-02', 'b')).toBe(9)
   })
 })
 
