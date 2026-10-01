@@ -84,6 +84,8 @@ export async function revisarPve(fedId: string): Promise<ResultadoPve> {
     await db.from('pve').update({ file_id: pdf.id, nombre, entregada_at: ahora, ...(corregida ? { reentregada_at: ahora } : {}), updated_at: ahora }).eq('fed_id', fedId).eq('mes', mes)
     await db.from('pve_historial').insert({ fed_id: fedId, mes, tipo: corregida ? 'reentregada' : 'entregada', autor_id: fedId })
     if (coord?.length) await db.from('notificaciones').insert(coord.map(c => ({ fed_id: c.id, autor_id: fedId, tipo: 'pve', detalle: corregida ? `Reentregó corregida su PVE de ${nombreMes(mes).toLowerCase()}` : `Entregó su PVE de ${nombreMes(mes).toLowerCase()}` })))
+    // Entregada: los avisos y la devolución de ese mes dejan de estar pendientes (también el banner).
+    await db.from('notificaciones').update({ leida: true }).eq('fed_id', fedId).eq('tipo', 'pve').eq('leida', false).like('detalle', `%PVE de ${nombreMes(mes).toLowerCase()}%`)
     res.nuevas++
   }
   return res
