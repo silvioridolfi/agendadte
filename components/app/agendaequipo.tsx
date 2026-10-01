@@ -67,7 +67,7 @@ export function AgendaEquipoView({ feds, reloadKey, onSelect }: { feds: Fed[], r
     <div className="flex flex-col gap-3 rounded-card border border-dte-linea bg-white p-3 shadow-e1">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <Segmented label="Vista de la agenda del equipo" value={modo} options={MODOS} onChange={setModo} />
-        {modo !== 'proximas' && <WeekNav onPrev={() => mover(-1)} onNext={() => mover(1)} onToday={() => setFecha(toWeekday(fechaHoyAR()))} prevLabel={modo === 'dia' ? 'Día anterior' : 'Semana anterior'} nextLabel={modo === 'dia' ? 'Día siguiente' : 'Semana siguiente'} />}
+        {modo !== 'proximas' && <WeekNav llena onPrev={() => mover(-1)} onNext={() => mover(1)} onToday={() => setFecha(toWeekday(fechaHoyAR()))} prevLabel={modo === 'dia' ? 'Día anterior' : 'Semana anterior'} nextLabel={modo === 'dia' ? 'Día siguiente' : 'Semana siguiente'} />}
       </div>
       <div className="grid gap-2 sm:grid-cols-[auto_1fr_1fr] sm:items-center">
         <div className="flex flex-wrap gap-1.5"><Pill on={soloTerritorio} onClick={() => setSoloTerritorio(true)} conIcono={false}>En territorio</Pill><Pill on={!soloTerritorio} onClick={() => setSoloTerritorio(false)} conIcono={false}>Todas las acciones</Pill></div>
@@ -145,6 +145,11 @@ function VistaDia({ equipo, fecha, esHoy, deDia, onSelect }: { equipo: Fed[], fe
 
     <ul className="flex flex-col gap-3 md:hidden">{orden.map(f => {
       const l = deDia(f, fecha)
+      // Con licencia o paro todo el día: una fila compacta, sin el detalle de horario.
+      if (l.length > 0 && l.every(ausencia)) return <li key={f.id} className="flex items-center justify-between gap-2 rounded-card border border-dte-linea bg-white px-3 py-2.5">
+        <span className="truncate font-semibold" title={f.nombre_completo}>{f.nombre_completo}</span>
+        <span className="shrink-0 rounded-full bg-aviso-fondo-fuerte px-2.5 py-0.5 text-xs font-semibold text-aviso-fuerte">{l[0].accion === 'PARO' ? 'Paro' : 'Licencia'}</span>
+      </li>
       return <li key={f.id} className={`rounded-card border border-dte-linea bg-white p-3 ${l.length ? '' : 'opacity-60'}`}>
         <p className="mb-1.5 flex items-center justify-between gap-2 font-semibold"><span className="truncate" title={f.nombre_completo}>{f.nombre_completo}</span><span className="shrink-0 text-xs font-normal text-dte-gris">{l.length ? `${l.length} ${l.length === 1 ? 'acción' : 'acciones'}` : 'Sin acciones'}</span></p>
         {l.length > 0 && <ul className="flex flex-col divide-y divide-dte-linea">{l.map(i => <li key={i.id}>
