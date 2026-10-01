@@ -16,6 +16,8 @@ import { DetailDialog } from '@/components/app/detalle'
 import { CoordinatorView } from '@/components/app/tablero'
 import { ItemForm } from '@/components/app/formulario'
 import { MenuPerfil, MiPerfilView } from '@/components/app/miperfil'
+import { AyudaView, useNovedadesNuevas } from '@/components/app/ayuda'
+import type { Rol } from '@/lib/ayuda/temas'
 import { RegistroEncuentro } from '@/components/app/encuentro'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
 import { limpiarCache } from '@/components/app/offline'
@@ -39,7 +41,7 @@ function tituloForm(e: { item: AgendaItem | null, preset?: ItemPreset } | null) 
   return 'Nueva acción'
 }
 
-const SECCIONES = ['agenda', 'board', 'perfil', 'fotos', 'mispve', 'usuarios', 'feriados', 'pve'] as const
+const SECCIONES = ['agenda', 'board', 'perfil', 'fotos', 'mispve', 'usuarios', 'feriados', 'pve', 'ayuda'] as const
 type Seccion = typeof SECCIONES[number]
 const SECCION_KEY = 'agenda-territorial:seccion'
 
@@ -48,6 +50,8 @@ export default function Page() {
   const [sesion, setSesion] = useState<Sesion | null | undefined>(undefined)
   const [feds, setFeds] = useState<Fed[] | null>(null)
   const profile = sesion?.fed ?? null
+  const rolAyuda: Rol = profile?.rol === 'coordinacion' ? 'ced' : 'fed'
+  const [hayNovedades, marcarNovedades] = useNovedadesNuevas(rolAyuda)
   const setProfile = (f: Fed) => setSesion(s => (s ? { ...s, fed: f } : s))
   const [section, setSection] = useState<Seccion>('agenda')
   // La sección abierta se recuerda en la pestaña del navegador: al recargar se vuelve al mismo lugar.
@@ -132,7 +136,7 @@ export default function Page() {
         <div className="flex shrink-0 items-center gap-1">
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <NotificacionesBell feds={feds ?? []} onOpen={setSelected} />
-        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
+        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} hayNovedades={hayNovedades} onAyuda={() => { setVista(null); irA('ayuda') }} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
         </div>
       </div>
     </header>
@@ -147,6 +151,7 @@ export default function Page() {
     {section === 'pve' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <PveEquipoView />
       : section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><div className="flex flex-col gap-4"><EventosPanel onSaved={changed} /><FeriadosView autorId={profile.id} onSaved={changed} /></div></main>
       : section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); irA('agenda') } }} />
+      : section === 'ayuda' ? <AyudaView rol={rolAyuda} onVista={marcarNovedades} />
       : section === 'fotos' ? <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-32 pt-6 lg:px-10"><SeccionFotos /></main>
       : section === 'mispve' && profile.rol === 'fed' ? <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-32 pt-6 lg:px-10"><SeccionPve /></main>
       : section === 'perfil'

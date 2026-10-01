@@ -2,6 +2,7 @@ import 'server-only'
 import { supabaseServer } from '@/lib/supabase-server'
 import { DriveError, carpetaVigente, crearCarpeta, darLectura, esCarpeta, listarHijos, renombrar } from '@/lib/drive'
 import { hoyAR } from '@/lib/hora'
+import { DIA_HABIL_AVISO, DIA_HABIL_RECORDATORIO, DIA_HABIL_VENCIMIENTO } from '@/lib/pve-reglas'
 
 // Planillas de Visita a Escuelas (PVE): cada FED sube un PDF por mes a "PVE MM-AAAA", dentro de la subcarpeta "PVE"
 // de su carpeta de Drive (la misma que usa para las fotos). La agenda lo detecta, lo renombra con el formato del
@@ -101,15 +102,15 @@ export function habilesDelMes(mes: string, noLaborables: Set<string> = new Set()
   return out
 }
 // Vencimiento de la PVE de un mes: el 5.º día hábil del mes siguiente.
-export const vencimientoPve = (mes: string, noLaborables: Set<string> = new Set()) => habilesDelMes(inicioMes(mes, 1), noLaborables)[4]
+export const vencimientoPve = (mes: string, noLaborables: Set<string> = new Set()) => habilesDelMes(inicioMes(mes, 1), noLaborables)[DIA_HABIL_VENCIMIENTO - 1]
 // Aviso de la PVE del mes anterior: el 1.er día hábil del mes ("ya podés subirla") y el 4.º (recordatorio, vence el 5.º).
 export function avisoPve(hoy: string, noLab: Set<string> = new Set()): { mes: string, vence: string, tipo: 'aviso' | 'recordatorio', texto: string } | null {
   const mes = inicioMes(hoy, -1)
   const habiles = habilesDelMes(inicioMes(hoy), noLab)
-  const vence = habiles[4], dia = habiles.indexOf(hoy)
-  if (!vence || mes < PRIMER_MES || (dia !== 0 && dia !== 3)) return null
+  const vence = habiles[DIA_HABIL_VENCIMIENTO - 1], dia = habiles.indexOf(hoy) + 1
+  if (!vence || mes < PRIMER_MES || (dia !== DIA_HABIL_AVISO && dia !== DIA_HABIL_RECORDATORIO)) return null
   const venceTxt = `${vence.slice(8, 10)}/${vence.slice(5, 7)}`
-  return dia === 0
+  return dia === DIA_HABIL_AVISO
     ? { mes, vence, tipo: 'aviso', texto: `Ya podés subir tu PVE de ${nombreMes(mes).toLowerCase()}: vence el ${venceTxt}` }
     : { mes, vence, tipo: 'recordatorio', texto: `Mañana (${venceTxt}) vence tu PVE de ${nombreMes(mes).toLowerCase()}` }
 }

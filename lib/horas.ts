@@ -1,5 +1,5 @@
 // Asignación de una foto a una acción de la agenda según la hora de captura (sin dependencias de servidor).
-const TOLERANCIA = 30 // minutos antes o después del horario de la acción
+export const TOLERANCIA = 30 // minutos antes o después del horario de la acción
 const aMin = (h: string) => { const [a, b] = h.split(':').map(Number); return a * 60 + b }
 
 // Acción a la que corresponde una foto por su hora: la única cuyo horario la contiene o, si ninguna, la única más
