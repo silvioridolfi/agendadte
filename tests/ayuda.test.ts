@@ -3,6 +3,7 @@ import { ACCIONES, ACCIONES_CED, SOLO_CED, CLUB_MIN_ENCUENTROS, nombreAccion } f
 import { DESTINATARIOS_BASE, PROPUESTAS_DE_CLUB } from '@/lib/encuentro'
 import { NOVEDADES } from '@/lib/ayuda/novedades'
 import { ALCANCE_CED, TEMAS } from '@/lib/ayuda/temas'
+import { ATAJOS, ESTILO_TEMA } from '@/lib/ayuda/estilo'
 import { normalizar, parsear, partesNegrita, textoPlano } from '@/lib/ayuda/formato'
 vi.mock('server-only', () => ({}))
 
@@ -48,6 +49,13 @@ describe('contenido de la ayuda', () => {
   })
   it('no menciona la geolocalización de las fotos', () => {
     expect(todo).not.toMatch(/geolocaliz|\bgps\b|exif|coordenadas|ubicaci[oó]n de (la|las) fotos?/i)
+  })
+})
+
+describe('identidad visual', () => {
+  it('cada tema tiene familia de color e ícono, y los atajos apuntan a temas de su rol', () => {
+    for (const t of TEMAS) expect(ESTILO_TEMA[t.id], t.id).toBeTruthy()
+    for (const rol of ['fed', 'ced'] as const) for (const a of ATAJOS[rol]) expect(TEMAS.find(t => t.id === a.id)?.para, a.id).toContain(rol)
   })
 })
 
