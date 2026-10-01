@@ -2,6 +2,7 @@
 
 import { Pill } from '@/components/ui/segmented'
 import { Input } from '@/components/ui/input'
+import { SUB_ACCIONES } from '@/lib/agenda'
 import { opcionesDestinatarios, partirDestinatarios, PROPUESTAS_DE_CLUB, unirDestinatarios } from '@/lib/encuentro'
 import { selectClass } from '@/components/app/comun'
 import { useState } from 'react'
@@ -32,5 +33,15 @@ export function Destinatarios({ value, grupo, onChange }: { value: string, grupo
   return <div className="flex flex-col gap-2">
     <div className="flex flex-wrap gap-1.5">{opciones.map(o => <Pill key={o} on={elegidos.includes(o)} onClick={() => alternar(o)}>{o}</Pill>)}</div>
     <Input aria-label="Otros destinatarios" placeholder="Otros (opcional), separados por coma" value={otrosTxt} onChange={e => { setOtrosTxt(e.target.value); onChange(juntar(elegidos, e.target.value)) }} className="h-10 bg-white" />
+  </div>
+}
+
+// Propuesta del taller o capacitación: una sola elección entre los temas habituales (volver a tocarla la quita) o un tema propio.
+export function PropuestaTaller({ value, onChange }: { value: string, onChange: (v: string) => void }) {
+  const temas = [...(SUB_ACCIONES['TALLER/CAPACITACIÓN'] ?? [])].sort((a, b) => a.localeCompare(b, 'es'))
+  const propia = !!value && !temas.includes(value)
+  return <div className="flex flex-col gap-2">
+    <div className="flex flex-wrap gap-1.5">{temas.map(t => <Pill key={t} on={value === t} onClick={() => onChange(value === t ? '' : t)}>{t}</Pill>)}</div>
+    <Input aria-label="Otra propuesta" placeholder="Otra propuesta (opcional)" value={propia ? value : ''} onChange={e => onChange(e.target.value)} className="h-10 bg-white" />
   </div>
 }
