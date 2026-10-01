@@ -216,7 +216,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       horariosSePisan({ ini: form.hora_inicio, fin: form.hora_fin }, { ini: hhmm(i.hora_inicio), fin: hhmm(i.hora_fin) })
       || (school && i.school_id === school.id && i.accion === form.accion && !esTrayecto(form.accion))))
     for (const i of solapa) out.push(`Ya tenés ${cap(i.accion.toLowerCase())} ${i.hora_inicio ? `a las ${hhmm(i.hora_inicio)} ` : ''}ese día${i.school ? ` en ${shortSchoolName(i.school)}` : ''}.`)
-    if (form.estado === 'realizada' && form.fecha > hoyAR()) out.push('Está marcada como realizada pero la fecha todavía no llegó.')
+    if (form.estado === 'realizada' && form.fecha > hoyAR() && !esParo) out.push('Está marcada como realizada pero la fecha todavía no llegó.')
     return out
   }, [form.accion, form.fecha, form.hora_inicio, form.hora_fin, form.estado, delDia, fed, school, esLicencia, esParo])
   // Sólo días hábiles: ni fines de semana ni feriados o recesos (al editar sin cambiar la fecha, se respeta lo cargado).

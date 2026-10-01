@@ -12,6 +12,7 @@ import { PRIMER_MES, carpetaDelMes, inicioMes, hoyAR as hoyPve, mesesEntregables
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 import { hoyAR } from '@/lib/hora'
 import { avisaPorFecha } from '@/lib/avisos'
+import { estadoAlCrear } from '@/lib/estado'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
@@ -186,7 +187,8 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
   // Una reprogramada que recibe fecha nueva vuelve a planificada: la etiqueta marca sólo lo pendiente de fecha.
   if (antes && antes.estado === 'reprogramada' && row.estado === 'reprogramada' && antes.fecha !== row.fecha) row.estado = 'planificada'
   // Acción nueva con fecha pasada: se registra como realizada (carga retroactiva de lo ya hecho).
-  if (!id && row.fecha < hoyAR() && row.estado === 'planificada') row.estado = 'realizada'
+  // Además, un paro (adhesión) no queda pendiente: se registra directamente como realizado, sin importar la fecha. Se puede editar después.
+  if (!id) row.estado = estadoAlCrear({ accion: row.accion, fecha: row.fecha, hoy: hoyAR(), estado: row.estado })
   // Club o práctica que ya vino de la planilla (CAPACITACIONES): no se duplica el encuentro.
   if (esTrayecto(row.accion) && (!antes || antes.fecha !== row.fecha || antes.school_id !== row.school_id)) {
     let q = db.from('agenda_encuentros').select('id').eq('fed_id', row.fed_id).eq('fecha', row.fecha).eq('tipo', row.accion).eq('origen', 'planilla').is('agenda_item_id', null).limit(1)

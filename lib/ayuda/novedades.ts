@@ -5,6 +5,7 @@ import type { Rol } from '@/lib/ayuda/temas'
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[] }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-01', titulo: 'Los paros se registran como realizados', texto: 'Al agendar un día como Paro queda directamente como realizado, aunque la fecha todavía no haya llegado. Igual podés editarlo. Además, el banner de avisos ahora ocupa menos lugar en el celular.' },
   { fecha: '2026-10-01', titulo: 'Una agenda que se mueve con suavidad', texto: 'Las pantallas y las listas entran con un fundido corto, al marcar una acción como realizada se dibuja una tilde, lo que acabás de guardar se destaca un instante y los desplegables abren y cierran sin saltos. Si tenés activado "reducir movimiento" en tu dispositivo, no se anima nada.' },
   { fecha: '2026-10-01', titulo: 'Ayuda dentro de la agenda', texto: 'Desde el menú de las iniciales › Ayuda encontrás el manual completo, con buscador, siempre al día con la versión de la agenda. Acá mismo vas a ver cada novedad.' },
   { fecha: '2026-10-01', titulo: 'Avisos con color y banner', texto: 'Las notificaciones se distinguen por color (rojo: urgente, amarillo: aviso, verde: confirmación). Lo que pide una acción tuya, como la PVE, aparece además como banner arriba de la pantalla.' },
