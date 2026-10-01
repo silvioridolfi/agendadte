@@ -31,11 +31,13 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
     return () => { vivo = false }
   }, [item])
   // Dirección de la escuela o jefatura, con enlace a Google Maps (enlace común, sin API ni límites de uso).
+  // La fila se reserva desde el principio (con un renglón en blanco) para que la tarjeta no cambie de alto al llegar la dirección.
   const [ubic, setUbic] = useState<Ubicacion | null>(null)
+  const [ubicLista, setUbicLista] = useState(false)
   useEffect(() => {
     if (!item || (!item.school_id && !item.lugar)) return
     let vivo = true
-    ubicacionDe(item.school_id, item.lugar).then(u => vivo && setUbic(u)).catch(() => {})
+    ubicacionDe(item.school_id, item.lugar).then(u => vivo && setUbic(u)).catch(() => {}).finally(() => vivo && setUbicLista(true))
     return () => { vivo = false }
   }, [item])
   if (!item) return <Dialog open={false} />
@@ -84,10 +86,10 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
         {row(Video, 'Reunión virtual', item.enlace && <a href={item.enlace} target="_blank" rel="noopener noreferrer" title={item.enlace} className="inline-flex min-h-11 items-center font-semibold text-dte-petroleo underline underline-offset-2 md:min-h-0">Unirse a la reunión</a>)}
         {row(GraduationCap, item.accion === 'FORMACIÓN INTERNA' ? 'Formación' : 'Modalidad', (item.modalidad || item.rol_formacion || item.dictada_por) && [item.rol_formacion, item.modalidad, item.dictada_por ? `dictada por ${item.dictada_por}` : null].filter(Boolean).join(' · '))}
         {row(SchoolIcon, 'Escuela', item.school && <>CUE {item.school.cue ?? '—'}{schoolPlace(item.school) ? ` · ${schoolPlace(item.school)}` : ''}</>)}
-        {row(Navigation, 'Dirección', (textoDir || mapa) && <>{textoDir}{mapa && <> {textoDir ? '· ' : ''}<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapa)}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Cómo llegar</a></>}</>)}
+        {row(Navigation, 'Dirección', !ubicLista && (item.school_id || item.lugar) ? <span aria-hidden className="block h-5 w-56 max-w-full animate-pulse rounded bg-dte-linea/70" /> : (textoDir || mapa) && <>{textoDir}{mapa && <> {textoDir ? '· ' : ''}<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapa)}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Cómo llegar</a></>}</>)}
         {!visita && <>
         {row(ClipboardList, 'Sub-acción', item.sub_accion && <>{item.sub_accion}{item.cantidad ? <span className="text-dte-gris"> · {item.cantidad} equipos</span> : null}</>)}
-        {row(UserRound, item.encuentros?.length > 1 ? `Encuentros (${item.encuentros.length})` : 'Encuentro', item.encuentros?.length ? <ul className="flex flex-col gap-1.5">{item.encuentros.map(e => <li key={e.id}>{[e.propuesta, e.encuentro_n ? `Encuentro N° ${e.encuentro_n}` : null, e.modalidad].filter(Boolean).join(' · ')}<span className="block text-xs text-dte-gris">{[e.destinatarios, e.inscriptos != null ? `${e.inscriptos} inscriptos` : null, e.asistentes != null ? `${e.asistentes} asistentes` : null].filter(Boolean).join(' · ')}{e.fotos_url && <> · <a href={e.fotos_url} target="_blank" rel="noreferrer" className="text-dte-petroleo underline">fotos</a></>}</span></li>)}</ul> : null)}
+        {row(UserRound, item.encuentros?.length > 1 ? `Encuentros (${item.encuentros.length})` : 'Encuentro', item.encuentros?.length ? <ul className="flex flex-col gap-1.5">{item.encuentros.map(e => <li key={e.id}>{[e.propuesta, e.encuentro_n ? `Encuentro N° ${e.encuentro_n}` : null, e.modalidad].filter(Boolean).join(' · ')}<span className="block text-xs text-dte-gris">{[e.destinatarios, e.inscriptos != null ? `${e.inscriptos} inscriptos` : null, e.asistentes != null ? `${e.asistentes} asistentes` : null].filter(Boolean).join(' · ')}{e.fotos_url && <> · <a href={e.fotos_url} target="_blank" rel="noreferrer" className="text-dte-petroleo underline">fotos</a></>}</span>{e.descripcion && <span className="mt-1 block whitespace-pre-wrap rounded-control bg-white p-2 text-sm"><span className="block text-xs font-semibold uppercase tracking-wider text-dte-gris">Breve descripción</span>{e.descripcion}</span>}</li>)}</ul> : null)}
         {row(Pencil, 'Detalle', item.detalle && <span className="whitespace-pre-wrap">{item.detalle}</span>)}
         </>}
         {row(UserRound, 'Creada por', fed?.nombre_completo ?? '—')}
@@ -97,7 +99,7 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
       {visita && <section aria-label="Acciones de la visita" className="flex flex-col gap-2">{visita.map(v => <div key={v.id} className="rounded-tile border border-dte-linea p-3 text-sm">
         <ActionChip label={v.accion} />
         {(v.sub_accion || !!v.cantidad) && <p className="mt-1.5">{v.sub_accion}{v.cantidad ? <span className="text-dte-gris">{v.sub_accion ? ' · ' : ''}{v.cantidad} equipos</span> : null}</p>}
-        {v.encuentros?.map(e => <p key={e.id} className="mt-1 text-dte-gris">{[e.propuesta, e.destinatarios, e.inscriptos != null ? `${e.inscriptos} inscriptos` : null, e.asistentes != null ? `${e.asistentes} asistentes` : null].filter(Boolean).join(' · ')}</p>)}
+        {v.encuentros?.map(e => <p key={e.id} className="mt-1 text-dte-gris">{[e.propuesta, e.destinatarios, e.inscriptos != null ? `${e.inscriptos} inscriptos` : null, e.asistentes != null ? `${e.asistentes} asistentes` : null].filter(Boolean).join(' · ')}{e.descripcion && <span className="mt-1 block whitespace-pre-wrap">{e.descripcion}</span>}</p>)}
         {v.detalle && <p className="mt-1 whitespace-pre-wrap text-dte-gris">{v.detalle}</p>}
         {!v.sub_accion && !v.cantidad && !v.detalle && !v.encuentros?.length && <p className="mt-1 text-xs text-dte-gris">Sin datos adicionales.</p>}
       </div>)}</section>}
