@@ -293,9 +293,27 @@
   }
 }
 
+/* Animaciones sutiles (120–300 ms, sin rebotes): entrada de pantallas y listas, y confirmaciones. */
+@keyframes entrada { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes destello { 0% { box-shadow: 0 0 0 0 rgb(0 174 195 / 0.55); background-color: #e0f4f6; } 100% { box-shadow: 0 0 0 10px rgb(0 174 195 / 0); background-color: transparent; } }
+@keyframes realizada { 0% { box-shadow: 0 0 0 0 rgb(0 96 108 / 0.4); background-color: #e0f4f6; } 100% { box-shadow: 0 0 0 8px rgb(0 96 108 / 0); background-color: transparent; } }
+@keyframes tilde { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+@keyframes sello { 0% { opacity: 0; transform: scale(0.8); } 15% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+.anim-entrada { animation: entrada var(--duracion-lenta) var(--ease-estandar) both; }
+/* Los hijos de una lista entran escalonados (30 ms entre uno y otro, hasta el 10.º). */
+.anim-lista > * { animation: entrada var(--duracion-lenta) var(--ease-estandar) both; }
+.anim-lista > :nth-child(2) { animation-delay: 30ms; } .anim-lista > :nth-child(3) { animation-delay: 60ms; } .anim-lista > :nth-child(4) { animation-delay: 90ms; }
+.anim-lista > :nth-child(5) { animation-delay: 120ms; } .anim-lista > :nth-child(6) { animation-delay: 150ms; } .anim-lista > :nth-child(7) { animation-delay: 180ms; }
+.anim-lista > :nth-child(8) { animation-delay: 210ms; } .anim-lista > :nth-child(9) { animation-delay: 240ms; } .anim-lista > :nth-child(n+10) { animation-delay: 270ms; }
+.anim-destello { animation: destello 1200ms ease-out 1; }
+.anim-realizada { animation: realizada 1000ms ease-out 1; }
+.anim-tilde path { stroke-dasharray: 24; animation: tilde 350ms 120ms ease-out both; }
+.anim-sello { animation: sello 1500ms ease-out both; }
+
 /* Respeto de "reducir movimiento". */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
+    animation-delay: 0ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

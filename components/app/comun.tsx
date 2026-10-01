@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { claseDestacado, type Destacados } from '@/lib/destacados'
+import { createContext, useEffect, useMemo, useState } from 'react'
 import { ArrowUp, Check, Loader2, ChevronLeft, ChevronRight, CircleAlert, PartyPopper, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import * as api from '@/app/actions'
@@ -167,6 +168,15 @@ export function BotonRealizar({ item, onRealizar, className = '' }: { item: Agen
     className={`flex size-11 shrink-0 items-center justify-center rounded-full text-dte-gris transition hover:text-exito focus-visible:opacity-100 md:size-8 ${className}`}>
     <span className="flex size-7 items-center justify-center rounded-full border-2 border-current bg-white md:size-6">{enviando ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" strokeWidth={3} />}</span>
   </button>
+}
+// Lo que acaba de pasar y conviene destacar un momento (ver lib/destacados).
+export { claseDestacado }
+export const DestacadosCtx = createContext<Destacados>({ guardado: null, realizadas: new Set() })
+// Tilde que se dibuja al marcar una acción como realizada (se desvanece solo).
+export const SelloRealizada = () => <span aria-hidden className="anim-sello pointer-events-none absolute right-2 top-2 z-10 flex size-6 items-center justify-center rounded-full bg-exito text-white shadow-e2"><Check className="anim-tilde size-3.5" strokeWidth={3} /></span>
+// Contenido que se despliega y se pliega con suavidad (sin saltos de alto). Cerrado, no se puede enfocar.
+export function Despliegue({ abierto, id, children }: { abierto: boolean, id?: string, children: React.ReactNode }) {
+  return <div id={id} inert={!abierto} className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${abierto ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}><div className="min-h-0 overflow-hidden">{children}</div></div>
 }
 // Etiquetas de una acción o, si es una visita con varias, de todas sus acciones.
 export function EtiquetasAccion({ item }: { item: AgendaItem }) {
