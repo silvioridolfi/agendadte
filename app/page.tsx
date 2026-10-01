@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { CalendarDays, CloudUpload, Eye, LayoutDashboard, Loader2, Plus, type LucideIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { CON_ENCUENTRO, esTrayecto, type AgendaItem, type Fed, type Trayecto } from '@/lib/agenda'
@@ -17,12 +17,13 @@ import { CoordinatorView } from '@/components/app/tablero'
 import { ItemForm } from '@/components/app/formulario'
 import { MenuPerfil, MiPerfilView } from '@/components/app/miperfil'
 import { AyudaView, useNovedadesNuevas } from '@/components/app/ayuda'
+import type { Destacados } from '@/lib/destacados'
 import type { Rol } from '@/lib/ayuda/temas'
 import { RegistroEncuentro } from '@/components/app/encuentro'
 import { pendientes, sincronizarPendientes } from '@/components/app/offline'
 import { limpiarCache } from '@/components/app/offline'
 import { ConteoFotosProvider } from '@/components/app/fotosconteo'
-import { cambiarEstadoVarias, errMsg, type AccionAviso, iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday, storage, VolverArriba } from '@/components/app/comun'
+import { cambiarEstadoVarias, errMsg, DestacadosCtx, type AccionAviso, iso, firstName, getFeds, miSesion, salir, Toast, PieInstitucional, ItemPreset, toWeekday, storage, VolverArriba } from '@/components/app/comun'
 import { fechaHoyAR } from '@/lib/hora'
 
 // Botón de la barra inferior mobile (área táctil de 56px de alto).
@@ -66,6 +67,14 @@ export default function Page() {
   const [selected, setSelected] = useState<AgendaItem | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [toast, setToast] = useState('')
+  // Lo que acaba de guardarse o marcarse como realizada se destaca un momento en las tarjetas.
+  const [destacados, setDestacados] = useState<Destacados>({ guardado: null, realizadas: new Set() })
+  const temporizador = useRef<number | undefined>(undefined)
+  const destacar = useCallback((guardado: string | null, realizadas: string[] = []) => {
+    window.clearTimeout(temporizador.current)
+    setDestacados({ guardado, realizadas: new Set(realizadas) })
+    temporizador.current = window.setTimeout(() => setDestacados({ guardado: null, realizadas: new Set() }), 2600)
+  }, [])
   const [toastAcciones, setToastAcciones] = useState<AccionAviso[]>([])
 
   const cargarSesion = useCallback(() => {
@@ -92,6 +101,7 @@ export default function Page() {
     try {
       const r = await cambiarEstadoVarias(ids, 'realizada')
       if (!r.actualizadas) { setToast(r.futuras ? 'No se puede marcar como realizada una acción de una fecha que todavía no llegó' : 'No se pudo marcar como realizada'); setToastAcciones([]); return }
+      destacar(null, ids)
       const deshacer = { label: 'Deshacer', onClick: () => { cambiarEstadoVarias(ids, antes).then(() => changed('Se deshizo el cambio')).catch(e => setToast(errMsg(e))) } }
       const conEncuentro = (item.visita ?? [item]).some(v => CON_ENCUENTRO.includes(v.accion))
       changed(conEncuentro ? 'Marcada como realizada. Completá los asistentes del encuentro.' : ids.length > 1 ? 'Visita marcada como realizada' : 'Marcada como realizada',
@@ -120,7 +130,7 @@ export default function Page() {
   if (!sesion || !profile) return <Ingreso onIngreso={cargarSesion} />
   if (sesion.debeCambiar) return <CambiarPassword obligatorio onListo={() => { setToast('Listo: ya tenés tu contraseña propia'); cargarSesion() }} />
 
-  return <ConteoFotosProvider reloadKey={reloadKey}><NotificacionesProvider profileId={profile.id} reloadKey={reloadKey}><div className="flex min-h-dvh flex-col bg-dte-fondo text-dte-tinta">
+  return <ConteoFotosProvider reloadKey={reloadKey}><NotificacionesProvider profileId={profile.id} reloadKey={reloadKey}><DestacadosCtx.Provider value={destacados}><div className="flex min-h-dvh flex-col bg-dte-fondo text-dte-tinta">
     <header className="sticky top-0 z-header pt-safe border-b border-dte-linea bg-white/95 backdrop-blur">
       <div className="bg-dte-degradado h-1" />
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 lg:px-10">
@@ -148,6 +158,8 @@ export default function Page() {
     </div>}
       <AvisosBanner feds={feds ?? []} puedeSubirPve={profile.rol === 'fed'} onIrAPve={() => { setVista(null); irA('mispve') }} />
     </div>
+    {/* Cada pantalla entra con un fundido corto; cambiar de sección o de vista la vuelve a animar. */}
+    <div key={`${section}-${vista?.tipo ?? ''}-${vista?.tipo === 'fed' ? vista.fed.id : ''}`} className="anim-entrada">
     {section === 'pve' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <PveEquipoView />
       : section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><div className="flex flex-col gap-4"><EventosPanel onSaved={changed} /><FeriadosView autorId={profile.id} onSaved={changed} /></div></main>
       : section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); irA('agenda') } }} />
@@ -167,6 +179,7 @@ export default function Page() {
       : <CoordinatorView key={profile.id} feds={profile.rol === 'fed' ? [profile] : (feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} onRealizar={marcarRealizada}
           propio={profile.rol === 'fed' ? profile : undefined} onNuevaAccion={preset => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset })}
           onNuevaReunion={profile.rol !== 'coordinacion' ? undefined : () => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { accion: 'REUNIÓN', sub_accion: 'Reunión de equipo (CED/FED)', participantes: (feds ?? []).filter(f => f.id !== profile.id).map(f => f.id) } })} />}
+    </div>
 
     <DetailDialog item={selected} feds={feds ?? []} profile={profile} soloLectura={!!vista} onClose={() => setSelected(null)}
       onEdit={item => { setSelected(null); setEditing({ item }) }}
@@ -177,7 +190,7 @@ export default function Page() {
         <DialogHeader><DialogTitle className="text-lg">{tituloForm(editing)}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : editing?.preset?.modo === 'nuevo' ? 'Con fecha, el primer encuentro se agrega a tu agenda; si todavía no la tenés, queda “por iniciar”.' : editing?.preset?.modo === 'encuentro' ? 'Se agrega a tu agenda como acción realizada (o planificada, si la fecha todavía no llegó).' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>
         {editing?.preset?.modo === 'encuentro' && esTrayecto(editing.preset.accion ?? null) && !editing.item
           ? <RegistroEncuentro fed={profile} tipo={editing.preset.accion as Trayecto} clubId={editing.preset.club_id} onCancel={() => setEditing(null)} onSaved={msg => { changed(msg); setEditing(null) }} />
-          : editing && <ItemForm key={editing.item?.id ?? `new-${editing.fecha}`} fed={profile} feds={feds ?? []} item={editing.item} defaultFecha={editing.fecha} preset={editing.preset} onCancel={() => setEditing(null)} onSaved={({ creadas, mensaje, offline }) => { changed(mensaje ? mensaje : offline ? 'Sin conexión: la acción quedó guardada en este dispositivo y se envía al volver la señal' : editing.item ? 'Acción actualizada' : creadas > 1 ? `Se crearon ${creadas} acciones de la serie` : editing.preset?.participantes?.length ? 'Reunión creada y notificada al equipo' : 'Acción agregada a tu agenda'); setEditing(null) }} />}
+          : editing && <ItemForm key={editing.item?.id ?? `new-${editing.fecha}`} fed={profile} feds={feds ?? []} item={editing.item} defaultFecha={editing.fecha} preset={editing.preset} onCancel={() => setEditing(null)} onSaved={({ creadas, id, mensaje, offline }) => { if (id) destacar(id); changed(mensaje ? mensaje : offline ? 'Sin conexión: la acción quedó guardada en este dispositivo y se envía al volver la señal' : editing.item ? 'Acción actualizada' : creadas > 1 ? `Se crearon ${creadas} acciones de la serie` : editing.preset?.participantes?.length ? 'Reunión creada y notificada al equipo' : 'Acción agregada a tu agenda'); setEditing(null) }} />}
       </DialogContent>
     </Dialog>
 
@@ -199,5 +212,5 @@ export default function Page() {
     </Dialog>
     <VolverArriba alto={section === 'perfil'} />
     {toast && <Toast message={toast} onDone={hideToast} acciones={toastAcciones} />}
-  </div></NotificacionesProvider></ConteoFotosProvider>
+  </div></DestacadosCtx.Provider></NotificacionesProvider></ConteoFotosProvider>
 }

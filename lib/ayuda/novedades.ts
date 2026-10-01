@@ -5,6 +5,7 @@ import type { Rol } from '@/lib/ayuda/temas'
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[] }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-01', titulo: 'Una agenda que se mueve con suavidad', texto: 'Las pantallas y las listas entran con un fundido corto, al marcar una acción como realizada se dibuja una tilde, lo que acabás de guardar se destaca un instante y los desplegables abren y cierran sin saltos. Si tenés activado "reducir movimiento" en tu dispositivo, no se anima nada.' },
   { fecha: '2026-10-01', titulo: 'Ayuda dentro de la agenda', texto: 'Desde el menú de las iniciales › Ayuda encontrás el manual completo, con buscador, siempre al día con la versión de la agenda. Acá mismo vas a ver cada novedad.' },
   { fecha: '2026-10-01', titulo: 'Avisos con color y banner', texto: 'Las notificaciones se distinguen por color (rojo: urgente, amarillo: aviso, verde: confirmación). Lo que pide una acción tuya, como la PVE, aparece además como banner arriba de la pantalla.' },
   { fecha: '2026-10-01', titulo: 'Cargar acciones pasadas no avisa a tus compañeros', texto: 'Al etiquetar o modificar acciones de fechas anteriores a hoy ya no se envía notificación: podés cargar todo junto a fin de mes sin molestar.' },

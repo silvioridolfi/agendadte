@@ -91,7 +91,7 @@ export function Field({ label, hint, required, children, className = '', error, 
     {error && <span id={errorId} role="alert" className="text-sm font-medium text-peligro">{error}</span>}</label>
 }
 
-export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSaved }: { fed: Fed, feds: Fed[], item: AgendaItem | null, defaultFecha?: string, preset?: ItemPreset, onCancel: () => void, onSaved: (r: { creadas: number, mensaje?: string, offline?: boolean }) => void }) {
+export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSaved }: { fed: Fed, feds: Fed[], item: AgendaItem | null, defaultFecha?: string, preset?: ItemPreset, onCancel: () => void, onSaved: (r: { creadas: number, id?: string, mensaje?: string, offline?: boolean }) => void }) {
   // Compañeros etiquetados: la acción aparece también en su calendario y reciben una notificación.
   const [participantes, setParticipantes] = useState<string[]>(() => item?.participantes?.map(p => p.fed_id) ?? preset?.participantes ?? [])
   const companeros = useMemo(() => feds.filter(f => f.id !== fed.id).sort((a, b) => (a.rol === b.rol ? az(a.nombre_completo, b.nombre_completo) : a.rol === 'coordinacion' ? 1 : -1)), [feds, fed.id])
@@ -345,7 +345,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         onSaved({ creadas: r.creadas, mensaje: `Licencia cargada: ${r.creadas} ${r.creadas === 1 ? 'día hábil' : 'días hábiles'}${ids.length ? ` · ${ids.length} ${ids.length === 1 ? 'acción reprogramada' : 'acciones reprogramadas'}` : ''}` })
         return
       }
-      onSaved({ creadas: r.creadas, mensaje: alcance === 'siguientes' && r.creadas > 1 ? `Se actualizaron este encuentro y ${r.creadas - 1} ${r.creadas === 2 ? 'fecha siguiente' : 'fechas siguientes'} de la serie` : estadoFinal !== form.estado ? 'La acción se marcó como realizada' : undefined }) } catch (err) {
+      onSaved({ creadas: r.creadas, id: r.id, mensaje: alcance === 'siguientes' && r.creadas > 1 ? `Se actualizaron este encuentro y ${r.creadas - 1} ${r.creadas === 2 ? 'fecha siguiente' : 'fechas siguientes'} de la serie` : estadoFinal !== form.estado ? 'La acción se marcó como realizada' : undefined }) } catch (err) {
       if (typeof navigator !== 'undefined' && !navigator.onLine) { encolarOffline(input, item?.id); onSaved({ creadas: 1, offline: true }); return }
       setError(errMsg(err)); setSaving(false)
     }

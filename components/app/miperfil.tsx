@@ -48,7 +48,7 @@ export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyu
       <span className="hidden md:block"><span className="block text-sm font-semibold leading-tight">{profile.nombre_completo}</span><span className="block text-xs text-dte-gris">{profile.rol === 'coordinacion' ? 'Coordinación' : 'FED'}</span></span>
       <ChevronDown className={`hidden size-4 text-dte-gris transition md:block ${open ? 'rotate-180' : ''}`} />
     </button>
-    {open && <div role="menu" aria-label="Opciones de perfil" className="absolute right-0 top-12 z-modal w-60 overflow-hidden rounded-card border border-dte-linea bg-white py-1 shadow-e3">
+    {open && <div role="menu" aria-label="Opciones de perfil" className="animate-in fade-in-0 slide-in-from-top-1 duration-150 absolute right-0 top-12 z-modal w-60 overflow-hidden rounded-card border border-dte-linea bg-white py-1 shadow-e3">
       <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>
       <button role="menuitem" onClick={() => { setOpen(false); onFotos() }} className={item}><Camera className="size-4 text-dte-petroleo" />Fotos de las acciones</button>
       {profile.rol === 'fed' && <button role="menuitem" onClick={() => { setOpen(false); onMisPve() }} className={item}><FileText className="size-4 text-dte-petroleo" />Planillas de Visita (PVE)</button>}

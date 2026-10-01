@@ -2,7 +2,7 @@
 
 import { Segmented } from '@/components/ui/segmented'
 import { exportarPlanilla } from '@/lib/exportar'
-import { useEffect, useMemo, useState } from 'react'
+import { useContext, useEffect, useMemo, useState } from 'react'
 import { CalendarX2, Check, ClipboardCheck, Clock, ListChecks, Loader2, Plus, Users, WifiOff, FileSpreadsheet } from 'lucide-react'
 import { BarraSeleccion, PanelFinDeSemana } from '@/components/app/seleccion'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { FotosChip } from '@/components/app/fotosconteo'
 import { EventoTag, useEventos } from '@/components/app/eventos'
 import { agruparVisitas } from '@/lib/visita'
 import { Confirmar } from '@/components/ui/confirmar'
-import { cambiarEstadoVarias, errMsg, BotonRealizar, puedeRealizar, EtiquetasAccion, actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, ddjjFor, itemTitle, itemCorto, cueLugar, marcaModalidad, firstName, getFedItems, storage, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
+import { cambiarEstadoVarias, errMsg, BotonRealizar, Despliegue, DestacadosCtx, SelloRealizada, claseDestacado, puedeRealizar, EtiquetasAccion, actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, ddjjFor, itemTitle, itemCorto, cueLugar, marcaModalidad, firstName, getFedItems, storage, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
 import { hoyAR, fechaHoyAR } from '@/lib/hora'
 
 export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio, onRealizar }: { fed: Fed, feds: Fed[], reloadKey: number, onNew?: (fecha?: string) => void, onSelect: (item: AgendaItem) => void, onCambio?: (msg: string) => void, onRealizar?: (item: AgendaItem) => void }) {
@@ -156,7 +156,7 @@ export function MonthGrid({ month, byDay, feriados, eventos, registrar = false, 
       <DialogHeader><DialogTitle className="text-lg">{dia ? cap(fmt(dia, { weekday: 'long', day: 'numeric', month: 'long' })) : ''}</DialogTitle><DialogDescription>{diaList.length ? `${diaList.length} ${diaList.length === 1 ? 'acción' : 'acciones'}` : 'Sin acciones cargadas.'}</DialogDescription></DialogHeader>
       {diaFer.length > 0 && <div className="flex flex-wrap gap-1">{diaFer.map(f => <FeriadoTag key={f.nombre} f={f} />)}</div>}
       {(eventos?.get(diaKey) ?? []).length > 0 && <div className="flex flex-wrap gap-1">{eventos!.get(diaKey)!.map(e => <EventoTag key={e.id} e={e} registrar={registrar} />)}</div>}
-      {diaList.length > 0 && <ul className="flex flex-col gap-2">{agruparVisitas([...diaList].sort((a, b) => (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))).map(i => <li key={i.id}><ItemCard item={i} viewer={viewer} onRealizar={onRealizar} onClick={() => { setDia(null); onSelect(i) }} /></li>)}</ul>}
+      {diaList.length > 0 && <ul className="anim-lista flex flex-col gap-2">{agruparVisitas([...diaList].sort((a, b) => (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))).map(i => <li key={i.id}><ItemCard item={i} viewer={viewer} onRealizar={onRealizar} onClick={() => { setDia(null); onSelect(i) }} /></li>)}</ul>}
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
         <Button variant="outline" onClick={() => { const d = dia; setDia(null); if (d) onDay(d) }}>Ver día completo</Button>
         {onNew && dia && habil(dia, diaFer) && <Button variant="marca" onClick={() => { setDia(null); onNew(diaKey) }}><Plus />Agregar acción</Button>}
@@ -193,13 +193,14 @@ export function ListaAcciones({ items, viewer, onSelect, sel, onToggle, onRealiz
   const inicioHoy = useMemo(() => { const i = orden.findIndex(x => x.fecha >= hoy); return i === -1 ? orden.length : i }, [orden, hoy])
   const [anteriores, setAnteriores] = useState(0)
   const [n, setN] = useState(20)
+  const destacados = useContext(DestacadosCtx)
   if (!orden.length) return <Vacio icono={CalendarX2} titulo="No hay acciones cargadas en este año" texto="Las acciones que agregues van a aparecer acá, de hoy en adelante." />
   const desde = Math.max(0, inicioHoy - anteriores), visibles = orden.slice(desde, inicioHoy + n)
   return <div className="flex flex-col gap-3">
     {desde > 0 && <div className="flex items-center justify-center gap-2"><Button variant="outline" size="sm" onClick={() => setAnteriores(a => a + 20)}>Ver {Math.min(20, desde)} anteriores</Button><span className="text-xs text-dte-gris">{desde} acciones antes de hoy</span></div>}
     {!visibles.length ? <p className="rounded-card border border-dashed border-dte-linea bg-white/60 p-6 text-center text-sm text-dte-gris">No hay acciones de hoy en adelante.</p>
-    : <ul className="divide-y divide-dte-linea overflow-hidden rounded-card border border-dte-linea bg-white shadow-e1">{visibles.map(item =>
-      <li key={item.id} className="group/check relative"><button onClick={() => (sel && onToggle && item.fed_id === viewer ? onToggle(item.id) : onSelect(item))} aria-pressed={sel && item.fed_id === viewer ? sel.includes(item.id) : undefined} className={`grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte sm:grid-cols-[6.5rem_1fr_auto] sm:items-center ${sel?.includes(item.id) ? 'bg-dte-tinte ring-2 ring-inset ring-dte-petroleo' : ''}`}>
+    : <ul className="anim-lista divide-y divide-dte-linea overflow-hidden rounded-card border border-dte-linea bg-white shadow-e1">{visibles.map(item =>
+      <li key={item.id} className={`group/check relative ${claseDestacado(destacados, item).clase}`}><button onClick={() => (sel && onToggle && item.fed_id === viewer ? onToggle(item.id) : onSelect(item))} aria-pressed={sel && item.fed_id === viewer ? sel.includes(item.id) : undefined} className={`grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte sm:grid-cols-[6.5rem_1fr_auto] sm:items-center ${sel?.includes(item.id) ? 'bg-dte-tinte ring-2 ring-inset ring-dte-petroleo' : ''}`}>
         <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize">{fmt(parse(item.fecha), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')}</span><span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span></span>
         <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemCorto(item)}</span><span className="block truncate text-xs text-dte-gris" title={[marcaModalidad(item), cueLugar(item.school), item.sub_accion].filter(Boolean).join(' · ') || undefined}>{[marcaModalidad(item), cueLugar(item.school), item.sub_accion].filter(Boolean).join(' · ') || ' '}</span></span>
         <span className="flex flex-wrap items-center gap-2 sm:justify-end"><ChipsVisita item={item} /><FotosChip item={item} />{item.fed_id !== viewer && <span className="inline-flex items-center gap-0.5 rounded-full bg-dte-tinte px-1.5 py-0.5 text-xs font-semibold text-dte-petroleo"><Users className="size-3" />Compartida</span>}</span>
@@ -212,8 +213,10 @@ export function ListaAcciones({ items, viewer, onSelect, sel, onToggle, onRealiz
 export function ItemCard({ item, onClick, viewer, seleccionado, onRealizar }: { item: AgendaItem, onClick: () => void, viewer?: string, seleccionado?: boolean, onRealizar?: (item: AgendaItem) => void }) {
   const muted = item.estado === 'cancelada'
   const conCheck = !!onRealizar && seleccionado === undefined && puedeRealizar(item, viewer)
-  const tarjeta = <button onClick={onClick} aria-pressed={seleccionado} title={item.school ? schoolName(item.school) : undefined} className={`relative w-full ${seleccionado ? 'ring-2 ring-dte-petroleo border-dte-petroleo' : ''} overflow-hidden rounded-tile border border-dte-linea bg-white p-2.5 pl-3.5 text-left transition hover:border-pba-celeste hover:shadow-e2 focus-visible:border-pba-celeste focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-pba-celeste/30 ${muted ? 'opacity-65' : ''}`}>
+  const { clase, realizada } = claseDestacado(useContext(DestacadosCtx), item)
+  const tarjeta = <button onClick={onClick} aria-pressed={seleccionado} title={item.school ? schoolName(item.school) : undefined} className={`relative w-full active:scale-[0.99] ${clase} ${seleccionado ? 'ring-2 ring-dte-petroleo border-dte-petroleo' : ''} overflow-hidden rounded-tile border border-dte-linea bg-white p-2.5 pl-3.5 text-left transition hover:-translate-y-px hover:border-pba-celeste hover:shadow-e2 focus-visible:border-pba-celeste focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-pba-celeste/30 ${muted ? 'opacity-65' : ''}`}>
     {seleccionado !== undefined && <span aria-hidden className={`absolute right-2 top-2 flex size-5 items-center justify-center rounded-md border ${seleccionado ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-gris-claro bg-white'}`}>{seleccionado && <Check className="size-3.5" />}</span>}
+    {realizada && <SelloRealizada />}
     <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${actionStyle[item.accion]?.dot}`} />
     <span className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-dte-gris"><Clock className="size-3 shrink-0" />{timeRange(item)}</span>
     <p className={`mt-1 line-clamp-3 text-sm font-semibold leading-snug ${muted ? 'line-through decoration-1' : ''}`}>{itemCorto(item)}</p>
@@ -265,10 +268,10 @@ function PendientesCerrar({ fed, reloadKey, onSelect, onRealizar, onCambio }: { 
         <Button size="sm" className="bg-dte-petroleo hover:bg-dte-petroleo-oscuro" onClick={() => setConfirmar(true)}><Check data-icon="inline-start" />Marcar todas</Button>
       </div>
     </div>
-    {abierto && <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{pendientes.map(i => <li key={i.id}>
+    <Despliegue abierto={abierto}><ul className="mt-3 grid gap-2 p-1 sm:grid-cols-2 xl:grid-cols-3">{pendientes.map(i => <li key={i.id}>
       <p className="mb-1 text-xs font-semibold capitalize text-aviso">{fmt(parse(i.fecha), { weekday: 'long', day: 'numeric', month: 'short' }).replace(/\./g, '')}</p>
       <ItemCard item={i} viewer={fed.id} onClick={() => onSelect(i)} onRealizar={onRealizar} />
-    </li>)}</ul>}
+    </li>)}</ul></Despliegue>
     {error && <div className="mt-2"><ErrorBox message={error} /></div>}
     <Confirmar abierto={confirmar} titulo="¿Marcar todas como realizadas?" accion="Marcar todas" onCerrar={() => setConfirmar(false)} onConfirmar={todas}
       descripcion={<>Se marcan como realizadas las {pendientes.length} {pendientes.length === 1 ? 'acción' : 'acciones'} pendientes de los últimos 7 días. Si alguna no se hizo, cancelala o reprogramala después.</>} />

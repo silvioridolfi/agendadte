@@ -4,7 +4,7 @@ import { Segmented } from '@/components/ui/segmented'
 import { exportarPlanilla } from '@/lib/exportar'
 import { MiEquipoView } from '@/components/app/equipo'
 import { AgendaEquipoView } from '@/components/app/agendaequipo'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { CalendarX2, Loader2, Search, SearchX, Users, X, FileSpreadsheet, SlidersHorizontal } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,7 @@ import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type F
 import { FotosChip } from '@/components/app/fotosconteo'
 import { InformeBloque, personaDe } from '@/components/app/informes'
 import { indicadoresCoordinacion, informeFed } from '@/lib/informes'
-import { BotonRealizar, puedeRealizar, EtiquetasAccion, type ItemPreset, itemCorto, cueLugar, marcaModalidad, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
+import { BotonRealizar, DestacadosCtx, claseDestacado, puedeRealizar, EtiquetasAccion, type ItemPreset, itemCorto, cueLugar, marcaModalidad, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
 import { hoyAR, fechaHoyAR, anioAR } from '@/lib/hora'
 import { agruparVisitas } from '@/lib/visita'
 import { inicioAnio } from '@/lib/receso'
@@ -62,6 +62,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   const [search, setSearch] = useState('')
   const [distrito, setDistrito] = useState('')
   const [fedIdElegido, setFedId] = useState('')
+  const destacados = useContext(DestacadosCtx)
   const fedId = propio?.id ?? fedIdElegido
   const [accion, setAccion] = useState('')
   const [estado, setEstado] = useState('')
@@ -189,8 +190,8 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
             <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-bold" title={fedName(id)}>{fedName(id)}</h3><p className="text-xs text-dte-gris">{group.length} {group.length === 1 ? 'acción' : 'acciones'} · {group.filter(i => i.estado === 'realizada').length} realizadas</p></div>
             {!fedId && groups.length > 1 && <Button variant="ghost" size="sm" onClick={() => setFedId(id)} className="text-dte-petroleo">Ver sólo este FED</Button>}
           </div>
-          <ul className="divide-y divide-dte-linea overflow-hidden rounded-card border border-dte-linea bg-white shadow-e1">{group.slice(0, visibles(id)).map(item =>
-            <li key={item.id} className="group/check relative"><button className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte focus-visible:bg-dte-tinte focus-visible:outline-none sm:grid-cols-[6.5rem_1fr_auto] sm:items-center" onClick={() => onSelect(item)}>
+          <ul className="anim-lista divide-y divide-dte-linea overflow-hidden rounded-card border border-dte-linea bg-white shadow-e1">{group.slice(0, visibles(id)).map(item =>
+            <li key={item.id} className={`group/check relative ${claseDestacado(destacados, item).clase}`}><button className="grid w-full grid-cols-[4.5rem_1fr] gap-x-3 gap-y-2 p-3.5 text-left transition hover:bg-dte-tinte focus-visible:bg-dte-tinte focus-visible:outline-none sm:grid-cols-[6.5rem_1fr_auto] sm:items-center" onClick={() => onSelect(item)}>
               <span className="row-span-2 text-sm sm:row-span-1"><span className="block font-semibold capitalize text-dte-tinta">{range === 'day' ? (hhmm(item.hora_inicio) || '—') : fmt(parse(item.fecha), range === 'week' ? { weekday: 'short', day: 'numeric' } : { day: 'numeric', month: 'short' }).replace('.', '')}</span>{range !== 'day' && <span className="block text-xs text-dte-gris">{hhmm(item.hora_inicio) || 'Sin horario'}</span>}</span>
               <span className={`min-w-0 ${item.estado === 'cancelada' ? 'opacity-65' : ''}`}><span className="line-clamp-2 font-semibold leading-snug">{itemCorto(item)}</span><span className="block truncate text-xs text-dte-gris" title={[marcaModalidad(item), cueLugar(item.school), item.school ? item.sub_accion : null].filter(Boolean).join(' · ') || ' '}>{[marcaModalidad(item), cueLugar(item.school), item.school ? item.sub_accion : null].filter(Boolean).join(' · ') || ' '}</span></span>
               <span className="flex flex-wrap items-center gap-2 sm:justify-end"><EtiquetasAccion item={item} /><StatusBadge status={item.estado} /><FotosChip item={item} /></span>
