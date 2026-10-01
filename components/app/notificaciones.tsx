@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Bell, CheckCircle2, Info, OctagonAlert } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Bell, CheckCircle2, Info, OctagonAlert, X } from 'lucide-react'
 import { type AgendaItem, type Fed, type Notificacion } from '@/lib/agenda'
 import { bannerDe, clasePve, nivelDe, type Nivel } from '@/lib/avisos'
 import { parse, fmt, cap, itemTitle, getNotificaciones, marcarLeidas } from '@/components/app/comun'
@@ -88,13 +88,14 @@ export function AvisosBanner({ feds, puedeSubirPve, onIrAPve }: { feds: Fed[], p
   const urgente = nivelDe(n) === 'urgente', e = ESTILO[urgente ? 'urgente' : 'aviso']
   const autor = (id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Un compañero'
   const irAPve = n.tipo === 'pve' && puedeSubirPve
-  return <div role="status" className={`border-b px-4 py-2 text-sm ${urgente ? 'border-peligro-borde bg-peligro-fondo text-peligro' : 'border-aviso-borde bg-aviso-fondo-fuerte text-aviso-fuerte'}`}>
-    <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 lg:px-6">
-      <span className="flex min-w-0 items-start gap-1.5"><e.Icono className="mt-0.5 size-4 shrink-0" aria-hidden />
-        <span>{n.tipo === 'pve' && clasePve(n) === 'aviso' ? <b>{n.detalle}</b> : <><Titulo n={n} autor={autor} />{n.detalle && <>: {n.detalle}</>}</>}{otros > 0 && <span className="ml-1 font-semibold">· y {otros} {otros === 1 ? 'aviso más' : 'avisos más'} en las notificaciones</span>}</span></span>
-      <span className="flex shrink-0 gap-2">
-        {irAPve && <button type="button" onClick={() => { leer([n.id]); onIrAPve() }} className="min-h-10 rounded-full bg-white px-3 text-xs font-semibold text-dte-petroleo shadow-e1 hover:bg-dte-tinte md:min-h-8">Ir a mis PVE</button>}
-        <button type="button" onClick={() => leer([n.id])} className="min-h-10 rounded-full border border-current px-3 text-xs font-semibold hover:bg-white/60 md:min-h-8">Entendido</button>
+  // Compacto: una fila, el texto en hasta dos renglones y los botones al lado (en el celular, "Entendido" es una cruz).
+  return <div role="status" className={`border-b px-4 py-1.5 text-sm ${urgente ? 'border-peligro-borde bg-peligro-fondo text-peligro' : 'border-aviso-borde bg-aviso-fondo-fuerte text-aviso-fuerte'}`}>
+    <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-2 lg:px-6">
+      <span className="flex min-w-0 items-center gap-1.5"><e.Icono className="size-4 shrink-0" aria-hidden />
+        <span className="line-clamp-2 min-w-0 text-[0.8125rem] leading-snug sm:text-sm">{n.tipo === 'pve' && clasePve(n) === 'aviso' ? <b><span className="sm:hidden">{(n.detalle ?? '').replace(/^Ya podés subir tu /, '')}</span><span className="hidden sm:inline">{n.detalle}</span></b> : <><Titulo n={n} autor={autor} />{n.detalle && <>: {n.detalle}</>}</>}{otros > 0 && <span className="ml-1 hidden font-semibold sm:inline">· y {otros} {otros === 1 ? 'aviso más' : 'avisos más'} en las notificaciones</span>}</span></span>
+      <span className="flex shrink-0 items-center gap-1.5">
+        {irAPve && <button type="button" onClick={() => { leer([n.id]); onIrAPve() }} aria-label="Ir a mis PVE" className="flex min-h-9 min-w-9 items-center justify-center rounded-full bg-white px-0 text-xs font-semibold text-dte-petroleo shadow-e1 hover:bg-dte-tinte min-[24rem]:px-3 md:min-h-8"><ArrowRight className="size-4 min-[24rem]:hidden" aria-hidden /><span className="hidden min-[24rem]:inline sm:hidden">Ir a PVE</span><span className="hidden sm:inline">Ir a mis PVE</span></button>}
+        <button type="button" onClick={() => leer([n.id])} aria-label="Entendido" className="flex min-h-9 min-w-9 items-center justify-center rounded-full border border-current px-0 text-xs font-semibold hover:bg-white/60 sm:px-3 md:min-h-8"><X className="size-4 sm:hidden" aria-hidden /><span className="hidden sm:inline">Entendido</span></button>
       </span>
     </div>
   </div>

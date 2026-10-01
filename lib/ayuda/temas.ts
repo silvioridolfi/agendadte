@@ -108,7 +108,7 @@ Desde el detalle: **Editar**, **Eliminar** (con confirmación) y **Ver historial
 3. Revisá el resumen de días hábiles y confirmá.
 Se registra un día por cada día hábil del período. Las acciones planificadas en esas fechas pueden pasar a reprogramadas automáticamente. La coordinación recibe un único aviso con el período. El campo **Motivo** es optativo y no debe incluir datos sensibles.
 ## Paros
-Se registran con el tipo **Paro**, sin establecimiento ni horario.
+Se registran con el tipo **Paro**, sin establecimiento ni horario. Quedan registrados directamente como **realizados**, aunque la fecha todavía no haya llegado; si hace falta, se pueden editar o cambiar de estado.
 [!!] Licencias y paros no se computan en métricas, informes ni planillas. La constancia de justificación debe enviarse dentro de las 48 horas.` },
 
   { id: 'clubes', titulo: 'Clubes de Tecnología y PEAT', para: ['fed'], md: () => `
