@@ -4,13 +4,14 @@ import { useMemo, useState } from 'react'
 import { CalendarClock, MapPin, UserX } from 'lucide-react'
 import { Segmented, Pill } from '@/components/ui/segmented'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { CATEGORIA, DISTRITOS_REGION, type AgendaItem, type Fed } from '@/lib/agenda'
+import { DISTRITOS_REGION, type AgendaItem, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
 import { EventoTag, useEventos } from '@/components/app/eventos'
 import { actionStyle, addDays, cap, fmt, hhmm, iso, parse, selectClass, siglaEscuela, conGrupo, startOfWeek, toWeekday, firstName, getAllItems, useItems, useFeriados, EtiquetasAccion, ErrorBox, FeriadoTag, Skeleton, Vacio, WeekNav } from '@/components/app/comun'
 import { ItemCard } from '@/components/app/agenda'
 import { hoyAR, horaAR, fechaHoyAR } from '@/lib/hora'
 import { agruparVisitas } from '@/lib/visita'
+import { enTerritorio } from '@/lib/territorio'
 
 type Modo = 'dia' | 'semana' | 'proximas'
 const MODOS = [['dia', 'Día'], ['semana', 'Semana'], ['proximas', 'Próximas']] as const
@@ -18,8 +19,6 @@ const H_INICIO = 7, H_FIN = 20
 const minutos = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 const pos = (t: string) => Math.min(100, Math.max(0, ((minutos(t) - H_INICIO * 60) / ((H_FIN - H_INICIO) * 60)) * 100))
 const ausencia = (i: AgendaItem) => i.accion === 'LICENCIA' || i.accion === 'PARO'
-// "En territorio": acciones en una escuela o sede, fuera de las tareas institucionales (reuniones, oficina, planificación).
-const enTerritorio = (i: AgendaItem) => (!!i.school_id || !!i.lugar) && CATEGORIA[i.accion] !== 'institucional'
 const lugar = (i: AgendaItem) => (i.school ? conGrupo(i, siglaEscuela(i.school)) : i.lugar || titleCase(i.accion))
 const horario = (i: AgendaItem) => (i.hora_inicio ? `${hhmm(i.hora_inicio)}${i.hora_fin ? `–${hhmm(i.hora_fin)}` : ''}` : 'Sin horario')
 
