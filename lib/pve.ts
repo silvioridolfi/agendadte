@@ -100,6 +100,17 @@ export function habilesDelMes(mes: string, noLaborables: Set<string> = new Set()
 }
 // Vencimiento de la PVE de un mes: el 5.º día hábil del mes siguiente.
 export const vencimientoPve = (mes: string, noLaborables: Set<string> = new Set()) => habilesDelMes(inicioMes(mes, 1), noLaborables)[4]
+// Aviso de la PVE del mes anterior: el 1.er día hábil del mes ("ya podés subirla") y el 4.º (recordatorio, vence el 5.º).
+export function avisoPve(hoy: string, noLab: Set<string> = new Set()): { mes: string, vence: string, tipo: 'aviso' | 'recordatorio', texto: string } | null {
+  const mes = inicioMes(hoy, -1)
+  const habiles = habilesDelMes(inicioMes(hoy), noLab)
+  const vence = habiles[4], dia = habiles.indexOf(hoy)
+  if (!vence || mes < PRIMER_MES || (dia !== 0 && dia !== 3)) return null
+  const venceTxt = `${vence.slice(8, 10)}/${vence.slice(5, 7)}`
+  return dia === 0
+    ? { mes, vence, tipo: 'aviso', texto: `Ya podés subir tu PVE de ${nombreMes(mes).toLowerCase()}: vence el ${venceTxt}` }
+    : { mes, vence, tipo: 'recordatorio', texto: `Mañana (${venceTxt}) vence tu PVE de ${nombreMes(mes).toLowerCase()}` }
+}
 // Feriados nacionales, turísticos y recesos (los aniversarios distritales no cuentan para todos).
 export async function noLaborables(desde: string, hasta: string) {
   const { data } = await supabaseServer().from('feriados').select('fecha, tipo').gte('fecha', desde).lte('fecha', hasta).neq('tipo', 'distrital')
