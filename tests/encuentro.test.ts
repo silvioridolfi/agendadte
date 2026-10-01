@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cambiaLaSerie, clubesDelDia, destinatarioEstudiantes, inscriptosDelClub, opcionesDestinatarios, partirDestinatarios, PROPUESTAS_DE_CLUB, unirDestinatarios, estadoAlCompletar, horariosSePisan, minEncuentros, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
+import { contarUnidades, unidadDe, cambiaLaSerie, clubesDelDia, destinatarioEstudiantes, inscriptosDelClub, opcionesDestinatarios, partirDestinatarios, PROPUESTAS_DE_CLUB, unirDestinatarios, estadoAlCompletar, horariosSePisan, minEncuentros, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
 
 describe('mínimo de encuentros (sólo informativo)', () => {
   it('los clubes tienen mínimo 8; las prácticas y el resto, ninguno', () => {
@@ -116,5 +116,19 @@ describe('ajustes de clubes', () => {
   it('clubes del día: propios, del mismo tipo, sin repetir ni canceladas', () => {
     const i = (club_id: string | null, estado = 'planificada', fed_id = 'yo', accion = 'CLUB DE TECNOLOGÍA') => ({ club_id, estado, fed_id, accion })
     expect(clubesDelDia([i('a'), i('a'), i('b'), i('c', 'cancelada'), i(null), i('d', 'planificada', 'otro'), i('e', 'planificada', 'yo', 'VISITA TÉCNICA')], 'CLUB DE TECNOLOGÍA', 'yo')).toEqual(['a', 'b'])
+  })
+})
+
+describe('prácticas por curso (cohorte)', () => {
+  const g = (id: string, cohorte: string | null, school_id: string | null = 's31') => ({ id, school_id, lugar: null, cohorte })
+  it('dos grupos del mismo curso son una unidad; sin cohorte, cada grupo es una', () => {
+    expect(unidadDe(g('a', '7° Informática'))).toBe(unidadDe(g('b', '7° informática ')))
+    expect(unidadDe(g('a', null))).toBe('a')
+    expect(unidadDe(g('a', '7° Informática', 's75'))).not.toBe(unidadDe(g('b', '7° Informática')))
+  })
+  it('cuenta unidades por estado: el curso va en el estado más activo de sus grupos', () => {
+    const lista = [{ c: g('1', '7° Informática'), estado: 'activo' }, { c: g('2', '7° Informática'), estado: 'finalizado' }, { c: g('3', null), estado: 'finalizado' }]
+    expect(contarUnidades(lista)).toEqual({ total: 2, porEstado: { activo: 1, finalizado: 1 } })
+    expect(contarUnidades([])).toEqual({ total: 0, porEstado: {} })
   })
 })

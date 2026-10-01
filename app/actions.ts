@@ -387,7 +387,7 @@ async function upsertClub(input: AgendaItemInput, row: ReturnType<typeof clean>)
   if (e.nuevo_club || !e.club_id) {
     if (!e.nuevo_club) return null
     const { data, error } = await db.from('clubes').insert({
-      fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, grupo: opt(e.grupo), escuela_origen_id: opt(e.escuela_origen_id), tipo: row.accion, propuesta: row.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Prácticas Educativas en Ambientes de Trabajo' : 'Club de Tecnología',
+      fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, grupo: opt(e.grupo), cohorte: row.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? opt(e.cohorte) : null, escuela_origen_id: opt(e.escuela_origen_id), tipo: row.accion, propuesta: row.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Prácticas Educativas en Ambientes de Trabajo' : 'Club de Tecnología',
       fecha_inicio: row.fecha, fecha_cierre: e.es_cierre ? row.fecha : null, encuentros_previstos: previstos,
     }).select('id').single()
     if (error) throw new Error(error.message)
@@ -407,7 +407,7 @@ async function upsertClub(input: AgendaItemInput, row: ReturnType<typeof clean>)
 
 // Club o práctica "por iniciar": se planifica sin fecha y sin acción en la agenda; la fecha de inicio
 // se completa al programar el primer encuentro desde el formulario.
-export type ClubPorIniciarInput = { fed_id: string, tipo: 'CLUB DE TECNOLOGÍA' | 'PRÁCTICAS PROFESIONALIZANTES', school_id: string | null, lugar: string | null, grupo: string, escuela_origen_id: string | null, encuentros_previstos: number | null }
+export type ClubPorIniciarInput = { fed_id: string, tipo: 'CLUB DE TECNOLOGÍA' | 'PRÁCTICAS PROFESIONALIZANTES', school_id: string | null, lugar: string | null, grupo: string, cohorte?: string | null, escuela_origen_id: string | null, encuentros_previstos: number | null }
 async function crearClubPorIniciarImpl(c: ClubPorIniciarInput): Promise<void> {
   const db = supabaseServer()
   const { data: fed } = await db.from('feds').select('rol').eq('id', c.fed_id).maybeSingle()
@@ -416,7 +416,7 @@ async function crearClubPorIniciarImpl(c: ClubPorIniciarInput): Promise<void> {
   if (!c.school_id && !opt(c.lugar)) throw new Error('Indicá el establecimiento o la sede')
   if (!opt(c.grupo)) throw new Error('Indicá el grado o curso')
   const previstos = c.encuentros_previstos && c.encuentros_previstos > 0 && c.encuentros_previstos < 100 ? Math.round(c.encuentros_previstos) : null
-  const row = { fed_id: c.fed_id, school_id: c.school_id, lugar: c.school_id ? null : opt(c.lugar), grupo: opt(c.grupo), escuela_origen_id: opt(c.escuela_origen_id), tipo: c.tipo,
+  const row = { fed_id: c.fed_id, school_id: c.school_id, lugar: c.school_id ? null : opt(c.lugar), grupo: opt(c.grupo), cohorte: c.tipo === 'PRÁCTICAS PROFESIONALIZANTES' ? opt(c.cohorte) : null, escuela_origen_id: opt(c.escuela_origen_id), tipo: c.tipo,
     propuesta: c.tipo === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Prácticas Educativas en Ambientes de Trabajo' : 'Club de Tecnología', fecha_inicio: null, fecha_cierre: null, encuentros_previstos: previstos }
   const { data, error } = await db.from('clubes').insert(row).select('id').single()
   if (error) throw new Error(error.message)

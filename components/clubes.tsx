@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { ErrorBox, errMsg } from '@/components/app/comun'
 import { hoyAR, ZONA } from '@/lib/hora'
 import { inicioCiclo } from '@/lib/receso'
-import { minEncuentros } from '@/lib/encuentro'
+import { contarUnidades, minEncuentros, unidadDe } from '@/lib/encuentro'
 
 const nf = new Intl.NumberFormat('es-AR')
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -61,7 +61,9 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
   const rows = useMemo(() => clubes.map(c => { const full = completos.get(c.id)!; return { c, estado: clubEstado(full, hoy, noHabiles), realizados: new Set(c.encuentros.map(e => e.fecha)).size, total: new Set(full.encuentros.map(e => e.fecha)).size, ultima: ultimaActividad(full), fechas: [...new Set(full.encuentros.map(e => e.fecha))], ...participacion(c) } })
     // Primero los que siguen en curso (activos y sin actividad), los finalizados al final; dentro de cada bloque, por escuela y de menor a mayor grado.
     .sort((a, b) => Number(a.estado === 'finalizado') - Number(b.estado === 'finalizado') || schoolLabel(a.c).localeCompare(schoolLabel(b.c), 'es', { numeric: true }) || ordenGrupo(a.c.grupo, b.c.grupo)), [clubes, completos, hoy, noHabiles, schoolLabel])
-  const n = (e: ClubEstado) => rows.filter(r => r.estado === e).length
+  // Las prácticas de un curso dividido en grupos cuentan una vez (por curso); sin cohorte, cada grupo es una unidad.
+  const unidades = useMemo(() => contarUnidades(rows), [rows])
+  const n = (e: ClubEstado) => unidades.porEstado[e] ?? 0
   const encuentros = rows.reduce((a, r) => a + r.realizados, 0)
   // Sólo los clubes tienen mínimo de encuentros (8) y es informativo: después no importa si son más. Las prácticas se cumplen por horas.
   const min = minEncuentros(tipo)
@@ -115,7 +117,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
     return { key: c.id, title: nombre(c), sub: [fedName(c.fed_id), `inicio ${corta(c.fecha_inicio)}`, c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : null].filter(Boolean).join(' · '), right: ESTADO_CLUB[clubEstado(full, hoy, noHabiles)].label }
   }) })
   const porFed = feds.map(f => ({ f, r: rows.filter(r => r.c.fed_id === f.id) })).filter(x => x.r.length).sort((a, b) => b.r.length - a.r.length)
-  const maxFed = Math.max(1, ...porFed.map(x => x.r.length))
+  const maxFed = Math.max(1, ...porFed.map(x => new Set(x.r.map(y => unidadDe(y.c))).size))
 
   // Línea de tiempo: de marzo a diciembre del ciclo.
   const year = Number(hoy.slice(0, 4))
@@ -180,7 +182,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
               [tipo === 'CLUB DE TECNOLOGÍA' ? 'Finalizados' : 'Finalizadas', 'finalizados', 'con cierre registrado'],
             ] as const).map(([label, key, hint]) => <tr key={key}>
               <td className="py-2 pr-3"><span className="font-semibold">{label}</span><span className="block text-xs text-dte-gris">{hint}</span></td>
-              {ciclo.map(t => <td key={t.k} className="py-2 pr-3 text-right"><button type="button" onClick={() => verCiclo(label, t.label, t[key])} className={`inline-flex min-h-11 min-w-10 items-center justify-end rounded-control px-2 py-1 tabular-nums transition md:min-h-0 md:min-w-0 hover:bg-dte-tinte ${t.k === 'ciclo' ? 'text-lg font-bold' : 'font-semibold'}`}>{nf.format(t[key].length)}</button></td>)}
+              {ciclo.map(t => <td key={t.k} className="py-2 pr-3 text-right"><button type="button" onClick={() => verCiclo(label, t.label, t[key])} className={`inline-flex min-h-11 min-w-10 items-center justify-end rounded-control px-2 py-1 tabular-nums transition md:min-h-0 md:min-w-0 hover:bg-dte-tinte ${t.k === 'ciclo' ? 'text-lg font-bold' : 'font-semibold'}`}>{nf.format(new Set(t[key].map(unidadDe)).size)}</button></td>)}
             </tr>)}
             {([['Encuentros realizados', 'encuentros'], ['Estudiantes inscriptos', 'inscriptos'], ['Escuelas y sedes', 'escuelas']] as const).map(([label, key]) => <tr key={key}>
               <td className="py-2 pr-3 font-semibold">{label}</td>
@@ -192,7 +194,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
     </Panel>
 
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-      <Kpi label={`${cap(clubesTxt)} activ${tipo === 'CLUB DE TECNOLOGÍA' ? 'os' : 'as'}`} value={nf.format(n('activo'))} hint={`de ${rows.length} con actividad en el período`} color={ESTADO_CLUB.activo.color} onClick={() => verEstado('activo', `${cap(clubesTxt)} activ${tipo === 'CLUB DE TECNOLOGÍA' ? 'os' : 'as'}`)} />
+      <Kpi label={`${cap(clubesTxt)} activ${tipo === 'CLUB DE TECNOLOGÍA' ? 'os' : 'as'}`} value={nf.format(n('activo'))} hint={`de ${unidades.total} con actividad en el período`} color={ESTADO_CLUB.activo.color} onClick={() => verEstado('activo', `${cap(clubesTxt)} activ${tipo === 'CLUB DE TECNOLOGÍA' ? 'os' : 'as'}`)} />
       <Kpi label="Sin actividad" value={nf.format(n('sin_actividad'))} hint="a confirmar cierre" color={ESTADO_CLUB.sin_actividad.color} onClick={() => verEstado('sin_actividad', 'Sin actividad')} />
       <Kpi label={tipo === 'CLUB DE TECNOLOGÍA' ? 'Finalizados' : 'Finalizadas'} value={nf.format(n('finalizado'))} color={ESTADO_CLUB.finalizado.color} onClick={() => verEstado('finalizado', tipo === 'CLUB DE TECNOLOGÍA' ? 'Finalizados' : 'Finalizadas')} />
       <Kpi label="Encuentros realizados" value={nf.format(encuentros)} hint={min === null ? 'sin mínimo: se cumplen por horas' : `${cumplen} ya cumplieron el mínimo de ${min}`} onClick={verEncuentros} />
@@ -253,8 +255,8 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
       <Panel title={`${cap(clubesTxt)} por FED`} subtitle="Activos, sin actividad y finalizados">
         <ul className="flex flex-col gap-2.5">{porFed.map(({ f, r }) => <li key={f.id} className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 text-sm">
           <span className="truncate" title={f.nombre_completo}>{f.nombre_completo}</span>
-          <span className="flex h-2.5 gap-[2px]">{ORDEN.map(e => { const k = r.filter(x => x.estado === e).length; return k ? <span key={e} title={`${ESTADO_CLUB[e].label}: ${k}`} className="h-full first:rounded-l last:rounded-r" style={{ width: `${(k / maxFed) * 100}%`, background: ESTADO_CLUB[e].color }} /> : null })}</span>
-          <span className="tabular-nums font-semibold">{r.length}</span>
+          <span className="flex h-2.5 gap-[2px]">{ORDEN.map(e => { const k = contarUnidades(r).porEstado[e] ?? 0; return k ? <span key={e} title={`${ESTADO_CLUB[e].label}: ${k}`} className="h-full first:rounded-l last:rounded-r" style={{ width: `${(k / maxFed) * 100}%`, background: ESTADO_CLUB[e].color }} /> : null })}</span>
+          <span className="tabular-nums font-semibold">{new Set(r.map(x => unidadDe(x.c))).size}</span>
         </li>)}</ul>
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-dte-gris">{ORDEN.map(e => <li key={e} className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm" style={{ background: ESTADO_CLUB[e].color }} />{ESTADO_CLUB[e].label}</li>)}</ul>
       </Panel>

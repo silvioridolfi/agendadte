@@ -91,7 +91,7 @@ export type Encuentro = {
 }
 // `id`: encuentro existente que se está editando (si no viene, se crea uno nuevo).
 // Club: `club_id` de uno existente, o `nuevo_club` para iniciarlo con esta fecha. `es_cierre` finaliza el club.
-export type EncuentroInput = Pick<Encuentro, 'propuesta' | 'encuentro_n' | 'modalidad' | 'destinatarios' | 'inscriptos' | 'asistentes'> & Partial<Pick<Encuentro, 'tipo_jornada' | 'descripcion' | 'club_id' | 'es_cierre'>> & { id?: string, nuevo_club?: boolean, grupo?: string | null, escuela_origen_id?: string | null, encuentros_previstos?: number | null }
+export type EncuentroInput = Pick<Encuentro, 'propuesta' | 'encuentro_n' | 'modalidad' | 'destinatarios' | 'inscriptos' | 'asistentes'> & Partial<Pick<Encuentro, 'tipo_jornada' | 'descripcion' | 'club_id' | 'es_cierre'>> & { id?: string, nuevo_club?: boolean, grupo?: string | null, escuela_origen_id?: string | null, cohorte?: string | null, encuentros_previstos?: number | null }
 // Fila de public.establecimientos (misma fuente que el buscador DTE).
 export type School = { id: string; cue: number | null; nombre: string | null; distrito: string | null; ciudad: string | null }
 export type AgendaItem = {
@@ -196,6 +196,8 @@ export type Club = {
   fecha_inicio: string | null
   fecha_cierre: string | null
   encuentros_previstos: number | null
+  // Curso completo cuando se dividió en grupos (ej.: "7° Informática"): las prácticas se cuentan por curso.
+  cohorte?: string | null
   created_at?: string
   school: School | null
   encuentros: ClubEncuentro[]
