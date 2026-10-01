@@ -252,11 +252,13 @@ export type ItemPreset = { accion?: Accion, sub_accion?: string, participantes?:
 
 // =====================================================================
 
-export function WeekNav({ onPrev, onToday, onNext, prevLabel, nextLabel }: { onPrev: () => void, onToday: () => void, onNext: () => void, prevLabel: string, nextLabel: string }) {
-  return <div className="flex items-center rounded-control border border-dte-linea bg-white shadow-e1">
-    <Button variant="ghost" size="icon-lg" aria-label={prevLabel} onClick={onPrev}><ChevronLeft /></Button>
+// `llena`: en el celular ocupa todo el ancho, con los tres botones parejos (anterior, Hoy, siguiente); desde sm vuelve a su tamaño natural.
+export function WeekNav({ onPrev, onToday, onNext, prevLabel, nextLabel, llena = false }: { onPrev: () => void, onToday: () => void, onNext: () => void, prevLabel: string, nextLabel: string, llena?: boolean }) {
+  const lado = llena ? 'max-sm:w-full!' : ''
+  return <div className={`items-center rounded-control border border-dte-linea bg-white shadow-e1 ${llena ? 'grid w-full grid-cols-[1fr_2fr_1fr] sm:flex sm:w-auto' : 'flex'}`}>
+    <Button variant="ghost" size="icon-lg" className={lado} aria-label={prevLabel} onClick={onPrev}><ChevronLeft /></Button>
     <Button variant="ghost" size="lg" className="rounded-none border-x border-dte-linea px-4 font-semibold" onClick={onToday}>Hoy</Button>
-    <Button variant="ghost" size="icon-lg" aria-label={nextLabel} onClick={onNext}><ChevronRight /></Button>
+    <Button variant="ghost" size="icon-lg" className={lado} aria-label={nextLabel} onClick={onNext}><ChevronRight /></Button>
   </div>
 }
 
