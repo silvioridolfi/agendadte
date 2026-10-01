@@ -71,3 +71,20 @@ export function cambiaLaSerie(antes: { fecha: string, hora_inicio: string | null
 export function clubesDelDia<T extends { club_id?: string | null, accion: string | null, estado: string, fed_id: string }>(items: T[], accion: string | null, fedId: string): string[] {
   return [...new Set(items.filter(i => i.fed_id === fedId && i.accion === accion && i.club_id && i.estado !== 'cancelada').map(i => i.club_id!))]
 }
+
+// Cursos divididos en grupos: las prácticas se cuentan por curso (escuela + cohorte), no por grupo. Sin cohorte, cada grupo es una unidad.
+export const unidadDe = (c: { id: string, school_id: string | null, lugar: string | null, cohorte?: string | null }): string =>
+  c.cohorte?.trim() ? `${c.school_id ?? `lugar:${c.lugar ?? ''}`}|${c.cohorte.trim().toLowerCase()}` : c.id
+
+const PESO_ESTADO: Record<string, number> = { activo: 0, sin_actividad: 1, finalizado: 2 }
+// Cantidad de unidades por estado: un curso con grupos en estados distintos cuenta una vez, en el más activo de sus grupos.
+export function contarUnidades(lista: { c: { id: string, school_id: string | null, lugar: string | null, cohorte?: string | null }, estado: string }[]): { total: number, porEstado: Record<string, number> } {
+  const mejor = new Map<string, string>()
+  for (const { c, estado } of lista) {
+    const k = unidadDe(c), previo = mejor.get(k)
+    if (previo === undefined || (PESO_ESTADO[estado] ?? 9) < (PESO_ESTADO[previo] ?? 9)) mejor.set(k, estado)
+  }
+  const porEstado: Record<string, number> = {}
+  for (const e of mejor.values()) porEstado[e] = (porEstado[e] ?? 0) + 1
+  return { total: mejor.size, porEstado }
+}

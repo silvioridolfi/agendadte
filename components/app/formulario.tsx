@@ -101,7 +101,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const enc0 = item?.encuentros?.find(e => e.origen === 'app') ?? item?.encuentros?.[0]
   // Formulario exclusivo de clubes y prácticas (abierto desde su sección, o al editar un encuentro): sin tipos de acción ni campos generales.
   const modoT = preset?.modo ?? (item && esTrayecto(item.accion) ? 'encuentro' : null)
-  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? hoyAR(), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? preset?.accion ?? null as Accion | null, estado: item?.estado ?? (((defaultFecha ?? hoyAR()) < hoyAR() ? 'realizada' : 'planificada') as Estado), sub_accion: item?.sub_accion ?? preset?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? (item?.accion === 'TALLER/CAPACITACIÓN' ? item.sub_accion ?? '' : ''), destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', modalidad_ev: item?.modalidad ?? ('Presencial' as ModalidadEvento), enlace: item?.enlace ?? '', rol_formacion: item?.rol_formacion ?? ('Asistí' as RolFormacion), dictada_por: item?.dictada_por ?? '', club_id: enc0?.club_id ?? item?.club_id ?? (preset?.modo === 'nuevo' ? 'nuevo' : preset?.club_id) ?? '', nivel: '', curso: '', seccion: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
+  const [form, setForm] = useState({ fecha: item?.fecha ?? defaultFecha ?? hoyAR(), hora_inicio: hhmm(item?.hora_inicio ?? null), hora_fin: hhmm(item?.hora_fin ?? null), accion: item?.accion ?? preset?.accion ?? null as Accion | null, estado: item?.estado ?? (((defaultFecha ?? hoyAR()) < hoyAR() ? 'realizada' : 'planificada') as Estado), sub_accion: item?.sub_accion ?? preset?.sub_accion ?? '', detalle: item?.detalle ?? '', lugar: item?.lugar ?? '', cantidad: item?.cantidad?.toString() ?? '', encuentro_n: enc0?.encuentro_n?.toString() ?? '', propuesta: enc0?.propuesta ?? (item?.accion === 'TALLER/CAPACITACIÓN' ? item.sub_accion ?? '' : ''), destinatarios: enc0?.destinatarios ?? '', modalidad: enc0?.modalidad ?? ('Presencial' as Modalidad), inscriptos: enc0?.inscriptos?.toString() ?? '', asistentes: enc0?.asistentes?.toString() ?? '', tipo_jornada: enc0?.tipo_jornada ?? ('' as TipoJornada | ''), descripcion: enc0?.descripcion ?? '', modalidad_ev: item?.modalidad ?? ('Presencial' as ModalidadEvento), enlace: item?.enlace ?? '', rol_formacion: item?.rol_formacion ?? ('Asistí' as RolFormacion), dictada_por: item?.dictada_por ?? '', club_id: enc0?.club_id ?? item?.club_id ?? (preset?.modo === 'nuevo' ? 'nuevo' : preset?.club_id) ?? '', nivel: '', curso: '', seccion: '', subgrupo: '', encuentros_previstos: '', es_cierre: enc0?.es_cierre ?? false })
   // Clubes y prácticas: registro por grupo con inicio y cierre (cada uno con su identidad visual).
   const esClub = esTrayecto(form.accion)
   const marca = esClub ? TRAYECTO_MARCA[form.accion as keyof typeof TRAYECTO_MARCA] : TRAYECTO_MARCA['CLUB DE TECNOLOGÍA']
@@ -138,7 +138,11 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   // Grado/curso del club nuevo: nivel sugerido por el nombre de la escuela, editable (cualquier nivel o modalidad).
   const nivelId = form.nivel || nivelDeEscuela(school?.nombre)
   const nivel = NIVELES.find(n => n.id === nivelId) ?? NIVELES[0]
-  const grupo = form.curso ? `${form.curso}${form.seccion ? ` ${form.seccion}` : ''}` : ''
+  // Práctica de un curso dividido en grupos (ej.: "7° Informática - Grupo 1"): el curso completo (cohorte) agrupa a los grupos en las métricas.
+  const cursoBase = form.curso ? `${form.curso}${form.seccion ? ` ${form.seccion}` : ''}` : ''
+  const subgrupo = form.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? form.subgrupo.trim() : ''
+  const grupo = cursoBase && subgrupo ? `${cursoBase} - ${subgrupo}` : cursoBase
+  const cohorte = cursoBase && subgrupo ? cursoBase : null
   function pickClub(id: string) {
     const c = clubes?.find(x => x.id === id)
     setForm(f => ({ ...f, club_id: id, encuentros_previstos: c?.encuentros_previstos?.toString() ?? f.encuentros_previstos,
@@ -287,7 +291,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     setSaving(true); setError('')
     if (aDefinir) {
       try {
-        await crearClubPorIniciar({ fed_id: fed.id, tipo: form.accion as 'CLUB DE TECNOLOGÍA' | 'PRÁCTICAS PROFESIONALIZANTES', school_id: school?.id ?? null, lugar: school ? null : form.lugar || null, grupo, escuela_origen_id: otroOrigen ? origen?.id ?? null : null, encuentros_previstos: toNum(form.encuentros_previstos) })
+        await crearClubPorIniciar({ fed_id: fed.id, tipo: form.accion as 'CLUB DE TECNOLOGÍA' | 'PRÁCTICAS PROFESIONALIZANTES', school_id: school?.id ?? null, lugar: school ? null : form.lugar || null, grupo, escuela_origen_id: otroOrigen ? origen?.id ?? null : null, encuentros_previstos: toNum(form.encuentros_previstos), cohorte })
         onSaved({ creadas: 0, mensaje: marca.corto === 'club' ? `Club ${grupo} guardado como “por iniciar”` : `Práctica ${grupo} guardada como “por iniciar”` })
       } catch (err) { setError(errMsg(err)); setSaving(false) }
       return
@@ -303,7 +307,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       participantes: esParo || esLicencia ? [] : participantes,
       encuentro: conEncuentro ? { id: encPrincipal, propuesta: propuestaEf, encuentro_n: toNum(form.encuentro_n), modalidad: form.modalidad, destinatarios: destinatariosEf, inscriptos: toNum(inscriptosEf), asistentes: toNum(form.asistentes),
         ...(esTaller ? { descripcion: form.descripcion } : {}),
-        ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', grupo: grupo, escuela_origen_id: otroOrigen ? origen?.id ?? null : null, encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
+        ...(esClub ? { tipo_jornada: form.tipo_jornada || null, descripcion: form.descripcion, club_id: form.club_id && form.club_id !== 'nuevo' ? form.club_id : null, nuevo_club: form.club_id === 'nuevo', grupo: grupo, cohorte, escuela_origen_id: otroOrigen ? origen?.id ?? null : null, encuentros_previstos: toNum(form.encuentros_previstos), es_cierre: form.es_cierre } : {}) } : null,
     }
     // Editar una visita (o sumar tipos a una acción): los datos comunes van a todas; los tipos desmarcados se eliminan.
     if (item && esVisita) {
@@ -457,6 +461,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
         <Field label="Nivel / modalidad" className="sm:col-span-3"><select className={`${selectClass} h-11 md:h-10`} value={nivel.id} onChange={e => setForm(f => ({ ...f, nivel: e.target.value, curso: '' }))}>{[...NIVELES].sort((a, b) => az(a.label, b.label)).map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select></Field>
         <Field id="campo-curso" label={nivel.cursoLabel} required className="scroll-mt-24 sm:col-span-2" error={errores.curso} errorId="err-curso"><select className={`${selectClass} h-11 md:h-10`} value={form.curso} onChange={e => { set('curso', e.target.value); limpiar('curso') }} aria-invalid={!!errores.curso || undefined} aria-describedby={errores.curso ? 'err-curso' : undefined}><option value="">Elegí…</option>{nivel.cursos.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
         <Field label="Sección" className="sm:col-span-1"><select className={`${selectClass} h-11 md:h-10`} value={form.seccion} onChange={e => set('seccion', e.target.value)}><option value="">—</option>{SECCIONES.map(x => <option key={x}>{x}</option>)}</select></Field>
+        {form.accion === 'PRÁCTICAS PROFESIONALIZANTES' && <Field label="Grupo" hint="(opcional)" className="sm:col-span-6"><Input placeholder="Ej.: Grupo 1 (si el curso se dividió en grupos)" value={form.subgrupo} onChange={e => set('subgrupo', e.target.value)} className="h-10 bg-white" /><span className="text-xs text-dte-gris">Si el curso se dividió en grupos, cada grupo se carga por separado y las métricas los cuentan como un solo curso.</span></Field>}
         <label className="flex items-center gap-2 text-sm sm:col-span-6"><input type="checkbox" checked={otroOrigen} onChange={e => setOtroOrigen(e.target.checked)} className="size-4" style={{ accentColor: marca.acento }} />Los estudiantes son de otra escuela (se desarrolla en esta sede o en territorio)</label>
         {otroOrigen && <div className="flex flex-col gap-1.5 sm:col-span-6"><span className="text-sm font-semibold">Escuela de origen de los estudiantes</span><SchoolPicker value={origen} onChange={setOrigen} /></div>}
         {grupo && <p className="text-xs sm:col-span-6">Se va a registrar como <b>{grupo}</b>{school ? ` · ${shortSchoolName(school)}` : ''}{otroOrigen && origen ? ` · estudiantes de ${shortSchoolName(origen)}` : ''}.</p>}
