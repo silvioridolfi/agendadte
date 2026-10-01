@@ -152,9 +152,13 @@ export default function Page() {
     </header>
 
     <div className="sticky top-[calc(4.25rem+env(safe-area-inset-top,0px))] z-fab">
-    {vista && <div role="status" className="border-b border-aviso-borde bg-aviso-fondo-fuerte px-4 py-2 text-sm text-aviso-fuerte">
-      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 lg:px-6"><span className="flex items-center gap-1.5"><Eye className="size-4 shrink-0" aria-hidden /><span>{vista.tipo === 'equipo' ? <>Estás viendo el <b>tablero del equipo completo</b></> : <>Estás viendo la agenda de <b>{vista.fed.nombre_completo}</b></>} · Solo lectura</span></span>
-        <button type="button" onClick={() => { setVista(null); irA('agenda') }} className="min-h-10 rounded-full bg-white px-3 text-xs font-semibold text-dte-petroleo shadow-e1 hover:bg-dte-tinte md:min-h-8">Volver a mi agenda</button></div>
+    {vista && <div role="status" className="border-b border-aviso-borde bg-aviso-fondo-fuerte px-4 py-1.5 text-sm text-aviso-fuerte">
+      {/* Una sola línea: en el celular el texto se acorta y el botón queda al lado. */}
+      <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-2 lg:px-6">
+        <span className="flex min-w-0 items-center gap-1.5"><Eye className="size-4 shrink-0" aria-hidden />
+          <span className="min-w-0 truncate sm:hidden">{vista.tipo === 'equipo' ? <b>Tablero del equipo</b> : <b>{firstName(vista.fed.nombre_completo)}</b>}<span className="max-[22.5rem]:hidden"> · solo lectura</span></span>
+          <span className="hidden truncate sm:inline">{vista.tipo === 'equipo' ? <>Estás viendo el <b>tablero del equipo completo</b></> : <>Estás viendo la agenda de <b>{vista.fed.nombre_completo}</b></>} · Solo lectura</span></span>
+        <button type="button" onClick={() => { setVista(null); irA('agenda') }} className="min-h-9 shrink-0 rounded-full bg-white px-3 text-xs font-semibold text-dte-petroleo shadow-e1 hover:bg-dte-tinte md:min-h-8"><span className="sm:hidden">Mi agenda</span><span className="hidden sm:inline">Volver a mi agenda</span></button></div>
     </div>}
       <AvisosBanner feds={feds ?? []} puedeSubirPve={profile.rol === 'fed'} onIrAPve={() => { setVista(null); irA('mispve') }} />
     </div>
