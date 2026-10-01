@@ -30,14 +30,44 @@ export function proximoEncuentro(encuentros: EncuentroNum[], fecha?: string, exc
 }
 
 // Una acción de club o práctica de hoy o anterior, todavía planificada, pasa a realizada cuando se cargan datos del encuentro
-// (inscriptos, participantes reales, descripción o cierre). Las canceladas y las futuras no se tocan.
+// (participantes reales, descripción o cierre). Las canceladas y las futuras no se tocan.
 export function estadoAlCompletar(p: { accion: string | null, estado: Estado, fecha: string, hoy: string, inscriptos: string, asistentes: string, descripcion: string, esCierre: boolean }): Estado {
   if (!esTrayecto(p.accion as never) || (p.estado !== 'planificada' && p.estado !== 'reprogramada') || p.fecha > p.hoy) return p.estado
-  const conDatos = p.inscriptos.trim() !== '' || p.asistentes.trim() !== '' || p.descripcion.trim() !== '' || p.esCierre
+  // Los inscriptos vienen precargados del primer encuentro: no alcanzan para dar por realizado el encuentro.
+  const conDatos = p.asistentes.trim() !== '' || p.descripcion.trim() !== '' || p.esCierre
   return conDatos ? 'realizada' : p.estado
 }
 
 // ¿Se pisan dos horarios (HH:MM)? Uno a continuación del otro (12:00–13:00 y 13:00–14:00) no se pisan; sin horario de inicio no se puede decir.
 export function horariosSePisan(a: { ini: string, fin: string }, b: { ini: string, fin: string }): boolean {
   return !!a.ini && !!b.ini && (a.ini < (b.fin || b.ini) || a.ini === b.ini) && (b.ini < (a.fin || a.ini) || a.ini === b.ini)
+}
+
+// Propuestas más usadas en los clubes (la primera es la de siempre); "Otra" permite escribir una propia.
+export const PROPUESTAS_DE_CLUB = ['Club de Tecnología', 'Ciudadanía Digital', 'Convivencia Digital', 'IA: Desafío y Oportunidades', 'Inicial (Programación y Robotita)', 'Programación - Robótica (No en inicial)',
+  'Edición de Audio y Video', 'Edición Gráfica', 'Podcasts - Microrrelatos Sonoros', 'Radios Escolares', 'Contenidos Digitales Interactivos', 'Aplicaciones Educativas']
+
+// Destinatarios: opciones fijas (el grado del club se suma como "Estudiantes de 5°"). Se guardan como texto separado por comas.
+export const DESTINATARIOS_BASE = ['Docentes', 'Familias', 'Equipo de Conducción', 'JR', 'JD', 'IE']
+export const destinatarioEstudiantes = (grupo: string | null | undefined) => (grupo?.trim() ? `Estudiantes de ${grupo.trim()}` : 'Estudiantes')
+export const opcionesDestinatarios = (grupo: string | null | undefined) => [destinatarioEstudiantes(grupo), ...DESTINATARIOS_BASE]
+export const partirDestinatarios = (texto: string): string[] => texto.split(',').map(x => x.trim()).filter(Boolean)
+export const unirDestinatarios = (l: string[]): string => l.join(', ')
+
+// Inscriptos del club: los del primer encuentro que los tenga (se definen al iniciar y se mantienen hasta el cierre).
+export function inscriptosDelClub(encuentros: { fecha: string, inscriptos: number | null }[]): number | null {
+  return [...encuentros].filter(e => e.inscriptos != null).sort((a, b) => a.fecha.localeCompare(b.fecha))[0]?.inscriptos ?? null
+}
+
+// ¿El cambio toca la fecha, el horario, el lugar, el tipo o el club? Sólo entonces tiene sentido preguntar si aplica a toda la serie.
+export function cambiaLaSerie(antes: { fecha: string, hora_inicio: string | null, hora_fin: string | null, school_id: string | null, lugar: string | null, accion: string | null },
+  ahora: { fecha: string, hora_inicio: string, hora_fin: string, school_id: string | null, lugar: string, accion: string | null }): boolean {
+  const hh = (h: string | null) => (h ?? '').slice(0, 5)
+  return antes.fecha !== ahora.fecha || hh(antes.hora_inicio) !== hh(ahora.hora_inicio) || hh(antes.hora_fin) !== hh(ahora.hora_fin)
+    || (antes.school_id ?? null) !== (ahora.school_id ?? null) || (antes.lugar ?? '') !== (ahora.lugar ?? '') || antes.accion !== ahora.accion
+}
+
+// Clubes (o prácticas) que el FED ya tiene ese día: se sugieren al cargar una acción nueva. Sin repetir y sin canceladas.
+export function clubesDelDia<T extends { club_id?: string | null, accion: string | null, estado: string, fed_id: string }>(items: T[], accion: string | null, fedId: string): string[] {
+  return [...new Set(items.filter(i => i.fed_id === fedId && i.accion === accion && i.club_id && i.estado !== 'cancelada').map(i => i.club_id!))]
 }

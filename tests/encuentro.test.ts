@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estadoAlCompletar, horariosSePisan, minEncuentros, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
+import { cambiaLaSerie, clubesDelDia, destinatarioEstudiantes, inscriptosDelClub, opcionesDestinatarios, partirDestinatarios, PROPUESTAS_DE_CLUB, unirDestinatarios, estadoAlCompletar, horariosSePisan, minEncuentros, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
 
 describe('mínimo de encuentros (sólo informativo)', () => {
   it('los clubes tienen mínimo 8; las prácticas y el resto, ninguno', () => {
@@ -47,7 +47,7 @@ describe('pasa a realizada al completar el encuentro', () => {
   const base = { accion: 'CLUB DE TECNOLOGÍA', estado: 'planificada' as const, fecha: '2026-09-30', hoy: '2026-09-30', inscriptos: '', asistentes: '', descripcion: '', esCierre: false }
   it('con datos cargados, una acción de hoy planificada pasa a realizada', () => {
     expect(estadoAlCompletar({ ...base, asistentes: '18' })).toBe('realizada')
-    expect(estadoAlCompletar({ ...base, inscriptos: '20' })).toBe('realizada')
+    expect(estadoAlCompletar({ ...base, inscriptos: '20' })).toBe('planificada') // precargado: no alcanza
     expect(estadoAlCompletar({ ...base, descripcion: 'Robótica con kits' })).toBe('realizada')
     expect(estadoAlCompletar({ ...base, esCierre: true })).toBe('realizada')
   })
@@ -85,5 +85,36 @@ describe('choque de horarios', () => {
   it('sin horario no se puede decir', () => {
     expect(horariosSePisan({ ini: '', fin: '' }, { ini: '12:00', fin: '13:00' })).toBe(false)
     expect(horariosSePisan({ ini: '12:00', fin: '13:00' }, { ini: '', fin: '' })).toBe(false)
+  })
+})
+
+describe('ajustes de clubes', () => {
+  it('la propuesta por defecto es Club de Tecnología y la lista es corta', () => {
+    expect(PROPUESTAS_DE_CLUB[0]).toBe('Club de Tecnología')
+    expect(PROPUESTAS_DE_CLUB.length).toBeLessThanOrEqual(14)
+  })
+  it('destinatarios: el grado del club encabeza las opciones', () => {
+    expect(destinatarioEstudiantes('5°')).toBe('Estudiantes de 5°')
+    expect(destinatarioEstudiantes(null)).toBe('Estudiantes')
+    expect(opcionesDestinatarios('6° B')).toEqual(['Estudiantes de 6° B', 'Docentes', 'Familias', 'Equipo de Conducción', 'JR', 'JD', 'IE'])
+    expect(partirDestinatarios('Estudiantes de 5°, Docentes ,')).toEqual(['Estudiantes de 5°', 'Docentes'])
+    expect(unirDestinatarios(['Docentes', 'JR'])).toBe('Docentes, JR')
+  })
+  it('inscriptos: los del primer encuentro que los tenga', () => {
+    expect(inscriptosDelClub([])).toBeNull()
+    expect(inscriptosDelClub([{ fecha: '2026-09-02', inscriptos: 28 }, { fecha: '2026-08-05', inscriptos: 30 }, { fecha: '2026-09-09', inscriptos: null }])).toBe(30)
+    expect(inscriptosDelClub([{ fecha: '2026-08-05', inscriptos: null }, { fecha: '2026-08-07', inscriptos: 30 }])).toBe(30)
+  })
+  const antes = { fecha: '2026-09-30', hora_inicio: '13:00:00', hora_fin: '14:00:00', school_id: 's1', lugar: null, accion: 'CLUB DE TECNOLOGÍA' }
+  const ahora = { fecha: '2026-09-30', hora_inicio: '13:00', hora_fin: '14:00', school_id: 's1', lugar: '', accion: 'CLUB DE TECNOLOGÍA' }
+  it('sólo pregunta por la serie si cambia fecha, horario, lugar o tipo', () => {
+    expect(cambiaLaSerie(antes, ahora)).toBe(false)
+    expect(cambiaLaSerie(antes, { ...ahora, fecha: '2026-10-01' })).toBe(true)
+    expect(cambiaLaSerie(antes, { ...ahora, hora_inicio: '14:00' })).toBe(true)
+    expect(cambiaLaSerie(antes, { ...ahora, school_id: 's2' })).toBe(true)
+  })
+  it('clubes del día: propios, del mismo tipo, sin repetir ni canceladas', () => {
+    const i = (club_id: string | null, estado = 'planificada', fed_id = 'yo', accion = 'CLUB DE TECNOLOGÍA') => ({ club_id, estado, fed_id, accion })
+    expect(clubesDelDia([i('a'), i('a'), i('b'), i('c', 'cancelada'), i(null), i('d', 'planificada', 'otro'), i('e', 'planificada', 'yo', 'VISITA TÉCNICA')], 'CLUB DE TECNOLOGÍA', 'yo')).toEqual(['a', 'b'])
   })
 })

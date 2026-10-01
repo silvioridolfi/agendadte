@@ -166,6 +166,11 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
       {anyFilter && <Button variant="ghost" onClick={clear} className="self-start text-dte-magenta hover:text-dte-magenta md:self-auto"><X data-icon="inline-start" />Limpiar</Button>}
     </div>}
 
+    {!propio && fedIdElegido && tab !== 'equipo' && tab !== 'agenda' && <div role="status" className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-control border border-dte-petroleo/30 bg-dte-petroleo/[0.06] px-3 py-2 text-sm">
+      <span>Estás viendo sólo a <b>{fedName(fedIdElegido)}</b>.</span>
+      <Button variant="outline" size="sm" onClick={() => setFedId('')} className="min-h-11 md:min-h-8"><X data-icon="inline-start" />Ver todo el equipo</Button>
+    </div>}
+
     {tab === 'agenda' ? <div className="mt-6"><AgendaEquipoView feds={feds} reloadKey={reloadKey} onSelect={onSelect} /></div>
     : tab === 'equipo' ? <div className="mt-6"><MiEquipoView feds={feds} todos={todos} items={items} clubes={clubes} noHabiles={noHabiles} periodo={title} desde={iso(from)} hasta={iso(to)} onSelect={onSelect} onVerAcciones={id => { setFedId(id); setTab('acciones') }} /></div>
     : tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} noHabiles={noHabiles} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={propio && !soloLectura ? async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) } : undefined}
