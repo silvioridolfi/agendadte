@@ -11,6 +11,7 @@ import { ordenarFotos } from '@/lib/fotos'
 import { PRIMER_MES, carpetaDelMes, inicioMes, hoyAR as hoyPve, mesesEntregables, nombreMes, noLaborables, revisarPve, vencimientoPve } from '@/lib/pve'
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 import { hoyAR } from '@/lib/hora'
+import { avisaPorFecha } from '@/lib/avisos'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
@@ -157,8 +158,11 @@ async function audit(tabla: string, registroId: string | null, operacion: 'alta'
 }
 
 // Aviso a los compañeros etiquetados (sin quien hizo el cambio).
+// Las acciones de fechas pasadas (carga retroactiva) no avisan: la agenda se acomoda al final del mes y no hay nada que anticipar.
 async function avisarParticipantes(itemId: string, autorId: string, tipo: 'modificacion' | 'cancelacion', detalle: string, conItem = true) {
   const db = supabaseServer()
+  const { data: it } = await db.from('agenda_items').select('fecha').eq('id', itemId).maybeSingle()
+  if (it && !avisaPorFecha(it.fecha as string, hoyAR())) return
   const { data } = await db.from('agenda_participantes').select('fed_id').eq('item_id', itemId)
   const destinos = (data ?? []).map(p => p.fed_id as string).filter(f => f !== autorId)
   if (destinos.length) await db.from('notificaciones').insert(destinos.map(fed_id => ({ fed_id, item_id: conItem ? itemId : null, autor_id: autorId, tipo, detalle })))
@@ -195,7 +199,7 @@ async function saveItemImpl(input: AgendaItemInput, id?: string, alcance: 'uno' 
     : await db.from('agenda_items').insert(rowSinSerie).select('id').single()
   if (res.error) throw new Error(res.error.message)
   const itemId = res.data.id as string
-  const cambiosPart = input.participantes ? await syncParticipantes(itemId, row.fed_id, input.participantes, avisar) : { sumar: [], quitar: [] }
+  const cambiosPart = input.participantes ? await syncParticipantes(itemId, row.fed_id, input.participantes, avisar && avisaPorFecha(row.fecha, hoyAR())) : { sumar: [], quitar: [] }
 
   // Encuentro: se edita el que se mostró en el formulario (puede ser uno importado) o se crea uno nuevo.
   // Si la acción deja de ser club/taller/prácticas, sólo se borra el encuentro creado desde la app; los importados se conservan.
@@ -559,7 +563,10 @@ async function propias(ids: string[], fedId: string) {
 }
 async function avisarEnBloque(ids: string[], autorId: string, detalle: string) {
   const db = supabaseServer()
-  const { data } = await db.from('agenda_participantes').select('fed_id').in('item_id', ids)
+  // Sólo las acciones de hoy o futuras: las pasadas no avisan.
+  const { data: vigentes } = await db.from('agenda_items').select('id').in('id', ids).gte('fecha', hoyAR())
+  if (!vigentes?.length) return
+  const { data } = await db.from('agenda_participantes').select('fed_id').in('item_id', vigentes.map(v => v.id as string))
   const destinos = [...new Set((data ?? []).map(p => p.fed_id as string))].filter(f => f !== autorId)
   if (destinos.length) await db.from('notificaciones').insert(destinos.map(fed_id => ({ fed_id, item_id: null, autor_id: autorId, tipo: 'cancelacion', detalle })))
 }
