@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AgendaItem } from '@/lib/agenda'
-import { accionesAcompanadas, indicadoresCoordinacion, informeFed } from '@/lib/informes'
+import { accionesAcompanadas, indicadoresCoordinacion, informeFed, resumenDe } from '@/lib/informes'
 
 let n = 0
 const it_ = (p: Partial<AgendaItem>): AgendaItem => ({ id: `i${++n}`, fed_id: 'f1', school_id: null, fecha: '2026-10-01', hora_inicio: null, hora_fin: null, accion: 'VISITA TÉCNICA', sub_accion: null, detalle: null, estado: 'realizada', cantidad: null, lugar: null, origen: 'app', created_at: '', updated_at: '', school: null, encuentros: [], participantes: [], ...p } as AgendaItem)
@@ -65,5 +65,16 @@ describe('acciones acompañadas', () => {
     const inf = informeFed(propias, otras)
     expect(val(inf, 'total')).toBe(1)
     expect(val(inf, 'acompanadas')).toBe(2)
+  })
+})
+
+describe('resumen del informe plegado', () => {
+  it('con el informe del FED muestra realizadas, escuelas y encuentros', () => {
+    const inf = informeFed([it_({ ...escuela('s1') }), it_({ ...escuela('s2') }), it_({ accion: 'CLUB DE TECNOLOGÍA', encuentros: [{ asistentes: 10 }] as never })])
+    expect(resumenDe(inf)).toBe('3 acciones realizadas · 2 escuelas visitadas · 1 encuentro de clubes y prácticas')
+  })
+  it('con otros indicadores usa los tres primeros con valor', () => {
+    const ind = indicadoresCoordinacion([it_({ fed_id: 'c1', accion: 'REUNIÓN' }), it_({ fed_id: 'c1', accion: 'INFORME TÉCNICO' })], new Set(['c1']))
+    expect(resumenDe(ind)).toBe('1 reuniones de coordinación · 1 informes técnicos elaborados')
   })
 })

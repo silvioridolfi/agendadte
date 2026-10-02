@@ -5,6 +5,7 @@ import type { Rol } from '@/lib/ayuda/temas'
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[] }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-02', titulo: 'Informe del período más compacto', texto: 'Los indicadores del informe ocupan menos lugar y el panel se puede plegar con la flecha del título: queda una línea con lo principal y los botones de Excel y PDF a la vista. La app recuerda cómo lo dejaste.' },
   { fecha: '2026-10-02', titulo: 'La cámara solo marca las acciones con fotos', texto: 'Si todas las fotos del día ya quedaron asignadas a otras acciones por horario, las acciones sin fotos dejan de mostrar la cámara. Solo la muestran si quedaron fotos del día sin asignar.', para: ['fed'] },
   { fecha: '2026-10-02', titulo: 'Acceso al sitio DTE Región 1', texto: 'En el menú de las iniciales sumamos Sitio DTE Región 1: abre el sitio de la Dirección en una pestaña nueva, con tu cuenta institucional.' },
   { fecha: '2026-10-01', titulo: 'Buscador de escuelas', texto: 'Con la lupa de arriba buscás cualquier escuela por nombre, sigla o CUE y ves su ficha: datos en tarjetas de color, próximas acciones, clubes y prácticas, y el historial de lo que se hizo ahí. Desde la ficha podés agendar una acción con la escuela ya elegida.' },

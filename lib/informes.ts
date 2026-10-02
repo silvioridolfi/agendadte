@@ -71,3 +71,11 @@ export function informeFed(items: AgendaItem[], acompanadas: AgendaItem[] = []):
 export function porTipo(items: AgendaItem[]) {
   return [...hechas(items).reduce((m, i) => m.set(i.accion, (m.get(i.accion) ?? 0) + 1), new Map<string, number>())].sort((a, b) => b[1] - a[1])
 }
+
+// Línea de resumen del informe plegado: lo principal de un vistazo. Con los indicadores del FED usa realizadas, escuelas y encuentros; si no, los tres primeros con valor.
+const CORTOS: Record<string, [string, string]> = { total: ['acción realizada', 'acciones realizadas'], escuelas: ['escuela visitada', 'escuelas visitadas'], encuentros: ['encuentro de clubes y prácticas', 'encuentros de clubes y prácticas'] }
+export function resumenDe(indicadores: Indicador[]): string {
+  const elegidos = Object.keys(CORTOS).map(k => indicadores.find(x => x.clave === k)).filter((x): x is Indicador => !!x)
+  const lista = elegidos.length === Object.keys(CORTOS).length ? elegidos : indicadores.filter(x => x.valor > 0).slice(0, 3)
+  return lista.map(x => `${x.valor} ${CORTOS[x.clave]?.[x.valor === 1 ? 0 : 1] ?? x.label.toLowerCase()}`).join(' · ')
+}
