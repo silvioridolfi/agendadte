@@ -42,8 +42,13 @@ export function indicadoresCoordinacion(equipo: AgendaItem[], ced: Set<string>):
   ]
 }
 
-// Resumen del período de un FED (sus acciones y las compartidas en las que participó ya vienen en `items`).
-export function informeFed(items: AgendaItem[]): Indicador[] {
+// Acciones de otros integrantes en las que el FED fue etiquetado y que se realizaron (las que rechazó no cuentan).
+// Se informan aparte: no se suman al total ni a las categorías, porque cada acción ya cuenta para quien la hizo.
+export const accionesAcompanadas = (items: AgendaItem[], fedId: string) =>
+  hechas(items).filter(i => i.fed_id !== fedId && (i.participantes ?? []).some(p => p.fed_id === fedId && p.respuesta !== 'rechaza'))
+
+// Resumen del período de un FED: `items` son sus acciones; `acompanadas`, las de otros en las que lo etiquetaron.
+export function informeFed(items: AgendaItem[], acompanadas: AgendaItem[] = []): Indicador[] {
   const h = hechas(items)
   const de = (...acciones: string[]) => h.filter(i => acciones.includes(i.accion))
   const porCat = (c: Categoria) => h.filter(i => CATEGORIA[i.accion] === c)
@@ -58,6 +63,7 @@ export function informeFed(items: AgendaItem[]): Indicador[] {
     { clave: 'talleres', label: 'Talleres y capacitaciones dictados', valor: de('TALLER/CAPACITACIÓN').length, items: de('TALLER/CAPACITACIÓN') },
     { clave: 'formacion', label: 'Formaciones internas', valor: formInterna.length, detalle: `${formInterna.filter(i => i.rol_formacion === 'La dicté').length} dictadas`, items: formInterna },
     { clave: 'eventos', label: 'Eventos DTE', valor: de('EVENTO DTE').length, items: de('EVENTO DTE') },
+    { clave: 'acompanadas', label: 'Acciones acompañadas', valor: acompanadas.length, detalle: 'de otros integrantes; no suman al total', items: acompanadas },
   ]
 }
 

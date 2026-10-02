@@ -15,7 +15,7 @@ import { titleCase } from '@/lib/format'
 import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed, type Club, clubEstado } from '@/lib/agenda'
 import { FotosChip } from '@/components/app/fotosconteo'
 import { InformeBloque, personaDe } from '@/components/app/informes'
-import { indicadoresCoordinacion, informeFed } from '@/lib/informes'
+import { accionesAcompanadas, indicadoresCoordinacion, informeFed } from '@/lib/informes'
 import { BotonRealizar, DestacadosCtx, claseDestacado, puedeRealizar, EtiquetasAccion, type ItemPreset, itemCorto, cueLugar, marcaModalidad, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
 import { hoyAR, fechaHoyAR, anioAR } from '@/lib/hora'
 import { agruparVisitas } from '@/lib/visita'
@@ -178,7 +178,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
       onNuevo={propio && onNuevaAccion ? () => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', modo: 'nuevo' }) : undefined}
       onEncuentro={propio && onNuevaAccion ? c => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', club_id: c?.id, modo: 'encuentro' }) : undefined} />}</div>
     : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <>{/* El FED ve su informe (descarga en Excel o PDF) arriba de todo; la coordinación, sus indicadores al final. */}{propio
-        ? <><InformeBloque titulo="Mi informe del período" subtitulo={`Tus acciones realizadas en ${title.toLowerCase()}. Descargalo en Excel o PDF.`} persona={personaDe(propio)} desde={iso(from)} hasta={iso(to)} indicadores={informeFed(base.filter(i => i.fed_id === propio.id))} items={base.filter(i => i.fed_id === propio.id)} feds={todos} onSelect={onSelect} /><div className="mt-6">{metricas}</div></>
+        ? <><InformeBloque titulo="Mi informe del período" subtitulo={`Tus acciones realizadas en ${title.toLowerCase()}. Descargalo en Excel o PDF.`} persona={personaDe(propio)} desde={iso(from)} hasta={iso(to)} indicadores={informeFed(base.filter(i => i.fed_id === propio.id), accionesAcompanadas(base, propio.id))} items={base.filter(i => i.fed_id === propio.id)} acompanadas={accionesAcompanadas(base, propio.id)} feds={todos} onSelect={onSelect} /><div className="mt-6">{metricas}</div></>
         : <>{metricas}{todos.some(f => f.rol === 'coordinacion') && <InformeBloque titulo="Coordinación · indicadores de seguimiento" subtitulo={`Según la planificación del CED 2026, para ${title.toLowerCase()}. No se mezclan con las métricas de los FED.`} persona={personaDe(todos.find(f => f.rol === 'coordinacion')!)} desde={iso(from)} hasta={iso(to)} indicadores={indicadoresCoordinacion(base, new Set(todos.filter(f => f.rol === 'coordinacion').map(f => f.id)))} items={base.filter(i => todos.some(f => f.id === i.fed_id && f.rol === 'coordinacion'))} feds={todos} onSelect={onSelect} />}</>}</>}</div>
     : <div className="mt-6 flex flex-col gap-6">
       {error ? <ErrorBox message={error} onRetry={retry} />

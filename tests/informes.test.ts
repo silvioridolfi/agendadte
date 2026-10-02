@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AgendaItem } from '@/lib/agenda'
-import { indicadoresCoordinacion, informeFed } from '@/lib/informes'
+import { accionesAcompanadas, indicadoresCoordinacion, informeFed } from '@/lib/informes'
 
 let n = 0
 const it_ = (p: Partial<AgendaItem>): AgendaItem => ({ id: `i${++n}`, fed_id: 'f1', school_id: null, fecha: '2026-10-01', hora_inicio: null, hora_fin: null, accion: 'VISITA TÉCNICA', sub_accion: null, detalle: null, estado: 'realizada', cantidad: null, lugar: null, origen: 'app', created_at: '', updated_at: '', school: null, encuentros: [], participantes: [], ...p } as AgendaItem)
@@ -48,5 +48,22 @@ describe('informe de un FED', () => {
     expect(val(inf, 'pedagogica')).toBe(2)
     expect(val(inf, 'escuelas')).toBe(2)
     expect(inf.find(x => x.clave === 'encuentros')!.detalle).toBe('10 asistentes en total')
+  })
+})
+
+describe('acciones acompañadas', () => {
+  const con = (fed_id: string, respuesta: 'pendiente' | 'acepta' | 'rechaza', p: Partial<AgendaItem> = {}) => it_({ fed_id, participantes: [{ fed_id: 'f1', respuesta }], ...p })
+  it('cuenta las realizadas de otros donde lo etiquetaron, sin las rechazadas', () => {
+    const todas = [
+      con('f2', 'acepta'), con('f3', 'pendiente'), con('f2', 'rechaza'), con('f2', 'acepta', { estado: 'planificada' }),
+      con('f2', 'acepta', { accion: 'LICENCIA' }), it_({ fed_id: 'f1' }), it_({ fed_id: 'f2', participantes: [{ fed_id: 'f4', respuesta: 'acepta' }] }),
+    ]
+    expect(accionesAcompanadas(todas, 'f1')).toHaveLength(2)
+  })
+  it('no se suma al total del informe', () => {
+    const propias = [it_({ fed_id: 'f1' })], otras = [con('f2', 'acepta'), con('f2', 'acepta')]
+    const inf = informeFed(propias, otras)
+    expect(val(inf, 'total')).toBe(1)
+    expect(val(inf, 'acompanadas')).toBe(2)
   })
 })
