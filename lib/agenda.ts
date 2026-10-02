@@ -288,6 +288,8 @@ export const cuentaHecha = (i: Pick<AgendaItem, 'estado' | 'accion'>) => i.estad
 export const RECORDATORIO_LICENCIA = 'En el caso de ausencias, especificá el motivo. El aviso se realiza en el momento en que se produce y dentro de las 48 hs posteriores se debe enviar la constancia de justificación.'
 // Establecimiento DTE (lugar de trabajo): los paros se registran ahí.
 export const CUE_DTE = 60000000
+// Sitio de la Dirección de Tecnología Educativa (Google Sites, con cuenta institucional): se abre desde el menú de las iniciales.
+export const SITIO_DTE_URL = 'https://sites.google.com/abc.gob.ar/region1dte/inicio'
 
 // Distritos de la Región 1 (para elegir los distritos a cargo en Mi perfil).
 export const DISTRITOS_REGION = ['BERISSO', 'BRANDSEN', 'ENSENADA', 'LA PLATA', 'MAGDALENA', 'PUNTA INDIO']
