@@ -203,7 +203,7 @@ export function Vacio({ icono: Icono, titulo, texto, children }: { icono: React.
     {children && <div className="mt-2">{children}</div>}
   </div>
 }
-export function Skeleton({ className = '' }: { className?: string }) { return <div className={`animate-pulse rounded-tile bg-dte-linea/70 ${className}`} /> }
+export function Skeleton({ className = '' }: { className?: string }) { return <div className={`anim-brillo rounded-tile bg-dte-linea/70 ${className}`} /> }
 
 // `acciones`: botones del aviso (p. ej., Deshacer); al tocarlos, el aviso se cierra.
 export type AccionAviso = { label: string, onClick: () => void }

@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { titleCase } from '@/lib/format'
 import { siglaEscuela } from '@/components/app/comun'
+import { Contador, numeroDe } from '@/components/contador'
 import { esEscuela, esGrupoEspecial, grupoDistrito, ordenGrupos } from '@/lib/sede'
 import { CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, type Accion, type AgendaItem, type Categoria, type Encuentro, type Fed, type School, cuentaHecha, esAusencia } from '@/lib/agenda'
 
@@ -34,7 +35,7 @@ export function Panel({ title, subtitle, children, action }: { title: string, su
 export function Kpi({ label, value, hint, color, onClick, active }: { label: string, value: string, hint?: string, color?: string, onClick?: () => void, active?: boolean }) {
   const body = <>
     <p className="flex items-center gap-1.5 text-xs font-semibold text-dte-gris">{color && <span className="size-2.5 rounded-sm" style={{ background: color }} />}{label}{onClick && <ChevronRight className="ml-auto size-3.5 text-dte-gris-claro transition group-hover:translate-x-0.5 group-hover:text-dte-petroleo" />}</p>
-    <p className="mt-1 text-2xl font-bold tabular-nums sm:text-3xl">{value}</p>
+    <p className="mt-1 text-2xl font-bold tabular-nums sm:text-3xl">{numeroDe(value) === null ? value : <Contador valor={numeroDe(value)!} />}</p>
     {hint && <p className="text-xs text-dte-gris">{hint}</p>}
   </>
   if (!onClick) return <div className="rounded-card border border-dte-linea bg-white px-4 py-3">{body}</div>
@@ -59,7 +60,7 @@ export function DrillDialog({ drill, onClose }: { drill: { title: string, subtit
 function StackedBar({ counts, max }: { counts: Counts, max: number }) {
   const total = CATEGORIAS.reduce((a, c) => a + counts[c], 0)
   return <div className="flex h-3 w-full gap-[2px]" role="img" aria-label={CATEGORIAS.map(c => `${CATEGORIA_LABEL[c]}: ${counts[c]}`).join(', ')}>
-    {CATEGORIAS.filter(c => counts[c]).map((c, i, arr) => <div key={c} title={`${CATEGORIA_LABEL[c]}: ${counts[c]}`} className={`h-full ${i === 0 ? 'rounded-l' : ''} ${i === arr.length - 1 ? 'rounded-r' : ''}`} style={{ width: `${(counts[c] / Math.max(max, 1)) * 100}%`, background: CAT_COLOR[c] }} />)}
+    {CATEGORIAS.filter(c => counts[c]).map((c, i, arr) => <div key={c} title={`${CATEGORIA_LABEL[c]}: ${counts[c]}`} className={`anim-barra h-full ${i === 0 ? 'rounded-l' : ''} ${i === arr.length - 1 ? 'rounded-r' : ''}`} style={{ width: `${(counts[c] / Math.max(max, 1)) * 100}%`, background: CAT_COLOR[c] }} />)}
     {!total && <div className="h-full w-full rounded bg-dte-fondo" />}
   </div>
 }
@@ -67,7 +68,7 @@ function StackedBar({ counts, max }: { counts: Counts, max: number }) {
 export function HBar({ label, value, max, sub, color = CAT_COLOR.tecnica }: { label: string, value: number, max: number, sub?: string, color?: string }) {
   return <li className="grid grid-cols-[minmax(0,10rem)_1fr_auto] items-center gap-3 text-sm sm:grid-cols-[minmax(0,14rem)_1fr_auto]" title={`${label}: ${value}${sub ? ` · ${sub}` : ''}`}>
     <span className="truncate text-dte-tinta" title={label}>{label}</span>
-    <span className="h-2.5 rounded-r bg-dte-fondo"><span className="block h-full rounded-r" style={{ width: `${(value / Math.max(max, 1)) * 100}%`, background: color }} /></span>
+    <span className="h-2.5 rounded-r bg-dte-fondo"><span className="anim-barra block h-full rounded-r transition-[width] duration-[var(--duracion-lenta)]" style={{ width: `${(value / Math.max(max, 1)) * 100}%`, background: color }} /></span>
     <span className="text-right tabular-nums"><span className="font-semibold">{nf.format(value)}</span>{sub && <span className="ml-1 text-xs text-dte-gris">{sub}</span>}</span>
   </li>
 }

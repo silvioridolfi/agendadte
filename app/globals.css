@@ -299,6 +299,14 @@
 @keyframes realizada { 0% { box-shadow: 0 0 0 0 rgb(0 96 108 / 0.4); background-color: #e0f4f6; } 100% { box-shadow: 0 0 0 8px rgb(0 96 108 / 0); background-color: transparent; } }
 @keyframes tilde { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
 @keyframes sello { 0% { opacity: 0; transform: scale(0.8); } 15% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes barra { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes banner { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes campana { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(14deg); } 35% { transform: rotate(-12deg); } 55% { transform: rotate(8deg); } 75% { transform: rotate(-5deg); } }
+@keyframes brillo { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.anim-barra { transform-origin: left; animation: barra var(--duracion-lenta) var(--ease-estandar) both; }
+.anim-banner { animation: banner var(--duracion-lenta) var(--ease-estandar) both; }
+.anim-campana { transform-origin: 50% 15%; animation: campana 700ms ease-in-out 1; }
+.anim-brillo { background-image: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.6) 50%, transparent 70%); background-size: 200% 100%; animation: brillo 1.6s linear infinite; }
 .anim-entrada { animation: entrada var(--duracion-lenta) var(--ease-estandar) both; }
 /* Los hijos de una lista entran escalonados (30 ms entre uno y otro, hasta el 10.º). */
 .anim-lista > * { animation: entrada var(--duracion-lenta) var(--ease-estandar) both; }

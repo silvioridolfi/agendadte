@@ -49,6 +49,9 @@ function Titulo({ n, autor }: { n: Notificacion, autor: (id: string | null) => s
 export function NotificacionesBell({ feds, onOpen }: { feds: Fed[], onOpen: (item: AgendaItem) => void }) {
   const { list, unread, leer } = useNotif()
   const [open, setOpen] = useState(false)
+  // La campanita se sacude una vez cuando llega una notificación sin leer más.
+  const [previas, setPrevias] = useState(unread), [sacudidas, setSacudidas] = useState(0)
+  if (unread !== previas) { setPrevias(unread); if (unread > previas) setSacudidas(k => k + 1) }
   const ref = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLButtonElement>(null), panelRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -62,7 +65,7 @@ export function NotificacionesBell({ feds, onOpen }: { feds: Fed[], onOpen: (ite
   const autor = (id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Un compañero'
   return <div ref={ref} className="relative">
     <button ref={btnRef} onClick={() => setOpen(o => !o)} aria-haspopup="dialog" aria-label={`Notificaciones${unread ? ` (${unread} sin leer)` : ''}`} aria-expanded={open} className="relative flex size-11 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-fondo hover:text-dte-tinta">
-      <Bell className="size-5" />{unread > 0 && <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-dte-magenta px-1 text-xs font-bold text-white">{unread}</span>}
+      <Bell key={sacudidas} className={`size-5 ${sacudidas ? 'anim-campana' : ''}`} />{unread > 0 && <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-dte-magenta px-1 text-xs font-bold text-white">{unread}</span>}
     </button>
     {open && <div ref={panelRef} tabIndex={-1} role="dialog" aria-label="Notificaciones" className="animate-in fade-in-0 slide-in-from-top-1 duration-150 fixed inset-x-2 top-[calc(3.75rem+env(safe-area-inset-top,0px))] z-modal overflow-hidden rounded-card border border-dte-linea bg-white shadow-e3 outline-none sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-[22rem]">
       <div className="flex items-center justify-between border-b border-dte-linea px-4 py-2.5"><p className="text-sm font-bold">Notificaciones</p>{unread > 0 && <button onClick={() => leer()} className="min-h-11 text-xs font-semibold text-dte-petroleo hover:opacity-80 sm:min-h-0">Marcar todas como leídas</button>}</div>
@@ -89,7 +92,7 @@ export function AvisosBanner({ feds, puedeSubirPve, onIrAPve }: { feds: Fed[], p
   const autor = (id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Un compañero'
   const irAPve = n.tipo === 'pve' && puedeSubirPve
   // Compacto: una fila, el texto en hasta dos renglones y los botones al lado (en el celular, "Entendido" es una cruz).
-  return <div role="status" className={`border-b px-4 py-1.5 text-sm ${urgente ? 'border-peligro-borde bg-peligro-fondo text-peligro' : 'border-aviso-borde bg-aviso-fondo-fuerte text-aviso-fuerte'}`}>
+  return <div role="status" className={`anim-banner border-b px-4 py-1.5 text-sm ${urgente ? 'border-peligro-borde bg-peligro-fondo text-peligro' : 'border-aviso-borde bg-aviso-fondo-fuerte text-aviso-fuerte'}`}>
     <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-2 lg:px-6">
       <span className="flex min-w-0 items-center gap-1.5"><e.Icono className="size-4 shrink-0" aria-hidden />
         <span className="line-clamp-2 min-w-0 text-[0.8125rem] leading-snug sm:text-sm">{n.tipo === 'pve' && clasePve(n) === 'aviso' ? <b><span className="sm:hidden">{(n.detalle ?? '').replace(/^Ya podés subir tu /, '')}</span><span className="hidden sm:inline">{n.detalle}</span></b> : <><Titulo n={n} autor={autor} />{n.detalle && <>: {n.detalle}</>}</>}{otros > 0 && <span className="ml-1 hidden font-semibold sm:inline">· y {otros} {otros === 1 ? 'aviso más' : 'avisos más'} en las notificaciones</span>}</span></span>
