@@ -134,7 +134,8 @@ export function BuscadorEscuelas({ open, onClose, feds, puedeAgendar, onAgendar,
   const volver = () => { setElegida(null); setFicha(null); setError('') }
   const cerrar = () => { onClose(); volver(); escribir('') }
   return <Dialog open={open} onOpenChange={o => !o && cerrar()}>
-    <DialogContent className="max-h-[90dvh] overflow-y-auto bg-white sm:max-w-xl">
+    {/* En el celular se ancla arriba: abajo el teclado taparía el campo. La búsqueda se limita a lo que queda visible sobre el teclado. */}
+    <DialogContent className={`overflow-y-auto bg-white max-sm:top-[calc(env(safe-area-inset-top,0px)+0.5rem)]! max-sm:bottom-auto! max-sm:rounded-b-2xl! max-sm:pb-4! ${elegida ? 'max-sm:max-h-[calc(100dvh-1rem)]!' : 'max-sm:max-h-[45dvh]!'} sm:max-w-xl`}>
       <DialogTitle className="flex items-center gap-2"><SchoolIcon className="size-5 text-dte-petroleo" aria-hidden />{elegida ? 'Ficha de la escuela' : 'Buscar escuela'}</DialogTitle>
       <DialogDescription className="sr-only">Buscá una escuela por nombre, sigla o CUE para ver sus datos y las acciones realizadas.</DialogDescription>
       {elegida ? <>

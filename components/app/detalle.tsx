@@ -129,7 +129,7 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
         {own ? <Button variant="outline" className="mt-2 self-start border-peligro/60 bg-white text-peligro hover:bg-peligro-fondo hover:text-peligro sm:mt-0 sm:self-auto" onClick={() => setConfirmDelete(true)}><Trash2 data-icon="inline-start" />Eliminar</Button>
           : <p className="text-xs text-dte-gris">{soloLectura ? 'Vista de solo lectura.' : `Sólo ${fed ? firstName(fed.nombre_completo) : 'el FED responsable'} puede modificar esta acción.`}</p>}
         <div className="flex flex-wrap gap-2 sm:justify-end"><Button variant="outline" className="flex-1 sm:flex-none" onClick={onClose}>Cerrar</Button>
-          {own && completar && <Button className="min-w-[9rem] flex-1 bg-dte-petroleo hover:bg-dte-petroleo-oscuro sm:flex-none" onClick={() => onEdit(item)}><ClipboardCheck data-icon="inline-start" />Completar encuentro</Button>}
+          {own && completar && <Button className="order-first basis-full bg-dte-petroleo hover:bg-dte-petroleo-oscuro sm:order-none sm:basis-auto sm:flex-none" onClick={() => onEdit(item)}><ClipboardCheck data-icon="inline-start" />Completar encuentro</Button>}
           {own && <Button variant={completar ? 'outline' : 'default'} className={`flex-1 sm:flex-none ${completar ? '' : 'bg-dte-petroleo hover:bg-dte-petroleo-oscuro'}`} onClick={() => onEdit(item)}><Pencil data-icon="inline-start" />Editar</Button>}</div>
       </div>}
     </DialogContent>
