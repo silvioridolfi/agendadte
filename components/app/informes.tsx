@@ -1,15 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { FileDown, FileSpreadsheet, Loader2 } from 'lucide-react'
+import { ChevronDown, FileDown, FileSpreadsheet, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Contador } from '@/components/contador'
 import { DrillDialog, type DrillRow } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
 import { cuentaHecha, type AgendaItem, type Fed } from '@/lib/agenda'
-import type { Indicador } from '@/lib/informes'
+import { resumenDe, type Indicador } from '@/lib/informes'
 import { esc, graficosInforme } from '@/lib/graficos'
 import type { Persona } from '@/lib/exportar'
-import { cap, errMsg, fmt, parse, itemCorto, ErrorBox } from '@/components/app/comun'
+import { cap, errMsg, fmt, parse, itemCorto, storage, ErrorBox } from '@/components/app/comun'
 import { ZONA } from '@/lib/hora'
 
 const fechaAR = (s: string) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}` }
@@ -98,10 +99,13 @@ Promise.all([document.fonts.ready, new Promise(r => { const i = document.querySe
 }
 
 // Bloque con los indicadores del período, el detalle de cada uno y la descarga en Excel o PDF.
-export function InformeBloque({ titulo, subtitulo, persona, desde, hasta, indicadores, items, acompanadas = [], feds, onSelect }: { titulo: string, subtitulo: string, persona: Persona, desde: string, hasta: string, indicadores: Indicador[], items: AgendaItem[], acompanadas?: AgendaItem[], feds: Fed[], onSelect?: (i: AgendaItem) => void }) {
+// `plegable`: clave con la que el navegador recuerda si quedó plegado (sin ella, el bloque no se pliega y usa menos columnas).
+export function InformeBloque({ titulo, subtitulo, persona, desde, hasta, indicadores, items, acompanadas = [], feds, onSelect, plegable }: { plegable?: string, titulo: string, subtitulo: string, persona: Persona, desde: string, hasta: string, indicadores: Indicador[], items: AgendaItem[], acompanadas?: AgendaItem[], feds: Fed[], onSelect?: (i: AgendaItem) => void }) {
   const [drill, setDrill] = useState<{ title: string, subtitle?: string, rows: DrillRow[] } | null>(null)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  const [abierto, setAbierto] = useState(() => !plegable || storage(() => localStorage.getItem(plegable)) !== 'cerrado')
+  const alternar = () => setAbierto(a => { if (plegable) storage(() => localStorage.setItem(plegable, a ? 'cerrado' : 'abierto')); return !a })
   const fedName = (id: string) => feds.find(f => f.id === id)?.nombre_completo ?? ''
   const ver = (x: Indicador) => setDrill({ title: x.label, subtitle: `${x.items.length} ${x.items.length === 1 ? 'acción' : 'acciones'}`, rows: [...x.items].sort((a, b) => b.fecha.localeCompare(a.fecha)).map(i => ({
     key: i.id, title: itemCorto(i), sub: [titleCase(i.accion), fedName(i.fed_id)].filter(Boolean).join(' · '), right: cap(fmt(parse(i.fecha), { day: 'numeric', month: 'short' }).replace(/\./g, '')), onClick: onSelect ? () => { setDrill(null); onSelect(i) } : undefined,
@@ -111,22 +115,25 @@ export function InformeBloque({ titulo, subtitulo, persona, desde, hasta, indica
     try { const { exportarInforme } = await import('@/lib/exportar'); await exportarInforme({ titulo, persona, desde, hasta, indicadores, items, acompanadas, feds }) } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
   }
   function pdf() { setError(''); try { imprimirInforme({ titulo, persona, desde, hasta, indicadores, items, acompanadas, feds }) } catch (e) { setError(errMsg(e)) } }
+  const botones = <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto">
+    <Button variant="outline" size="sm" disabled={!!busy} onClick={excel}>{busy === 'xlsx' ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}Excel</Button>
+    <Button variant="outline" size="sm" onClick={pdf}><FileDown data-icon="inline-start" />PDF</Button>
+  </div>
+  const cabeza = <><h3 className="font-bold">{titulo}</h3><p className="text-sm text-dte-gris">{abierto || !plegable ? subtitulo : resumenDe(indicadores) || subtitulo}</p></>
   return <section className="mt-4 rounded-card border border-dte-linea bg-white p-4 shadow-e1 sm:p-5" aria-label={titulo}>
     <DrillDialog drill={drill} onClose={() => setDrill(null)} />
-    <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-      <div className="min-w-0"><h3 className="font-bold">{titulo}</h3><p className="text-sm text-dte-gris">{subtitulo}</p></div>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" disabled={!!busy} onClick={excel}>{busy === 'xlsx' ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}Excel</Button>
-        <Button variant="outline" size="sm" onClick={pdf}><FileDown data-icon="inline-start" />PDF</Button>
-      </div>
+    <div className={`flex flex-wrap items-start justify-between gap-2 ${abierto ? 'mb-3' : ''}`}>
+      {plegable
+        ? <button type="button" onClick={alternar} aria-expanded={abierto} className="-m-1 flex w-full min-w-0 items-start gap-2 rounded-control p-1 text-left transition hover:bg-dte-tinte sm:w-auto sm:flex-1"><ChevronDown className={`mt-0.5 size-5 shrink-0 text-dte-petroleo transition-transform ${abierto ? '' : '-rotate-90'}`} aria-hidden /><span className="min-w-0"><span className="sr-only">{abierto ? 'Plegar' : 'Desplegar'}: </span>{cabeza}</span></button>
+        : <div className="min-w-0">{cabeza}</div>}
+      {botones}
     </div>
-    <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">{indicadores.map(x => <li key={x.clave}>
-      <button type="button" onClick={() => ver(x)} disabled={!x.items.length} className="flex h-full w-full flex-col rounded-tile border border-dte-linea p-3 text-left transition hover:border-dte-petroleo hover:bg-dte-tinte disabled:hover:border-dte-linea disabled:hover:bg-transparent">
-        <span className="text-xs leading-snug text-dte-gris">{x.label}</span>
-        <span className="mt-1 text-2xl font-bold tabular-nums text-dte-petroleo">{x.valor}</span>
-        {x.detalle && <span className="text-xs text-dte-gris">{x.detalle}</span>}
+    {abierto && <ul className={`grid grid-cols-2 gap-2 sm:grid-cols-3 ${plegable ? 'lg:grid-cols-5' : ''}`}>{indicadores.map(x => <li key={x.clave}>
+      <button type="button" onClick={() => ver(x)} disabled={!x.items.length} className="flex h-full w-full items-center gap-2.5 rounded-tile border border-dte-linea px-3 py-2 text-left transition hover:border-dte-petroleo hover:bg-dte-tinte disabled:hover:border-dte-linea disabled:hover:bg-transparent">
+        <span className="min-w-6 text-xl font-bold tabular-nums text-dte-petroleo"><Contador valor={x.valor} /></span>
+        <span className="min-w-0 text-xs leading-snug text-dte-gris">{x.label}{x.detalle && <span className="block text-dte-gris-claro">{x.detalle}</span>}</span>
       </button>
-    </li>)}</ul>
+    </li>)}</ul>}
     {error && <div className="mt-3"><ErrorBox message={error} /></div>}
   </section>
 }

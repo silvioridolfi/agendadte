@@ -232,6 +232,7 @@ El **Tablero** presenta tu información del período elegido (día, semana, mes 
 Solo las acciones **realizadas**. No se computan las planificadas, reprogramadas o canceladas, ni las licencias y paros. Cada número del resumen permite ver las acciones que lo componen.
 [i] Las acciones de las que solo participás como acompañante no cuentan en tus métricas: cuentan para quien las creó.
 ## Mi informe del período
+- **Panel plegable:** la flecha del título pliega el informe a una sola línea con lo principal (acciones realizadas, escuelas y encuentros); Excel y PDF quedan a la vista. La app recuerda cómo lo dejaste.
 - **Acciones acompañadas:** el informe suma un indicador aparte con las acciones realizadas de otros integrantes en las que te etiquetaron. No se suma al total ni a las categorías, y no cuentan las que rechazaste.
 - **Excel:** hoja Informe (indicadores del período), hoja Acciones (detalle de las realizadas) y, si hay, hoja Acompañadas.
 - **PDF:** se abre el informe con el logo institucional; **Guardar PDF** lo descarga (en el celular: Compartir › Imprimir). Al final lista las acciones acompañadas.
