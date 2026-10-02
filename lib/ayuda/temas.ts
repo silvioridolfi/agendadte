@@ -59,7 +59,7 @@ El botón **Guardar** se habilita al modificar algún dato; **Descartar** revier
 - **Horario, escuela y CUE.** Las escuelas se muestran con sigla (EP, EES, EEST, JI…).
 - **Etiquetas:** tipo de acción y estado.
 - **Compartida:** acción de otro integrante en la que te incorporaron. **+1, +2…** es la cantidad de acompañantes.
-- **Ícono de cámara:** la acción tiene fotos en Drive.
+- **Ícono de cámara:** la acción tiene fotos en Drive: las que quedaron asignadas a ella por horario o, si no tiene, fotos del día que no pertenecen a ninguna otra acción.
 Los feriados, recesos y aniversarios distritales se marcan en el calendario; los eventos DTE, con una marca violeta.` },
   { id: 'buscador', titulo: 'Buscador de escuelas', para: ['fed', 'ced'], md: () => `
 La **lupa** de la barra de arriba abre el buscador de escuelas. Escribí el nombre, la sigla o el CUE (por ejemplo "EP 4" o "ees 31") y elegí la escuela.
