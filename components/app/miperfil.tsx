@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Briefcase, Camera, CalendarOff, CircleHelp, EyeOff, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
+import { Briefcase, Camera, CalendarOff, CircleHelp, ExternalLink, EyeOff, Globe, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Pill } from '@/components/ui/segmented'
-import { type Fed } from '@/lib/agenda'
+import { SITIO_DTE_URL, type Fed } from '@/lib/agenda'
 import { horasSemanales, textoCarga, armarDdjj, cargosDe, franjasDte, validarDdjj, type Cargo, type Franja } from '@/lib/ddjj'
 import { titleCase } from '@/lib/format'
 import { eyebrow, errMsg, fedColor, initials, storage, updateMiPerfil, ErrorBox } from '@/components/app/comun'
@@ -58,6 +58,7 @@ export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyu
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onFeriados() }} className={item}><CalendarOff className="size-4 text-dte-petroleo" />Feriados y eventos</button>}
       {admin && <button role="menuitem" onClick={ocultar} className={item}><EyeOff className="size-4 text-dte-petroleo" />Ocultar opciones de administración</button>}
       <button role="menuitem" onClick={() => { setOpen(false); onAyuda() }} className={item}><CircleHelp className="size-4 text-dte-petroleo" />Ayuda{hayNovedades && <span className="ml-auto rounded-full bg-dte-magenta px-1.5 text-xs font-bold text-white" aria-label="Hay novedades">nuevo</span>}</button>
+      <a role="menuitem" href={SITIO_DTE_URL} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className={item}><Globe className="size-4 text-dte-petroleo" />Sitio DTE Región 1<ExternalLink className="ml-auto size-3.5 text-dte-gris-claro" aria-hidden /><span className="sr-only"> (se abre en una pestaña nueva)</span></a>
       <button role="menuitem" onClick={() => { setOpen(false); onPassword() }} className={item}><KeyRound className="size-4 text-dte-petroleo" />Cambiar contraseña</button>
       <button role="menuitem" onClick={() => { setOpen(false); onSalir() }} className={`${item} border-t border-dte-linea text-peligro`}><LogOut className="size-4" />Cerrar sesión</button>
     </div>}

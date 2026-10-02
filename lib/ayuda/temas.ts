@@ -31,6 +31,8 @@ Por eso es importante registrar cada acción y mantener su estado actualizado.` 
 - **Android (Chrome):** menú de tres puntos › Agregar a pantalla de inicio o Instalar aplicación.
 - **iPhone (Safari):** botón Compartir › Agregar a inicio.
 Instalada, se abre como una aplicación, a pantalla completa.
+## Sitio DTE Región 1
+En el menú de las iniciales, **Sitio DTE Región 1** abre el sitio de la Dirección de Tecnología Educativa en una pestaña nueva. Necesitás haber iniciado sesión de Google con tu cuenta institucional (abc.gob.ar).
 ## Si olvidás la contraseña
 El administrador de la agenda genera una contraseña temporal nueva. En equipos compartidos conviene usar **Cerrar sesión** desde el menú de las iniciales.
 ## Uso sin conexión
