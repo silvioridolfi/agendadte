@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { escuelaDelClub, contarUnidades, unidadDe, cambiaLaSerie, clubesDelDia, destinatarioEstudiantes, inscriptosDelClub, opcionesDestinatarios, partirDestinatarios, PROPUESTAS_DE_CLUB, unirDestinatarios, estadoAlCompletar, horariosSePisan, minEncuentros, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
+import { esPeatConGrupo, escuelaDelClub, contarUnidades, unidadDe, cambiaLaSerie, clubesDelDia, destinatarioEstudiantes, inscriptosDelClub, opcionesDestinatarios, partirDestinatarios, PROPUESTAS_DE_CLUB, unirDestinatarios, estadoAlCompletar, horariosSePisan, minEncuentros, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
 
 describe('mínimo de encuentros (sólo informativo)', () => {
   it('los clubes tienen mínimo 8; las prácticas y el resto, ninguno', () => {
@@ -145,5 +145,14 @@ describe('escuela con la que se identifica un grupo', () => {
     const g = (id: string, origen: string) => ({ id, school_id: null, lugar: null, cohorte: '7° Informática', escuela_origen: { id: origen } })
     expect(unidadDe(g('a', 'e3'))).toBe(unidadDe(g('b', 'e3')))
     expect(unidadDe(g('a', 'e3'))).not.toBe(unidadDe(g('b', 'e9')))
+  })
+})
+
+describe('grupos de PEAT en la agenda', () => {
+  it('solo las prácticas con grupo se muestran sin la escuela', () => {
+    expect(esPeatConGrupo({ accion: 'PRÁCTICAS PROFESIONALIZANTES', club: { grupo: '7° Informática - Grupo 1' } })).toBe(true)
+    expect(esPeatConGrupo({ accion: 'PRÁCTICAS PROFESIONALIZANTES', club: null })).toBe(false)
+    expect(esPeatConGrupo({ accion: 'PRÁCTICAS PROFESIONALIZANTES', club: { grupo: null } })).toBe(false)
+    expect(esPeatConGrupo({ accion: 'CLUB DE TECNOLOGÍA', club: { grupo: '4°' } })).toBe(false)
   })
 })
