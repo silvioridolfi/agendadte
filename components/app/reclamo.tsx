@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { type Fed, type School } from '@/lib/agenda'
-import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, enlacesDe, faltantes, gmailUrl, mailtoUrl, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
+import { type School } from '@/lib/agenda'
+import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, enlacesDe, faltantes, gmailUrl, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
 import { titleCase } from '@/lib/format'
 import { ErrorBox, errMsg, getConectividadEscuela, selectClass } from '@/components/app/comun'
 import { Field, SchoolPicker } from '@/components/app/formulario'
@@ -15,7 +15,8 @@ import { Field, SchoolPicker } from '@/components/app/formulario'
 type Errores = ReturnType<typeof faltantes>
 
 // Reclamo de conectividad: con la escuela y el tipo de reclamo arma el asunto, el cuerpo del mail y la lista de adjuntos según la guía de la DTE.
-export function ReclamoConectividad({ open, onClose, fed, escuelaInicial }: { open: boolean, onClose: () => void, fed: Fed, escuelaInicial: School | null }) {
+// `cuenta`: correo institucional con el que se inició sesión (Gmail se abre con esa cuenta). `ced`: nombre de pila del CED, a quien va dirigido el mensaje.
+export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial }: { open: boolean, onClose: () => void, cuenta: string, ced: string | null, escuelaInicial: School | null }) {
   const [escuela, setEscuela] = useState<School | null>(escuelaInicial)
   const [con, setCon] = useState<EscuelaConectividad | null>(null)
   const [cargando, setCargando] = useState(!!escuelaInicial)
@@ -57,7 +58,7 @@ export function ReclamoConectividad({ open, onClose, fed, escuelaInicial }: { op
     const f = faltantes(tipo, con, datos)
     setErrores(f)
     if (Object.keys(f).length) return
-    setReclamo(armarReclamo(con, tipo, datos, new Date(), { nombre: fed.nombre_completo, cargo: fed.rol === 'coordinacion' ? 'Coordinador de Educación Digital (CED)' : 'Facilitador de Educación Digital (FED)' }))
+    setReclamo(armarReclamo(con, tipo, datos, new Date(), ced))
   }
   async function copiar(texto: string, clave: string) {
     try { await navigator.clipboard.writeText(texto); setCopiado(clave); setTimeout(() => setCopiado(c => (c === clave ? '' : c)), 2000) } catch { setError('No se pudo copiar: seleccioná el texto y copialo a mano.') }
@@ -113,12 +114,14 @@ export function ReclamoConectividad({ open, onClose, fed, escuelaInicial }: { op
           {tipo.campos.includes('detalle') && <Field label={tipo.id === 'instaladores' ? 'Explicá la situación' : 'Descripción'} required={tipo.requeridos.includes('detalle')} hint={tipo.requeridos.includes('detalle') ? undefined : '(opcional)'} error={errores.detalle}><Textarea value={d.detalle} onChange={e => set('detalle', e.target.value)} placeholder="Qué pasa, desde cuándo y qué se probó" className="min-h-20" /></Field>}
 
           {!porTelefonoSeleccionado && <fieldset className="flex flex-col gap-2"><legend className="mb-1 text-sm font-semibold">Contacto del directivo o jerárquico{contactoPide ? <span className="text-dte-magenta" aria-hidden> *</span> : <span className="ml-1 text-xs font-normal text-dte-gris">(opcional)</span>}</legend>
-            <div className="grid gap-2 sm:grid-cols-2"><Input placeholder="Nombre y apellido" aria-label="Nombre del contacto" value={d.contactoNombre} onChange={e => set('contactoNombre', e.target.value)} className="h-11 md:h-10" /><Input type="tel" placeholder="Teléfono" aria-label="Teléfono del contacto" value={d.contactoTelefono} onChange={e => set('contactoTelefono', e.target.value)} className="h-11 md:h-10" /></div>
+            <div className="grid gap-2 sm:grid-cols-2"><Input placeholder="Nombre y apellido" aria-label="Nombre del contacto" value={d.contactoNombre} onChange={e => set('contactoNombre', e.target.value)} className="h-11 md:h-10" />
+              <Input list="cargos-contacto" placeholder="Cargo (director/a, secretario/a…)" aria-label="Cargo del contacto" value={d.contactoCargo} onChange={e => set('contactoCargo', e.target.value)} className="h-11 md:h-10" /><datalist id="cargos-contacto"><option value="Director/a" /><option value="Vicedirector/a" /><option value="Secretario/a" /><option value="Prosecretario/a" /><option value="Jefe/a de área" /><option value="Referente técnico" /></datalist>
+              <Input type="tel" placeholder="Teléfono" aria-label="Teléfono del contacto" value={d.contactoTelefono} onChange={e => set('contactoTelefono', e.target.value)} className="h-11 md:h-10" /></div>
             <Input placeholder="Horario en que se puede llamar (ej.: 8 a 16)" aria-label="Horario del contacto" value={d.contactoHorario} onChange={e => set('contactoHorario', e.target.value)} className="h-11 md:h-10" />
             {errores.contacto && <p role="alert" className="text-sm font-medium text-peligro">{errores.contacto}</p>}
           </fieldset>}
 
-          <Button type="button" onClick={armar} className="w-full sm:w-auto sm:self-start"><Mail data-icon="inline-start" />Armar reclamo</Button>
+          <div className="flex flex-col gap-2 sm:flex-row"><Button type="button" onClick={armar} className="w-full sm:w-auto"><Mail data-icon="inline-start" />Armar reclamo</Button><Button type="button" variant="outline" onClick={cerrar} className="w-full sm:w-auto">Cancelar</Button></div>
         </>}
 
         {reclamo && <section aria-live="polite" className="flex flex-col gap-3 border-t border-dte-linea pt-4">
@@ -135,10 +138,10 @@ export function ReclamoConectividad({ open, onClose, fed, escuelaInicial }: { op
             {reclamo.adjuntos.length > 0 && <div className="rounded-card border-l-4 border-l-club-lila bg-club-violeta-fondo p-3.5"><h4 className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-club-violeta"><Paperclip className="size-3.5" aria-hidden />Adjuntá al mail</h4>
               <ul className="flex flex-col gap-1 text-sm">{reclamo.adjuntos.map(a => <li key={a.texto} className="flex flex-wrap items-center gap-x-2">{a.texto}{a.enlace && <a href={a.enlace} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-dte-petroleo underline underline-offset-2">Abrir modelo<ExternalLink className="size-3" aria-hidden /></a>}</li>)}</ul></div>}
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <a href={gmailUrl(reclamo)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control bg-dte-petroleo px-4 text-sm font-semibold text-white transition hover:bg-dte-petroleo-oscuro md:min-h-9"><Mail className="size-4" aria-hidden />Abrir en Gmail</a>
-              <a href={mailtoUrl(reclamo)} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control border border-dte-linea px-4 text-sm font-semibold text-dte-petroleo transition hover:border-dte-petroleo hover:bg-dte-tinte md:min-h-9">Abrir en mi correo</a>
+              <a href={gmailUrl(reclamo, cuenta)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control bg-dte-petroleo px-4 text-sm font-semibold text-white transition hover:bg-dte-petroleo-oscuro md:min-h-9"><Mail className="size-4" aria-hidden />Abrir en mi correo ({cuenta})</a>
+              <Button type="button" variant="outline" onClick={cerrar} className="min-h-11 md:min-h-9">Cancelar</Button>
             </div>
-            <p className="text-xs text-dte-gris">Los archivos los adjuntás vos. El asunto lleva la hora de este momento: si lo enviás más tarde, volvé a armarlo. Si la escuela ya tiene un reclamo abierto, <b>no abras una cadena nueva</b>: respondé en la original (sin el “Fwd” antes del código). <a href={DOC_BUSCADOR_CUE} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Buscar reclamos anteriores por CUE</a>.</p>
+            <p className="text-xs text-dte-gris">El mensaje va al correo regional y de ahí lo deriva el CED. Se abre con tu cuenta institucional; los archivos los adjuntás vos. El asunto lleva la hora de este momento: si lo enviás más tarde, volvé a armarlo. Si la escuela ya tiene un reclamo abierto, <b>no abras una cadena nueva</b>: respondé en la original (sin el “Fwd” antes del código). <a href={DOC_BUSCADOR_CUE} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Buscar reclamos anteriores por CUE</a>.</p>
           </>}
         </section>}
       </>}
