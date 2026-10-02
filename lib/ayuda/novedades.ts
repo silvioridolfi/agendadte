@@ -5,6 +5,7 @@ import type { Rol } from '@/lib/ayuda/temas'
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[] }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-02', titulo: 'Carpetas de fotos de PEAT con curso y grupo', texto: 'Las carpetas de fotos de los grupos de prácticas se nombran solo con el curso y el grupo, sin la escuela del encuentro. Las existentes se renombran solas en el próximo orden nocturno, o al tocar Ordenar ahora.', para: ['fed'] },
   { fecha: '2026-10-02', titulo: 'PEAT en la agenda: solo curso y grupo', texto: 'Las tarjetas de los grupos de prácticas muestran solo el curso y el grupo (por ejemplo, 7° Informática - Grupo 1), sin la escuela del encuentro. El detalle de la acción sigue indicando dónde fue.', para: ['fed'] },
   { fecha: '2026-10-02', titulo: 'Los grupos de PEAT se identifican por su escuela de origen', texto: 'Un grupo de prácticas ya no queda atado a una sede: se muestra con la escuela de origen de los estudiantes y cada encuentro lleva el lugar donde se hizo. Al crear un grupo nuevo, la escuela de origen es obligatoria.', para: ['fed'] },
   { fecha: '2026-10-02', titulo: 'Informe del período más compacto', texto: 'Los indicadores del informe ocupan menos lugar y el panel se puede plegar con la flecha del título: queda una línea con lo principal y los botones de Excel y PDF a la vista. La app recuerda cómo lo dejaste.' },

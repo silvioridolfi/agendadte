@@ -169,7 +169,7 @@ La agenda organiza en tu Google Drive las fotos de cada acción. Su uso es **opt
 | Computadora | Arrastrar los archivos originales a la carpeta en drive.google.com. |
 Subí las fotos sueltas a la carpeta personal: no hace falta crear subcarpetas ni renombrar archivos.
 ## Cómo se ordenan
-- **Por día:** según la fecha de captura registrada en la foto. La carpeta del día se nombra con la fecha y las escuelas de las acciones de esa jornada.
+- **Por día:** según la fecha de captura registrada en la foto. La carpeta del día se nombra con la fecha y las escuelas de las acciones de esa jornada; los grupos de PEAT figuran solo con el curso y el grupo (por ejemplo, "7° Informática - Grupo 1"), igual que su subcarpeta.
 - **Por acción:** si la hora de captura cae dentro del horario de una acción (o hasta ${TOLERANCIA} minutos antes o después), la foto pasa a la subcarpeta de esa acción.
 - Si no se puede determinar la acción (por ejemplo, dos acciones en el mismo horario), la foto queda en la carpeta del día.
 - Si la acción se registra después, en la siguiente pasada la foto se mueve a su carpeta.

@@ -1,31 +1,14 @@
 import 'server-only'
 import { supabaseServer } from '@/lib/supabase-server'
 import { accionPorFoto } from '@/lib/horas'
+import { SIN_FECHA, nombreAccion, nombreDelDia, type ItemDia } from '@/lib/fotos-nombres'
 import { DriveError, borrar, carpetaVigente, crearCarpeta, esAtajo, listarHijos, esCarpeta, listarTodo, fechaDeCaptura, listar, minutosDeCaptura, ubicacionDeCaptura, mover, renombrar } from '@/lib/drive'
 
 // Orden de fotos: las imágenes y videos sueltos en la carpeta del FED pasan a la carpeta de su día
 // ("30-09-2026 · EP N° 4 (5°) · EES N° 31 (7° Informática - Grupo 1)") y, si la hora de captura coincide con el horario
 // de una acción de la agenda, a su subcarpeta ("12:00 · Club EP N° 4 - 4°"). Sin fecha: carpeta "Sin fecha".
 // Las fotos se mueven a su carpeta; si una foto queda en el día y después se carga la acción, pasa a la carpeta de la acción.
-const SIN_FECHA = '1900-01-01'
 const LOTE = 150
-const SIGLAS: [RegExp, string][] = [
-  [/^Escuela de Educación Secundaria Técnica/i, 'EEST'], [/^Escuela de Educación Secundaria Agraria/i, 'EESA'], [/^Escuela de Educación Secundaria/i, 'EES'],
-  [/^Escuela de Educación Primaria/i, 'EP'], [/^Escuela de Educación Especial/i, 'EEE'], [/^Jardín de Infantes/i, 'JI'],
-  [/^Instituto Superior de Formación Docente/i, 'ISFD'], [/^Instituto Superior de Formación Técnica/i, 'ISFT'], [/^Centro de Educación Física/i, 'CEF'],
-]
-const titulo = (s: string) => s.toLowerCase().replace(/(^|[\s(“"])(\p{L})/gu, (_, a: string, b: string) => a + b.toUpperCase()).replace(/\bN°\s*/gi, 'N° ')
-function sigla(nombre: string) {
-  const n = titulo(nombre), s = SIGLAS.find(([re]) => re.test(n))
-  const corto = s ? n.replace(s[0], s[1]) : n
-  return corto.match(/^(.*?N°\s*\d+)/)?.[1] ?? corto
-}
-const TIPO: Record<string, string> = { 'CLUB DE TECNOLOGÍA': 'Club', 'PRÁCTICAS PROFESIONALIZANTES': 'PEAT' }
-
-type ItemDia = { id: string, accion: string, lugar: string | null, hora_inicio: string | null, hora_fin: string | null, school: { nombre: string | null, lat?: number | null, lon?: number | null } | null, club: { grupo: string | null } | null }
-const lugarDe = (i: ItemDia) => i.school?.nombre ? sigla(i.school.nombre) : i.lugar ?? titulo(i.accion)
-const nombreAccion = (i: ItemDia) => `${i.hora_inicio ? `${i.hora_inicio.slice(0, 5)} · ` : ''}${TIPO[i.accion] ?? titulo(i.accion)} ${lugarDe(i)}${i.club?.grupo ? ` - ${i.club.grupo}` : ''}`.slice(0, 150)
-
 async function itemsDelDia(fedId: string, fecha: string): Promise<ItemDia[]> {
   const db = supabaseServer(), cols = 'id, accion, lugar, hora_inicio, hora_fin, school:establecimientos(nombre, lat, lon), club:clubes(grupo)'
   const [{ data: propias }, { data: part }] = await Promise.all([
@@ -38,18 +21,6 @@ async function itemsDelDia(fedId: string, fecha: string): Promise<ItemDia[]> {
     .map(e => ({ id: `enc:${e.id}`, accion: e.tipo, lugar: e.lugar, hora_inicio: null, hora_fin: null, school: e.school, club: e.club }))
   const todos = [...(propias ?? []), ...((part ?? []) as unknown as { item: ItemDia }[]).map(p => p.item), ...extra] as unknown as ItemDia[]
   return [...new Map(todos.map(i => [i.id, i])).values()].sort((a, b) => (a.hora_inicio ?? '99').localeCompare(b.hora_inicio ?? '99'))
-}
-
-function nombreDelDia(fecha: string, items: ItemDia[]) {
-  if (fecha === SIN_FECHA) return 'Sin fecha (ordenar a mano)'
-  // Agrupado por escuela: "EP N° 4 (4°, 5°, 6°)".
-  const porLugar = new Map<string, string[]>()
-  for (const i of items) { const l = porLugar.get(lugarDe(i)) ?? []; if (i.club?.grupo && !l.includes(i.club.grupo)) l.push(i.club.grupo); porLugar.set(lugarDe(i), l) }
-  const partes = [...porLugar].map(([l, g]) => (g.length ? `${l} (${g.sort((a, b) => a.localeCompare(b, 'es', { numeric: true })).join(', ')})` : l))
-  const resumen = partes.length ? partes.slice(0, 4).join(' · ') + (partes.length > 4 ? ` y ${partes.length - 4} más` : '') : 'Sin acciones en la agenda'
-  // Fecha como DD-MM-AAAA (así la leen en Drive).
-  const [y, m, d] = fecha.split('-')
-  return `${d}-${m}-${y} · ${resumen}`.slice(0, 180)
 }
 
 export type ResultadoOrden = { ordenadas: number, atajos: number, sinFecha: number, porAccion: number, pendientes: number, rescatadas: number }
@@ -118,7 +89,12 @@ export async function ordenarFotos(fedId: string): Promise<ResultadoOrden> {
   const recientes = [...carpetasDia.keys()].filter(f => f !== SIN_FECHA).sort().slice(-60)
   for (const fecha of recientes) {
     const actual = carpetasDia.get(fecha)!
-    if (await carpetaVigente(actual.id, raiz)) { await carpetaDia(fecha); continue }
+    if (await carpetaVigente(actual.id, raiz)) {
+      await carpetaDia(fecha)
+      // Las subcarpetas de las acciones también se renombran si cambió su nombre (sin consultar Drive cuando no cambió).
+      for (const item of await items(fecha)) { const c = carpetasAccion.get(item.id); if (c && c.nombre !== nombreAccion(item)) await carpetaAccion(fecha, item) }
+      continue
+    }
     // Carpeta eliminada por el FED: las fotos que tenía vuelven a la carpeta principal y se ordenan de nuevo (no se pierden).
     await rescatar(actual.id)
     await db.from('fotos_dias').delete().eq('fed_id', fedId).eq('fecha', fecha)
