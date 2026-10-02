@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Briefcase, Camera, CalendarOff, CircleHelp, ExternalLink, EyeOff, Globe, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
+import { Briefcase, Camera, CalendarOff, CircleHelp, ExternalLink, EyeOff, Globe, Wifi, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +17,7 @@ const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 // Menú del avatar: Mi perfil (sólo FED) y cambio de perfil. Se cierra con Escape o tocando afuera.
 const CLAVE_PRESENTACION = 'agenda-territorial:presentacion'
 
-export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyuda, onPerfil, onFotos, onMisPve, onUsuarios, onFeriados, onPve, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, hayNovedades?: boolean, onAyuda: () => void, onPerfil: () => void, onFotos: () => void, onMisPve: () => void, onUsuarios: () => void, onFeriados: () => void, onPve: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
+export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyuda, onReclamo, onPerfil, onFotos, onMisPve, onUsuarios, onFeriados, onPve, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, hayNovedades?: boolean, onAyuda: () => void, onReclamo: () => void, onPerfil: () => void, onFotos: () => void, onMisPve: () => void, onUsuarios: () => void, onFeriados: () => void, onPve: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
   const [open, setOpen] = useState(false)
   // Modo presentación (sólo administración): oculta las opciones de administración en este navegador.
   // Se vuelve a mostrar entrando con #admin en la dirección.
@@ -58,6 +58,7 @@ export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyu
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onFeriados() }} className={item}><CalendarOff className="size-4 text-dte-petroleo" />Feriados y eventos</button>}
       {admin && <button role="menuitem" onClick={ocultar} className={item}><EyeOff className="size-4 text-dte-petroleo" />Ocultar opciones de administración</button>}
       <button role="menuitem" onClick={() => { setOpen(false); onAyuda() }} className={item}><CircleHelp className="size-4 text-dte-petroleo" />Ayuda{hayNovedades && <span className="ml-auto rounded-full bg-dte-magenta px-1.5 text-xs font-bold text-white" aria-label="Hay novedades">nuevo</span>}</button>
+      <button role="menuitem" onClick={() => { setOpen(false); onReclamo() }} className={item}><Wifi className="size-4 text-dte-petroleo" />Reclamo de conectividad</button>
       <a role="menuitem" href={SITIO_DTE_URL} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className={item}><Globe className="size-4 text-dte-petroleo" />Sitio DTE Región 1<ExternalLink className="ml-auto size-3.5 text-dte-gris-claro" aria-hidden /><span className="sr-only"> (se abre en una pestaña nueva)</span></a>
       <button role="menuitem" onClick={() => { setOpen(false); onPassword() }} className={item}><KeyRound className="size-4 text-dte-petroleo" />Cambiar contraseña</button>
       <button role="menuitem" onClick={() => { setOpen(false); onSalir() }} className={`${item} border-t border-dte-linea text-peligro`}><LogOut className="size-4" />Cerrar sesión</button>

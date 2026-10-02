@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CalendarDays, CloudUpload, Eye, LayoutDashboard, Loader2, Plus, Search, type LucideIcon } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { CON_ENCUENTRO, esTrayecto, type AgendaItem, type Fed, type Trayecto } from '@/lib/agenda'
+import { CON_ENCUENTRO, esTrayecto, type AgendaItem, type Fed, type School, type Trayecto } from '@/lib/agenda'
 import { AvisosBanner, NotificacionesBell, NotificacionesProvider } from '@/components/app/notificaciones'
 import { CambiarPassword, Ingreso, UsuariosView } from '@/components/app/acceso'
 import { FeriadosView } from '@/components/app/feriados'
@@ -16,6 +16,7 @@ import { DetailDialog } from '@/components/app/detalle'
 import { CoordinatorView } from '@/components/app/tablero'
 import { ItemForm } from '@/components/app/formulario'
 import { BuscadorEscuelas } from '@/components/app/escuelas'
+import { ReclamoConectividad } from '@/components/app/reclamo'
 import { MenuPerfil, MiPerfilView } from '@/components/app/miperfil'
 import { AyudaView, useNovedadesNuevas } from '@/components/app/ayuda'
 import type { Destacados } from '@/lib/destacados'
@@ -67,6 +68,9 @@ export default function Page() {
   const [editing, setEditing] = useState<{ item: AgendaItem | null, fecha?: string, preset?: ItemPreset } | null>(null)
   const [selected, setSelected] = useState<AgendaItem | null>(null)
   const [buscador, setBuscador] = useState(false)
+  // Reclamo de conectividad: `k` reinicia el formulario cada vez que se abre.
+  const [reclamo, setReclamo] = useState<{ escuela: School | null, k: number } | null>(null)
+  const abrirReclamo = (escuela: School | null) => setReclamo({ escuela, k: Date.now() })
   const [reloadKey, setReloadKey] = useState(0)
   const [toast, setToast] = useState('')
   // Lo que acaba de guardarse o marcarse como realizada se destaca un momento en las tarjetas.
@@ -149,7 +153,7 @@ export default function Page() {
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <button type="button" onClick={() => setBuscador(true)} aria-label="Buscar escuela" title="Buscar escuela" className="flex size-11 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-fondo hover:text-dte-tinta"><Search className="size-5" /></button>
         <NotificacionesBell feds={feds ?? []} onOpen={setSelected} />
-        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} hayNovedades={hayNovedades} onAyuda={() => { setVista(null); irA('ayuda') }} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
+        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} hayNovedades={hayNovedades} onReclamo={() => abrirReclamo(null)} onAyuda={() => { setVista(null); irA('ayuda') }} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
         </div>
       </div>
     </header>
@@ -188,11 +192,12 @@ export default function Page() {
           onNuevaReunion={profile.rol !== 'coordinacion' ? undefined : () => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { accion: 'REUNIÓN', sub_accion: 'Reunión de equipo (CED/FED)', participantes: (feds ?? []).filter(f => f.id !== profile.id).map(f => f.id) } })} />}
     </div>
 
-    <DetailDialog item={selected} feds={feds ?? []} profile={profile} soloLectura={!!vista} onClose={() => setSelected(null)}
+    <DetailDialog item={selected} feds={feds ?? []} profile={profile} soloLectura={!!vista} onClose={() => setSelected(null)} onReclamo={s => { setSelected(null); abrirReclamo(s) }}
       onEdit={item => { setSelected(null); setEditing({ item }) }}
       onChanged={(msg, updated) => { changed(msg); setSelected(updated) }} />
 
-    <BuscadorEscuelas open={buscador} onClose={() => setBuscador(false)} feds={feds ?? []} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onOpen={setSelected} />
+    <BuscadorEscuelas open={buscador} onClose={() => setBuscador(false)} feds={feds ?? []} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
+    {reclamo && <ReclamoConectividad key={reclamo.k} open onClose={() => setReclamo(null)} fed={profile} escuelaInicial={reclamo.escuela} />}
     <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
       <DialogContent className="bg-white sm:max-w-2xl">
         <DialogHeader><DialogTitle className="text-lg">{tituloForm(editing)}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : editing?.preset?.modo === 'nuevo' ? 'Con fecha, el primer encuentro se agrega a tu agenda; si todavía no la tenés, queda “por iniciar”.' : editing?.preset?.modo === 'encuentro' ? 'Se agrega a tu agenda como acción realizada (o planificada, si la fecha todavía no llegó).' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>

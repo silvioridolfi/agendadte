@@ -1,0 +1,176 @@
+// Reclamos de conectividad: arma el asunto, el cuerpo y la lista de adjuntos según la "Guía para reclamos de conectividad" de la DTE.
+// Todo es determinístico: sale de la infraestructura de la escuela (enlace y piso, que ya están en la base) y del tipo de reclamo.
+import { titleCase } from '@/lib/format'
+import { ZONA } from '@/lib/hora'
+
+export const RECLAMOS_PARA = 'region1dte@abc.gob.ar'
+export const RECLAMOS_PARA_CLARO = 'conectividaddte@abc.gob.ar'
+export const TEL_MOVISTAR = '0800-333-0800'
+export const TEL_EDUCAR = '0800-444-1115'
+export const DOC_CHECKLIST_USAP = 'https://docs.google.com/spreadsheets/d/1onaKMv_cbjCjjBBSJ6qIvrx6J-b_pvg52CUfRoWb-ZI/edit?gid=721317433#gid=721317433'
+export const DOC_CHECKLIST_Z3 = 'https://docs.google.com/spreadsheets/d/1qz5mOphC7v8mrrNdJh5ynluudvfzOPROVrkDHb10nbA/edit?gid=1063477087#gid=1063477087'
+export const DOC_FORMULARIO = 'https://docs.google.com/spreadsheets/d/1dcqoNFDnm9nv9gRmrC_Q_LsobeVlc0Tf-Rz2nCygLrw/edit?gid=382422117#gid=382422117'
+export const DOC_BUSCADOR_CUE = 'https://docs.google.com/spreadsheets/d/1Y4k73frJATDXhrWDF1IIN7KGvTmKhgCbps7lRPjCkL8/edit?gid=0#gid=0'
+
+export type Enlace = 'PNCE' | 'PBA1' | 'PBA2' | 'PBA2019'
+export const ENLACE_LABEL: Record<Enlace, string> = { PNCE: 'PNCE (Nación)', PBA1: 'PBA Grupo 1', PBA2: 'PBA Grupo 2 A', PBA2019: 'PBA 2019' }
+export const esPba = (e: Enlace | null) => !!e && e !== 'PNCE'
+
+// Lo que la base sabe de la conectividad de una escuela.
+export type EscuelaConectividad = {
+  id: string, cue: number | null, nombre: string | null, distrito: string | null, ciudad: string | null, direccion: string | null, matricula: number | null,
+  plan_enlace: string | null, subplan_enlace: string | null, plan_piso_tecnologico: string | null, tipo_piso_instalado: string | null, tipo: string | null,
+  proveedor_pnce: string | null, proveedor_pba: string | null, ani: string | null, recurso_primario: string | null, access_id: string | null,
+}
+
+// Enlaces de la escuela según el plan cargado ("PNCE", "PBA GRUPO 2 A", "PNCE - PBA GRUPO 1", "PBA 2019 - PBA GRUPO 2 A"…). Sin enlace: lista vacía.
+export function enlacesDe(plan: string | null, subplan: string | null): Enlace[] {
+  const t = `${subplan ?? ''} ${plan ?? ''}`.toUpperCase(), out: Enlace[] = []
+  if (/PNCE/.test(t)) out.push('PNCE')
+  if (/GRUPO\s*1\b/.test(t)) out.push('PBA1')
+  if (/GRUPO\s*2/.test(t)) out.push('PBA2')
+  if (/2019/.test(t)) out.push('PBA2019')
+  return out
+}
+export const tienePiso = (e: Pick<EscuelaConectividad, 'plan_piso_tecnologico'>) => !!e.plan_piso_tecnologico?.trim()
+// Aviso cuando la escuela figura en un régimen especial (la guía no los cubre igual).
+export function avisoEspecial(e: Pick<EscuelaConectividad, 'plan_enlace' | 'tipo'>): string | null {
+  const t = `${e.plan_enlace ?? ''} ${e.tipo ?? ''}`.toUpperCase()
+  if (/CONTEXTO DE ENCIERRO/.test(t)) return 'Figura como contexto de encierro: confirmá que corresponda reclamarla por este circuito.'
+  if (/ESCUELA CERRADA/.test(t)) return 'Figura como escuela cerrada: confirmá que corresponda reclamarla.'
+  if (/ITINERANTE/.test(t)) return 'Figura como itinerante: confirmá que corresponda reclamarla por este circuito.'
+  return null
+}
+
+export type Campo = 'detalle' | 'aulas' | 'matricula' | 'direccion' | 'coordenadas' | 'serie' | 'fechaCronograma' | 'subtipo'
+export type TipoReclamo = {
+  id: string, asunto: string, grupo: 'problemas' | 'pedidos', cuando: string, campos: Campo[], requeridos: Campo[]
+  // Contacto del establecimiento: siempre, sólo si el enlace es PBA, o si se quiere.
+  contacto: 'siempre' | 'pba' | 'opcional'
+}
+export const TIPOS: TipoReclamo[] = [
+  { id: 'sin_conectividad', asunto: 'Sin Conectividad', grupo: 'problemas', cuando: 'No hay conectividad, intermitencia, módem quemado, cable cortado u otros problemas del enlace.', campos: ['detalle'], requeridos: ['detalle'], contacto: 'siempre' },
+  { id: 'utm_switch', asunto: 'Problemas con UTM o Switch', grupo: 'problemas', cuando: 'Falla del UTM o de un switch.', campos: ['detalle'], requeridos: ['detalle'], contacto: 'pba' },
+  { id: 'piso', asunto: 'Problemas con Piso Tecnológico', grupo: 'problemas', cuando: 'Cableado, access points, problemas eléctricos en el rack u otros problemas del piso que no sean UTM o switch.', campos: ['detalle'], requeridos: ['detalle'], contacto: 'pba' },
+  { id: 'ancho_banda', asunto: 'Ampliación de Ancho de Banda', grupo: 'problemas', cuando: 'La escuela necesita más ancho de banda.', campos: ['matricula', 'detalle'], requeridos: ['matricula'], contacto: 'pba' },
+  { id: 'danos_robo', asunto: 'Daños/Robo al Predio', grupo: 'problemas', cuando: 'Daño o robo del equipamiento del piso tecnológico.', campos: ['detalle', 'serie'], requeridos: ['detalle'], contacto: 'pba' },
+  { id: 'instalacion', asunto: 'Instalación incorrecta', grupo: 'problemas', cuando: 'Rack y módem en lugares distintos, instalación en un CUE incorrecto o sin finalizar.', campos: ['subtipo', 'detalle'], requeridos: ['subtipo', 'detalle'], contacto: 'pba' },
+  { id: 'instaladores', asunto: 'Problemas con instaladores', grupo: 'problemas', cuando: 'Inconvenientes con los técnicos que instalaron.', campos: ['detalle'], requeridos: ['detalle'], contacto: 'pba' },
+  { id: 'cronograma', asunto: 'Incumplimiento en cronograma', grupo: 'problemas', cuando: 'No fueron a la escuela en la fecha del cronograma.', campos: ['fechaCronograma', 'detalle'], requeridos: ['fechaCronograma'], contacto: 'pba' },
+  { id: 'mudanza', asunto: 'Mudanza', grupo: 'pedidos', cuando: 'Mudanza de enlace o de piso tecnológico.', campos: ['detalle'], requeridos: [], contacto: 'opcional' },
+  { id: 'unificacion', asunto: 'Unificación/Desunificación de predio', grupo: 'pedidos', cuando: 'Se unifican o se separan establecimientos de un predio.', campos: ['detalle'], requeridos: [], contacto: 'opcional' },
+  { id: 'tac_usap', asunto: 'Cambio TAC a USAP', grupo: 'pedidos', cuando: 'Pasar de piso TAC a USAP.', campos: ['detalle'], requeridos: [], contacto: 'opcional' },
+  { id: 'extension', asunto: 'Extensión/ampliación Piso', grupo: 'pedidos', cuando: 'Ampliar el piso tecnológico a más aulas.', campos: ['aulas', 'matricula', 'detalle'], requeridos: ['aulas', 'matricula'], contacto: 'opcional' },
+  { id: 'solicitud_piso', asunto: 'Solicitud de Piso', grupo: 'pedidos', cuando: 'La escuela no tiene piso tecnológico y lo necesita.', campos: ['detalle'], requeridos: [], contacto: 'opcional' },
+  { id: 'solicitud_conectividad', asunto: 'Solicitud de Conectividad', grupo: 'pedidos', cuando: 'La escuela no tiene enlace y lo necesita.', campos: ['detalle'], requeridos: [], contacto: 'opcional' },
+  { id: 'error_direccion', asunto: 'Error en dirección', grupo: 'pedidos', cuando: 'La dirección de la escuela figura mal en cronogramas o solicitudes.', campos: ['direccion', 'coordenadas'], requeridos: ['direccion', 'coordenadas'], contacto: 'opcional' },
+]
+export const tipoDe = (id: string) => TIPOS.find(t => t.id === id) ?? null
+export const SUBTIPOS_INSTALACION = [
+  { id: 'rack_modem', label: 'Rack y módem en lugares distintos' }, { id: 'cue_incorrecto', label: 'Instalación en CUE incorrecto' }, { id: 'sin_finalizar', label: 'Instalación sin finalizar correctamente' },
+] as const
+
+export type DatosReclamo = {
+  enlace: Enlace | null, proveedorG1: 'Movistar' | 'Claro' | null, subtipo: string, detalle: string,
+  contactoNombre: string, contactoTelefono: string, contactoHorario: string,
+  aulas: string, matricula: string, direccion: string, coordenadas: string, serie: string, fechaCronograma: string,
+}
+export const DATOS_VACIOS: DatosReclamo = { enlace: null, proveedorG1: null, subtipo: '', detalle: '', contactoNombre: '', contactoTelefono: '', contactoHorario: '', aulas: '', matricula: '', direccion: '', coordenadas: '', serie: '', fechaCronograma: '' }
+
+// Código de fecha y hora del asunto (hora argentina): DDMMAAAAHHMM, todo junto.
+export function codigoFecha(ahora: Date): string {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: ZONA, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(ahora).map(x => [x.type, x.value]))
+  return `${p.day}${p.month}${p.year}${p.hour}${p.minute}`
+}
+export const asuntoDe = (cue: number | string, tipo: TipoReclamo, ahora: Date) => `06-01-${codigoFecha(ahora)} - CUE ${cue} - ${tipo.asunto}`
+
+// Qué falta completar (mensajes para mostrar al lado de cada campo).
+export function faltantes(tipo: TipoReclamo, esc: EscuelaConectividad, d: DatosReclamo): Partial<Record<Campo | 'contacto' | 'enlace' | 'proveedor' | 'escuela', string>> {
+  const err: ReturnType<typeof faltantes> = {}
+  const enlaces = enlacesDe(esc.plan_enlace, esc.subplan_enlace)
+  if (!esc.cue) err.escuela = 'La escuela no tiene CUE cargado.'
+  else if (String(esc.cue).length !== 8) err.escuela = `El CUE tiene que tener 8 dígitos (figura ${esc.cue}).`
+  if (tipo.id === 'sin_conectividad' && !enlaces.length) err.enlace = 'La escuela figura sin enlace: para pedirlo usá "Solicitud de Conectividad".'
+  else if (enlaces.length > 1 && !d.enlace) err.enlace = 'Elegí qué enlace tiene el problema.'
+  if (d.enlace === 'PBA1' && tipo.id === 'sin_conectividad' && !d.proveedorG1) err.proveedor = 'Elegí el proveedor (Movistar o Claro).'
+  for (const c of tipo.requeridos) if (!d[c].trim()) err[c] = c === 'subtipo' ? 'Elegí el caso.' : 'Completá este dato.'
+  const pidePba = tipo.contacto === 'siempre' || (tipo.contacto === 'pba' && esPba(d.enlace ?? enlaces[0] ?? null))
+  const porTelefono = tipo.id === 'sin_conectividad' && d.enlace === 'PBA1' && d.proveedorG1 === 'Movistar'
+  if (pidePba && !porTelefono && (!d.contactoNombre.trim() || !d.contactoTelefono.trim())) err.contacto = 'Completá el nombre y el teléfono del contacto del establecimiento.'
+  return err
+}
+
+export type Adjunto = { texto: string, enlace?: string }
+export type Reclamo = {
+  asunto: string, para: string | null, cuerpo: string, adjuntos: Adjunto[], avisos: string[],
+  // PBA Grupo 1 con Movistar: no es un mail; la escuela llama al 0800 con estos datos.
+  porTelefono: null | { telefono: string, datos: { label: string, valor: string }[] },
+}
+
+function adjuntosDe(tipo: TipoReclamo, esc: EscuelaConectividad, d: DatosReclamo, avisos: string[]): Adjunto[] {
+  const checklist = (): Adjunto => {
+    if (tienePiso(esc)) return { texto: 'Checklist USAP completo', enlace: DOC_CHECKLIST_USAP }
+    avisos.push('La escuela figura sin piso tecnológico: se sugiere el checklist de Z3 (predio pequeño). Verificá que corresponda.')
+    return { texto: 'Checklist de Z3 (predio pequeño TAC o GAP) completo', enlace: DOC_CHECKLIST_Z3 }
+  }
+  const modem: Adjunto = { texto: 'Foto donde se vean las luces del módem' }
+  const formulario: Adjunto = { texto: 'Formulario completo con la información solicitada', enlace: DOC_FORMULARIO }
+  switch (tipo.id) {
+    case 'sin_conectividad':
+      if (d.enlace === 'PNCE') return [checklist()]
+      if (d.enlace === 'PBA1') return [modem]
+      return tienePiso(esc) ? [modem, { texto: 'Checklist USAP completo', enlace: DOC_CHECKLIST_USAP }] : [modem]
+    case 'utm_switch': case 'piso': return [checklist()]
+    case 'ancho_banda': return [{ texto: 'Captura de pantalla de la medición de velocidad' }, checklist()]
+    case 'danos_robo': return [{ texto: 'Denuncia policial con el N° de serie del equipamiento robado' }, { texto: 'Imágenes que constaten el hecho' }]
+    case 'instalacion': return [d.subtipo === 'rack_modem' ? { texto: 'Plano marcando el lugar del módem y del rack' } : { texto: 'Imágenes que constaten el hecho' }]
+    case 'mudanza': return [formulario, { texto: 'Plano del nuevo edificio' }]
+    case 'unificacion': case 'tac_usap': case 'solicitud_piso': case 'solicitud_conectividad': return [formulario, { texto: 'Plano del establecimiento' }]
+    case 'extension': return [{ texto: 'Plano del establecimiento marcando la zona con conectividad y la zona sin conectividad' }]
+    default: return []
+  }
+}
+
+// Nombres de la base (en mayúsculas) en formato de oración, con las preposiciones en minúscula.
+const nombrePropio = (s: string) => titleCase(s).replace(/ (De|Del|La|Las|Los|Y|E|Con|Para)(?= )/g, m => m.toLowerCase())
+const linea = (k: string, v: string | null | undefined) => (v && v.trim() ? `${k}: ${v.trim()}\n` : '')
+// Arma el reclamo. `fed`: quien lo envía (firma). Si faltan datos obligatorios, usar `faltantes` antes.
+export function armarReclamo(esc: EscuelaConectividad, tipo: TipoReclamo, d: DatosReclamo, ahora: Date, fed: { nombre: string, cargo: string }): Reclamo {
+  const enlaces = enlacesDe(esc.plan_enlace, esc.subplan_enlace)
+  const enlace = d.enlace ?? (enlaces.length === 1 ? enlaces[0] : null)
+  const datos = { ...d, enlace }
+  const avisos: string[] = []
+  const especial = avisoEspecial(esc)
+  if (especial) avisos.push(especial)
+
+  const porTelefono = tipo.id === 'sin_conectividad' && enlace === 'PBA1' && d.proveedorG1 === 'Movistar'
+  if (porTelefono) {
+    return { asunto: '', para: null, cuerpo: '', adjuntos: [], avisos, porTelefono: { telefono: TEL_MOVISTAR, datos: [
+      ...(esc.ani ? [{ label: 'ANI (línea telefónica)', valor: esc.ani }] : []), ...(esc.recurso_primario ? [{ label: 'Recurso primario (servicio de internet)', valor: esc.recurso_primario }] : []), ...(esc.access_id ? [{ label: 'ID de acceso', valor: esc.access_id }] : []),
+    ] } }
+  }
+  if (enlace === 'PNCE' && tipo.id === 'sin_conectividad') avisos.push(`También puede reclamar el establecimiento al ${TEL_EDUCAR} (Mesa de Ayuda Educar).`)
+  const adjuntos = adjuntosDe(tipo, esc, datos, avisos)
+  const para = tipo.id === 'sin_conectividad' && enlace === 'PBA1' && d.proveedorG1 === 'Claro' ? RECLAMOS_PARA_CLARO : RECLAMOS_PARA
+  const proveedor = enlace === 'PNCE' ? esc.proveedor_pnce : esc.proveedor_pba
+  const piso = tienePiso(esc) ? `Piso tecnológico ${esc.plan_piso_tecnologico}${esc.tipo_piso_instalado ? ` (${esc.tipo_piso_instalado.replace(/\s*-\s*Instalada$/i, '')})` : ''}` : 'Sin piso tecnológico'
+  const subtipo = SUBTIPOS_INSTALACION.find(s => s.id === d.subtipo)?.label
+  const contacto = [d.contactoNombre.trim(), d.contactoTelefono.trim() && `tel. ${d.contactoTelefono.trim()}`, d.contactoHorario.trim() && `horario: ${d.contactoHorario.trim()}`].filter(Boolean).join(' · ')
+  const cuerpo = `Buen día,\n\nDesde la Dirección de Tecnología Educativa – Región 1 reportamos el siguiente caso.\n\n`
+    + linea('Establecimiento', `${esc.nombre ? nombrePropio(esc.nombre) : 'Sin nombre'} (CUE ${esc.cue})`)
+    + linea('Localidad', [esc.ciudad, esc.distrito].filter((x, i, a) => x && a.indexOf(x) === i).map(x => nombrePropio(x!)).join(', '))
+    + linea('Dirección', esc.direccion ? nombrePropio(esc.direccion) : null)
+    + linea('Infraestructura', [enlace ? `Enlace ${ENLACE_LABEL[enlace]}${proveedor ? ` (${proveedor})` : ''}` : 'Sin enlace cargado', piso].join(' · '))
+    + linea('Tipo de reclamo', tipo.asunto)
+    + linea('Caso', subtipo) + linea('Matrícula', d.matricula) + linea('Cantidad de aulas', d.aulas)
+    + linea('Dirección que figura', tipo.id === 'error_direccion' ? esc.direccion : null) + linea('Dirección correcta', d.direccion) + linea('Coordenadas geográficas', d.coordenadas)
+    + linea('N° de serie del equipamiento', d.serie) + linea('Fecha en la que tendrían que haber visitado el establecimiento', d.fechaCronograma && d.fechaCronograma.split('-').reverse().join('/'))
+    + (d.detalle.trim() ? `\n${d.detalle.trim()}\n` : '')
+    + (contacto ? `\nContacto del establecimiento: ${contacto}\n` : '')
+    + (adjuntos.length ? `\nSe adjunta:\n${adjuntos.map(a => `- ${a.texto}`).join('\n')}\n` : '')
+    + `\nQuedamos a disposición.\nSaludos,\n${fed.nombre}\n${fed.cargo} · Dirección de Tecnología Educativa – Región 1`
+  return { asunto: asuntoDe(esc.cue ?? '', tipo, ahora), para, cuerpo, adjuntos, avisos, porTelefono: null }
+}
+
+export const gmailUrl = (r: Pick<Reclamo, 'asunto' | 'para' | 'cuerpo'>) => `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(r.para ?? '')}&su=${encodeURIComponent(r.asunto)}&body=${encodeURIComponent(r.cuerpo)}`
+export const mailtoUrl = (r: Pick<Reclamo, 'asunto' | 'para' | 'cuerpo'>) => `mailto:${r.para ?? ''}?subject=${encodeURIComponent(r.asunto)}&body=${encodeURIComponent(r.cuerpo)}`
