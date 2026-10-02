@@ -1,0 +1,52 @@
+// Registro de reclamos de conectividad: estados, tipo de conexión, tipo de número y filtros del panel (puro).
+import { enlacesDe, tienePiso } from '@/lib/reclamos'
+
+export const ESTADOS_RECLAMO = ['enviado', 'en_proceso', 'resuelto', 'anulado'] as const
+export type EstadoReclamo = typeof ESTADOS_RECLAMO[number]
+export const ESTADO_RECLAMO_LABEL: Record<EstadoReclamo, string> = { enviado: 'Reclamo enviado', en_proceso: 'En proceso', resuelto: 'Resuelto', anulado: 'Anulado' }
+// Clases completas (Tailwind) de cada estado.
+export const ESTADO_RECLAMO_CLASE: Record<EstadoReclamo, string> = {
+  enviado: 'border-aviso-borde bg-aviso-fondo-fuerte text-aviso-fuerte', en_proceso: 'border-pba-celeste/50 bg-pba-celeste/10 text-pba-celeste-texto',
+  resuelto: 'border-exito/40 bg-exito-fondo text-exito', anulado: 'border-dte-linea bg-dte-fondo text-dte-gris',
+}
+export const esAbierto = (e: string) => e === 'enviado' || e === 'en_proceso'
+
+export type Reclamo = {
+  id: string, fed_id: string | null, school_id: string | null, cue: number | null, tipo: string, tipo_label: string, conexion: string | null, asunto: string,
+  enviado_at: string, estado: EstadoReclamo, nro_incidencia: string | null, notas: string | null, resuelto_at: string | null, origen: 'app' | 'planilla',
+  school: { nombre: string | null, distrito: string | null, ciudad: string | null } | null,
+}
+
+// Tipo de conexión como lo anota el CED: "Piso PNCE y Enlace PBA", "Piso y Enlace PNCE", "Enlace PBA (Sin piso)".
+export function conexionDe(e: { plan_enlace: string | null, subplan_enlace: string | null, plan_piso_tecnologico: string | null }): string {
+  const enl = enlacesDe(e.plan_enlace, e.subplan_enlace)
+  const enlace = enl.length ? (enl.every(x => x === 'PNCE') ? 'PNCE' : enl.every(x => x !== 'PNCE') ? 'PBA' : 'PNCE y PBA') : null
+  const piso = tienePiso(e) ? (/PNCE/i.test(e.plan_piso_tecnologico ?? '') && /PBA/i.test(e.plan_piso_tecnologico ?? '') ? 'PNCE y PBA' : /PBA/i.test(e.plan_piso_tecnologico ?? '') ? 'PBA' : 'PNCE') : null
+  if (piso && enlace) return piso === enlace ? `Piso y Enlace ${enlace}` : `Piso ${piso} y Enlace ${enlace}`
+  if (enlace) return `Enlace ${enlace} (Sin piso)`
+  if (piso) return `Piso ${piso} (Sin enlace)`
+  return 'Sin datos de conectividad'
+}
+
+// Qué es el número que llega de Nivel Central: "NI-000234800" es una incidencia de Educar; "ticket 337918" o "incidente 336001", de PBA.
+export function origenDeNumero(n: string | null): 'Educar' | 'PBA' | null {
+  const t = (n ?? '').trim()
+  if (!t) return null
+  if (/\bNI-?\s*\d+/i.test(t)) return 'Educar'
+  if (/ticket|incidente|\bpba\b/i.test(t) || /^\d{5,7}\.?$/.test(t)) return 'PBA'
+  return null
+}
+
+export type FiltrosReclamo = { estado: 'abiertos' | 'todos' | EstadoReclamo, fedId: string, conexion: string, busqueda: string }
+const sinTildes = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+export function filtrarReclamos(lista: Reclamo[], f: FiltrosReclamo, nombreFed: (id: string | null) => string): Reclamo[] {
+  const q = sinTildes(f.busqueda.trim())
+  return lista.filter(r =>
+    (f.estado === 'todos' ? true : f.estado === 'abiertos' ? esAbierto(r.estado) : r.estado === f.estado)
+    && (!f.fedId || r.fed_id === f.fedId) && (!f.conexion || r.conexion === f.conexion)
+    && (!q || sinTildes(`${r.asunto} ${r.cue ?? ''} ${r.school?.nombre ?? ''} ${r.school?.distrito ?? ''} ${r.nro_incidencia ?? ''} ${r.notas ?? ''} ${nombreFed(r.fed_id)}`).includes(q)))
+}
+
+export const resumenReclamos = (lista: Reclamo[]) => ({
+  enviados: lista.filter(r => r.estado === 'enviado').length, enProceso: lista.filter(r => r.estado === 'en_proceso').length, resueltos: lista.filter(r => r.estado === 'resuelto').length,
+})

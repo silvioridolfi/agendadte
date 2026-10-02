@@ -93,6 +93,21 @@ Arma el asunto y el cuerpo del mail de un reclamo de conectividad, con la lista 
 Los demás tipos piden lo que indica la guía: formulario y plano (mudanza, solicitudes), medición y checklist (ancho de banda), denuncia e imágenes (daños o robo), etc.
 [i] El mail va a ${RECLAMOS_PARA}: lo recibe el CED, que lo reenvía a la DTE (ella lo deriva a PBA o a Educar). Un mail por escuela y con el CUE de 8 dígitos. El botón abre Gmail con tu cuenta institucional; los archivos los adjuntás vos, la agenda no los envía.
 [!] Si la escuela ya tiene un reclamo abierto, no abras una cadena nueva: respondé en la original, sin el "Fwd" antes del código. Si lo enviás más tarde, volvé a armar el reclamo para que el asunto lleve la hora correcta.` },
+  { id: 'registro-reclamos', titulo: 'Registro de reclamos de conectividad', para: ['fed', 'ced'], md: () => `
+Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la planilla manual. Se abre desde el menú de las iniciales (**Registro de reclamos**).
+## Cómo se carga
+1. Armás el reclamo (**Armar reclamo de conectividad**) y lo mandás por mail al CED.
+2. Tocás **Reclamo enviado**: queda registrado con tu nombre, la escuela, el tipo de reclamo, el asunto y el tipo de conexión de la escuela.
+3. Cuando Nivel Central responde, el CED anota el **número de ticket (PBA) o de incidencia (Educar)** y, más tarde, marca el reclamo como **Resuelto**.
+## Estados
+| Estado | Qué significa |
+| Reclamo enviado | Lo mandaste al CED; todavía no llegó un número. |
+| En proceso | Ya tiene número de ticket o de incidencia. |
+| Resuelto | Se solucionó. |
+| Anulado | Se registró por error o se dejó sin efecto. |
+## Quién ve y quién edita
+Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado, FED, tipo de conexión y búsqueda por CUE, escuela, número o nombre. Solo el CED los actualiza; la administración los ve en modo lectura.
+[i] Al armar un reclamo de una escuela que ya tiene uno abierto, la agenda te avisa para que sigas esa cadena en lugar de abrir otra.` },
 
   { id: 'registro', titulo: 'Registrar una acción', para: ['fed'], md: () => `
 ## Paso a paso

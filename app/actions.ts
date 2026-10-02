@@ -13,7 +13,8 @@ import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib
 import { hoyAR } from '@/lib/hora'
 import { avisaPorFecha } from '@/lib/avisos'
 import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
-import type { EscuelaConectividad } from '@/lib/reclamos'
+import { tipoDe, type EscuelaConectividad } from '@/lib/reclamos'
+import { ESTADOS_RECLAMO, conexionDe, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
 import { estadoAlCrear } from '@/lib/estado'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -81,6 +82,58 @@ async function getConectividadEscuelaImpl(id: string): Promise<EscuelaConectivid
   return { id: data.id as string, cue: (data.cue as number | null) ?? null, nombre: t(data.nombre), distrito: t(data.distrito), ciudad: t(data.ciudad), direccion: t(data.direccion), matricula: data.matricula == null ? null : Number(data.matricula),
     plan_enlace: t(data.plan_enlace), subplan_enlace: t(data.subplan_enlace), plan_piso_tecnologico: t(data.plan_piso_tecnologico), tipo_piso_instalado: t(data.tipo_piso_instalado), tipo: t(data.tipo),
     proveedor_pnce: t(data.proveedor_internet_pnce), proveedor_pba: t(data.proveedor_asignado_pba), ani: t(data.reclamos_grupo_1_ani), recurso_primario: t(data.recurso_primario), access_id: t(data.access_id) }
+}
+
+// ---- Registro de reclamos de conectividad: el FED registra el que armó y mandó al CED; el CED anota el N° de ticket o incidencia y si se resolvió.
+const COLS_RECLAMO = '*, school:establecimientos(nombre, distrito, ciudad)'
+async function registrarReclamoImpl(yo: Usuario, input: { school_id: string, tipo: string, asunto: string }): Promise<string> {
+  if (!UUID.test(input.school_id)) throw new Error('Escuela inválida')
+  const tipo = tipoDe(input.tipo)
+  if (!tipo) throw new Error('Tipo de reclamo inválido')
+  const asunto = input.asunto.trim()
+  const db = supabaseServer()
+  const { data: esc, error } = await db.from('establecimientos').select('id, cue, plan_enlace, subplan_enlace, plan_piso_tecnologico').eq('id', input.school_id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!esc) throw new Error('No se encontró la escuela')
+  if (!/^06-01-\d{12} - CUE \d{8} - .+/.test(asunto) || !asunto.includes(`CUE ${esc.cue} - `)) throw new Error('El asunto no tiene el formato de la guía')
+  // Si ya se registró este mismo reclamo (doble toque), no se duplica.
+  const { data: previo } = await db.from('reclamos_conectividad').select('id').eq('fed_id', yo.fed.id).eq('asunto', asunto).maybeSingle()
+  if (previo) return previo.id as string
+  const row = { fed_id: yo.fed.id, school_id: esc.id, cue: esc.cue, tipo: tipo.id, tipo_label: tipo.asunto, conexion: conexionDe(esc as { plan_enlace: string | null, subplan_enlace: string | null, plan_piso_tecnologico: string | null }), asunto, origen: 'app' as const }
+  const { data, error: e2 } = await db.from('reclamos_conectividad').insert(row).select('id').single()
+  if (e2) throw new Error(e2.message)
+  await audit('reclamos_conectividad', data.id as string, 'alta', yo.fed.id, row)
+  return data.id as string
+}
+async function getReclamosImpl(): Promise<Reclamo[]> {
+  return fetchAll<Reclamo>((a, b) => supabaseServer().from('reclamos_conectividad').select(COLS_RECLAMO).order('enviado_at', { ascending: false }).order('id').range(a, b))
+}
+// Reclamos abiertos de una escuela: al armar uno nuevo se avisa para seguir la cadena original (la guía pide no abrir cadenas nuevas).
+async function reclamosAbiertosDeImpl(schoolId: string): Promise<Reclamo[]> {
+  if (!UUID.test(schoolId)) throw new Error('Escuela inválida')
+  const { data, error } = await supabaseServer().from('reclamos_conectividad').select(COLS_RECLAMO).eq('school_id', schoolId).in('estado', ['enviado', 'en_proceso']).order('enviado_at', { ascending: false }).limit(10)
+  if (error) throw new Error(error.message)
+  return (data ?? []) as unknown as Reclamo[]
+}
+// Sólo el CED (coordinación) actualiza el registro; la administración lo ve en modo lectura.
+async function actualizarReclamoImpl(yo: Usuario, id: string, cambios: { estado?: EstadoReclamo, nro_incidencia?: string | null, notas?: string | null }): Promise<void> {
+  if (yo.fed.rol !== 'coordinacion') throw new Error('Sólo la coordinación puede actualizar los reclamos')
+  if (!UUID.test(id)) throw new Error('Reclamo inválido')
+  const db = supabaseServer()
+  const { data: antes, error } = await db.from('reclamos_conectividad').select('estado, nro_incidencia, notas').eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!antes) throw new Error('No se encontró el reclamo')
+  const nro = cambios.nro_incidencia === undefined ? antes.nro_incidencia : opt(cambios.nro_incidencia)
+  const notas = cambios.notas === undefined ? antes.notas : opt(cambios.notas)
+  if ((nro ?? '').length > 200 || (notas ?? '').length > 1000) throw new Error('El texto es demasiado largo')
+  let estado = cambios.estado ?? (antes.estado as EstadoReclamo)
+  if (!ESTADOS_RECLAMO.includes(estado)) throw new Error('Estado inválido')
+  // Llegó un número de Nivel Central: el reclamo pasa a "en proceso" (salvo que se lo marque resuelto o anulado en el mismo cambio).
+  if (cambios.estado === undefined && estado === 'enviado' && nro && !antes.nro_incidencia) estado = 'en_proceso'
+  const row = { estado, nro_incidencia: nro, notas, resuelto_at: estado === 'resuelto' ? new Date().toISOString() : null, actualizado_por: yo.fed.id, updated_at: new Date().toISOString() }
+  const up = await db.from('reclamos_conectividad').update(row).eq('id', id)
+  if (up.error) throw new Error(up.error.message)
+  await audit('reclamos_conectividad', id, estado !== antes.estado ? 'estado' : 'modificacion', yo.fed.id, { antes, despues: { estado, nro_incidencia: nro, notas } })
 }
 
 // PostgREST devuelve como máximo 1000 filas por consulta: se pide por páginas (la vista anual supera ese límite).
@@ -681,6 +734,10 @@ export const getFeds = async () => conUsuario(() => getFedsImpl())
 export const searchSchools = async (query: string) => conUsuario(() => searchSchoolsImpl(query))
 export const getFichaEscuela = async (id: string) => conUsuario(yo => getFichaEscuelaImpl(yo, id))
 export const getConectividadEscuela = async (id: string) => conUsuario(() => getConectividadEscuelaImpl(id))
+export const registrarReclamo = async (input: { school_id: string, tipo: string, asunto: string }) => conUsuario(yo => registrarReclamoImpl(yo, input))
+export const getReclamos = async () => conUsuario(() => getReclamosImpl())
+export const reclamosAbiertosDe = async (schoolId: string) => conUsuario(() => reclamosAbiertosDeImpl(schoolId))
+export const actualizarReclamo = async (id: string, cambios: { estado?: EstadoReclamo, nro_incidencia?: string | null, notas?: string | null }) => conUsuario(yo => actualizarReclamoImpl(yo, id, cambios))
 
 // Jefaturas distritales y regional (organismos descentralizados, con código propio en lugar de CUE).
 // Al elegir una se guarda como lugar "NOMBRE (CÓDIGO)", el mismo formato que venían usando a mano.

@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { type School } from '@/lib/agenda'
 import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, enlacesDe, faltantes, gmailUrl, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
 import { titleCase } from '@/lib/format'
-import { ErrorBox, errMsg, getConectividadEscuela, selectClass } from '@/components/app/comun'
+import { ESTADO_RECLAMO_LABEL, type Reclamo as ReclamoRegistrado } from '@/lib/reclamos-registro'
+import { ErrorBox, errMsg, getConectividadEscuela, reclamosAbiertosDe, registrarReclamo, selectClass } from '@/components/app/comun'
 import { Field, SchoolPicker } from '@/components/app/formulario'
 
 type Errores = ReturnType<typeof faltantes>
@@ -26,26 +27,32 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
   const [errores, setErrores] = useState<Errores>({})
   const [reclamo, setReclamo] = useState<Reclamo | null>(null)
   const [copiado, setCopiado] = useState('')
+  // Reclamos que la escuela ya tiene abiertos (para seguir esa cadena) y registro del reclamo armado.
+  const [abiertos, setAbiertos] = useState<ReclamoRegistrado[]>([])
+  const [registrando, setRegistrando] = useState(false)
+  const [registrado, setRegistrado] = useState(false)
 
   // Escuela que viene elegida (desde su ficha o desde una acción de conectividad): se cargan sus datos al abrir.
   useEffect(() => {
     if (!escuelaInicial) return
     let vivo = true
+    reclamosAbiertosDe(escuelaInicial.id).then(a => { if (vivo) setAbiertos(a) }).catch(() => {})
     getConectividadEscuela(escuelaInicial.id).then(c => { if (vivo) setCon(c) }).catch(e => { if (vivo) setError(errMsg(e)) }).finally(() => { if (vivo) setCargando(false) })
     return () => { vivo = false }
   }, [escuelaInicial])
 
   const elegir = (s: School | null) => {
-    setEscuela(s); setCon(null); setError(''); setReclamo(null); setErrores({}); setD(DATOS_VACIOS); setTipoId('')
+    setEscuela(s); setCon(null); setError(''); setReclamo(null); setRegistrado(false); setAbiertos([]); setErrores({}); setD(DATOS_VACIOS); setTipoId('')
     if (!s) return
     setCargando(true)
+    reclamosAbiertosDe(s.id).then(setAbiertos).catch(() => {})
     getConectividadEscuela(s.id).then(setCon).catch(e => setError(errMsg(e))).finally(() => setCargando(false))
   }
   const enlaces = con ? enlacesDe(con.plan_enlace, con.subplan_enlace) : []
   const tipo = tipoDe(tipoId)
-  const set = <K extends keyof DatosReclamo>(k: K, v: DatosReclamo[K]) => { setD(x => ({ ...x, [k]: v })); setReclamo(null); setErrores(e => ({ ...e, [k]: undefined })) }
+  const set = <K extends keyof DatosReclamo>(k: K, v: DatosReclamo[K]) => { setD(x => ({ ...x, [k]: v })); setReclamo(null); setRegistrado(false); setErrores(e => ({ ...e, [k]: undefined })) }
   const elegirTipo = (id: string) => {
-    setTipoId(id); setReclamo(null); setErrores({})
+    setTipoId(id); setReclamo(null); setRegistrado(false); setErrores({})
     const t = tipoDe(id)
     setD(x => ({ ...x, subtipo: '', matricula: t?.campos.includes('matricula') && !x.matricula && con?.matricula ? String(con.matricula) : x.matricula, enlace: enlaces.length === 1 ? enlaces[0] : x.enlace }))
   }
@@ -58,7 +65,12 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
     const f = faltantes(tipo, con, datos)
     setErrores(f)
     if (Object.keys(f).length) return
-    setReclamo(armarReclamo(con, tipo, datos, new Date(), ced))
+    setRegistrado(false); setReclamo(armarReclamo(con, tipo, datos, new Date(), ced))
+  }
+  async function registrar() {
+    if (!con || !tipo || !reclamo) return
+    setRegistrando(true); setError('')
+    try { await registrarReclamo({ school_id: con.id, tipo: tipo.id, asunto: reclamo.asunto }); setRegistrado(true) } catch (e) { setError(errMsg(e)) } finally { setRegistrando(false) }
   }
   async function copiar(texto: string, clave: string) {
     try { await navigator.clipboard.writeText(texto); setCopiado(clave); setTimeout(() => setCopiado(c => (c === clave ? '' : c)), 2000) } catch { setError('No se pudo copiar: seleccioná el texto y copialo a mano.') }
@@ -77,6 +89,11 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
       {error && <ErrorBox message={error} />}
 
       {con && <>
+        {abiertos.length > 0 && <section role="status" className="rounded-card border-l-4 border-l-aviso-borde bg-aviso-fondo p-3.5 text-sm">
+          <h3 className="mb-1 flex items-center gap-1.5 font-bold text-aviso-fuerte"><AlertTriangle className="size-4" aria-hidden />Esta escuela ya tiene {abiertos.length === 1 ? 'un reclamo abierto' : `${abiertos.length} reclamos abiertos`}</h3>
+          <p className="text-xs">No abras una cadena nueva: seguí la original (respondé ese mail, sin el “Fwd” antes del código) o consultá con el CED.</p>
+          <ul className="mt-2 flex flex-col gap-1.5">{abiertos.map(a => <li key={a.id} className="rounded-control bg-white/70 px-2.5 py-1.5"><span className="block break-words font-mono text-[0.75rem] font-medium">{a.asunto}</span><span className="text-xs text-dte-gris">{ESTADO_RECLAMO_LABEL[a.estado]} · enviado el {new Date(a.enviado_at).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}{a.nro_incidencia ? ` · ${a.nro_incidencia}` : ''}</span></li>)}</ul>
+        </section>}
         <section className="rounded-card border-l-4 border-l-accion-asistencia-remota-punto bg-accion-asistencia-remota p-3.5 text-sm">
           <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-accion-asistencia-remota-texto">Infraestructura de conectividad</h3>
           <dl className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
@@ -139,8 +156,10 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
               <ul className="flex flex-col gap-1 text-sm">{reclamo.adjuntos.map(a => <li key={a.texto} className="flex flex-wrap items-center gap-x-2">{a.texto}{a.enlace && <a href={a.enlace} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-dte-petroleo underline underline-offset-2">Abrir modelo<ExternalLink className="size-3" aria-hidden /></a>}</li>)}</ul></div>}
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <a href={gmailUrl(reclamo, cuenta)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control bg-dte-petroleo px-4 text-sm font-semibold text-white transition hover:bg-dte-petroleo-oscuro md:min-h-9"><Mail className="size-4" aria-hidden />Abrir en mi correo ({cuenta})</a>
-              <Button type="button" variant="outline" onClick={cerrar} className="min-h-11 md:min-h-9">Cancelar</Button>
+              <Button type="button" variant="outline" onClick={cerrar} className="min-h-11 md:min-h-9">{registrado ? 'Cerrar' : 'Cancelar'}</Button>
             </div>
+            {registrado ? <p role="status" className="flex items-start gap-1.5 rounded-control bg-exito-fondo px-3 py-2 text-sm font-semibold text-exito"><Check className="mt-0.5 size-4 shrink-0" aria-hidden />Registrado en el panel de reclamos. El CED va a anotar el número de ticket o de incidencia cuando llegue.</p>
+              : <div className="rounded-card border border-dte-linea bg-dte-fondo p-3"><p className="text-xs text-dte-gris">Cuando lo hayas mandado por mail al CED, registralo para llevar el seguimiento.</p><Button type="button" onClick={registrar} disabled={registrando} className="mt-2 w-full sm:w-auto">{registrando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Reclamo enviado</Button></div>}
             <p className="text-xs text-dte-gris">El mensaje va al correo regional y de ahí lo deriva el CED. Se abre con tu cuenta institucional; los archivos los adjuntás vos. El asunto lleva la hora de este momento: si lo enviás más tarde, volvé a armarlo. Si la escuela ya tiene un reclamo abierto, <b>no abras una cadena nueva</b>: respondé en la original (sin el “Fwd” antes del código). <a href={DOC_BUSCADOR_CUE} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Buscar reclamos anteriores por CUE</a>.</p>
           </>}
         </section>}
