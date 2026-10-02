@@ -15,6 +15,7 @@ import { titleCase } from '@/lib/format'
 import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed, type Club, clubEstado } from '@/lib/agenda'
 import { FotosChip } from '@/components/app/fotosconteo'
 import { InformeBloque, personaDe } from '@/components/app/informes'
+import { Contador } from '@/components/contador'
 import { accionesAcompanadas, indicadoresCoordinacion, informeFed } from '@/lib/informes'
 import { BotonRealizar, DestacadosCtx, claseDestacado, puedeRealizar, EtiquetasAccion, type ItemPreset, itemCorto, cueLugar, marcaModalidad, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
 import { hoyAR, fechaHoyAR, anioAR } from '@/lib/hora'
@@ -150,7 +151,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
     {tab === 'acciones' && <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
       {ESTADOS.map(e => <button key={e} onClick={() => setEstado(estado === e ? '' : e)} aria-pressed={estado === e} className={`rounded-card border bg-white px-4 py-3 text-left transition hover:shadow-e2 ${estado === e ? 'border-dte-petroleo ring-2 ring-dte-petroleo/20' : 'border-dte-linea'}`}>
         <span className="text-xs font-semibold text-dte-gris">{statusStyle[e].label}s</span>
-        <span className="mt-1 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums sm:text-3xl">{items ? counts[e] : '–'}</span>{estado === e && <span className="text-xs font-semibold text-dte-petroleo">Filtrando</span>}</span>
+        <span className="mt-1 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums sm:text-3xl">{items ? <Contador valor={counts[e]} /> : '–'}</span>{estado === e && <span className="text-xs font-semibold text-dte-petroleo">Filtrando</span>}</span>
       </button>)}
     </div>}
 
