@@ -10,7 +10,7 @@ import { Field, SchoolPicker } from '@/components/app/formulario'
 import { CLUB_MIN_ENCUENTROS, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEncuentrosRealizados, clubEstado, iniciado, ordenGrupo, type Club, type Fed, type School, type Modalidad, type TipoJornada, type Trayecto } from '@/lib/agenda'
 import { az, errMsg, getClubes, saveItem, selectClass, shortSchoolName, ErrorBox } from '@/components/app/comun'
 import { hoyAR } from '@/lib/hora'
-import { proximoEncuentro, textoMinimo } from '@/lib/encuentro'
+import { escuelaDelClub, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
 
 const OTRA = '__otra'
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
@@ -31,12 +31,15 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
   const [fecha, setFecha] = useState(hoy)
   const [desde, setDesde] = useState('')
   // Sede del encuentro: la habitual del grupo o, cuando salen a territorio, la escuela donde se hace ese día.
-  const [enOtraSede, setEnOtraSede] = useState(false)
+  const [enOtraSedeElegida, setEnOtraSede] = useState(false)
   const [otraSede, setOtraSede] = useState<School | null>(null)
+  // Grupo sin sede propia (prácticas): cada encuentro lleva su lugar, que hay que elegir.
+  const sinSede = !!club && !club.school_id && !club.lugar
+  const enOtraSede = enOtraSedeElegida || sinSede
   const [hasta, setHasta] = useState('')
   // Otros grupos (grados) de la misma sede que se registran con los mismos datos, cada uno con su número de encuentro.
   const [otros, setOtros] = useState<string[]>([])
-  const hermanos = club ? opciones.filter(c => c.id !== club.id && c.school_id && c.school_id === club.school_id) : []
+  const hermanos = club ? opciones.filter(c => c.id !== club.id && escuelaDelClub(c) && escuelaDelClub(c)!.id === escuelaDelClub(club)?.id) : []
   // Serie: mismos días de la semana hasta una fecha (salta feriados y recesos); las fechas futuras quedan planificadas.
   const [repetir, setRepetir] = useState(false)
   const [dias, setDias] = useState<number[]>([])
@@ -102,11 +105,11 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
     </fieldset>}
 
     {club && <fieldset>
-      <legend className="mb-1.5 text-sm font-semibold">Sede del encuentro</legend>
-      <div className="grid gap-1.5 sm:grid-cols-2">
+      <legend className="mb-1.5 text-sm font-semibold">{sinSede ? 'Lugar del encuentro' : 'Sede del encuentro'}</legend>
+      {!sinSede && <div className="grid gap-1.5 sm:grid-cols-2">
         <Pill conIcono={false} on={!enOtraSede} onClick={() => setEnOtraSede(false)} className="justify-center">Sede habitual</Pill>
         <Pill conIcono={false} on={enOtraSede} onClick={() => setEnOtraSede(true)} className="justify-center">Otra escuela (territorio)</Pill>
-      </div>
+      </div>}
       {enOtraSede ? <div className="mt-2"><SchoolPicker value={otraSede} onChange={setOtraSede} /></div>
         : <p className="mt-1.5 text-xs text-dte-gris">{club.school ? shortSchoolName(club.school) : club.lugar ?? 'Sin sede cargada'}</p>}
     </fieldset>}
@@ -153,4 +156,4 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
   </form>
 }
 
-const etiqueta = (c: Club) => `${c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar'}${c.grupo ? ` · ${c.grupo}` : ''}`
+const etiqueta = (c: Club) => `${escuelaDelClub(c) ? shortSchoolName(escuelaDelClub(c)!) : c.lugar ?? 'Sin lugar'}${c.grupo ? ` · ${c.grupo}` : ''}`

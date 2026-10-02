@@ -131,12 +131,13 @@ Se gestionan desde **Tablero › Mis clubes** y **Mis prácticas**.
 ## Alta
 Cada grado o grupo es un club o una práctica. **Nuevo club / Nueva práctica:** escuela, grado o curso y primer encuentro. Con **Fecha a definir** queda "por iniciar" y no se agrega a la agenda hasta programar el primer encuentro.
 Si un curso se dividió en grupos (por ejemplo, 7.º Informática en Grupo 1 y Grupo 2), cargá cada grupo en el campo **Grupo**: en las métricas de prácticas cuentan como un solo curso, con los inscriptos sumados.
+**En las prácticas (PEAT),** el grupo se identifica por la **escuela de origen** de los estudiantes, que es obligatoria: no lleva una sede propia, porque las prácticas se hacen en varios lugares. En cada encuentro elegís el lugar donde se hizo (el establecimiento del formulario).
 ## Registrar un encuentro
 - El **número de encuentro** se asigna solo, a partir de los encuentros ya realizados del grupo; podés corregirlo.
 - **Propuesta dictada:** en clubes viene "Club de Tecnología" y hay una lista corta para elegir otra (${PROPUESTAS_DE_CLUB.slice(1, 5).join(', ')}, entre otras) o escribir una propia. En PEAT es siempre "Prácticas Educativas en Ambientes de Trabajo".
 - **Destinatarios:** se tilda entre el grado del club, ${DESTINATARIOS_BASE.join(', ')}, y se pueden sumar otros.
 - **Inscriptos:** se cargan al iniciar y se mantienen hasta el cierre; el formulario los trae del primer encuentro. En cada encuentro cargás solo los **participantes reales** y una breve descripción de lo realizado.
-- Si el encuentro fue en otra sede, se puede indicar.
+- Si el encuentro fue en otra sede, se puede indicar. En un grupo de PEAT, que no tiene sede propia, siempre se elige el lugar del encuentro.
 ## Completar un encuentro desde la agenda
 En una acción propia de club o PEAT, de hoy o anterior, el botón **Completar encuentro** abre el formulario con los datos del encuentro. Al guardar con participantes reales, descripción o cierre cargados, la acción se marca como realizada. Cargar o editar datos del encuentro no pregunta "este o este y los siguientes": solo pregunta si cambiás fecha, horario, lugar o tipo.
 La breve descripción se ve en el detalle de la acción realizada y en el Excel.

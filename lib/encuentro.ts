@@ -73,12 +73,16 @@ export function clubesDelDia<T extends { club_id?: string | null, accion: string
 }
 
 // Cursos divididos en grupos: las prácticas se cuentan por curso (escuela + cohorte), no por grupo. Sin cohorte, cada grupo es una unidad.
-export const unidadDe = (c: { id: string, school_id: string | null, lugar: string | null, cohorte?: string | null }): string =>
-  c.cohorte?.trim() ? `${c.school_id ?? `lugar:${c.lugar ?? ''}`}|${c.cohorte.trim().toLowerCase()}` : c.id
+export const unidadDe = (c: { id: string, school_id: string | null, lugar: string | null, cohorte?: string | null, escuela_origen?: { id: string } | null }): string =>
+  c.cohorte?.trim() ? `${c.escuela_origen?.id ?? c.school_id ?? `lugar:${c.lugar ?? ''}`}|${c.cohorte.trim().toLowerCase()}` : c.id
+
+// Escuela con la que se identifica un club o grupo: en los clubes, donde funcionan; en las prácticas (que se hacen en varios lugares), la escuela de origen de los estudiantes.
+export const escuelaDelClub = <S,>(c: { tipo: string, school: S | null, escuela_origen: S | null }): S | null =>
+  c.tipo === 'PRÁCTICAS PROFESIONALIZANTES' ? c.escuela_origen ?? c.school : c.school
 
 const PESO_ESTADO: Record<string, number> = { activo: 0, sin_actividad: 1, finalizado: 2 }
 // Cantidad de unidades por estado: un curso con grupos en estados distintos cuenta una vez, en el más activo de sus grupos.
-export function contarUnidades(lista: { c: { id: string, school_id: string | null, lugar: string | null, cohorte?: string | null }, estado: string }[]): { total: number, porEstado: Record<string, number> } {
+export function contarUnidades(lista: { c: { id: string, school_id: string | null, lugar: string | null, cohorte?: string | null, escuela_origen?: { id: string } | null }, estado: string }[]): { total: number, porEstado: Record<string, number> } {
   const mejor = new Map<string, string>()
   for (const { c, estado } of lista) {
     const k = unidadDe(c), previo = mejor.get(k)

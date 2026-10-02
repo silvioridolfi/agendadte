@@ -1,4 +1,5 @@
 // Exportación a Excel (planilla mensual por FED y consolidado regional). Se genera en el navegador.
+import { escuelaDelClub } from '@/lib/encuentro'
 import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, clubEstado, cuentaHecha, esAusencia, iniciado, ordenGrupo, ultimaActividad, type AgendaItem, type Club, type Encuentro, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
 import { graficosInforme, type Grafico } from '@/lib/graficos'
@@ -122,8 +123,8 @@ export async function exportarPlanilla({ titulo, desde, hasta, items, encuentros
         { header: 'Encuentros realizados', key: 'realizados', width: 11 }, { header: 'Encuentros previstos', key: 'previstos', width: 11 },
       ], l.map(c => {
         const est = iniciado(c) ? clubEstado(c, hoy) : null
-        return { fed: fedName(c.fed_id), escuela: escuela(c.school, c.lugar), grupo: c.grupo ?? '', origen: c.escuela_origen ? escuela(c.escuela_origen) : '',
-          distrito: c.school?.distrito ? titleCase(c.school.distrito) : '', inicio: fecha(c.fecha_inicio), cierre: fecha(c.fecha_cierre), ultimo: iniciado(c) ? fecha(ultimaActividad(c)) : '',
+        return { fed: fedName(c.fed_id), escuela: escuela(escuelaDelClub(c), c.lugar), grupo: c.grupo ?? '', origen: c.escuela_origen && escuelaDelClub(c) !== c.escuela_origen ? escuela(c.escuela_origen) : '',
+          distrito: escuelaDelClub(c)?.distrito ? titleCase(escuelaDelClub(c)!.distrito!) : '', inicio: fecha(c.fecha_inicio), cierre: fecha(c.fecha_cierre), ultimo: iniciado(c) ? fecha(ultimaActividad(c)) : '',
           estado: !est ? 'Por iniciar' : est === 'activo' ? 'Activo' : est === 'finalizado' ? 'Finalizado' : 'Sin actividad', realizados: new Set(c.encuentros.map(e => e.fecha)).size, previstos: c.tipo === 'CLUB DE TECNOLOGÍA' ? c.encuentros_previstos ?? '' : '' }
       }), 'Ciclo lectivo completo · un grupo por fila')
     }
