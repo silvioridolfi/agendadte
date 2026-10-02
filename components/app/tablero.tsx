@@ -16,6 +16,7 @@ import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type F
 import { FotosChip } from '@/components/app/fotosconteo'
 import { InformeBloque, personaDe } from '@/components/app/informes'
 import { Contador } from '@/components/contador'
+import { escuelaDelClub } from '@/lib/encuentro'
 import { accionesAcompanadas, indicadoresCoordinacion, informeFed } from '@/lib/informes'
 import { BotonRealizar, DestacadosCtx, claseDestacado, puedeRealizar, EtiquetasAccion, type ItemPreset, itemCorto, cueLugar, marcaModalidad, Vacio, getFeriados, statusStyle, az, selectClass, eyebrow, iso, parse, addDays, startOfWeek, fmt, cap, hhmm, weekTitle, shortSchoolName, initials, fedColor, getAllItems, getEncuentros, getClubes, setClubCierre, StatusBadge, ErrorBox, Skeleton, useItems, WeekNav, storage } from '@/components/app/comun'
 import { hoyAR, fechaHoyAR, anioAR } from '@/lib/hora'
@@ -110,8 +111,8 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   const encBase = useMemo(() => (encs ?? []).filter(e =>
     (!distrito || e.school?.distrito === distrito) && (!fedId || e.fed_id === fedId) && (!accion || e.tipo === accion) &&
     (!q || `${fedName(e.fed_id)} ${e.school?.nombre ?? ''} ${e.school?.ciudad ?? ''} ${e.school?.cue ?? ''} ${esSedeDte(e.school) ? 'dte' : ''} ${e.propuesta ?? ''} ${e.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [encs, distrito, fedId, accion, q, fedName])
-  const clubBase = useMemo(() => (clubes ?? []).filter(c => (!distrito || c.school?.distrito === distrito) && (!fedId || c.fed_id === fedId) &&
-    (!q || `${fedName(c.fed_id)} ${c.school?.nombre ?? ''} ${c.school?.ciudad ?? ''} ${c.school?.cue ?? ''} ${esSedeDte(c.school) ? 'dte' : ''} ${c.escuela_origen?.nombre ?? ''} ${c.escuela_origen?.cue ?? ''} ${c.grupo ?? ''} ${c.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [clubes, distrito, fedId, q, fedName])
+  const clubBase = useMemo(() => (clubes ?? []).filter(c => (!distrito || escuelaDelClub(c)?.distrito === distrito) && (!fedId || c.fed_id === fedId) &&
+    (!q || `${fedName(c.fed_id)} ${escuelaDelClub(c)?.nombre ?? ''} ${escuelaDelClub(c)?.ciudad ?? ''} ${escuelaDelClub(c)?.cue ?? ''} ${esSedeDte(c.school) ? 'dte' : ''} ${c.escuela_origen?.nombre ?? ''} ${c.escuela_origen?.cue ?? ''} ${c.grupo ?? ''} ${c.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [clubes, distrito, fedId, q, fedName])
   const counts = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, base.filter(i => i.estado === e).length])) as Record<Estado, number>, [base])
   // FEDs en orden alfabético; dentro de cada uno, las acciones de la más nueva a la más antigua (fecha, hora y carga).
   // Primero lo de hoy hacia atrás (lo más reciente arriba); lo planificado a futuro va al final, de lo más próximo a lo más lejano.
@@ -175,7 +176,7 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
 
     {tab === 'agenda' ? <div className="mt-6"><AgendaEquipoView feds={feds} reloadKey={reloadKey} onSelect={onSelect} /></div>
     : tab === 'equipo' ? <div className="mt-6"><MiEquipoView feds={feds} todos={todos} items={items} clubes={clubes} noHabiles={noHabiles} periodo={title} desde={iso(from)} hasta={iso(to)} onSelect={onSelect} onVerAcciones={id => { setFedId(id); setTab('acciones') }} /></div>
-    : tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} noHabiles={noHabiles} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (c.school ? shortSchoolName(c.school) : c.lugar ?? 'Sin lugar')} onCierre={propio && !soloLectura ? async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) } : undefined}
+    : tab === 'clubes' || tab === 'practicas' ? <div className="mt-6">{!clubes ? <Skeleton className="h-64" /> : <ClubesView key={tab} noHabiles={noHabiles} tipo={tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES'} clubes={clubBase} feds={feds} desde={iso(from)} hasta={iso(to)} periodo={title} schoolLabel={c => (escuelaDelClub(c) ? shortSchoolName(escuelaDelClub(c)!) : c.lugar ?? 'Sin lugar')} onCierre={propio && !soloLectura ? async (c, f) => { await setClubCierre(c.id, f); setClubKey(k => k + 1) } : undefined}
       onNuevo={propio && onNuevaAccion ? () => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', modo: 'nuevo' }) : undefined}
       onEncuentro={propio && onNuevaAccion ? c => onNuevaAccion({ accion: tab === 'clubes' ? 'CLUB DE TECNOLOGÍA' : 'PRÁCTICAS PROFESIONALIZANTES', club_id: c?.id, modo: 'encuentro' }) : undefined} />}</div>
     : tab === 'resumen' ? <div className="mt-6">{error ? <ErrorBox message={error} onRetry={retry} /> : !items ? <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40" />)}</div> : <>{/* El FED ve su informe (descarga en Excel o PDF) arriba de todo; la coordinación, sus indicadores al final. */}{propio

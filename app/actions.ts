@@ -422,8 +422,11 @@ async function upsertClub(input: AgendaItemInput, row: ReturnType<typeof clean>)
   const previstos = num(e.encuentros_previstos) || null
   if (e.nuevo_club || !e.club_id) {
     if (!e.nuevo_club) return null
+    // Las prácticas se hacen en varios lugares: el grupo se identifica por la escuela de origen de sus estudiantes y no lleva sede propia.
+    const peat = row.accion === 'PRÁCTICAS PROFESIONALIZANTES'
+    if (peat && !opt(e.escuela_origen_id)) throw new Error('Indicá la escuela de origen de los estudiantes')
     const { data, error } = await db.from('clubes').insert({
-      fed_id: row.fed_id, school_id: row.school_id, lugar: row.lugar, grupo: opt(e.grupo), cohorte: row.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? opt(e.cohorte) : null, escuela_origen_id: opt(e.escuela_origen_id), tipo: row.accion, propuesta: row.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Prácticas Educativas en Ambientes de Trabajo' : 'Club de Tecnología',
+      fed_id: row.fed_id, school_id: peat ? null : row.school_id, lugar: peat ? null : row.lugar, grupo: opt(e.grupo), cohorte: row.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? opt(e.cohorte) : null, escuela_origen_id: opt(e.escuela_origen_id), tipo: row.accion, propuesta: row.accion === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Prácticas Educativas en Ambientes de Trabajo' : 'Club de Tecnología',
       fecha_inicio: row.fecha, fecha_cierre: e.es_cierre ? row.fecha : null, encuentros_previstos: previstos,
     }).select('id').single()
     if (error) throw new Error(error.message)
@@ -449,10 +452,11 @@ async function crearClubPorIniciarImpl(c: ClubPorIniciarInput): Promise<void> {
   const { data: fed } = await db.from('feds').select('rol').eq('id', c.fed_id).maybeSingle()
   if (fed?.rol !== 'fed') throw new Error('Sólo un FED puede iniciar clubes o prácticas')
   if (c.tipo !== 'CLUB DE TECNOLOGÍA' && c.tipo !== 'PRÁCTICAS PROFESIONALIZANTES') throw new Error('Tipo inválido')
-  if (!c.school_id && !opt(c.lugar)) throw new Error('Indicá el establecimiento o la sede')
+  const peat = c.tipo === 'PRÁCTICAS PROFESIONALIZANTES'
+  if (peat ? !opt(c.escuela_origen_id) : !c.school_id && !opt(c.lugar)) throw new Error(peat ? 'Indicá la escuela de origen de los estudiantes' : 'Indicá el establecimiento o la sede')
   if (!opt(c.grupo)) throw new Error('Indicá el grado o curso')
   const previstos = c.encuentros_previstos && c.encuentros_previstos > 0 && c.encuentros_previstos < 100 ? Math.round(c.encuentros_previstos) : null
-  const row = { fed_id: c.fed_id, school_id: c.school_id, lugar: c.school_id ? null : opt(c.lugar), grupo: opt(c.grupo), cohorte: c.tipo === 'PRÁCTICAS PROFESIONALIZANTES' ? opt(c.cohorte) : null, escuela_origen_id: opt(c.escuela_origen_id), tipo: c.tipo,
+  const row = { fed_id: c.fed_id, school_id: peat ? null : c.school_id, lugar: peat || c.school_id ? null : opt(c.lugar), grupo: opt(c.grupo), cohorte: c.tipo === 'PRÁCTICAS PROFESIONALIZANTES' ? opt(c.cohorte) : null, escuela_origen_id: opt(c.escuela_origen_id), tipo: c.tipo,
     propuesta: c.tipo === 'PRÁCTICAS PROFESIONALIZANTES' ? 'Prácticas Educativas en Ambientes de Trabajo' : 'Club de Tecnología', fecha_inicio: null, fecha_cierre: null, encuentros_previstos: previstos }
   const { data, error } = await db.from('clubes').insert(row).select('id').single()
   if (error) throw new Error(error.message)

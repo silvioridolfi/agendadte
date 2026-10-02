@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { ErrorBox, errMsg } from '@/components/app/comun'
 import { hoyAR, ZONA } from '@/lib/hora'
 import { inicioCiclo } from '@/lib/receso'
-import { contarUnidades, minEncuentros, unidadDe } from '@/lib/encuentro'
+import { contarUnidades, escuelaDelClub, minEncuentros, unidadDe } from '@/lib/encuentro'
 
 const nf = new Intl.NumberFormat('es-AR')
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -164,7 +164,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
         const dias = c.created_at ? Math.round((Date.parse(`${hoy}T12:00:00Z`) - Date.parse(`${new Date(c.created_at).toLocaleDateString('en-CA', { timeZone: ZONA })}T12:00:00Z`)) / 86400000) : 0
         return <li key={c.id} className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold">{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate" title={schoolLabel(c)}>{schoolLabel(c)}</span></p>
-            <p className="text-xs text-dte-gris">{[c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id), tipo === 'CLUB DE TECNOLOGÍA' && c.encuentros_previstos ? `${c.encuentros_previstos} encuentros previstos` : null].filter(Boolean).join(' · ')}</p>
+            <p className="text-xs text-dte-gris">{[escuelaDelClub(c)?.distrito ? titleCase(escuelaDelClub(c)!.distrito!) : null, fedName(c.fed_id), tipo === 'CLUB DE TECNOLOGÍA' && c.encuentros_previstos ? `${c.encuentros_previstos} encuentros previstos` : null].filter(Boolean).join(' · ')}</p>
             {dias > 30 && <p className="text-xs font-semibold text-aviso-fuerte">Hace {dias} días sin fecha: ¿lo programamos?</p>}</div>
           {onEncuentro && <Button variant="outline" size="sm" onClick={() => onEncuentro(c)} className="shrink-0"><CalendarPlus data-icon="inline-start" />Programar primer encuentro</Button>}
         </li>
@@ -216,7 +216,7 @@ export function ClubesView({ clubes: entrada, feds, onCierre, schoolLabel, tipo 
             const st = ESTADO_CLUB[estado]
             const fin = c.fecha_cierre ?? ultima
             return <tr key={c.id} className="align-middle">
-              <td className="py-2.5 pr-3"><p className="flex max-w-[20rem] items-center gap-1.5 font-semibold" title={c.school?.nombre ?? c.lugar ?? ''}>{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate" title={schoolLabel(c)}>{schoolLabel(c)}</span></p><p className="text-xs text-dte-gris">{[c.escuela_origen ? `Estudiantes de ${schoolLabel({ school: c.escuela_origen, lugar: null } as Club)}` : null, c.school?.distrito ? titleCase(c.school.distrito) : null, fedName(c.fed_id)].filter(Boolean).join(' · ')}</p>{(() => { const n = new Set(completos.get(c.id)!.encuentros.map(e => e.school_id ?? e.lugar)).size; return n > 1 ? <p className="text-xs font-semibold" style={{ color: marca.acento }}>{n} sedes</p> : null })()}</td>
+              <td className="py-2.5 pr-3"><p className="flex max-w-[20rem] items-center gap-1.5 font-semibold" title={escuelaDelClub(c)?.nombre ?? c.lugar ?? ''}>{c.grupo && <span className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold text-white" style={{ background: marca.acento }}>{c.grupo}</span>}<span className="truncate" title={schoolLabel(c)}>{schoolLabel(c)}</span></p><p className="text-xs text-dte-gris">{[c.escuela_origen && escuelaDelClub(c) !== c.escuela_origen ? `Estudiantes de ${schoolLabel({ school: c.escuela_origen, lugar: null } as Club)}` : null, escuelaDelClub(c)?.distrito ? titleCase(escuelaDelClub(c)!.distrito!) : null, fedName(c.fed_id)].filter(Boolean).join(' · ')}</p>{(() => { const n = new Set(completos.get(c.id)!.encuentros.map(e => e.school_id ?? e.lugar)).size; return n > 1 ? <p className="text-xs font-semibold" style={{ color: marca.acento }}>{n} sedes</p> : null })()}</td>
               <td data-label="Recorrido" className="py-2.5 pr-3"><div className="relative h-5" role="img" aria-label={`Del ${corta(c.fecha_inicio)} al ${corta(fin)}`}>
                 <div className="absolute inset-y-[7px] left-0 right-0 rounded bg-dte-fondo" />
                 <div className="absolute inset-y-[5px] rounded" style={{ left: `${pos(c.fecha_inicio)}%`, width: `${Math.max(0.8, pos(fin) - pos(c.fecha_inicio))}%`, background: st.color, opacity: estado === 'finalizado' ? 0.55 : 0.85 }} title={`${corta(c.fecha_inicio)} → ${c.fecha_cierre ? `cierre ${corta(c.fecha_cierre)}` : `último ${corta(ultima)}`}`} />

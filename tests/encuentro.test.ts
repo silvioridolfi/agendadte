@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contarUnidades, unidadDe, cambiaLaSerie, clubesDelDia, destinatarioEstudiantes, inscriptosDelClub, opcionesDestinatarios, partirDestinatarios, PROPUESTAS_DE_CLUB, unirDestinatarios, estadoAlCompletar, horariosSePisan, minEncuentros, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
+import { escuelaDelClub, contarUnidades, unidadDe, cambiaLaSerie, clubesDelDia, destinatarioEstudiantes, inscriptosDelClub, opcionesDestinatarios, partirDestinatarios, PROPUESTAS_DE_CLUB, unirDestinatarios, estadoAlCompletar, horariosSePisan, minEncuentros, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
 
 describe('mínimo de encuentros (sólo informativo)', () => {
   it('los clubes tienen mínimo 8; las prácticas y el resto, ninguno', () => {
@@ -130,5 +130,20 @@ describe('prácticas por curso (cohorte)', () => {
     const lista = [{ c: g('1', '7° Informática'), estado: 'activo' }, { c: g('2', '7° Informática'), estado: 'finalizado' }, { c: g('3', null), estado: 'finalizado' }]
     expect(contarUnidades(lista)).toEqual({ total: 2, porEstado: { activo: 1, finalizado: 1 } })
     expect(contarUnidades([])).toEqual({ total: 0, porEstado: {} })
+  })
+})
+
+describe('escuela con la que se identifica un grupo', () => {
+  const e3 = { id: 'e3' }, e31 = { id: 'e31' }
+  it('en las prácticas es la escuela de origen; en los clubes, la sede', () => {
+    expect(escuelaDelClub({ tipo: 'PRÁCTICAS PROFESIONALIZANTES', school: e31, escuela_origen: e3 })).toBe(e3)
+    expect(escuelaDelClub({ tipo: 'PRÁCTICAS PROFESIONALIZANTES', school: null, escuela_origen: e3 })).toBe(e3)
+    expect(escuelaDelClub({ tipo: 'PRÁCTICAS PROFESIONALIZANTES', school: e31, escuela_origen: null })).toBe(e31)
+    expect(escuelaDelClub({ tipo: 'CLUB DE TECNOLOGÍA', school: e31, escuela_origen: e3 })).toBe(e31)
+  })
+  it('los grupos de un curso sin sede propia son una unidad, y no se mezclan con otra escuela de origen', () => {
+    const g = (id: string, origen: string) => ({ id, school_id: null, lugar: null, cohorte: '7° Informática', escuela_origen: { id: origen } })
+    expect(unidadDe(g('a', 'e3'))).toBe(unidadDe(g('b', 'e3')))
+    expect(unidadDe(g('a', 'e3'))).not.toBe(unidadDe(g('b', 'e9')))
   })
 })
