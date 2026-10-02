@@ -17,6 +17,10 @@ export async function GET(request: Request) {
   const db = supabaseServer()
   const resultados: Record<string, unknown> = {}
   const inicio = Date.now()
+  // Registro de la ejecución (ver cron_ejecuciones): se abre al empezar y se completa al terminar; si queda sin `fin`, la función se cortó.
+  const registro = await db.from('cron_ejecuciones').insert({ tarea: 'fotos' }).select('id').single()
+  const idRegistro = registro.data?.id as string | undefined
+  const anotar = async (cambios: Record<string, unknown>) => { if (idRegistro) await db.from('cron_ejecuciones').update(cambios).eq('id', idRegistro) }
   // PVE del mes anterior: aviso el 1.er día hábil y recordatorio el 4.º a quienes todavía no la subieron (vence el 5.º).
   // Va primero (sólo base de datos): ordenar fotos y revisar Drive de todos los FED puede agotar el tiempo de la función.
   try {
@@ -38,11 +42,16 @@ export async function GET(request: Request) {
   } catch (e) { resultados.recordatorioPve = { error: e instanceof Error ? e.message : String(e) } }
 
   const { data: feds } = await db.from('feds').select('id, nombre_completo, rol').not('carpeta_fotos_id', 'is', null)
+  await anotar({ feds_total: feds?.length ?? 0 })
+  let procesados = 0
   // Fotos y PVE de cada FED, con tope de tiempo: lo que no alcance se retoma la noche siguiente (la función se corta a los 60 s).
   for (const f of feds ?? []) {
     if (Date.now() - inicio > TOPE_MS) { resultados.cortadoPorTiempo = true; break }
     try { resultados[f.nombre_completo] = await ordenarFotos(f.id) } catch (e) { resultados[f.nombre_completo] = { error: e instanceof Error ? e.message : String(e) } }
     if (f.rol === 'fed') try { resultados[`${f.nombre_completo} · PVE`] = await revisarPve(f.id) } catch (e) { resultados[`${f.nombre_completo} · PVE`] = { error: e instanceof Error ? e.message : String(e) } }
+    procesados++
+    await anotar({ feds_procesados: procesados })
   }
+  await anotar({ fin: new Date().toISOString(), feds_procesados: procesados, cortado_por_tiempo: resultados.cortadoPorTiempo === true, resultado: resultados })
   return Response.json({ ok: true, resultados })
 }
