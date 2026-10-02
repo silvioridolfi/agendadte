@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowLeft, CalendarPlus, Loader2, MapPin, Navigation, Search, School as SchoolIcon } from 'lucide-react'
+import { ArrowLeft, Building2, CalendarClock, CalendarPlus, History, Loader2, MapPin, Navigation, Search, School as SchoolIcon, Trophy, Users, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { type Accion, type AgendaItem, type Estado, type Fed, type School } from '@/lib/agenda'
+import { FAMILIAS, type Familia } from '@/lib/ayuda/estilo'
 import { resumenHistorial, separarHistorial, type FichaEscuela, type FilaHistorial } from '@/lib/escuela'
 import { hoyAR } from '@/lib/hora'
 import { titleCase } from '@/lib/format'
@@ -14,8 +15,24 @@ import { ActionChip, Skeleton, StatusBadge, ErrorBox, cap, errMsg, fmt, parse, s
 const num = new Intl.NumberFormat('es-AR')
 const fechaCorta = (f: string) => cap(fmt(parse(f), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).replace(/\./g, ''))
 
+// Color por tipo de dato (las mismas familias de la ayuda): ubicación, institución, alumnado y cada sección del historial.
+type Tono = { familia: Familia, Icono: LucideIcon }
+const TONO = {
+  ubicacion: { familia: 'celeste', Icono: MapPin }, institucion: { familia: 'violeta', Icono: Building2 }, alumnado: { familia: 'amarillo', Icono: Users },
+  proximas: { familia: 'celeste', Icono: CalendarClock }, clubes: { familia: 'violeta', Icono: Trophy }, historial: { familia: 'azul', Icono: History },
+} satisfies Record<string, Tono>
+const sinComillas = (t: string | null) => (t ? titleCase(t.replace(/["“”]/g, '').trim()) : null)
+
 function Dato({ label, children }: { label: string, children: React.ReactNode }) {
-  return children ? <div className="min-w-0"><dt className="text-xs font-semibold uppercase tracking-wider text-dte-gris">{label}</dt><dd className="text-sm">{children}</dd></div> : null
+  return children ? <div className="min-w-0"><dt className="text-xs font-semibold text-dte-gris">{label}</dt><dd className="text-sm font-medium">{children}</dd></div> : null
+}
+
+function Tarjeta({ tono, titulo, children }: { tono: Tono, titulo: string, children: React.ReactNode }) {
+  const f = FAMILIAS[tono.familia]
+  return <section className={`min-w-0 rounded-card border-l-4 p-3.5 ${f.fondo} ${f.borde}`}>
+    <h3 className={`mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider ${f.texto}`}><tono.Icono className="size-4" aria-hidden />{titulo}</h3>
+    <dl className="flex flex-col gap-2">{children}</dl>
+  </section>
 }
 
 function Fila({ f, feds, onOpen }: { f: FilaHistorial, feds: Fed[], onOpen: (i: AgendaItem) => void }) {
@@ -28,11 +45,21 @@ function Fila({ f, feds, onOpen }: { f: FilaHistorial, feds: Fed[], onOpen: (i: 
   return <li>{f.item ? <button type="button" onClick={() => onOpen(f.item!)} className={`${base} transition hover:bg-dte-tinte`}>{cuerpo}</button> : <div className={base}>{cuerpo}</div>}</li>
 }
 
-function Lista({ titulo, filas, feds, onOpen }: { titulo: string, filas: FilaHistorial[], feds: Fed[], onOpen: (i: AgendaItem) => void }) {
-  return filas.length ? <section>
-    <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">{titulo} ({filas.length})</h3>
-    <ul className="max-h-80 divide-y divide-dte-linea overflow-y-auto rounded-tile border border-dte-linea">{filas.map(f => <Fila key={f.id} f={f} feds={feds} onOpen={onOpen} />)}</ul>
-  </section> : null
+// Sección con título de color y contador. Muestra las primeras `inicial` filas y el resto con "Ver más" (sin scroll interno: la ficha tiene uno solo).
+function Seccion({ tono, titulo, cantidad, children }: { tono: Tono, titulo: string, cantidad: number, children: React.ReactNode }) {
+  const f = FAMILIAS[tono.familia]
+  return <section>
+    <h3 className="mb-2 flex items-center gap-2 text-sm font-bold"><span className={`flex size-6 items-center justify-center rounded-md ${f.fondo} ${f.texto}`}><tono.Icono className="size-3.5" aria-hidden /></span>{titulo}<span className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${f.fondo} ${f.texto}`}>{cantidad}</span></h3>
+    {children}
+  </section>
+}
+
+function Filas({ filas, feds, onOpen, inicial }: { filas: FilaHistorial[], feds: Fed[], onOpen: (i: AgendaItem) => void, inicial: number }) {
+  const [visibles, setVisibles] = useState(inicial)
+  return <>
+    <ul className="divide-y divide-dte-linea overflow-hidden rounded-tile border border-dte-linea">{filas.slice(0, visibles).map(f => <Fila key={f.id} f={f} feds={feds} onOpen={onOpen} />)}</ul>
+    {filas.length > visibles && <Button type="button" variant="ghost" size="sm" onClick={() => setVisibles(v => v + 15)} className="mt-1 w-full text-dte-petroleo">Ver más ({filas.length - visibles})</Button>}
+  </>
 }
 
 function Ficha({ ficha, feds, puedeAgendar, onAgendar, onOpen }: { ficha: FichaEscuela, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
@@ -40,34 +67,42 @@ function Ficha({ ficha, feds, puedeAgendar, onAgendar, onOpen }: { ficha: FichaE
   const { proximas, anteriores } = separarHistorial(historial, hoyAR())
   const r = resumenHistorial(historial)
   const fedDe = (id: string) => feds.find(x => x.id === id)?.nombre_completo ?? ''
-  const alumnos = e.matricula != null ? `${num.format(e.matricula)}${e.varones != null && e.mujeres != null ? ` (${num.format(e.varones)} varones, ${num.format(e.mujeres)} mujeres)` : ''}` : null
+  const stats: [string | number, string, Familia][] = [[r.realizadas, 'acciones realizadas', 'azul'], [r.feds, r.feds === 1 ? 'FED las hizo' : 'FED distintos', 'violeta'], [r.ultima ? fmt(parse(r.ultima), { day: 'numeric', month: 'short' }).replace(/\./g, '') : '—', 'última visita', 'celeste']]
   return <div className="flex flex-col gap-5">
-    <div>
-      <p className="font-bold leading-snug">{schoolName(e)}</p>
-      <p className="text-sm text-dte-gris">CUE {e.cue ?? '—'}{schoolPlace(e) ? ` · ${schoolPlace(e)}` : ''}</p>
-    </div>
-    <dl className="grid gap-3 sm:grid-cols-2">
-      <Dato label="Dirección">{e.direccion && <>{titleCase(e.direccion)}{e.mapa && <> · <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.mapa)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-dte-petroleo underline underline-offset-2"><Navigation className="size-3.5" aria-hidden />Cómo llegar</a></>}</>}</Dato>
-      <Dato label="FED a cargo">{e.fed_a_cargo}</Dato>
-      <Dato label="Nivel y modalidad">{[e.nivel, e.modalidad].filter(Boolean).join(' · ')}</Dato>
-      <Dato label="Turnos">{e.turnos && titleCase(e.turnos)}</Dato>
-      <Dato label="Matrícula">{alumnos}</Dato>
-      <Dato label="Secciones">{e.secciones != null && num.format(e.secciones)}</Dato>
-      <Dato label="Ámbito">{e.ambito}</Dato>
-    </dl>
+    <header className="rounded-card bg-dte-degradado p-4 text-white">
+      <div className="flex items-start gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/15"><SchoolIcon className="size-5" aria-hidden /></span>
+        <div className="min-w-0"><p className="font-bold leading-snug">{schoolName(e)}</p><p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/85"><span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold">CUE {e.cue ?? '—'}</span>{schoolPlace(e)}</p></div>
+      </div>
+      {puedeAgendar && <Button type="button" onClick={() => onAgendar({ id: e.id, cue: e.cue, nombre: e.nombre, distrito: e.distrito, ciudad: e.ciudad })} className="mt-3 w-full bg-white text-dte-petroleo hover:bg-white/90 sm:w-auto"><CalendarPlus data-icon="inline-start" />Agendar acá</Button>}
+    </header>
     <ul className="grid grid-cols-3 gap-2 text-center">
-      {[[r.realizadas, 'acciones realizadas'], [r.feds, r.feds === 1 ? 'FED las hizo' : 'FED distintos'], [r.ultima ? fmt(parse(r.ultima), { day: 'numeric', month: 'short' }).replace(/\./g, '') : '—', 'última visita']].map(([v, l]) => <li key={l} className="rounded-tile bg-dte-fondo px-2 py-2"><p className="text-base font-bold tabular-nums leading-tight sm:text-lg">{v}</p><p className="text-xs text-dte-gris">{l}</p></li>)}
+      {stats.map(([v, l, fam]) => <li key={l} className={`rounded-tile px-2 py-2.5 ${FAMILIAS[fam].fondo}`}><p className={`text-xl font-bold tabular-nums leading-tight ${FAMILIAS[fam].texto}`}>{v}</p><p className="text-xs text-dte-gris">{l}</p></li>)}
     </ul>
-    {puedeAgendar && <Button type="button" onClick={() => onAgendar({ id: e.id, cue: e.cue, nombre: e.nombre, distrito: e.distrito, ciudad: e.ciudad })} className="self-start"><CalendarPlus data-icon="inline-start" />Agendar acá</Button>}
-    <Lista titulo="Próximas acciones" filas={proximas} feds={feds} onOpen={onOpen} />
-    {clubes.length > 0 && <section>
-      <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-dte-gris">Clubes y prácticas ({clubes.length})</h3>
-      <ul className="divide-y divide-dte-linea rounded-tile border border-dte-linea">{clubes.map(c => <li key={c.id} className="px-3 py-2.5 text-sm">
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Tarjeta tono={TONO.ubicacion} titulo="Ubicación">
+        <Dato label="Dirección">{e.direccion && <>{titleCase(e.direccion)}{e.mapa && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.mapa)}`} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 font-semibold text-dte-petroleo underline underline-offset-2"><Navigation className="size-3.5" aria-hidden />Cómo llegar</a>}</>}</Dato>
+        <Dato label="Ámbito">{e.ambito}</Dato>
+      </Tarjeta>
+      <Tarjeta tono={TONO.institucion} titulo="Institución">
+        <Dato label="Nivel y modalidad">{[e.nivel, e.modalidad].filter(Boolean).join(' · ')}</Dato>
+        <Dato label="Turnos">{sinComillas(e.turnos)}</Dato>
+        <Dato label="FED a cargo">{e.fed_a_cargo}</Dato>
+      </Tarjeta>
+      {(e.matricula != null || e.secciones != null) && <Tarjeta tono={TONO.alumnado} titulo="Alumnado">
+        <Dato label="Matrícula">{e.matricula != null && <>{num.format(e.matricula)}{e.varones != null && e.mujeres != null && <span className="font-normal text-dte-gris"> · {num.format(e.varones)} varones, {num.format(e.mujeres)} mujeres</span>}</>}</Dato>
+        <Dato label="Secciones">{e.secciones != null && num.format(e.secciones)}</Dato>
+      </Tarjeta>}
+    </div>
+    {proximas.length > 0 && <Seccion tono={TONO.proximas} titulo="Próximas acciones" cantidad={proximas.length}><Filas filas={proximas} feds={feds} onOpen={onOpen} inicial={5} /></Seccion>}
+    {clubes.length > 0 && <Seccion tono={TONO.clubes} titulo="Clubes y prácticas" cantidad={clubes.length}>
+      <ul className="divide-y divide-dte-linea overflow-hidden rounded-tile border border-dte-linea">{clubes.map(c => <li key={c.id} className="px-3 py-2.5 text-sm">
         <p className="font-semibold">{cap(c.tipo.toLowerCase())}{c.grupo ? ` · ${c.grupo}` : ''}{c.esOrigen && <span className="ml-1.5 text-xs font-normal text-dte-gris">(escuela de origen)</span>}</p>
         <p className="text-xs text-dte-gris">{[c.propuesta, fedDe(c.fed_id), `${c.realizados} ${c.realizados === 1 ? 'encuentro realizado' : 'encuentros realizados'}`, c.fecha_cierre ? 'cerrado' : 'en curso'].filter(Boolean).join(' · ')}</p>
       </li>)}</ul>
-    </section>}
-    {anteriores.length ? <Lista titulo="Historial" filas={anteriores} feds={feds} onOpen={onOpen} /> : !proximas.length && <p className="rounded-tile border border-dashed border-dte-linea px-3 py-4 text-center text-sm text-dte-gris">Todavía no hay acciones agendadas en esta escuela.</p>}
+    </Seccion>}
+    {anteriores.length > 0 ? <Seccion tono={TONO.historial} titulo="Historial" cantidad={anteriores.length}><Filas filas={anteriores} feds={feds} onOpen={onOpen} inicial={8} /></Seccion>
+      : !proximas.length && <p className="rounded-tile border border-dashed border-dte-linea px-3 py-4 text-center text-sm text-dte-gris">Todavía no hay acciones agendadas en esta escuela.</p>}
   </div>
 }
 

@@ -67,6 +67,7 @@ La **lupa** de la barra de arriba abre el buscador de escuelas. Escribí el nomb
 - **Próximas acciones** planificadas en esa escuela.
 - **Clubes y prácticas** que funcionan ahí, con su avance.
 - **Historial:** acciones anteriores, de la más nueva a la más vieja, con quién las hizo.
+Los datos de la escuela se agrupan en tarjetas de color (ubicación, institución y alumnado) y las listas largas muestran las primeras acciones y el botón **Ver más**.
 ## Qué ves de las acciones de otros
 De las acciones de otros integrantes ves la fecha, el tipo, el estado y quién la hizo. El detalle (descripción, participantes, fotos) lo ves solo en las tuyas, en las que te etiquetaron y, si sos CED, en todas.
 ## Agendar desde la ficha
