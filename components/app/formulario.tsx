@@ -96,7 +96,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   const [participantes, setParticipantes] = useState<string[]>(() => item?.participantes?.map(p => p.fed_id) ?? preset?.participantes ?? [])
   const companeros = useMemo(() => feds.filter(f => f.id !== fed.id).sort((a, b) => (a.rol === b.rol ? az(a.nombre_completo, b.nombre_completo) : a.rol === 'coordinacion' ? 1 : -1)), [feds, fed.id])
   const togglePart = (id: string) => setParticipantes(l => (l.includes(id) ? l.filter(x => x !== id) : [...l, id]))
-  const [school, setSchool] = useState<School | null>(item?.school ?? null)
+  const [school, setSchool] = useState<School | null>(item?.school ?? preset?.school ?? null)
   // Encuentro editable desde la app: el propio (origen app) o, si no hay, el primero importado.
   const enc0 = item?.encuentros?.find(e => e.origen === 'app') ?? item?.encuentros?.[0]
   // Formulario exclusivo de clubes y prácticas (abierto desde su sección, o al editar un encuentro): sin tipos de acción ni campos generales.

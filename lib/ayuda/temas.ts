@@ -59,6 +59,18 @@ El botón **Guardar** se habilita al modificar algún dato; **Descartar** revier
 - **Compartida:** acción de otro integrante en la que te incorporaron. **+1, +2…** es la cantidad de acompañantes.
 - **Ícono de cámara:** la acción tiene fotos en Drive.
 Los feriados, recesos y aniversarios distritales se marcan en el calendario; los eventos DTE, con una marca violeta.` },
+  { id: 'buscador', titulo: 'Buscador de escuelas', para: ['fed', 'ced'], md: () => `
+La **lupa** de la barra de arriba abre el buscador de escuelas. Escribí el nombre, la sigla o el CUE (por ejemplo "EP 4" o "ees 31") y elegí la escuela.
+## Qué muestra la ficha
+- **Datos:** CUE, distrito, dirección con **Cómo llegar**, FED a cargo, nivel, modalidad, turnos, matrícula y secciones.
+- **Resumen:** acciones realizadas, cuántos FED distintos las hicieron y la fecha de la última visita.
+- **Próximas acciones** planificadas en esa escuela.
+- **Clubes y prácticas** que funcionan ahí, con su avance.
+- **Historial:** acciones anteriores, de la más nueva a la más vieja, con quién las hizo.
+## Qué ves de las acciones de otros
+De las acciones de otros integrantes ves la fecha, el tipo, el estado y quién la hizo. El detalle (descripción, participantes, fotos) lo ves solo en las tuyas, en las que te etiquetaron y, si sos CED, en todas.
+## Agendar desde la ficha
+**Agendar acá** abre el formulario con la escuela ya elegida. No aparece cuando estás mirando la agenda de otra persona (solo lectura).` },
 
   { id: 'registro', titulo: 'Registrar una acción', para: ['fed'], md: () => `
 ## Paso a paso

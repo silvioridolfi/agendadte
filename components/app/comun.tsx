@@ -110,6 +110,7 @@ export const listarUsuarios = call(api.listarUsuarios)
 export const generarPasswordTemporal = call(api.generarPasswordTemporal)
 export const getFeds = call(api.getFeds)
 export const searchSchools = call(api.searchSchools)
+export const getFichaEscuela = call(api.getFichaEscuela)
 export const getFedItems = call(api.getFedItems)
 export const buscarOrganismos = call(api.buscarOrganismos)
 export const ubicacionDe = call(api.ubicacionDe)
@@ -248,7 +249,7 @@ export function useItems(load: () => Promise<AgendaItem[]>, deps: unknown[], cac
 // =====================================================================
 
 // `modo`: formulario exclusivo de clubes/prácticas ('nuevo' = alta; 'encuentro' = cargar un encuentro de uno activo).
-export type ItemPreset = { accion?: Accion, sub_accion?: string, participantes?: string[], club_id?: string, modo?: 'nuevo' | 'encuentro' }
+export type ItemPreset = { school?: School, accion?: Accion, sub_accion?: string, participantes?: string[], club_id?: string, modo?: 'nuevo' | 'encuentro' }
 
 // =====================================================================
 

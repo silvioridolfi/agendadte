@@ -22,7 +22,7 @@ export function useNovedadesNuevas(rol: Rol): [boolean, () => void] {
 
 const ICONOS: Record<Icono, LucideIcon> = {
   llave: KeyRound, usuario: UserRound, calendario: CalendarDays, nuevo: PlusCircle, estado: ClipboardCheck, licencia: CalendarOff, clubes: Trophy, fotos: Camera,
-  pve: FileText, tablero: LayoutDashboard, campana: Bell, pregunta: CircleHelp, rol: Users, indicadores: Gauge, equipo: Users, ausencias: Stethoscope,
+  pve: FileText, tablero: LayoutDashboard, campana: Bell, pregunta: CircleHelp, rol: Users, indicadores: Gauge, equipo: Users, ausencias: Stethoscope, buscador: Search,
 }
 
 // Texto con **negrita**: lo que termina en ":" es un rótulo (negrita de color); el resto, el nombre de un botón o pantalla, va como etiqueta.
