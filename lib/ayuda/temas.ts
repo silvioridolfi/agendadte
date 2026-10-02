@@ -217,8 +217,9 @@ El **Tablero** presenta tu información del período elegido (día, semana, mes 
 Solo las acciones **realizadas**. No se computan las planificadas, reprogramadas o canceladas, ni las licencias y paros. Cada número del resumen permite ver las acciones que lo componen.
 [i] Las acciones de las que solo participás como acompañante no cuentan en tus métricas: cuentan para quien las creó.
 ## Mi informe del período
-- **Excel:** hoja Informe (indicadores del período) y hoja Acciones (detalle de las realizadas).
-- **PDF:** se abre el informe con el logo institucional; **Guardar PDF** lo descarga (en el celular: Compartir › Imprimir).
+- **Acciones acompañadas:** el informe suma un indicador aparte con las acciones realizadas de otros integrantes en las que te etiquetaron. No se suma al total ni a las categorías, y no cuentan las que rechazaste.
+- **Excel:** hoja Informe (indicadores del período), hoja Acciones (detalle de las realizadas) y, si hay, hoja Acompañadas.
+- **PDF:** se abre el informe con el logo institucional; **Guardar PDF** lo descarga (en el celular: Compartir › Imprimir). Al final lista las acciones acompañadas.
 Además, **Exportar Excel** (en la agenda y en el tablero) descarga la planilla completa del período, con las hojas Resumen, Acciones, Capacitaciones, Clubes y Prácticas.
 [i] Enero es receso: los informes no cuentan enero (los de clubes arrancan en marzo).` },
 
@@ -301,7 +302,7 @@ Desde las iniciales: **Mi perfil y DD.JJ.** (horario DTE y otros cargos), **Foto
 Vistas **Día** (franja horaria por FED), **Semana** y **Próximas**. **En territorio** muestra las acciones en escuelas: incluye la oficina R1 y las reuniones presenciales que se hacen dentro de una escuela; no incluye las reuniones virtuales, con Jefatura o en la sede DTE, ni el resto de lo institucional. **Todas las acciones** incluye las institucionales. Las ausencias figuran como **Lic.** o **Paro**.
 ## Mi equipo
 Cada tarjeta presenta las acciones realizadas y planificadas del período, clubes y prácticas, la fecha de la última acción realizada y los horarios de la DD.JJ. Incluye tres accesos:
-- **Informe:** el mismo informe que el FED ve en su tablero, descargable en Excel o PDF.
+- **Informe:** el mismo informe que el FED ve en su tablero (con sus acciones acompañadas aparte), descargable en Excel o PDF.
 - **Ver acciones del FED:** abre el listado filtrado por ese integrante.
 - **Carpeta de fotos:** acceso a su carpeta de Drive (si la configuró).
 ## Exportar Excel

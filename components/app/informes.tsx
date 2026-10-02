@@ -16,12 +16,14 @@ const fechaAR = (s: string) => { const [y, m, d] = s.split('-'); return `${d}/${
 export const personaDe = (f: Fed): Persona => ({ nombre: f.nombre_completo, rol: f.rol === 'coordinacion' ? 'Coordinador de Educación Digital (CED)' : 'Facilitador de Educación Digital (FED)', distritos: f.distritos_a_cargo, carga: f.carga_horaria })
 
 // PDF: una página de informe con la identidad DTE que se guarda con "Imprimir → Guardar como PDF" del navegador.
-function imprimirInforme({ titulo, persona, desde, hasta, indicadores, items, feds }: { titulo: string, persona: Persona, desde: string, hasta: string, indicadores: Indicador[], items: AgendaItem[], feds: Fed[] }) {
+function imprimirInforme({ titulo, persona, desde, hasta, indicadores, items, acompanadas, feds }: { titulo: string, persona: Persona, desde: string, hasta: string, indicadores: Indicador[], items: AgendaItem[], acompanadas: AgendaItem[], feds: Fed[] }) {
   const w = window.open('', '_blank')
   if (!w) throw new Error('El navegador bloqueó la ventana del informe: permití ventanas emergentes para este sitio.')
   const fedName = (id: string) => feds.find(f => f.id === id)?.nombre_completo ?? ''
   const hechas = [...items].filter(cuentaHecha).sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))
   const variosResponsables = new Set(hechas.map(i => i.fed_id)).size > 1
+  const acomp = [...acompanadas].sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''))
+  const lugarDe = (i: AgendaItem) => i.school?.nombre ? `${titleCase(i.school.nombre)}${i.school.cue ? ` (CUE ${i.school.cue})` : ''}` : i.lugar ?? (i.modalidad === 'Virtual' ? 'Virtual' : '')
   const logo = `${location.origin}/brand/oficial-color.png`
   const graf = graficosInforme({ items, desde, hasta })
   w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>${esc(titulo)} · ${esc(persona.nombre)}</title>
@@ -44,6 +46,7 @@ h2 { color: #05476e; font-size: 12.5pt; margin: 6mm 0 2mm; }
 .graficos { break-before: page; }
 .graf { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3mm; align-items: start; }
 .graf svg { display: block; width: 100%; height: auto; break-inside: avoid; }
+p.nota { margin: 0 0 2mm; font-size: 8.5pt; color: #5b6474; }
 table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
 th { background: #05476e; color: #fff; text-align: left; padding: 1.8mm 2mm; }
 td { padding: 1.6mm 2mm; border-bottom: 1px solid #e3e1ea; vertical-align: top; }
@@ -81,6 +84,10 @@ ${graf.length ? `<section class="graficos"><h2>Gráficos del período</h2><div c
 ${hechas.length ? `<div class="tabla"><table><thead><tr><th>Fecha</th>${variosResponsables ? '<th>Responsable</th>' : ''}<th>Acción</th><th>Escuela / lugar</th><th>Tema / detalle</th></tr></thead><tbody>
 ${hechas.map(i => `<tr><td>${fechaAR(i.fecha)}</td>${variosResponsables ? `<td>${esc(fedName(i.fed_id))}</td>` : ''}<td>${esc(titleCase(i.accion))}</td><td>${esc(i.school?.nombre ? `${titleCase(i.school.nombre)}${i.school.cue ? ` (CUE ${i.school.cue})` : ''}` : i.lugar ?? (i.modalidad === 'Virtual' ? 'Virtual' : ''))}</td><td>${esc(i.sub_accion ?? '')}</td></tr>`).join('')}
 </tbody></table></div>` : '<p>No hay acciones realizadas en el período.</p>'}
+${acomp.length ? `<h2>Acciones acompañadas (${acomp.length})</h2><p class="nota">Acciones de otros integrantes en las que participó. No se suman a los indicadores de arriba.</p>
+<div class="tabla"><table><thead><tr><th>Fecha</th><th>Responsable</th><th>Acción</th><th>Escuela / lugar</th><th>Tema / detalle</th></tr></thead><tbody>
+${acomp.map(i => `<tr><td>${fechaAR(i.fecha)}</td><td>${esc(fedName(i.fed_id))}</td><td>${esc(titleCase(i.accion))}</td><td>${esc(lugarDe(i))}</td><td>${esc(i.sub_accion ?? '')}</td></tr>`).join('')}
+</tbody></table></div>` : ''}
 <div class="pie"><img src="${logo}" alt="Dirección de Tecnología Educativa · DGCyE · Gobierno de la Provincia de Buenos Aires"><span>Agenda Territorial · ${esc(persona.nombre)} · ${fechaAR(desde)} al ${fechaAR(hasta)}</span></div>
 <script>
 // En la app instalada (iPhone) la ventana no tiene botón de cerrar: si no se puede cerrar, vuelve a la agenda.
@@ -91,7 +98,7 @@ Promise.all([document.fonts.ready, new Promise(r => { const i = document.querySe
 }
 
 // Bloque con los indicadores del período, el detalle de cada uno y la descarga en Excel o PDF.
-export function InformeBloque({ titulo, subtitulo, persona, desde, hasta, indicadores, items, feds, onSelect }: { titulo: string, subtitulo: string, persona: Persona, desde: string, hasta: string, indicadores: Indicador[], items: AgendaItem[], feds: Fed[], onSelect?: (i: AgendaItem) => void }) {
+export function InformeBloque({ titulo, subtitulo, persona, desde, hasta, indicadores, items, acompanadas = [], feds, onSelect }: { titulo: string, subtitulo: string, persona: Persona, desde: string, hasta: string, indicadores: Indicador[], items: AgendaItem[], acompanadas?: AgendaItem[], feds: Fed[], onSelect?: (i: AgendaItem) => void }) {
   const [drill, setDrill] = useState<{ title: string, subtitle?: string, rows: DrillRow[] } | null>(null)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
@@ -101,9 +108,9 @@ export function InformeBloque({ titulo, subtitulo, persona, desde, hasta, indica
   })) })
   async function excel() {
     setBusy('xlsx'); setError('')
-    try { const { exportarInforme } = await import('@/lib/exportar'); await exportarInforme({ titulo, persona, desde, hasta, indicadores, items, feds }) } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
+    try { const { exportarInforme } = await import('@/lib/exportar'); await exportarInforme({ titulo, persona, desde, hasta, indicadores, items, acompanadas, feds }) } catch (e) { setError(errMsg(e)) } finally { setBusy('') }
   }
-  function pdf() { setError(''); try { imprimirInforme({ titulo, persona, desde, hasta, indicadores, items, feds }) } catch (e) { setError(errMsg(e)) } }
+  function pdf() { setError(''); try { imprimirInforme({ titulo, persona, desde, hasta, indicadores, items, acompanadas, feds }) } catch (e) { setError(errMsg(e)) } }
   return <section className="mt-4 rounded-card border border-dte-linea bg-white p-4 shadow-e1 sm:p-5" aria-label={titulo}>
     <DrillDialog drill={drill} onClose={() => setDrill(null)} />
     <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
