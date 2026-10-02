@@ -5,7 +5,7 @@ import type { Rol } from '@/lib/ayuda/temas'
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[] }
 
 export const NOVEDADES: Novedad[] = [
-  { fecha: '2026-10-02', titulo: 'Buscador de escuelas', texto: 'Con la lupa de arriba buscás cualquier escuela por nombre, sigla o CUE y ves su ficha: datos, próximas acciones, clubes y prácticas, y el historial de lo que se hizo ahí. Desde la ficha podés agendar una acción con la escuela ya elegida.' },
+  { fecha: '2026-10-02', titulo: 'Buscador de escuelas', texto: 'Con la lupa de arriba buscás cualquier escuela por nombre, sigla o CUE y ves su ficha: datos en tarjetas de color, próximas acciones, clubes y prácticas, y el historial de lo que se hizo ahí. Desde la ficha podés agendar una acción con la escuela ya elegida.' },
   { fecha: '2026-10-02', titulo: 'Más movimiento, siempre suave', texto: 'Los números del tablero suben hasta su valor, las barras crecen, el banner de avisos se desliza al aparecer, la campanita se sacude una vez cuando llega algo nuevo y las pantallas que cargan muestran un brillo suave. Con "reducir movimiento" activado en tu dispositivo, todo aparece quieto.' },
   { fecha: '2026-10-02', titulo: 'Acciones acompañadas en tu informe', texto: 'Tu informe del período muestra aparte las acciones de otros integrantes en las que te etiquetaron y que se realizaron. No se suman a tus totales, no cuentan las que rechazaste y también salen en el Excel y el PDF.' },
   { fecha: '2026-10-01', titulo: 'Los paros se registran como realizados', texto: 'Al agendar un día como Paro queda directamente como realizado, aunque la fecha todavía no haya llegado. Igual podés editarlo. Además, el banner de avisos ahora ocupa menos lugar en el celular.' },
