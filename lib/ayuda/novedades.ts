@@ -5,6 +5,7 @@ import type { Rol } from '@/lib/ayuda/temas'
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[] }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-02', titulo: 'Acciones acompañadas en tu informe', texto: 'Tu informe del período muestra aparte las acciones de otros integrantes en las que te etiquetaron y que se realizaron. No se suman a tus totales, no cuentan las que rechazaste y también salen en el Excel y el PDF.' },
   { fecha: '2026-10-01', titulo: 'Los paros se registran como realizados', texto: 'Al agendar un día como Paro queda directamente como realizado, aunque la fecha todavía no haya llegado. Igual podés editarlo. Además, el banner de avisos ahora ocupa menos lugar en el celular.' },
   { fecha: '2026-10-01', titulo: 'Una agenda que se mueve con suavidad', texto: 'Las pantallas y las listas entran con un fundido corto, al marcar una acción como realizada se dibuja una tilde, lo que acabás de guardar se destaca un instante y los desplegables abren y cierran sin saltos. Si tenés activado "reducir movimiento" en tu dispositivo, no se anima nada.' },
   { fecha: '2026-10-01', titulo: 'Ayuda dentro de la agenda', texto: 'Desde el menú de las iniciales › Ayuda encontrás el manual completo, con buscador, siempre al día con la versión de la agenda. Acá mismo vas a ver cada novedad.' },

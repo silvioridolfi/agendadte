@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { InformeBloque, personaDe } from '@/components/app/informes'
-import { informeFed } from '@/lib/informes'
+import { accionesAcompanadas, informeFed } from '@/lib/informes'
 import { Camera, Clock, FileBarChart, MapPin } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { titleCase } from '@/lib/format'
@@ -80,7 +80,7 @@ export function MiEquipoView({ feds, todos, items, clubes, noHabiles, periodo, d
     <Dialog open={!!informe} onOpenChange={o => !o && setInforme(null)}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto bg-white sm:max-w-2xl">
         <DialogTitle className="sr-only">Informe de {informe?.nombre_completo}</DialogTitle>
-        {informe && <InformeBloque titulo={`Informe de ${informe.nombre_completo}`} subtitulo={`Acciones realizadas en ${periodo.toLowerCase()}.`} persona={personaDe(informe)} desde={desde} hasta={hasta} indicadores={informeFed((items ?? []).filter(i => i.fed_id === informe.id))} items={(items ?? []).filter(i => i.fed_id === informe.id)} feds={todos} onSelect={i => { setInforme(null); onSelect(i) }} />}
+        {informe && <InformeBloque titulo={`Informe de ${informe.nombre_completo}`} subtitulo={`Acciones realizadas en ${periodo.toLowerCase()}.`} persona={personaDe(informe)} desde={desde} hasta={hasta} indicadores={informeFed((items ?? []).filter(i => i.fed_id === informe.id), accionesAcompanadas(items ?? [], informe.id))} items={(items ?? []).filter(i => i.fed_id === informe.id)} acompanadas={accionesAcompanadas(items ?? [], informe.id)} feds={todos} onSelect={i => { setInforme(null); onSelect(i) }} />}
       </DialogContent>
     </Dialog>
   </div>

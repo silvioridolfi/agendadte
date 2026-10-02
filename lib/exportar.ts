@@ -191,7 +191,7 @@ export function agregarHojaGraficos(wb: Workbook, graficos: Grafico[], pngs: (Ar
 
 // Informe del período (coordinación o un FED): datos de la persona, indicadores y detalle de acciones.
 export type Persona = { nombre: string, rol: string, distritos: string[], carga: string | null }
-export async function exportarInforme({ titulo, persona, desde, hasta, indicadores, items, feds }: { titulo: string, persona: Persona, desde: string, hasta: string, indicadores: { label: string, valor: number, detalle?: string }[], items: AgendaItem[], feds: Fed[] }) {
+export async function exportarInforme({ titulo, persona, desde, hasta, indicadores, items, acompanadas = [], feds }: { titulo: string, persona: Persona, desde: string, hasta: string, indicadores: { label: string, valor: number, detalle?: string }[], items: AgendaItem[], acompanadas?: AgendaItem[], feds: Fed[] }) {
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Agenda Territorial DTE'; wb.created = new Date()
@@ -239,6 +239,19 @@ export async function exportarInforme({ titulo, persona, desde, hasta, indicador
     row.alignment = { vertical: 'top', wrapText: true }
     if (n % 2) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } }
   })
+
+  // Acciones de otros integrantes en las que participó: hoja aparte, no se suman a los indicadores.
+  if (acompanadas.length) {
+    const wa = wb.addWorksheet('Acompañadas', { views: [{ state: 'frozen', ySplit: 1 }] })
+    cols.forEach(([h, w], i) => { wa.getRow(1).getCell(i + 1).value = h; wa.getColumn(i + 1).width = w })
+    wa.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    wa.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PETROLEO } }
+    ;[...acompanadas].sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? '')).forEach((i, n) => {
+      const row = wa.addRow([fecha(i.fecha), hora(i), fedName(i.fed_id), titleCase(i.accion), i.sub_accion ?? '', escuela(i.school, i.lugar), i.school?.cue ?? '', i.school?.distrito ? titleCase(i.school.distrito) : '', i.detalle ?? ''])
+      row.alignment = { vertical: 'top', wrapText: true }
+      if (n % 2) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } }
+    })
+  }
 
   const buf = await wb.xlsx.writeBuffer()
   const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
