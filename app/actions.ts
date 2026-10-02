@@ -939,7 +939,7 @@ export const devolverPve = async (fedId: string, mes: string, motivo: string) =>
   await db.from('notificaciones').insert({ fed_id: fedId, autor_id: yo.fed.id, tipo: 'pve', detalle: `Devolvió tu PVE de ${nombreMes(mes).toLowerCase()} para corregir: ${texto}` })
   await audit('pve', null, 'estado', yo.fed.id, { fedId, mes, devuelta: texto })
 })
-// Fotos de una acción: la subcarpeta de la acción si ya tiene fotos asignadas por hora; si no, la carpeta del día.
+// Fotos de una acción: la subcarpeta de la acción si ya tiene fotos asignadas por hora; si no, la carpeta del día, sólo si quedaron fotos sin asignar a ninguna acción.
 // Una por cada FED (responsable y participantes) que tenga fotos ordenadas.
 export const fotosDelDia = async (fedIds: string[], fecha: string, itemId?: string) => conUsuario(async () => {
   const ids = fedIds.slice(0, 20), db = supabaseServer()
@@ -949,17 +949,18 @@ export const fotosDelDia = async (fedIds: string[], fecha: string, itemId?: stri
   ])
   const porAccion = new Map((acc ?? []).map(a => [a.fed_id as string, a.folder_id as string]))
   const { data: procesadas } = await db.from('fotos_procesadas').select('fed_id, item_id').in('fed_id', ids).eq('fecha', fecha)
-  const cuenta = (id: string, deAccion: boolean) => (procesadas ?? []).filter(p => p.fed_id === id && (!deAccion || p.item_id === itemId)).length
+  const cuenta = (id: string, deAccion: boolean) => (procesadas ?? []).filter(p => p.fed_id === id && (deAccion ? p.item_id === itemId : !p.item_id)).length
   return ids.flatMap(id => {
     const a = porAccion.get(id), d = (dias ?? []).find(x => x.fed_id === id)?.folder_id as string | undefined
-    return a ? [{ fedId: id, url: urlCarpeta(a), deAccion: true, n: cuenta(id, true) }] : d ? [{ fedId: id, url: urlCarpeta(d), deAccion: false, n: cuenta(id, false) }] : []
+    return a ? [{ fedId: id, url: urlCarpeta(a), deAccion: true, n: cuenta(id, true) }] : d && cuenta(id, false) ? [{ fedId: id, url: urlCarpeta(d), deAccion: false, n: cuenta(id, false) }] : []
   })
 })
 
 // Cantidad de fotos ordenadas: por acción (asignadas por hora) y por FED y día ("fedId|fecha"). Para los contadores del calendario y el tablero.
-export type ConteoFotos = { items: Record<string, number>, dias: Record<string, number> }
+// `sueltas`: fotos del día que no quedaron asignadas a ninguna acción.
+export type ConteoFotos = { items: Record<string, number>, dias: Record<string, number>, sueltas: Record<string, number> }
 export const conteoFotos = async () => conUsuario(async (): Promise<ConteoFotos> => {
-  const db = supabaseServer(), out: ConteoFotos = { items: {}, dias: {} }
+  const db = supabaseServer(), out: ConteoFotos = { items: {}, dias: {}, sueltas: {} }
   for (let desde = 0; ; desde += 1000) {
     const { data, error } = await db.from('fotos_procesadas').select('fed_id, fecha, item_id').not('fecha', 'is', null).order('file_id').range(desde, desde + 999)
     if (error) throw new Error(error.message)
@@ -967,6 +968,7 @@ export const conteoFotos = async () => conUsuario(async (): Promise<ConteoFotos>
       const k = `${r.fed_id}|${r.fecha}`
       out.dias[k] = (out.dias[k] ?? 0) + 1
       if (r.item_id) out.items[r.item_id as string] = (out.items[r.item_id as string] ?? 0) + 1
+      else out.sueltas[k] = (out.sueltas[k] ?? 0) + 1
     }
     if (!data || data.length < 1000) return out
   }
