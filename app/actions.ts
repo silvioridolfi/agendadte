@@ -4,7 +4,7 @@ import { supabaseServer } from '@/lib/supabase-server'
 import { proximoEncuentro } from '@/lib/encuentro'
 import { esEnero, mensajeEnero, recesoEnero } from '@/lib/receso'
 import { enlaceDe, esReunion } from '@/lib/reunion'
-import { ACCIONES, CON_ENCUENTRO, ESTADOS, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, MODALIDADES, MODALIDADES_EVENTO, ROLES_FORMACION, type EventoDte, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
+import { ACCIONES, CON_ENCUENTRO, ESTADOS, esAusencia, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, MODALIDADES, MODALIDADES_EVENTO, ROLES_FORMACION, type EventoDte, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
 import { borrarSesion, guardarSesion, passwordTemporal, requerirUsuario, usuarioActual, usuarioDeSesion, validarPassword, type Usuario } from '@/lib/sesion'
 import { DriveError, cuentaTecnica, driveConfigurado, idDeCarpeta, urlCarpeta, verificarCarpeta } from '@/lib/drive'
 import { ordenarFotos } from '@/lib/fotos'
@@ -12,6 +12,7 @@ import { PRIMER_MES, carpetaDelMes, inicioMes, hoyAR as hoyPve, mesesEntregables
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 import { hoyAR } from '@/lib/hora'
 import { avisaPorFecha } from '@/lib/avisos'
+import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
 import { estadoAlCrear } from '@/lib/estado'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -38,6 +39,35 @@ async function searchSchoolsImpl(query: string): Promise<School[]> {
   const { data, error } = await supabaseServer().rpc('search_establecimientos', { q, max_results: 15 })
   if (error) throw new Error(error.message)
   return data ?? []
+}
+
+// Ficha de una escuela. Todos ven el historial de la escuela; el detalle de cada acción sólo llega para quien participó o es de coordinación.
+const COLS_ESCUELA = 'id, cue, nombre, alias, distrito, ciudad, direccion, lat, lon, nivel, modalidad, ambito, turnos, matricula, varones, mujeres, secciones, fed_a_cargo'
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuela> {
+  if (!UUID.test(id)) throw new Error('Escuela inválida')
+  const db = supabaseServer()
+  const [e, its, cls] = await Promise.all([
+    db.from('establecimientos').select(COLS_ESCUELA).eq('id', id).maybeSingle(),
+    db.from('agenda_items').select(ITEM_COLS).eq('school_id', id).neq('estado', 'cancelada').order('fecha', { ascending: false }).limit(400),
+    db.from('clubes').select('id, tipo, grupo, propuesta, fed_id, fecha_inicio, fecha_cierre, cohorte, school_id, encuentros:agenda_encuentros(id, item:agenda_items(estado))').or(`school_id.eq.${id},escuela_origen_id.eq.${id}`),
+  ])
+  if (e.error) throw new Error(e.error.message)
+  if (its.error) throw new Error(its.error.message)
+  if (cls.error) throw new Error(cls.error.message)
+  if (!e.data) throw new Error('No se encontró la escuela')
+  const { lat, lon, ...resto } = e.data as Record<string, unknown> & { lat: number | null, lon: number | null, direccion: string | null, ciudad: string | null }
+  const texto = resto.direccion ? `${resto.direccion}${resto.ciudad ? `, ${resto.ciudad}` : ''}, Buenos Aires, Argentina` : null
+  const escuela = { ...resto, mapa: lat != null && lon != null ? `${lat},${lon}` : texto } as unknown as DatosEscuela
+  const todo = yo.fed.rol === 'coordinacion'
+  const historial: FilaHistorial[] = ((its.data ?? []) as unknown as AgendaItem[]).filter(i => !esAusencia(i.accion)).map(i => {
+    const propia = i.fed_id === yo.fed.id || (i.participantes ?? []).some(p => p.fed_id === yo.fed.id)
+    return { id: i.id, fed_id: i.fed_id, fecha: i.fecha, hora_inicio: i.hora_inicio, accion: i.accion, sub_accion: i.sub_accion, estado: i.estado, propia, ...(propia || todo ? { item: i } : {}) }
+  })
+  const clubes: ClubDeEscuela[] = ((cls.data ?? []) as unknown as (Omit<ClubDeEscuela, 'realizados' | 'esOrigen'> & { school_id: string | null, encuentros: { item: { estado: string } | { estado: string }[] | null }[] })[]).map(({ encuentros, school_id, ...c }) => ({
+    ...c, esOrigen: school_id !== id, realizados: encuentros.filter(x => [x.item].flat().some(it => it?.estado === 'realizada')).length,
+  }))
+  return { escuela, historial, clubes }
 }
 
 // PostgREST devuelve como máximo 1000 filas por consulta: se pide por páginas (la vista anual supera ese límite).
@@ -632,6 +662,7 @@ async function moverFinDeSemanaImpl(ids: string[], fedId: string, destino: 'vier
 const conUsuario = <T,>(fn: (yo: Usuario) => Promise<T>) => run(async () => fn(await requerirUsuario()))
 export const getFeds = async () => conUsuario(() => getFedsImpl())
 export const searchSchools = async (query: string) => conUsuario(() => searchSchoolsImpl(query))
+export const getFichaEscuela = async (id: string) => conUsuario(yo => getFichaEscuelaImpl(yo, id))
 
 // Jefaturas distritales y regional (organismos descentralizados, con código propio en lugar de CUE).
 // Al elegir una se guarda como lugar "NOMBRE (CÓDIGO)", el mismo formato que venían usando a mano.
