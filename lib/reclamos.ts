@@ -72,10 +72,10 @@ export const SUBTIPOS_INSTALACION = [
 
 export type DatosReclamo = {
   enlace: Enlace | null, proveedorG1: 'Movistar' | 'Claro' | null, subtipo: string, detalle: string,
-  contactoNombre: string, contactoTelefono: string, contactoHorario: string,
+  contactoNombre: string, contactoCargo: string, contactoTelefono: string, contactoHorario: string,
   aulas: string, matricula: string, direccion: string, coordenadas: string, serie: string, fechaCronograma: string,
 }
-export const DATOS_VACIOS: DatosReclamo = { enlace: null, proveedorG1: null, subtipo: '', detalle: '', contactoNombre: '', contactoTelefono: '', contactoHorario: '', aulas: '', matricula: '', direccion: '', coordenadas: '', serie: '', fechaCronograma: '' }
+export const DATOS_VACIOS: DatosReclamo = { enlace: null, proveedorG1: null, subtipo: '', detalle: '', contactoNombre: '', contactoCargo: '', contactoTelefono: '', contactoHorario: '', aulas: '', matricula: '', direccion: '', coordenadas: '', serie: '', fechaCronograma: '' }
 
 // Código de fecha y hora del asunto (hora argentina): DDMMAAAAHHMM, todo junto.
 export function codigoFecha(ahora: Date): string {
@@ -96,7 +96,7 @@ export function faltantes(tipo: TipoReclamo, esc: EscuelaConectividad, d: DatosR
   for (const c of tipo.requeridos) if (!d[c].trim()) err[c] = c === 'subtipo' ? 'Elegí el caso.' : 'Completá este dato.'
   const pidePba = tipo.contacto === 'siempre' || (tipo.contacto === 'pba' && esPba(d.enlace ?? enlaces[0] ?? null))
   const porTelefono = tipo.id === 'sin_conectividad' && d.enlace === 'PBA1' && d.proveedorG1 === 'Movistar'
-  if (pidePba && !porTelefono && (!d.contactoNombre.trim() || !d.contactoTelefono.trim())) err.contacto = 'Completá el nombre y el teléfono del contacto del establecimiento.'
+  if (pidePba && !porTelefono && (!d.contactoNombre.trim() || !d.contactoCargo.trim() || !d.contactoTelefono.trim())) err.contacto = 'Completá el nombre, el cargo y el teléfono del contacto del establecimiento.'
   return err
 }
 
@@ -113,13 +113,14 @@ function adjuntosDe(tipo: TipoReclamo, esc: EscuelaConectividad, d: DatosReclamo
     avisos.push('La escuela figura sin piso tecnológico: se sugiere el checklist de Z3 (predio pequeño). Verificá que corresponda.')
     return { texto: 'Checklist de Z3 (predio pequeño TAC o GAP) completo', enlace: DOC_CHECKLIST_Z3 }
   }
-  const modem: Adjunto = { texto: 'Foto donde se vean las luces del módem' }
+  const modem: Adjunto = { texto: 'Fotos del módem (o de la antena, si el problema es ahí)' }
   const formulario: Adjunto = { texto: 'Formulario completo con la información solicitada', enlace: DOC_FORMULARIO }
   switch (tipo.id) {
     case 'sin_conectividad':
       if (d.enlace === 'PNCE') return [checklist()]
       if (d.enlace === 'PBA1') return [modem]
-      return tienePiso(esc) ? [modem, { texto: 'Checklist USAP completo', enlace: DOC_CHECKLIST_USAP }] : [modem]
+      // PBA Grupo 2 o 2019: el checklist USAP se suma sólo cuando el piso tecnológico también es de PBA (si el piso es de PNCE alcanza con las fotos).
+      return /PBA/i.test(esc.plan_piso_tecnologico ?? '') ? [modem, { texto: 'Checklist USAP completo', enlace: DOC_CHECKLIST_USAP }] : [modem]
     case 'utm_switch': case 'piso': return [checklist()]
     case 'ancho_banda': return [{ texto: 'Captura de pantalla de la medición de velocidad' }, checklist()]
     case 'danos_robo': return [{ texto: 'Denuncia policial con el N° de serie del equipamiento robado' }, { texto: 'Imágenes que constaten el hecho' }]
@@ -134,8 +135,15 @@ function adjuntosDe(tipo: TipoReclamo, esc: EscuelaConectividad, d: DatosReclamo
 // Nombres de la base (en mayúsculas) en formato de oración, con las preposiciones en minúscula.
 const nombrePropio = (s: string) => titleCase(s).replace(/ (De|Del|La|Las|Los|Y|E|Con|Para)(?= )/g, m => m.toLowerCase())
 const linea = (k: string, v: string | null | undefined) => (v && v.trim() ? `${k}: ${v.trim()}\n` : '')
-// Arma el reclamo. `fed`: quien lo envía (firma). Si faltan datos obligatorios, usar `faltantes` antes.
-export function armarReclamo(esc: EscuelaConectividad, tipo: TipoReclamo, d: DatosReclamo, ahora: Date, fed: { nombre: string, cargo: string }): Reclamo {
+// Saludo según la hora argentina: buen día hasta las 12, buenas tardes hasta las 20 y buenas noches después.
+export function saludoDe(ahora: Date): string {
+  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: ZONA, hour: '2-digit', hourCycle: 'h23' }).format(ahora))
+  return h < 12 ? 'buen día' : h < 20 ? 'buenas tardes' : 'buenas noches'
+}
+
+// Arma el reclamo. Lo recibe el CED por el correo regional, y es él quien lo reenvía a la DTE (que lo deriva a PBA o a Educar): por eso el mensaje
+// va dirigido al CED, sin firma ni cargo (el correo oficial ya los lleva). `ced`: nombre de pila del CED, si se conoce. Si faltan datos, usar `faltantes` antes.
+export function armarReclamo(esc: EscuelaConectividad, tipo: TipoReclamo, d: DatosReclamo, ahora: Date, ced: string | null): Reclamo {
   const enlaces = enlacesDe(esc.plan_enlace, esc.subplan_enlace)
   const enlace = d.enlace ?? (enlaces.length === 1 ? enlaces[0] : null)
   const datos = { ...d, enlace }
@@ -153,24 +161,27 @@ export function armarReclamo(esc: EscuelaConectividad, tipo: TipoReclamo, d: Dat
   const adjuntos = adjuntosDe(tipo, esc, datos, avisos)
   const para = tipo.id === 'sin_conectividad' && enlace === 'PBA1' && d.proveedorG1 === 'Claro' ? RECLAMOS_PARA_CLARO : RECLAMOS_PARA
   const proveedor = enlace === 'PNCE' ? esc.proveedor_pnce : esc.proveedor_pba
-  const piso = tienePiso(esc) ? `Piso tecnológico ${esc.plan_piso_tecnologico}${esc.tipo_piso_instalado ? ` (${esc.tipo_piso_instalado.replace(/\s*-\s*Instalada$/i, '')})` : ''}` : 'Sin piso tecnológico'
+  const piso = tienePiso(esc) ? `${esc.plan_piso_tecnologico}${esc.tipo_piso_instalado ? ` (${esc.tipo_piso_instalado.replace(/\s*-\s*Instalada$/i, '')})` : ''}` : 'sin piso tecnológico'
   const subtipo = SUBTIPOS_INSTALACION.find(s => s.id === d.subtipo)?.label
-  const contacto = [d.contactoNombre.trim(), d.contactoTelefono.trim() && `tel. ${d.contactoTelefono.trim()}`, d.contactoHorario.trim() && `horario: ${d.contactoHorario.trim()}`].filter(Boolean).join(' · ')
-  const cuerpo = `Buen día,\n\nDesde la Dirección de Tecnología Educativa – Región 1 reportamos el siguiente caso.\n\n`
-    + linea('Establecimiento', `${esc.nombre ? nombrePropio(esc.nombre) : 'Sin nombre'} (CUE ${esc.cue})`)
+  const contacto = d.contactoNombre.trim() || d.contactoTelefono.trim()
+    ? `\nContacto de la escuela:\n${linea('Nombre', d.contactoNombre)}${linea('Cargo', d.contactoCargo)}${linea('Teléfono', d.contactoTelefono)}${linea('Horario', d.contactoHorario)}`
+    : ''
+  const cuerpo = `Hola${ced ? ` ${ced}` : ''}, ${saludoDe(ahora)}.\n\nTe paso un reclamo de conectividad:\n\n`
+    + linea('Escuela', `${esc.nombre ? nombrePropio(esc.nombre) : 'Sin nombre'} (CUE ${esc.cue})`)
     + linea('Localidad', [esc.ciudad, esc.distrito].filter((x, i, a) => x && a.indexOf(x) === i).map(x => nombrePropio(x!)).join(', '))
     + linea('Dirección', esc.direccion ? nombrePropio(esc.direccion) : null)
-    + linea('Infraestructura', [enlace ? `Enlace ${ENLACE_LABEL[enlace]}${proveedor ? ` (${proveedor})` : ''}` : 'Sin enlace cargado', piso].join(' · '))
+    + linea('Enlace', enlace ? `${ENLACE_LABEL[enlace]}${proveedor ? ` (${proveedor})` : ''}` : 'sin enlace cargado')
+    + linea('Piso tecnológico', piso.charAt(0).toUpperCase() + piso.slice(1))
     + linea('Tipo de reclamo', tipo.asunto)
     + linea('Caso', subtipo) + linea('Matrícula', d.matricula) + linea('Cantidad de aulas', d.aulas)
     + linea('Dirección que figura', tipo.id === 'error_direccion' ? esc.direccion : null) + linea('Dirección correcta', d.direccion) + linea('Coordenadas geográficas', d.coordenadas)
     + linea('N° de serie del equipamiento', d.serie) + linea('Fecha en la que tendrían que haber visitado el establecimiento', d.fechaCronograma && d.fechaCronograma.split('-').reverse().join('/'))
     + (d.detalle.trim() ? `\n${d.detalle.trim()}\n` : '')
-    + (contacto ? `\nContacto del establecimiento: ${contacto}\n` : '')
-    + (adjuntos.length ? `\nSe adjunta:\n${adjuntos.map(a => `- ${a.texto}`).join('\n')}\n` : '')
-    + `\nQuedamos a disposición.\nSaludos,\n${fed.nombre}\n${fed.cargo} · Dirección de Tecnología Educativa – Región 1`
+    + contacto
+    + (adjuntos.length ? `\nAdjunto:\n${adjuntos.map(a => `- ${a.texto}`).join('\n')}\n` : '')
+    + `\nSaludos`
   return { asunto: asuntoDe(esc.cue ?? '', tipo, ahora), para, cuerpo, adjuntos, avisos, porTelefono: null }
 }
 
-export const gmailUrl = (r: Pick<Reclamo, 'asunto' | 'para' | 'cuerpo'>) => `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(r.para ?? '')}&su=${encodeURIComponent(r.asunto)}&body=${encodeURIComponent(r.cuerpo)}`
-export const mailtoUrl = (r: Pick<Reclamo, 'asunto' | 'para' | 'cuerpo'>) => `mailto:${r.para ?? ''}?subject=${encodeURIComponent(r.asunto)}&body=${encodeURIComponent(r.cuerpo)}`
+// Abre Gmail con la cuenta institucional (abc.gob.ar) con la que se inició sesión en la agenda.
+export const gmailUrl = (r: Pick<Reclamo, 'asunto' | 'para' | 'cuerpo'>, cuenta?: string | null) => `https://mail.google.com/mail/?${cuenta ? `authuser=${encodeURIComponent(cuenta)}&` : ''}view=cm&fs=1&to=${encodeURIComponent(r.para ?? '')}&su=${encodeURIComponent(r.asunto)}&body=${encodeURIComponent(r.cuerpo)}`

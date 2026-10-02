@@ -64,6 +64,7 @@ export default function Page() {
   const [vista, setVista] = useState<{ tipo: 'equipo' } | { tipo: 'fed', fed: Fed } | null>(null)
   // La vista del equipo completo es sólo el Tablero: al ir a otra sección se vuelve a los datos propios.
   const irA = (s: Seccion) => { setSection(s); if (s !== 'board') setVista(v => (v?.tipo === 'equipo' ? null : v)) }
+  const irAlInicio = () => { setVista(null); irA(profile?.rol === 'coordinacion' ? 'board' : 'agenda'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   // `preset`: valores iniciales (ej.: reunión de equipo con todo el equipo invitado).
   const [editing, setEditing] = useState<{ item: AgendaItem | null, fecha?: string, preset?: ItemPreset } | null>(null)
   const [selected, setSelected] = useState<AgendaItem | null>(null)
@@ -140,10 +141,11 @@ export default function Page() {
     <header className="sticky top-0 z-header pt-safe border-b border-dte-linea bg-white/95 backdrop-blur">
       <div className="bg-dte-degradado h-1" />
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 lg:px-10">
-        <div className="flex min-w-0 items-center gap-3">
-          <img src="/brand/dte1-160.png" alt="DTE Región 1" width={40} height={40} className="size-10 shrink-0" />
-          <div className="min-w-0"><p className="hidden text-xs font-bold uppercase tracking-[0.2em] text-dte-magenta sm:block">Equipo FED · DTE</p><h1 className="truncate text-base font-bold leading-tight">Agenda Territorial</h1></div>
-        </div>
+        {/* El logo y el título llevan siempre al inicio (la agenda; en coordinación, el tablero). */}
+        <button type="button" onClick={irAlInicio} aria-label="Ir al inicio" className="-m-1 flex min-w-0 items-center gap-3 rounded-control p-1 text-left transition hover:bg-dte-fondo focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dte-petroleo">
+          <img src="/brand/dte1-160.png" alt="" width={40} height={40} className="size-10 shrink-0" />
+          <span className="min-w-0"><span className="hidden text-xs font-bold uppercase tracking-[0.2em] text-dte-magenta sm:block">Equipo FED · DTE</span><span className="block truncate text-base font-bold leading-tight">Agenda Territorial</span></span>
+        </button>
         {/* Navegación principal en desktop; en mobile va en la barra inferior. */}
         <nav aria-label="Secciones" className="hidden rounded-full border border-dte-linea bg-dte-fondo p-1 md:flex">
           {([['agenda', 'Mi agenda', CalendarDays], ['board', 'Tablero', LayoutDashboard]] as const).map(([key, label, Icon]) =>
@@ -197,7 +199,7 @@ export default function Page() {
       onChanged={(msg, updated) => { changed(msg); setSelected(updated) }} />
 
     <BuscadorEscuelas open={buscador} onClose={() => setBuscador(false)} feds={feds ?? []} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
-    {reclamo && <ReclamoConectividad key={reclamo.k} open onClose={() => setReclamo(null)} fed={profile} escuelaInicial={reclamo.escuela} />}
+    {reclamo && <ReclamoConectividad key={reclamo.k} open onClose={() => setReclamo(null)} cuenta={sesion.email} ced={(feds ?? []).find(f => f.rol === 'coordinacion') ? firstName((feds ?? []).find(f => f.rol === 'coordinacion')!.nombre_completo) : null} escuelaInicial={reclamo.escuela} />}
     <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
       <DialogContent className="bg-white sm:max-w-2xl">
         <DialogHeader><DialogTitle className="text-lg">{tituloForm(editing)}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : editing?.preset?.modo === 'nuevo' ? 'Con fecha, el primer encuentro se agrega a tu agenda; si todavía no la tenés, queda “por iniciar”.' : editing?.preset?.modo === 'encuentro' ? 'Se agrega a tu agenda como acción realizada (o planificada, si la fecha todavía no llegó).' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>
