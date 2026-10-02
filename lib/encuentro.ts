@@ -76,6 +76,9 @@ export function clubesDelDia<T extends { club_id?: string | null, accion: string
 export const unidadDe = (c: { id: string, school_id: string | null, lugar: string | null, cohorte?: string | null, escuela_origen?: { id: string } | null }): string =>
   c.cohorte?.trim() ? `${c.escuela_origen?.id ?? c.school_id ?? `lugar:${c.lugar ?? ''}`}|${c.cohorte.trim().toLowerCase()}` : c.id
 
+// Prácticas (PEAT) con grupo: en la agenda se muestran sólo por el curso y el grupo, sin la escuela donde fue ese encuentro.
+export const esPeatConGrupo = (i: { accion: string, club?: { grupo: string | null } | null }): boolean => i.accion === 'PRÁCTICAS PROFESIONALIZANTES' && !!i.club?.grupo
+
 // Escuela con la que se identifica un club o grupo: en los clubes, donde funcionan; en las prácticas (que se hacen en varios lugares), la escuela de origen de los estudiantes.
 export const escuelaDelClub = <S,>(c: { tipo: string, school: S | null, escuela_origen: S | null }): S | null =>
   c.tipo === 'PRÁCTICAS PROFESIONALIZANTES' ? c.escuela_origen ?? c.school : c.school
