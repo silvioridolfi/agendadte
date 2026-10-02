@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Bell, CalendarDays, CalendarOff, Camera, ChevronDown, CircleHelp, FileText, Gauge, Info, KeyRound, LayoutDashboard, OctagonAlert, PlusCircle, Search, Sparkles, Stethoscope, TriangleAlert, UserRound, Users, ClipboardCheck, Trophy, type LucideIcon } from 'lucide-react'
+import { Bell, CalendarDays, CalendarOff, Camera, ChevronDown, CircleHelp, FileText, Gauge, Info, KeyRound, LayoutDashboard, OctagonAlert, PlusCircle, Search, Sparkles, Stethoscope, TriangleAlert, UserRound, Users, Wifi, ClipboardCheck, Trophy, type LucideIcon } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Despliegue, storage } from '@/components/app/comun'
 import { NOVEDADES, ultimaNovedad } from '@/lib/ayuda/novedades'
@@ -22,7 +22,7 @@ export function useNovedadesNuevas(rol: Rol): [boolean, () => void] {
 
 const ICONOS: Record<Icono, LucideIcon> = {
   llave: KeyRound, usuario: UserRound, calendario: CalendarDays, nuevo: PlusCircle, estado: ClipboardCheck, licencia: CalendarOff, clubes: Trophy, fotos: Camera,
-  pve: FileText, tablero: LayoutDashboard, campana: Bell, pregunta: CircleHelp, rol: Users, indicadores: Gauge, equipo: Users, ausencias: Stethoscope, buscador: Search,
+  pve: FileText, tablero: LayoutDashboard, campana: Bell, pregunta: CircleHelp, rol: Users, indicadores: Gauge, equipo: Users, ausencias: Stethoscope, buscador: Search, conectividad: Wifi,
 }
 
 // Texto con **negrita**: lo que termina en ":" es un rótulo (negrita de color); el resto, el nombre de un botón o pantalla, va como etiqueta.

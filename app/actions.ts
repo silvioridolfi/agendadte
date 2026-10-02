@@ -13,6 +13,7 @@ import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib
 import { hoyAR } from '@/lib/hora'
 import { avisaPorFecha } from '@/lib/avisos'
 import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
+import type { EscuelaConectividad } from '@/lib/reclamos'
 import { estadoAlCrear } from '@/lib/estado'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -68,6 +69,18 @@ async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuel
     ...c, esOrigen: school_id !== id, realizados: encuentros.filter(x => [x.item].flat().some(it => it?.estado === 'realizada')).length,
   }))
   return { escuela, historial, clubes }
+}
+
+// Lo que la base sabe de la conectividad de una escuela (enlace, piso y proveedores): para armar reclamos de conectividad.
+async function getConectividadEscuelaImpl(id: string): Promise<EscuelaConectividad> {
+  if (!UUID.test(id)) throw new Error('Escuela inválida')
+  const { data, error } = await supabaseServer().from('establecimientos').select('id, cue, nombre, distrito, ciudad, direccion, matricula, plan_enlace, subplan_enlace, plan_piso_tecnologico, tipo_piso_instalado, tipo, proveedor_internet_pnce, proveedor_asignado_pba, reclamos_grupo_1_ani, recurso_primario, access_id').eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error('No se encontró la escuela')
+  const t = (v: unknown) => (v == null || String(v).trim() === '' ? null : String(v).trim())
+  return { id: data.id as string, cue: (data.cue as number | null) ?? null, nombre: t(data.nombre), distrito: t(data.distrito), ciudad: t(data.ciudad), direccion: t(data.direccion), matricula: data.matricula == null ? null : Number(data.matricula),
+    plan_enlace: t(data.plan_enlace), subplan_enlace: t(data.subplan_enlace), plan_piso_tecnologico: t(data.plan_piso_tecnologico), tipo_piso_instalado: t(data.tipo_piso_instalado), tipo: t(data.tipo),
+    proveedor_pnce: t(data.proveedor_internet_pnce), proveedor_pba: t(data.proveedor_asignado_pba), ani: t(data.reclamos_grupo_1_ani), recurso_primario: t(data.recurso_primario), access_id: t(data.access_id) }
 }
 
 // PostgREST devuelve como máximo 1000 filas por consulta: se pide por páginas (la vista anual supera ese límite).
@@ -667,6 +680,7 @@ const conUsuario = <T,>(fn: (yo: Usuario) => Promise<T>) => run(async () => fn(a
 export const getFeds = async () => conUsuario(() => getFedsImpl())
 export const searchSchools = async (query: string) => conUsuario(() => searchSchoolsImpl(query))
 export const getFichaEscuela = async (id: string) => conUsuario(yo => getFichaEscuelaImpl(yo, id))
+export const getConectividadEscuela = async (id: string) => conUsuario(() => getConectividadEscuelaImpl(id))
 
 // Jefaturas distritales y regional (organismos descentralizados, con código propio en lugar de CUE).
 // Al elegir una se guarda como lugar "NOMBRE (CÓDIGO)", el mismo formato que venían usando a mano.

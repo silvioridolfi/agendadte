@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Building2, CalendarClock, CalendarPlus, History, Loader2, MapPin, Navigation, Search, School as SchoolIcon, Trophy, Users, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Building2, CalendarClock, CalendarPlus, History, Loader2, MapPin, Navigation, Search, School as SchoolIcon, Trophy, Users, Wifi, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -62,7 +62,7 @@ function Filas({ filas, feds, onOpen, inicial }: { filas: FilaHistorial[], feds:
   </>
 }
 
-function Ficha({ ficha, feds, puedeAgendar, onAgendar, onOpen }: { ficha: FichaEscuela, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
+function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen }: { ficha: FichaEscuela, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
   const { escuela: e, historial, clubes } = ficha
   const { proximas, anteriores } = separarHistorial(historial, hoyAR())
   const r = resumenHistorial(historial)
@@ -74,7 +74,10 @@ function Ficha({ ficha, feds, puedeAgendar, onAgendar, onOpen }: { ficha: FichaE
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/15"><SchoolIcon className="size-5" aria-hidden /></span>
         <div className="min-w-0"><p className="font-bold leading-snug">{schoolName(e)}</p><p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/85"><span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold">CUE {e.cue ?? '—'}</span>{schoolPlace(e)}</p></div>
       </div>
-      {puedeAgendar && <Button type="button" onClick={() => onAgendar({ id: e.id, cue: e.cue, nombre: e.nombre, distrito: e.distrito, ciudad: e.ciudad })} className="mt-3 w-full bg-white text-dte-petroleo hover:bg-white/90 sm:w-auto"><CalendarPlus data-icon="inline-start" />Agendar acá</Button>}
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        {puedeAgendar && <Button type="button" onClick={() => onAgendar({ id: e.id, cue: e.cue, nombre: e.nombre, distrito: e.distrito, ciudad: e.ciudad })} className="w-full bg-white text-dte-petroleo hover:bg-white/90 sm:w-auto"><CalendarPlus data-icon="inline-start" />Agendar acá</Button>}
+        <Button type="button" variant="outline" onClick={() => onReclamo({ id: e.id, cue: e.cue, nombre: e.nombre, distrito: e.distrito, ciudad: e.ciudad })} className="w-full border-white/60 bg-transparent text-white hover:bg-white/15 hover:text-white sm:w-auto"><Wifi data-icon="inline-start" />Reclamo de conectividad</Button>
+      </div>
     </header>
     <ul className="grid grid-cols-3 gap-2 text-center">
       {stats.map(([v, l, fam]) => <li key={l} className={`rounded-tile px-2 py-2.5 ${FAMILIAS[fam].fondo}`}><p className={`text-xl font-bold tabular-nums leading-tight ${FAMILIAS[fam].texto}`}>{v}</p><p className="text-xs text-dte-gris">{l}</p></li>)}
@@ -107,7 +110,7 @@ function Ficha({ ficha, feds, puedeAgendar, onAgendar, onOpen }: { ficha: FichaE
 }
 
 // Buscador de escuelas: escribís el nombre, la sigla o el CUE y se abre la ficha con lo que se hizo ahí.
-export function BuscadorEscuelas({ open, onClose, feds, puedeAgendar, onAgendar, onOpen }: { open: boolean, onClose: () => void, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
+export function BuscadorEscuelas({ open, onClose, feds, puedeAgendar, onAgendar, onReclamo, onOpen }: { open: boolean, onClose: () => void, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<School[]>([])
   const [buscando, setBuscando] = useState(false)
@@ -142,7 +145,7 @@ export function BuscadorEscuelas({ open, onClose, feds, puedeAgendar, onAgendar,
         <Button type="button" variant="ghost" size="sm" onClick={volver} className="-mt-1 self-start"><ArrowLeft data-icon="inline-start" />Volver a la búsqueda</Button>
         {error ? <ErrorBox message={error} onRetry={() => abrir(elegida)} />
           : !ficha ? <div className="flex flex-col gap-3"><Skeleton className="h-12" /><Skeleton className="h-24" /><Skeleton className="h-40" /></div>
-          : <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { cerrar(); onAgendar(s) }} onOpen={i => { cerrar(); onOpen(i) }} />}
+          : <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { cerrar(); onAgendar(s) }} onReclamo={s => { cerrar(); onReclamo(s) }} onOpen={i => { cerrar(); onOpen(i) }} />}
       </> : <>
         <div className="relative"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" aria-hidden /><Input autoFocus value={query} onChange={e => escribir(e.target.value)} placeholder="Nombre, sigla o CUE (ej.: EP 4, ees 31)" aria-label="Buscar escuela" className="h-11 pl-9" />{buscando && <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-dte-gris" aria-hidden />}</div>
         {error && <ErrorBox message={error} />}

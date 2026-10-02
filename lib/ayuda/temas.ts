@@ -1,5 +1,6 @@
 // Contenido de la ayuda. Los valores que salen de reglas de la agenda (tipos de acción, mínimos, plazos, umbrales) se toman del código,
 // así que si la regla cambia, la ayuda cambia con ella. El resto es texto: se actualiza en el mismo cambio que modifica la función.
+import { RECLAMOS_PARA, RECLAMOS_PARA_CLARO, TEL_EDUCAR, TEL_MOVISTAR } from '@/lib/reclamos'
 import { ACCIONES, ACCIONES_CED, CATEGORIA, CLUB_DIAS_SIN_ACTIVIDAD, CLUB_MAX_PARTICIPANTES, CLUB_MIN_ENCUENTROS, SOLO_CED, nombreAccion, type Accion } from '@/lib/agenda'
 import { UMBRAL_DIAS_HABILES } from '@/lib/actividad'
 import { DESTINATARIOS_BASE, PROPUESTAS_DE_CLUB } from '@/lib/encuentro'
@@ -74,6 +75,24 @@ Los datos de la escuela se agrupan en tarjetas de color (ubicación, institució
 De las acciones de otros integrantes ves la fecha, el tipo, el estado y quién la hizo. El detalle (descripción, participantes, fotos) lo ves solo en las tuyas, en las que te etiquetaron y, si sos CED, en todas.
 ## Agendar desde la ficha
 **Agendar acá** abre el formulario con la escuela ya elegida. No aparece cuando estás mirando la agenda de otra persona (solo lectura).` },
+  { id: 'reclamos', titulo: 'Reclamos de conectividad', para: ['fed', 'ced'], md: () => `
+Arma el asunto y el cuerpo del mail de un reclamo de conectividad, con la lista de lo que hay que adjuntar, según la guía de la DTE. Se abre desde el menú de las iniciales (**Reclamo de conectividad**), desde la ficha de una escuela y desde una acción de **Conectividad** (con la escuela ya elegida).
+## Cómo se arma
+1. **Escuela:** la agenda muestra su enlace (PNCE o PBA y su grupo) y su piso tecnológico, que salen de la base de conectividad de la región.
+2. **Tipo de reclamo:** los 15 de la guía, con su asunto (Sin Conectividad, Problemas con UTM o Switch, Mudanza, etc.). Cada uno pide solo los datos que corresponden.
+3. **Contacto del directivo:** nombre, teléfono y horario. Es obligatorio en "Sin Conectividad" y en los reclamos de enlaces PBA.
+4. **Armar reclamo:** sale el asunto con el formato 06-01-DDMMAAAAHHMM - CUE XXXXXXXX - Asunto (con la fecha y la hora de ese momento), el cuerpo y los adjuntos. Podés copiar cada parte o abrir Gmail con todo cargado.
+## Qué adjuntar según la infraestructura
+| Caso | Qué se adjunta |
+| PBA Grupo 2 o 2019, sin piso | Foto de las luces del módem y contacto. |
+| PBA Grupo 2 o 2019, con piso | Lo anterior y el checklist USAP. |
+| PBA Grupo 1 con Claro | Fotos del módem y contacto, por mail a ${RECLAMOS_PARA_CLARO}. |
+| PBA Grupo 1 con Movistar | No es un mail: el establecimiento llama al ${TEL_MOVISTAR} con el ANI y el recurso primario, que la agenda muestra. |
+| PNCE, sin piso | Checklist de Z3 (predio pequeño) y contacto. También puede llamar la escuela al ${TEL_EDUCAR} (Mesa de Ayuda Educar). |
+| PNCE, con piso | Checklist USAP. |
+Los demás tipos piden lo que indica la guía: formulario y plano (mudanza, solicitudes), medición y checklist (ancho de banda), denuncia e imágenes (daños o robo), etc.
+[i] El mail va a ${RECLAMOS_PARA}, un mail por escuela y con el CUE de 8 dígitos. Los archivos los adjuntás vos: la agenda no los envía.
+[!] Si la escuela ya tiene un reclamo abierto, no abras una cadena nueva: respondé en la original, sin el "Fwd" antes del código. Si lo enviás más tarde, volvé a armar el reclamo para que el asunto lleve la hora correcta.` },
 
   { id: 'registro', titulo: 'Registrar una acción', para: ['fed'], md: () => `
 ## Paso a paso

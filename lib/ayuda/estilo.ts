@@ -14,7 +14,7 @@ export const FAMILIAS: Record<Familia, { fondo: string, texto: string, punto: st
   lila: { fondo: 'bg-accion-visita-pedagogica', texto: 'text-accion-visita-pedagogica-texto', punto: 'bg-accion-visita-pedagogica-punto', borde: 'border-l-accion-visita-pedagogica-punto', fondoSuave: 'bg-accion-visita-pedagogica/40' },
 }
 
-export type Icono = 'llave' | 'usuario' | 'calendario' | 'nuevo' | 'estado' | 'licencia' | 'clubes' | 'fotos' | 'pve' | 'tablero' | 'campana' | 'pregunta' | 'rol' | 'indicadores' | 'equipo' | 'ausencias' | 'buscador'
+export type Icono = 'llave' | 'usuario' | 'calendario' | 'nuevo' | 'estado' | 'licencia' | 'clubes' | 'fotos' | 'pve' | 'tablero' | 'campana' | 'pregunta' | 'rol' | 'indicadores' | 'equipo' | 'ausencias' | 'buscador' | 'conectividad'
 
 export const ESTILO_TEMA: Record<string, { familia: Familia, icono: Icono }> = {
   intro: { familia: 'azul', icono: 'calendario' },
@@ -22,6 +22,7 @@ export const ESTILO_TEMA: Record<string, { familia: Familia, icono: Icono }> = {
   perfil: { familia: 'azul', icono: 'usuario' },
   agenda: { familia: 'azul', icono: 'calendario' },
   buscador: { familia: 'celeste', icono: 'buscador' },
+  reclamos: { familia: 'violeta', icono: 'conectividad' },
   registro: { familia: 'rosa', icono: 'nuevo' },
   estado: { familia: 'rosa', icono: 'estado' },
   licencias: { familia: 'rosa', icono: 'licencia' },
