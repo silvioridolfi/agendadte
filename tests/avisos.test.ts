@@ -12,6 +12,8 @@ describe('nivel de cada notificación', () => {
   it('amarillo: aviso y recordatorio de PVE, FED sin actividad', () => {
     expect(nivelDe(n({ tipo: 'pve', detalle: 'Ya podés subir tu PVE de septiembre 2026: vence el 07/10' }))).toBe('aviso')
     expect(nivelDe(n({ tipo: 'inactividad', autor_id: 'f' }))).toBe('aviso')
+    expect(nivelDe(n({ tipo: 'reclamo', detalle: 'Se resolvió el reclamo de CUE 60304400 · Sin Conectividad' }))).toBe('ok')
+    expect(nivelDe(n({ tipo: 'reclamo', detalle: 'Llegó el número del reclamo de CUE 60304400 · Sin Conectividad: ticket 1' }))).toBe('info')
   })
   it('verde: confirmaciones y PVE entregada; el resto, informativo', () => {
     expect(nivelDe(n({ tipo: 'respuesta', detalle: 'Confirmó que participa' }))).toBe('ok')

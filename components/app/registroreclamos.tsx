@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Check, ClipboardList, Eye, Loader2, Pencil, Search } from 'lucide-react'
+import { Check, ClipboardList, Eye, FileSpreadsheet, Loader2, Pencil, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,8 @@ export function RegistroReclamos({ profile, feds, esAdmin }: { profile: Fed, fed
   const [soloMios, setSoloMios] = useState(profile.rol === 'fed' && !esAdmin)
   const [editando, setEditando] = useState<Reclamo | null>(null)
   const puedeEditar = profile.rol === 'coordinacion'
+  const [exportando, setExportando] = useState(false)
+  const [errorExcel, setErrorExcel] = useState('')
   const cargar = useCallback(() => { getReclamos().then(setLista).catch(e => setError(errMsg(e))) }, [])
   useEffect(() => { cargar() }, [cargar])
   const nombreFed = useCallback((id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Ex integrante', [feds])
@@ -34,7 +36,10 @@ export function RegistroReclamos({ profile, feds, esAdmin }: { profile: Fed, fed
 
   return <main className="mx-auto w-full min-w-0 max-w-5xl px-4 pb-32 pt-6 lg:px-10">
     <p className={eyebrow}>Conectividad</p>
-    <h2 className="text-2xl font-bold">Registro de reclamos</h2>
+    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-2xl font-bold">Registro de reclamos</h2>
+      {lista && <Button type="button" variant="outline" size="sm" disabled={exportando || !visibles.length} onClick={async () => { setExportando(true); setErrorExcel(''); try { const { exportarReclamos } = await import('@/lib/exportar'); await exportarReclamos(visibles, nombreFed) } catch (e) { setErrorExcel(errMsg(e)) } finally { setExportando(false) } }}>{exportando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}Excel ({visibles.length})</Button>}
+    </div>
+    {errorExcel && <div className="mt-2"><ErrorBox message={errorExcel} /></div>}
     <p className="mt-1 text-sm text-dte-gris">Los reclamos que el equipo armó y mandó al CED, con el número de ticket o de incidencia que llega de Nivel Central.</p>
     {!puedeEditar && <p className="mt-3 flex items-center gap-1.5 rounded-control bg-dte-fondo px-3 py-2 text-xs font-semibold text-dte-gris"><Eye className="size-3.5" aria-hidden />Modo lectura: el CED es quien anota los números y marca los reclamos resueltos.</p>}
 

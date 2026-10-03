@@ -50,3 +50,11 @@ export function filtrarReclamos(lista: Reclamo[], f: FiltrosReclamo, nombreFed: 
 export const resumenReclamos = (lista: Reclamo[]) => ({
   enviados: lista.filter(r => r.estado === 'enviado').length, enProceso: lista.filter(r => r.estado === 'en_proceso').length, resueltos: lista.filter(r => r.estado === 'resuelto').length,
 })
+
+// Aviso al FED que envió un reclamo cuando el CED anota el número o lo marca como resuelto (null si no hay nada que avisar).
+export function avisoDeCambio(antes: { estado: string, nro_incidencia: string | null }, despues: { estado: string, nro_incidencia: string | null }, r: { cue: number | null, tipo_label: string }): string | null {
+  const que = `CUE ${r.cue ?? '—'} · ${r.tipo_label}`
+  if (despues.estado === 'resuelto' && antes.estado !== 'resuelto') return `Se resolvió el reclamo de ${que}${despues.nro_incidencia ? ` (${despues.nro_incidencia})` : ''}`
+  if (despues.nro_incidencia && despues.nro_incidencia !== antes.nro_incidencia && despues.estado !== 'anulado') return `Llegó el número del reclamo de ${que}: ${despues.nro_incidencia}`
+  return null
+}

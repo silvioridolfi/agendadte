@@ -1,5 +1,6 @@
 // Exportación a Excel (planilla mensual por FED y consolidado regional). Se genera en el navegador.
 import { escuelaDelClub } from '@/lib/encuentro'
+import { ESTADO_RECLAMO_LABEL, type Reclamo } from '@/lib/reclamos-registro'
 import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, clubEstado, cuentaHecha, esAusencia, iniciado, ordenGrupo, ultimaActividad, type AgendaItem, type Club, type Encuentro, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
 import { graficosInforme, type Grafico } from '@/lib/graficos'
@@ -257,5 +258,28 @@ export async function exportarInforme({ titulo, persona, desde, hasta, indicador
   const buf = await wb.xlsx.writeBuffer()
   const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
   const a = document.createElement('a'); a.href = url; a.download = nombreArchivo(`${titulo} ${persona.nombre} ${desde}`); a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+}
+
+// Registro de reclamos de conectividad (lo que se ve en el panel, con sus filtros): mismas columnas que la planilla del CED, más la escuela y las notas.
+export async function exportarReclamos(reclamos: Reclamo[], nombreFed: (id: string | null) => string) {
+  const ExcelJS = (await import('exceljs')).default
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'Agenda Territorial DTE'; wb.created = new Date()
+  const ws = wb.addWorksheet('Reclamos', { views: [{ state: 'frozen', ySplit: 1 }] })
+  const cols = [['FED', 18], ['Tipo de conexión', 26], ['Asunto de mail', 62], ['Escuela', 44], ['CUE', 11], ['Distrito', 16], ['Estado', 18], ['Fecha de envío', 14], ['N° de ticket o incidencia', 28], ['¿Se resolvió?', 14], ['Notas', 44]] as const
+  cols.forEach(([h, w], i) => { ws.getRow(1).getCell(i + 1).value = h; ws.getColumn(i + 1).width = w })
+  ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PETROLEO } }
+  const dia = (iso: string) => new Date(iso).toLocaleDateString('es-AR', { timeZone: ZONA, day: '2-digit', month: '2-digit', year: 'numeric' })
+  reclamos.forEach((r, n) => {
+    const row = ws.addRow([nombreFed(r.fed_id), r.conexion ?? '', r.asunto, r.school?.nombre ? titleCase(r.school.nombre) : '', r.cue ?? '', r.school?.distrito ? titleCase(r.school.distrito) : '', ESTADO_RECLAMO_LABEL[r.estado], dia(r.enviado_at), r.nro_incidencia ?? '', r.estado === 'resuelto' ? 'Sí' : r.estado === 'anulado' ? 'Anulado' : 'En proceso', r.notas ?? ''])
+    row.alignment = { vertical: 'top', wrapText: true }
+    if (n % 2) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } }
+  })
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols.length } }
+  const buf = await wb.xlsx.writeBuffer()
+  const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
+  const a = document.createElement('a'); a.href = url; a.download = nombreArchivo(`Reclamos de conectividad ${new Date().toLocaleDateString('en-CA', { timeZone: ZONA })}`); a.click()
   setTimeout(() => URL.revokeObjectURL(url), 5000)
 }

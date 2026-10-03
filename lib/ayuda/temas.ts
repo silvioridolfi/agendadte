@@ -98,7 +98,7 @@ Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la
 ## Cómo se carga
 1. Armás el reclamo (**Armar reclamo de conectividad**) y lo mandás por mail al CED.
 2. Tocás **Reclamo enviado**: queda registrado con tu nombre, la escuela, el tipo de reclamo, el asunto y el tipo de conexión de la escuela.
-3. Cuando Nivel Central responde, el CED anota el **número de ticket (PBA) o de incidencia (Educar)** y, más tarde, marca el reclamo como **Resuelto**.
+3. Cuando Nivel Central responde, el CED anota el **número de ticket (PBA) o de incidencia (Educar)** y, más tarde, marca el reclamo como **Resuelto**. Cada vez, el FED que lo envió recibe una notificación (al tocarla se abre el registro).
 ## Estados
 | Estado | Qué significa |
 | Reclamo enviado | Lo mandaste al CED; todavía no llegó un número. |
@@ -106,7 +106,7 @@ Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la
 | Resuelto | Se solucionó. |
 | Anulado | Se registró por error o se dejó sin efecto. |
 ## Quién ve y quién edita
-Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado, FED, tipo de conexión y búsqueda por CUE, escuela, número o nombre. Solo el CED los actualiza; la administración los ve en modo lectura.
+Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado, FED, tipo de conexión y búsqueda por CUE, escuela, número o nombre. Solo el CED los actualiza; la administración los ve en modo lectura. El botón **Excel** descarga la lista tal como la estás viendo, con las mismas columnas de la planilla del CED.
 [i] Al armar un reclamo de una escuela que ya tiene uno abierto, la agenda te avisa para que sigas esa cadena en lugar de abrir otra.` },
 
   { id: 'registro', titulo: 'Registrar una acción', para: ['fed'], md: () => `

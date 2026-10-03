@@ -155,7 +155,7 @@ export default function Page() {
         <div className="flex shrink-0 items-center gap-1">
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <button type="button" onClick={() => setBuscador(true)} aria-label="Buscar escuela" title="Buscar escuela" className="flex size-11 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-fondo hover:text-dte-tinta"><Search className="size-5" /></button>
-        <NotificacionesBell feds={feds ?? []} onOpen={setSelected} />
+        <NotificacionesBell feds={feds ?? []} onOpen={setSelected} onReclamos={() => { setVista(null); irA('reclamos') }} />
         <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} hayNovedades={hayNovedades} onReclamo={() => abrirReclamo(null)} onRegistroReclamos={() => { setVista(null); irA('reclamos') }} onAyuda={() => { setVista(null); irA('ayuda') }} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
         </div>
       </div>

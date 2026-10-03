@@ -14,7 +14,7 @@ import { hoyAR } from '@/lib/hora'
 import { avisaPorFecha } from '@/lib/avisos'
 import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
 import { tipoDe, type EscuelaConectividad } from '@/lib/reclamos'
-import { ESTADOS_RECLAMO, conexionDe, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
+import { ESTADOS_RECLAMO, avisoDeCambio, conexionDe, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
 import { estadoAlCrear } from '@/lib/estado'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -120,7 +120,7 @@ async function actualizarReclamoImpl(yo: Usuario, id: string, cambios: { estado?
   if (yo.fed.rol !== 'coordinacion') throw new Error('Sólo la coordinación puede actualizar los reclamos')
   if (!UUID.test(id)) throw new Error('Reclamo inválido')
   const db = supabaseServer()
-  const { data: antes, error } = await db.from('reclamos_conectividad').select('estado, nro_incidencia, notas').eq('id', id).maybeSingle()
+  const { data: antes, error } = await db.from('reclamos_conectividad').select('estado, nro_incidencia, notas, fed_id, cue, tipo_label').eq('id', id).maybeSingle()
   if (error) throw new Error(error.message)
   if (!antes) throw new Error('No se encontró el reclamo')
   const nro = cambios.nro_incidencia === undefined ? antes.nro_incidencia : opt(cambios.nro_incidencia)
@@ -134,6 +134,9 @@ async function actualizarReclamoImpl(yo: Usuario, id: string, cambios: { estado?
   const up = await db.from('reclamos_conectividad').update(row).eq('id', id)
   if (up.error) throw new Error(up.error.message)
   await audit('reclamos_conectividad', id, estado !== antes.estado ? 'estado' : 'modificacion', yo.fed.id, { antes, despues: { estado, nro_incidencia: nro, notas } })
+  // Se avisa al FED que envió el reclamo cuando llega el número o se resuelve (no a quien hizo el cambio).
+  const aviso = avisoDeCambio({ estado: antes.estado as string, nro_incidencia: antes.nro_incidencia as string | null }, { estado, nro_incidencia: nro }, { cue: antes.cue as number | null, tipo_label: antes.tipo_label as string })
+  if (aviso && antes.fed_id && antes.fed_id !== yo.fed.id) await db.from('notificaciones').insert({ fed_id: antes.fed_id, autor_id: yo.fed.id, tipo: 'reclamo', detalle: aviso })
 }
 
 // PostgREST devuelve como máximo 1000 filas por consulta: se pide por páginas (la vista anual supera ese límite).
