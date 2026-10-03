@@ -5,6 +5,7 @@ import type { Rol } from '@/lib/ayuda/temas'
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[] }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-03', titulo: 'Contadores del registro de reclamos más parejos', texto: 'En el celular, los tres contadores del registro de reclamos tienen el mismo tamaño y los nombres van en plural: Reclamos enviados, En proceso y Resueltos.' },
   { fecha: '2026-10-02', titulo: 'Buscador de escuela: la lupa en su lugar', texto: 'En el buscador de escuela del reclamo, la lupa ya no se corre al abrir los resultados: queda siempre dentro del campo.' },
   { fecha: '2026-10-02', titulo: 'Reclamos con Gmail directo y menú ordenado', texto: 'En el celular, Abrir en mi correo ahora abre la app de Gmail con el mensaje ya armado, sin pasar por el navegador. Si no tenés la app, se abre en el navegador como antes. Además, el botón Cancelar se ve más claro y el menú de las iniciales quedó agrupado: lo tuyo, conectividad, coordinación (si sos administración) y el resto, con Cerrar sesión al final.' },
   { fecha: '2026-10-02', titulo: 'Estados del registro de reclamos con colores más claros', texto: 'En el registro de reclamos, Reclamo enviado, En proceso y Resuelto ahora se distinguen de un vistazo: ámbar, azul y verde, tanto en los contadores como en cada tarjeta.' },
