@@ -52,15 +52,18 @@ export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyu
       <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>
       <button role="menuitem" onClick={() => { setOpen(false); onFotos() }} className={item}><Camera className="size-4 text-dte-petroleo" />Fotos de las acciones</button>
       {profile.rol === 'fed' && <button role="menuitem" onClick={() => { setOpen(false); onMisPve() }} className={item}><FileText className="size-4 text-dte-petroleo" />Planillas de Visita (PVE)</button>}
+      <div role="separator" className="my-1 border-t border-dte-linea" />
+      <button role="menuitem" onClick={() => { setOpen(false); onReclamo() }} className={item}><Wifi className="size-4 text-dte-petroleo" />Armar reclamo de conectividad</button>
+      <button role="menuitem" onClick={() => { setOpen(false); onRegistroReclamos() }} className={item}><ClipboardList className="size-4 text-dte-petroleo" />Registro de reclamos</button>
+      {(admin || profile.rol === 'coordinacion') && <div role="separator" className="my-1 border-t border-dte-linea" />}
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
       {(admin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onPve() }} className={item}><FileText className="size-4 text-dte-petroleo" />PVE del equipo</button>}
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onFeriados() }} className={item}><CalendarOff className="size-4 text-dte-petroleo" />Feriados y eventos</button>}
       {admin && <button role="menuitem" onClick={ocultar} className={item}><EyeOff className="size-4 text-dte-petroleo" />Ocultar opciones de administración</button>}
-      <button role="menuitem" onClick={() => { setOpen(false); onAyuda() }} className={item}><CircleHelp className="size-4 text-dte-petroleo" />Ayuda{hayNovedades && <span className="ml-auto rounded-full bg-dte-magenta px-1.5 text-xs font-bold text-white" aria-label="Hay novedades">nuevo</span>}</button>
-      <button role="menuitem" onClick={() => { setOpen(false); onReclamo() }} className={item}><Wifi className="size-4 text-dte-petroleo" />Armar reclamo de conectividad</button>
-      <button role="menuitem" onClick={() => { setOpen(false); onRegistroReclamos() }} className={item}><ClipboardList className="size-4 text-dte-petroleo" />Registro de reclamos</button>
+      <div role="separator" className="my-1 border-t border-dte-linea" />
       <a role="menuitem" href={SITIO_DTE_URL} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className={item}><Globe className="size-4 text-dte-petroleo" />Sitio DTE Región 1<ExternalLink className="ml-auto size-3.5 text-dte-gris-claro" aria-hidden /><span className="sr-only"> (se abre en una pestaña nueva)</span></a>
+      <button role="menuitem" onClick={() => { setOpen(false); onAyuda() }} className={item}><CircleHelp className="size-4 text-dte-petroleo" />Ayuda{hayNovedades && <span className="ml-auto rounded-full bg-dte-magenta px-1.5 text-xs font-bold text-white" aria-label="Hay novedades">nuevo</span>}</button>
       <button role="menuitem" onClick={() => { setOpen(false); onPassword() }} className={item}><KeyRound className="size-4 text-dte-petroleo" />Cambiar contraseña</button>
       <button role="menuitem" onClick={() => { setOpen(false); onSalir() }} className={`${item} border-t border-dte-linea text-peligro`}><LogOut className="size-4" />Cerrar sesión</button>
     </div>}
