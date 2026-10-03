@@ -84,7 +84,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
       <DialogTitle className="flex items-center gap-2"><Wifi className="size-5 text-dte-petroleo" aria-hidden />Reclamo de conectividad</DialogTitle>
       <DialogDescription className="text-sm text-dte-gris">Elegí la escuela y el tipo de reclamo: se arma el asunto, el cuerpo del mail y la lista de lo que hay que adjuntar, según la guía de la DTE.</DialogDescription>
 
-      <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">1. Escuela</span><SchoolPicker value={escuela} onChange={elegir} /></div>
+      <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">1. Escuela</span><SchoolPicker enLinea value={escuela} onChange={elegir} /></div>
       {cargando && <div className="flex items-center gap-2 text-sm text-dte-gris"><Loader2 className="size-4 animate-spin" aria-hidden />Buscando los datos de conectividad…</div>}
       {error && <ErrorBox message={error} />}
 
