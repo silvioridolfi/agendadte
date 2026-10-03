@@ -11,6 +11,8 @@ export function nivelDe(n: Pick<NotifBase, 'tipo' | 'detalle' | 'autor_id'>): Ni
   if (n.tipo === 'respuesta') return /no puede/i.test(n.detalle ?? '') ? 'urgente' : 'ok'
   if (n.tipo === 'pve') { const c = clasePve(n); return c === 'devuelta' ? 'urgente' : c === 'entrega' ? 'ok' : 'aviso' }
   if (n.tipo === 'inactividad') return 'aviso'
+  // Reclamo de conectividad: resuelto (verde) o con número de ticket o incidencia (informativo).
+  if (n.tipo === 'reclamo') return /^Se resolvió/.test(n.detalle ?? '') ? 'ok' : 'info'
   return 'info'
 }
 

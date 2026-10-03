@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { conexionDe, filtrarReclamos, origenDeNumero, resumenReclamos, esAbierto, type Reclamo } from '@/lib/reclamos-registro'
+import { avisoDeCambio, conexionDe, filtrarReclamos, origenDeNumero, resumenReclamos, esAbierto, type Reclamo } from '@/lib/reclamos-registro'
 
 const e = (plan_enlace: string, subplan_enlace: string, plan_piso_tecnologico: string | null) => ({ plan_enlace, subplan_enlace, plan_piso_tecnologico })
 
@@ -38,5 +38,21 @@ describe('panel de reclamos', () => {
   it('cuenta por estado y distingue abiertos', () => {
     expect(resumenReclamos(lista)).toEqual({ enviados: 1, enProceso: 1, resueltos: 1 })
     expect(esAbierto('enviado') && esAbierto('en_proceso') && !esAbierto('resuelto') && !esAbierto('anulado')).toBe(true)
+  })
+})
+
+describe('aviso al FED cuando cambia su reclamo', () => {
+  const rec = { cue: 60304400, tipo_label: 'Sin Conectividad' }
+  it('avisa cuando llega el número', () => {
+    expect(avisoDeCambio({ estado: 'enviado', nro_incidencia: null }, { estado: 'en_proceso', nro_incidencia: 'ticket 337900' }, rec)).toBe('Llegó el número del reclamo de CUE 60304400 · Sin Conectividad: ticket 337900')
+  })
+  it('avisa cuando se resuelve, con el número si lo hay', () => {
+    expect(avisoDeCambio({ estado: 'en_proceso', nro_incidencia: 'NI-000234800' }, { estado: 'resuelto', nro_incidencia: 'NI-000234800' }, rec)).toBe('Se resolvió el reclamo de CUE 60304400 · Sin Conectividad (NI-000234800)')
+    expect(avisoDeCambio({ estado: 'enviado', nro_incidencia: null }, { estado: 'resuelto', nro_incidencia: null }, rec)).toBe('Se resolvió el reclamo de CUE 60304400 · Sin Conectividad')
+  })
+  it('no avisa si no cambió el número ni se resolvió, ni al anular', () => {
+    expect(avisoDeCambio({ estado: 'en_proceso', nro_incidencia: 'x' }, { estado: 'en_proceso', nro_incidencia: 'x' }, rec)).toBeNull()
+    expect(avisoDeCambio({ estado: 'enviado', nro_incidencia: null }, { estado: 'anulado', nro_incidencia: null }, rec)).toBeNull()
+    expect(avisoDeCambio({ estado: 'resuelto', nro_incidencia: 'x' }, { estado: 'resuelto', nro_incidencia: 'x' }, rec)).toBeNull()
   })
 })
