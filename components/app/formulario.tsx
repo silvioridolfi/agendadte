@@ -25,7 +25,8 @@ const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, 
 // =====================================================================
 
 // `onOrganismo`: si se pasa, la búsqueda incluye jefaturas distritales y regional; al elegir una se recibe "NOMBRE (CÓDIGO)" como lugar.
-export function SchoolPicker({ value, onChange, onOrganismo }: { value: School | null, onChange: (s: School | null) => void, onOrganismo?: (lugar: string) => void }) {
+// `enLinea`: la lista de resultados empuja el contenido en vez de flotar (para diálogos con scroll propio, donde un desplegable flotante se recorta).
+export function SchoolPicker({ value, onChange, onOrganismo, enLinea }: { value: School | null, onChange: (s: School | null) => void, onOrganismo?: (lugar: string) => void, enLinea?: boolean }) {
   const [query, setQuery] = useState('')
   const [orgs, setOrgs] = useState<Organismo[]>([])
   const [results, setResults] = useState<School[]>([])
@@ -71,7 +72,7 @@ export function SchoolPicker({ value, onChange, onOrganismo }: { value: School |
         else if (e.key === 'Enter') { e.preventDefault(); pick(opciones[active]) }
         else if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
       }} />
-    {showList && <div id="school-results" role="listbox" className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-tile border border-dte-linea bg-white p-1 text-sm font-normal text-dte-tinta shadow-e3">
+    {showList && <div id="school-results" role="listbox" className={`${enLinea ? 'max-h-60' : 'absolute z-50 max-h-72'} mt-1 w-full overflow-y-auto rounded-tile border border-dte-linea bg-white p-1 text-sm font-normal text-dte-tinta shadow-e3`}>
       {loading ? <p className="flex items-center gap-2 p-3 text-dte-gris"><Loader2 className="size-4 animate-spin" />Buscando…</p>
         : failed ? <p className="p-3 text-peligro">No se pudo buscar. Probá de nuevo.</p>
         : !opciones.length ? <p className="p-3 text-dte-gris">Sin resultados para “{query.trim()}”.</p>
