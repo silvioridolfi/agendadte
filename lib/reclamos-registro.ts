@@ -4,6 +4,8 @@ import { enlacesDe, tienePiso } from '@/lib/reclamos'
 export const ESTADOS_RECLAMO = ['enviado', 'en_proceso', 'resuelto', 'anulado'] as const
 export type EstadoReclamo = typeof ESTADOS_RECLAMO[number]
 export const ESTADO_RECLAMO_LABEL: Record<EstadoReclamo, string> = { enviado: 'Reclamo enviado', en_proceso: 'En proceso', resuelto: 'Resuelto', anulado: 'Anulado' }
+// Plural para los contadores del panel (cada uno cuenta varios reclamos).
+export const ESTADO_RECLAMO_PLURAL: Record<EstadoReclamo, string> = { enviado: 'Reclamos enviados', en_proceso: 'En proceso', resuelto: 'Resueltos', anulado: 'Anulados' }
 // Clases completas (Tailwind) de cada estado.
 export const ESTADO_RECLAMO_CLASE: Record<EstadoReclamo, string> = {
   enviado: 'border-reclamo-enviado bg-reclamo-enviado text-reclamo-enviado-texto', en_proceso: 'border-reclamo-proceso bg-reclamo-proceso text-white',

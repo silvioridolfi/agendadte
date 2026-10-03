@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { type Fed } from '@/lib/agenda'
-import { ESTADOS_RECLAMO, ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL, filtrarReclamos, origenDeNumero, resumenReclamos, type EstadoReclamo, type FiltrosReclamo, type Reclamo } from '@/lib/reclamos-registro'
+import { ESTADOS_RECLAMO, ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL, ESTADO_RECLAMO_PLURAL, filtrarReclamos, origenDeNumero, resumenReclamos, type EstadoReclamo, type FiltrosReclamo, type Reclamo } from '@/lib/reclamos-registro'
 import { titleCase } from '@/lib/format'
 import { ErrorBox, Skeleton, actualizarReclamo, eyebrow, errMsg, getReclamos, selectClass } from '@/components/app/comun'
 import { Field } from '@/components/app/formulario'
@@ -47,7 +47,7 @@ export function RegistroReclamos({ profile, feds, esAdmin }: { profile: Fed, fed
       : !lista ? <div className="mt-4 flex flex-col gap-3"><Skeleton className="h-16" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div>
       : <>
         <ul className="mt-4 grid grid-cols-3 gap-2">{([['enviado', resumen.enviados], ['en_proceso', resumen.enProceso], ['resuelto', resumen.resueltos]] as [EstadoReclamo, number][]).map(([e, n]) =>
-          <li key={e}><button type="button" aria-pressed={filtros.estado === e} onClick={() => set('estado', filtros.estado === e ? 'abiertos' : e)} className={`w-full rounded-card border px-3 py-2.5 text-left transition hover:shadow-e2 ${filtros.estado === e ? 'ring-2 ring-dte-petroleo/30' : ''} ${ESTADO_RECLAMO_CLASE[e]}`}><span className="block text-xl font-bold tabular-nums">{n}</span><span className="block text-xs leading-snug">{ESTADO_RECLAMO_LABEL[e]}</span></button></li>)}</ul>
+          <li key={e} className="flex"><button type="button" aria-pressed={filtros.estado === e} onClick={() => set('estado', filtros.estado === e ? 'abiertos' : e)} className={`flex h-full w-full flex-col justify-between gap-1 rounded-control border px-3 py-2.5 text-left transition hover:shadow-e2 ${filtros.estado === e ? 'ring-2 ring-dte-petroleo/30' : ''} ${ESTADO_RECLAMO_CLASE[e]}`}><span className="block text-xl font-bold tabular-nums">{n}</span><span className="block text-xs leading-snug">{ESTADO_RECLAMO_PLURAL[e]}</span></button></li>)}</ul>
 
         <div className="mt-4 flex flex-col gap-2 rounded-card border border-dte-linea bg-white p-3 shadow-e1 md:flex-row md:flex-wrap md:items-center">
           <div className="relative min-w-0 flex-1 md:min-w-56"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" aria-hidden /><Input value={filtros.busqueda} onChange={e => set('busqueda', e.target.value)} placeholder="Buscar CUE, escuela, número o FED…" aria-label="Buscar" className="h-11 bg-dte-fondo pl-9 md:h-9" /></div>
