@@ -62,6 +62,7 @@ export function SchoolPicker({ value, onChange, onOrganismo, enLinea }: { value:
 
   const showList = open && query.trim().length >= 2
   return <div className="relative">
+    <div className="relative">
     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" />
     <Input role="combobox" aria-expanded={showList} aria-controls="school-results" aria-autocomplete="list" className="h-11 md:h-10 pl-9 font-normal" placeholder="Nombre, localidad o CUE…" value={query}
       onChange={e => { buscar(e.target.value); setOpen(true) }} onFocus={e => { setOpen(true); e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' }) }} onBlur={() => setTimeout(() => setOpen(false), 150)}
@@ -72,6 +73,7 @@ export function SchoolPicker({ value, onChange, onOrganismo, enLinea }: { value:
         else if (e.key === 'Enter') { e.preventDefault(); pick(opciones[active]) }
         else if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
       }} />
+    </div>
     {showList && <div id="school-results" role="listbox" className={`${enLinea ? 'max-h-60' : 'absolute z-50 max-h-72'} mt-1 w-full overflow-y-auto rounded-tile border border-dte-linea bg-white p-1 text-sm font-normal text-dte-tinta shadow-e3`}>
       {loading ? <p className="flex items-center gap-2 p-3 text-dte-gris"><Loader2 className="size-4 animate-spin" />Buscando…</p>
         : failed ? <p className="p-3 text-peligro">No se pudo buscar. Probá de nuevo.</p>
