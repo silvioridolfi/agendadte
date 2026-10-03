@@ -5,6 +5,7 @@ import type { Rol } from '@/lib/ayuda/temas'
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[] }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-02', titulo: 'Reclamos con Gmail directo y menú ordenado', texto: 'En el celular, Abrir en mi correo ahora abre la app de Gmail con el mensaje ya armado, sin pasar por el navegador. Si no tenés la app, se abre en el navegador como antes. Además, el botón Cancelar se ve más claro y el menú de las iniciales quedó agrupado: lo tuyo, conectividad, coordinación (si sos administración) y el resto, con Cerrar sesión al final.' },
   { fecha: '2026-10-02', titulo: 'Estados del registro de reclamos con colores más claros', texto: 'En el registro de reclamos, Reclamo enviado, En proceso y Resuelto ahora se distinguen de un vistazo: ámbar, azul y verde, tanto en los contadores como en cada tarjeta.' },
   { fecha: '2026-10-02', titulo: 'Buscador de escuela en el reclamo', texto: 'Al armar un reclamo de conectividad, los resultados de la búsqueda de la escuela ahora se ven completos en el celular y en la compu, sin cortarse.' },
   { fecha: '2026-10-02', titulo: 'Avisos y Excel en el registro de reclamos', texto: 'Cuando el CED anota el número de ticket o de incidencia de tu reclamo, o lo marca resuelto, te llega una notificación (al tocarla se abre el registro). Además, el botón Excel del registro descarga la lista con tus filtros, con las mismas columnas de la planilla del CED.' },

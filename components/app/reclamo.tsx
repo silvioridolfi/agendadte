@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Check, Copy, ExternalLink, Loader2, Mail, Paperclip, Phone, Wifi } from 'lucide-react'
+import { AlertTriangle, Check, Copy, ExternalLink, Loader2, Mail, Paperclip, Phone, Wifi, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { type School } from '@/lib/agenda'
-import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, enlacesDe, faltantes, gmailUrl, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
+import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, enlacesDe, faltantes, gmailAppUrl, gmailUrl, plataformaDe, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
 import { titleCase } from '@/lib/format'
 import { ESTADO_RECLAMO_LABEL, type Reclamo as ReclamoRegistrado } from '@/lib/reclamos-registro'
 import { ErrorBox, errMsg, getConectividadEscuela, reclamosAbiertosDe, registrarReclamo, selectClass } from '@/components/app/comun'
@@ -155,12 +155,12 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
             {reclamo.adjuntos.length > 0 && <div className="rounded-card border-l-4 border-l-club-lila bg-club-violeta-fondo p-3.5"><h4 className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-club-violeta"><Paperclip className="size-3.5" aria-hidden />Adjuntá al mail</h4>
               <ul className="flex flex-col gap-1 text-sm">{reclamo.adjuntos.map(a => <li key={a.texto} className="flex flex-wrap items-center gap-x-2">{a.texto}{a.enlace && <a href={a.enlace} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-dte-petroleo underline underline-offset-2">Abrir modelo<ExternalLink className="size-3" aria-hidden /></a>}</li>)}</ul></div>}
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <a href={gmailUrl(reclamo, cuenta)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control bg-dte-petroleo px-4 text-sm font-semibold text-white transition hover:bg-dte-petroleo-oscuro md:min-h-9"><Mail className="size-4" aria-hidden />Abrir en mi correo ({cuenta})</a>
-              <Button type="button" variant="outline" onClick={cerrar} className="min-h-11 md:min-h-9">{registrado ? 'Cerrar' : 'Cancelar'}</Button>
+              <a href={gmailUrl(reclamo, cuenta)} target="_blank" rel="noopener noreferrer" onClick={e => { const p = plataformaDe(navigator.userAgent); if (p === 'otra') return; e.preventDefault(); window.location.href = gmailAppUrl(reclamo, p, cuenta) }} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control bg-dte-petroleo px-4 text-sm font-semibold text-white transition hover:bg-dte-petroleo-oscuro md:min-h-9"><Mail className="size-4" aria-hidden />Abrir en mi correo ({cuenta})</a>
+              <Button type="button" variant="outline" onClick={cerrar} className="min-h-11 border-dte-gris/60 font-semibold text-dte-tinta hover:bg-dte-fondo md:min-h-9"><X className="size-4" aria-hidden />{registrado ? 'Cerrar' : 'Cancelar'}</Button>
             </div>
             {registrado ? <p role="status" className="flex items-start gap-1.5 rounded-control bg-exito-fondo px-3 py-2 text-sm font-semibold text-exito"><Check className="mt-0.5 size-4 shrink-0" aria-hidden />Registrado en el panel de reclamos. El CED va a anotar el número de ticket o de incidencia cuando llegue.</p>
               : <div className="rounded-card border border-dte-linea bg-dte-fondo p-3"><p className="text-xs text-dte-gris">Cuando lo hayas mandado por mail al CED, registralo para llevar el seguimiento.</p><Button type="button" onClick={registrar} disabled={registrando} className="mt-2 w-full sm:w-auto">{registrando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Reclamo enviado</Button></div>}
-            <p className="text-xs text-dte-gris">El mensaje va al correo regional y de ahí lo deriva el CED. Se abre con tu cuenta institucional; los archivos los adjuntás vos. El asunto lleva la hora de este momento: si lo enviás más tarde, volvé a armarlo. Si la escuela ya tiene un reclamo abierto, <b>no abras una cadena nueva</b>: respondé en la original (sin el “Fwd” antes del código). <a href={DOC_BUSCADOR_CUE} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Buscar reclamos anteriores por CUE</a>.</p>
+            <p className="text-xs text-dte-gris">El mensaje va al correo regional y de ahí lo deriva el CED. Se abre con tu cuenta institucional (en el celular, en la app de Gmail); los archivos los adjuntás vos. El asunto lleva la hora de este momento: si lo enviás más tarde, volvé a armarlo. Si la escuela ya tiene un reclamo abierto, <b>no abras una cadena nueva</b>: respondé en la original (sin el “Fwd” antes del código). <a href={DOC_BUSCADOR_CUE} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Buscar reclamos anteriores por CUE</a>.</p>
           </>}
         </section>}
       </>}

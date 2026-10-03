@@ -185,3 +185,14 @@ export function armarReclamo(esc: EscuelaConectividad, tipo: TipoReclamo, d: Dat
 
 // Abre Gmail con la cuenta institucional (abc.gob.ar) con la que se inició sesión en la agenda.
 export const gmailUrl = (r: Pick<Reclamo, 'asunto' | 'para' | 'cuerpo'>, cuenta?: string | null) => `https://mail.google.com/mail/?${cuenta ? `authuser=${encodeURIComponent(cuenta)}&` : ''}view=cm&fs=1&to=${encodeURIComponent(r.para ?? '')}&su=${encodeURIComponent(r.asunto)}&body=${encodeURIComponent(r.cuerpo)}`
+
+// En el celular el mensaje se abre directo en la app de Gmail (en el navegador pide iniciar sesión y pierde el borrador).
+// iOS: esquema googlegmail://. Android: intent dirigido al paquete de Gmail, con el navegador como respaldo si no está instalada.
+export type Plataforma = 'ios' | 'android' | 'otra'
+export const plataformaDe = (ua: string): Plataforma => /iPhone|iPad|iPod/i.test(ua) ? 'ios' : /Android/i.test(ua) ? 'android' : 'otra'
+export const gmailAppUrl = (r: Pick<Reclamo, 'asunto' | 'para' | 'cuerpo'>, plataforma: Plataforma, cuenta?: string | null): string => {
+  const q = `subject=${encodeURIComponent(r.asunto)}&body=${encodeURIComponent(r.cuerpo)}`
+  if (plataforma === 'ios') return `googlegmail:///co?to=${encodeURIComponent(r.para ?? '')}&${q}`
+  if (plataforma === 'android') return `intent:${encodeURIComponent(r.para ?? '')}?${q}#Intent;scheme=mailto;package=com.google.android.gm;S.browser_fallback_url=${encodeURIComponent(gmailUrl(r, cuenta))};end`
+  return gmailUrl(r, cuenta)
+}

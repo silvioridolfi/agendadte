@@ -91,7 +91,7 @@ Arma el asunto y el cuerpo del mail de un reclamo de conectividad, con la lista 
 | PNCE, sin piso | Checklist de Z3 (predio pequeño) y contacto. También puede llamar la escuela al ${TEL_EDUCAR} (Mesa de Ayuda Educar). |
 | PNCE, con piso | Checklist USAP. |
 Los demás tipos piden lo que indica la guía: formulario y plano (mudanza, solicitudes), medición y checklist (ancho de banda), denuncia e imágenes (daños o robo), etc.
-[i] El mail va a ${RECLAMOS_PARA}: lo recibe el CED, que lo reenvía a la DTE (ella lo deriva a PBA o a Educar). Un mail por escuela y con el CUE de 8 dígitos. El botón abre Gmail con tu cuenta institucional; los archivos los adjuntás vos, la agenda no los envía.
+[i] El mail va a ${RECLAMOS_PARA}: lo recibe el CED, que lo reenvía a la DTE (ella lo deriva a PBA o a Educar). Un mail por escuela y con el CUE de 8 dígitos. El botón abre Gmail con tu cuenta institucional; en el celular lo abre directo en la app de Gmail (con la cuenta que tengas activa ahí) y, si no la tenés instalada, en el navegador. Los archivos los adjuntás vos, la agenda no los envía.
 [!] Si la escuela ya tiene un reclamo abierto, no abras una cadena nueva: respondé en la original, sin el "Fwd" antes del código. Si lo enviás más tarde, volvé a armar el reclamo para que el asunto lleve la hora correcta.` },
   { id: 'registro-reclamos', titulo: 'Registro de reclamos de conectividad', para: ['fed', 'ced'], md: () => `
 Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la planilla manual. Se abre desde el menú de las iniciales (**Registro de reclamos**).
