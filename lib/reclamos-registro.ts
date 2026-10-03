@@ -6,8 +6,8 @@ export type EstadoReclamo = typeof ESTADOS_RECLAMO[number]
 export const ESTADO_RECLAMO_LABEL: Record<EstadoReclamo, string> = { enviado: 'Reclamo enviado', en_proceso: 'En proceso', resuelto: 'Resuelto', anulado: 'Anulado' }
 // Clases completas (Tailwind) de cada estado.
 export const ESTADO_RECLAMO_CLASE: Record<EstadoReclamo, string> = {
-  enviado: 'border-aviso-borde bg-aviso-fondo-fuerte text-aviso-fuerte', en_proceso: 'border-pba-celeste/50 bg-pba-celeste/10 text-pba-celeste-texto',
-  resuelto: 'border-exito/40 bg-exito-fondo text-exito', anulado: 'border-dte-linea bg-dte-fondo text-dte-gris',
+  enviado: 'border-reclamo-enviado bg-reclamo-enviado text-reclamo-enviado-texto', en_proceso: 'border-reclamo-proceso bg-reclamo-proceso text-white',
+  resuelto: 'border-reclamo-resuelto bg-reclamo-resuelto text-white', anulado: 'border-dte-linea bg-dte-fondo text-dte-gris',
 }
 export const esAbierto = (e: string) => e === 'enviado' || e === 'en_proceso'
 
