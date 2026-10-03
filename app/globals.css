@@ -40,6 +40,11 @@
   --color-aviso-borde: #e9d8a6;
   --color-exito: #00606c;
   --color-exito-fondo: #e0f4f6;
+  /* Estados de reclamo: tres colores bien distintos (ámbar, azul, verde) para leerse de un vistazo */
+  --color-reclamo-enviado: #f2b134;
+  --color-reclamo-enviado-texto: #3d2c00;
+  --color-reclamo-proceso: #417099;
+  --color-reclamo-resuelto: #2f7d4f;
   --color-info-fondo: #f3f9fc;      /* resaltado suave (ej.: notificación sin leer) */
 
   /* Calendario: feriados nacionales y aniversarios distritales */
