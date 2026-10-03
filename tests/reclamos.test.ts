@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DATOS_VACIOS, gmailUrl, saludoDe, RECLAMOS_PARA, RECLAMOS_PARA_CLARO, armarReclamo, asuntoDe, codigoFecha, enlacesDe, faltantes, tipoDe, type DatosReclamo, type EscuelaConectividad } from '@/lib/reclamos'
+import { DATOS_VACIOS, gmailUrl, gmailAppUrl, plataformaDe, saludoDe, RECLAMOS_PARA, RECLAMOS_PARA_CLARO, armarReclamo, asuntoDe, codigoFecha, enlacesDe, faltantes, tipoDe, type DatosReclamo, type EscuelaConectividad } from '@/lib/reclamos'
 
 const esc = (p: Partial<EscuelaConectividad> = {}): EscuelaConectividad => ({ id: 'e', cue: 60897700, nombre: 'ESCUELA DE EDUCACIÓN SECUNDARIA N° 31', distrito: 'LA PLATA', ciudad: 'LA PLATA', direccion: 'BRASIL esq. EVA PERÓN', matricula: 784,
   plan_enlace: 'PBA', subplan_enlace: 'PBA GRUPO 2 A', plan_piso_tecnologico: 'PBA', tipo_piso_instalado: 'Red Local Pequeña - Instalada', tipo: 'PISO TECNOLÓGICO + ENLACE', proveedor_pnce: null, proveedor_pba: 'Orbith S.A', ani: null, recurso_primario: null, access_id: null, ...p })
@@ -85,6 +85,15 @@ describe('mensaje al CED', () => {
   it('Gmail se abre con la cuenta institucional', () => {
     expect(gmailUrl(r, 'sridolfi@abc.gob.ar')).toContain('authuser=sridolfi%40abc.gob.ar&view=cm')
     expect(gmailUrl(r)).not.toContain('authuser')
+  })
+  it('en el celular se abre la app de Gmail', () => {
+    expect(plataformaDe('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)')).toBe('ios')
+    expect(plataformaDe('Mozilla/5.0 (Linux; Android 14; Pixel 8)')).toBe('android')
+    expect(plataformaDe('Mozilla/5.0 (Windows NT 10.0; Win64; x64)')).toBe('otra')
+    expect(gmailAppUrl(r, 'ios')).toMatch(/^googlegmail:\/\/\/co\?to=/)
+    expect(gmailAppUrl(r, 'android')).toContain('package=com.google.android.gm')
+    expect(gmailAppUrl(r, 'android', 'a@abc.gob.ar')).toContain('S.browser_fallback_url=https%3A%2F%2Fmail.google.com')
+    expect(gmailAppUrl(r, 'otra', 'a@abc.gob.ar')).toBe(gmailUrl(r, 'a@abc.gob.ar'))
   })
 })
 
