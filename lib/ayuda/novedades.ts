@@ -5,6 +5,7 @@ import type { Rol } from '@/lib/ayuda/temas'
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[] }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-04', titulo: 'PEAT: la escuela del encuentro a la vista', texto: 'Las tarjetas de los grupos de prácticas muestran, debajo del curso y el grupo, la escuela donde es el encuentro y su localidad. En el detalle, la escuela aparece con su nombre completo, además del CUE.', para: ['fed'] },
   { fecha: '2026-10-03', titulo: 'Contadores del registro de reclamos más parejos', texto: 'En el celular, los tres contadores del registro de reclamos tienen el mismo tamaño y los nombres van en plural: Reclamos enviados, En proceso y Resueltos.' },
   { fecha: '2026-10-02', titulo: 'Buscador de escuela: la lupa en su lugar', texto: 'En el buscador de escuela del reclamo, la lupa ya no se corre al abrir los resultados: queda siempre dentro del campo.' },
   { fecha: '2026-10-02', titulo: 'Reclamos con Gmail directo y menú ordenado', texto: 'En el celular, Abrir en mi correo ahora abre la app de Gmail con el mensaje ya armado, sin pasar por el navegador. Si no tenés la app, se abre en el navegador como antes. Además, el botón Cancelar se ve más claro y el menú de las iniciales quedó agrupado: lo tuyo, conectividad, coordinación (si sos administración) y el resto, con Cerrar sesión al final.' },

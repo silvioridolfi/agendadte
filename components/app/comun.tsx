@@ -84,9 +84,9 @@ export const schoolPlace = (s: School | null) => (s ? [s.ciudad && s.ciudad !== 
 export const ddjjFor = (fed: Fed, fecha: string) => { const d = parse(fecha).getDay(); return d >= 1 && d <= 5 ? fed.ddjj?.find(x => x.dia === d) : undefined }
 // Título de la acción; en clubes y prácticas se agrega el grado/grupo (ej.: "EP N° 5 · 4° A").
 export const conGrupo = (i: AgendaItem, t: string) => (i.club?.grupo ? `${t} · ${i.club.grupo}` : t)
-// Los grupos de PEAT se muestran sólo por el curso y el grupo (ej.: "7° Informática - Grupo 1"), sin la escuela donde fue ese encuentro (el detalle sí la trae).
-// Línea de CUE y localidad de las tarjetas (vacía en los grupos de PEAT).
-export const lugarDeTarjeta = (i: AgendaItem) => (esPeatConGrupo(i) ? '' : cueLugar(i.school))
+// Los grupos de PEAT llevan como título sólo el curso y el grupo (ej.: "7° Informática - Grupo 1"), y la escuela donde es el encuentro va en la segunda línea.
+// Segunda línea de las tarjetas: CUE y localidad (en los grupos de PEAT, la escuela del encuentro y su localidad).
+export const lugarDeTarjeta = (i: AgendaItem) => (esPeatConGrupo(i) ? (i.school ? [shortSchoolName(i.school), schoolPlace(i.school)].filter(Boolean).join(' · ') : '') : cueLugar(i.school))
 export const itemTitle = (i: AgendaItem) => esPeatConGrupo(i) ? i.club!.grupo! : conGrupo(i, i.school ? schoolName(i.school) : i.lugar || i.sub_accion || (i.modalidad === 'Virtual' ? `${cap(i.accion.toLowerCase())} virtual` : cap(i.accion.toLowerCase())))
 // Reunión virtual o híbrida: se marca en las tarjetas ("Virtual" / "Híbrido").
 export const marcaModalidad = (i: AgendaItem) => (esReunion(i.accion) && i.modalidad && i.modalidad !== 'Presencial' ? i.modalidad : null)
