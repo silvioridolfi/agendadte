@@ -350,7 +350,7 @@ Desde las iniciales: **Mi perfil y DD.JJ.** (horario DTE y otros cargos), **Foto
 - **Escuelas con clubes activos** considera únicamente los clubes en curso; los finalizados o sin actividad no se incluyen.
 - Las acciones del CED no se suman a las métricas del equipo: se presentan en los indicadores de coordinación.
 ## Agenda del equipo
-Vistas **Día** (franja horaria por FED), **Semana** y **Próximas**. **En territorio** muestra las acciones en escuelas: incluye la oficina R1 y las reuniones presenciales que se hacen dentro de una escuela; no incluye las reuniones virtuales, con Jefatura o en la sede DTE, ni el resto de lo institucional. **Todas las acciones** incluye las institucionales. Las ausencias figuran como **Lic.** o **Paro**.
+Vistas **Día** (franja horaria por FED), **Semana** y **Próximas**. **En territorio** muestra las acciones en escuelas: incluye siempre la oficina R1 (funciona en la EES 31, aunque la acción se cargue con la DTE como sede) y las reuniones presenciales que se hacen dentro de una escuela; no incluye la asistencia remota (siempre es virtual), las reuniones virtuales, con Jefatura o en la sede DTE, ni el resto de lo institucional. En una visita con varias etiquetas alcanza con que una cuente. **Todas las acciones** incluye las institucionales. Las ausencias figuran como **Lic.** o **Paro**.
 ## Mi equipo
 Cada tarjeta presenta las acciones realizadas y planificadas del período, clubes y prácticas, la fecha de la última acción realizada y los horarios de la DD.JJ. Incluye tres accesos:
 - **Informe:** el mismo informe que el FED ve en su tablero (con sus acciones acompañadas aparte), descargable en Excel o PDF.
