@@ -57,7 +57,7 @@ El botón **Guardar** se habilita al modificar algún dato; **Descartar** revier
 | Lista | Acciones del año en orden cronológico, desde hoy en adelante; las anteriores se despliegan a pedido. |
 ## Cómo leer una tarjeta
 - **Franja de color:** tipo de acción.
-- **Horario, escuela y CUE.** Las escuelas se muestran con sigla (EP, EES, EEST, JI…). Los grupos de PEAT se muestran solo con el curso y el grupo (por ejemplo, "7° Informática - Grupo 1"); el detalle indica la escuela donde fue el encuentro.
+- **Horario, escuela y CUE.** Las escuelas se muestran con sigla (EP, EES, EEST, JI…). Los grupos de PEAT llevan como título solo el curso y el grupo (por ejemplo, "7° Informática - Grupo 1") y, debajo, la escuela donde es el encuentro con su localidad; el detalle también muestra su nombre completo y el CUE.
 - **Etiquetas:** tipo de acción y estado.
 - **Compartida:** acción de otro integrante en la que te incorporaron. **+1, +2…** es la cantidad de acompañantes.
 - **Ícono de cámara:** la acción tiene fotos en Drive: las que quedaron asignadas a ella por horario o, si no tiene, fotos del día que no pertenecen a ninguna otra acción.

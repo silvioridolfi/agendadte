@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ESTADOS, esTrayecto, type AgendaItem, type Estado, type Fed, type School } from '@/lib/agenda'
 import type { Ubicacion } from '@/app/actions'
 import { titleCase } from '@/lib/format'
-import { ubicacionDe, statusStyle, parse, fmt, cap, timeRange, schoolPlace, itemTitle, firstName, setItemStatus, deleteItem, responder, getHistorial, fotosDelDia, errMsg, ActionChip, StatusBadge, ErrorBox } from '@/components/app/comun'
+import { esPeatConGrupo } from '@/lib/encuentro'
+import { ubicacionDe, statusStyle, parse, fmt, cap, timeRange, schoolPlace, itemTitle, schoolName, firstName, setItemStatus, deleteItem, responder, getHistorial, fotosDelDia, errMsg, ActionChip, StatusBadge, ErrorBox } from '@/components/app/comun'
 import { ZONA, hoyAR } from '@/lib/hora'
 
 // =====================================================================
@@ -85,7 +86,7 @@ function DetalleAccion({ item, feds, profile, soloLectura, onClose, onEdit, onCh
         {row(MapPin, 'Lugar', !item.school && item.lugar)}
         {row(Video, 'Reunión virtual', item.enlace && <a href={item.enlace} target="_blank" rel="noopener noreferrer" title={item.enlace} className="inline-flex min-h-11 items-center font-semibold text-dte-petroleo underline underline-offset-2 md:min-h-0">Unirse a la reunión</a>)}
         {row(GraduationCap, item.accion === 'FORMACIÓN INTERNA' ? 'Formación' : 'Modalidad', (item.modalidad || item.rol_formacion || item.dictada_por) && [item.rol_formacion, item.modalidad, item.dictada_por ? `dictada por ${item.dictada_por}` : null].filter(Boolean).join(' · '))}
-        {row(SchoolIcon, 'Escuela', item.school && <>CUE {item.school.cue ?? '—'}{schoolPlace(item.school) ? ` · ${schoolPlace(item.school)}` : ''}</>)}
+        {row(SchoolIcon, 'Escuela', item.school && <>{esPeatConGrupo(item) && <span className="block font-semibold">{schoolName(item.school)}</span>}CUE {item.school.cue ?? '—'}{schoolPlace(item.school) ? ` · ${schoolPlace(item.school)}` : ''}</>)}
         {row(Navigation, 'Dirección', !ubicLista && (item.school_id || item.lugar) ? <span aria-hidden className="block h-5 w-56 max-w-full anim-brillo rounded bg-dte-linea/70" /> : (textoDir || mapa) && <>{textoDir}{mapa && <> {textoDir ? '· ' : ''}<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapa)}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Cómo llegar</a></>}</>)}
         {!visita && <>
         {row(ClipboardList, 'Sub-acción', item.sub_accion && <>{item.sub_accion}{item.cantidad ? <span className="text-dte-gris"> · {item.cantidad} equipos</span> : null}</>)}
