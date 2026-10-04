@@ -12,9 +12,22 @@ describe('En territorio', () => {
     expect(enTerritorio(it_('CLUB DE TECNOLOGÍA'))).toBe(true)
     expect(enTerritorio(it_('VISITA TÉCNICA', { school_id: null, lugar: null }))).toBe(false)
   })
-  it('la oficina R1 dentro de una escuela cuenta; en la sede DTE, no', () => {
+  it('la oficina R1 es siempre territorio, aunque se cargue con la DTE como sede o sin escuela', () => {
     expect(enTerritorio(it_('OFICINA R1'))).toBe(true) // EES 31
-    expect(enTerritorio(it_('OFICINA R1', { cue: 60000000 }))).toBe(false)
+    expect(enTerritorio(it_('OFICINA R1', { cue: 60000000 }))).toBe(true)
+    expect(enTerritorio(it_('OFICINA R1', { school_id: null, lugar: null }))).toBe(true)
+    expect(enTerritorio(it_('OFICINA R1', { modalidad: 'Virtual' }))).toBe(false)
+  })
+  it('la asistencia remota nunca es territorio, ni con una escuela o la DTE como sede', () => {
+    expect(enTerritorio(it_('ASISTENCIA REMOTA', { cue: 60000000 }))).toBe(false)
+    expect(enTerritorio(it_('ASISTENCIA REMOTA'))).toBe(false)
+    expect(enTerritorio(it_('ASISTENCIA REMOTA', { school_id: null, lugar: 'Casa' }))).toBe(false)
+  })
+  it('una visita con varias etiquetas cuenta si alguna cuenta', () => {
+    const visita = (...a: Accion[]) => ({ ...it_(a[0], { cue: 60000000 }), visita: a.map(x => it_(x, { cue: 60000000 })) })
+    expect(enTerritorio(visita('ASISTENCIA REMOTA', 'OFICINA R1'))).toBe(true)
+    expect(enTerritorio(visita('ASISTENCIA REMOTA'))).toBe(false)
+    expect(enTerritorio({ ...it_('ASISTENCIA REMOTA'), visita: [it_('ASISTENCIA REMOTA'), it_('VISITA TÉCNICA')] })).toBe(true)
   })
   it('la reunión presencial en una escuela cuenta; virtual, en la DTE o con Jefatura, no', () => {
     expect(enTerritorio(it_('REUNIÓN', { modalidad: 'Presencial' }))).toBe(true)
