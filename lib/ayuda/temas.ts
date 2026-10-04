@@ -167,7 +167,7 @@ Cada grado o grupo es un club o una práctica. **Nuevo club / Nueva práctica:**
 Si un curso se dividió en grupos (por ejemplo, 7.º Informática en Grupo 1 y Grupo 2), cargá cada grupo en el campo **Grupo**: en las métricas de prácticas cuentan como un solo curso, con los inscriptos sumados.
 **En las prácticas (PEAT),** el grupo se identifica por la **escuela de origen** de los estudiantes, que es obligatoria: no lleva una sede propia, porque las prácticas se hacen en varios lugares. En cada encuentro elegís el lugar donde se hizo (el establecimiento del formulario).
 ## Registrar un encuentro
-- El **número de encuentro** se asigna solo, a partir de los encuentros ya realizados del grupo; podés corregirlo.
+- El **número de encuentro** se asigna solo, a partir de los encuentros ya realizados del grupo (también cuentan los que marcaste como realizados sin completar sus datos); podés corregirlo. Si marcás como realizada una fecha en la que no hubo encuentro, el número de los siguientes se corre: pasala a cancelada.
 - **Propuesta dictada:** en clubes viene "Club de Tecnología" y hay una lista corta para elegir otra (${PROPUESTAS_DE_CLUB.slice(1, 5).join(', ')}, entre otras) o escribir una propia. En PEAT es siempre "Prácticas Educativas en Ambientes de Trabajo".
 - **Destinatarios:** se tilda entre el grado del club, ${DESTINATARIOS_BASE.join(', ')}, y se pueden sumar otros.
 - **Inscriptos:** se cargan al iniciar y se mantienen hasta el cierre; el formulario los trae del primer encuentro. En cada encuentro cargás solo los **participantes reales** y una breve descripción de lo realizado.
