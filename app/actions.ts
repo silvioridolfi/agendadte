@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseServer } from '@/lib/supabase-server'
-import { proximoEncuentro } from '@/lib/encuentro'
+import { conRealizadosSinRegistro, proximoEncuentro } from '@/lib/encuentro'
 import { esEnero, mensajeEnero, recesoEnero } from '@/lib/receso'
 import { enlaceDe, esReunion } from '@/lib/reunion'
 import { ACCIONES, CON_ENCUENTRO, ESTADOS, esAusencia, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, MODALIDADES, MODALIDADES_EVENTO, ROLES_FORMACION, type EventoDte, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
@@ -476,12 +476,13 @@ async function marcarLeidasImpl(fedId: string, ids?: string[]): Promise<void> {
 
 async function siguienteEncuentro(clubId: string, fecha: string, excluirItem: string): Promise<number> {
   const db = supabaseServer()
-  const [{ data }, { data: items }] = await Promise.all([
+  const [{ data }, { data: items }, { data: hechas }] = await Promise.all([
     db.from('agenda_encuentros').select('fecha, encuentro_n, agenda_item_id, item:agenda_items(estado)').eq('club_id', clubId),
     db.from('agenda_items').select('fecha').eq('club_id', clubId).in('estado', ['planificada', 'reprogramada']).lt('fecha', fecha).neq('id', excluirItem),
+    db.from('agenda_items').select('id, fecha').eq('club_id', clubId).eq('estado', 'realizada').lte('fecha', fecha).neq('id', excluirItem),
   ])
   const encuentros = (data ?? []).map(e => ({ ...e, item: Array.isArray(e.item) ? e.item[0] ?? null : e.item }))
-  return proximoEncuentro(encuentros, fecha, excluirItem, (items ?? []).map(i => i.fecha as string))
+  return proximoEncuentro(conRealizadosSinRegistro(encuentros, (hechas ?? []) as { id: string, fecha: string }[]), fecha, excluirItem, (items ?? []).map(i => i.fecha as string))
 }
 
 // Club del encuentro: crea uno nuevo (inicia en esta fecha) o actualiza el elegido; marcar cierre lo finaliza.

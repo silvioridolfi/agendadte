@@ -5,6 +5,7 @@ import type { Rol } from '@/lib/ayuda/temas'
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[] }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-04', titulo: 'Número de encuentro más preciso', texto: 'Al numerar el próximo encuentro de un club o grupo de prácticas, ahora cuentan también las fechas marcadas como realizadas aunque no se hayan completado los datos del encuentro. Si una fecha quedó como realizada sin que hubiera encuentro, pasala a cancelada para que no corra la numeración.', para: ['fed'] },
   { fecha: '2026-10-04', titulo: 'PEAT: la escuela del encuentro a la vista', texto: 'Las tarjetas de los grupos de prácticas muestran, debajo del curso y el grupo, la escuela donde es el encuentro y su localidad. En el detalle, la escuela aparece con su nombre completo, además del CUE.', para: ['fed'] },
   { fecha: '2026-10-03', titulo: 'Contadores del registro de reclamos más parejos', texto: 'En el celular, los tres contadores del registro de reclamos tienen el mismo tamaño y los nombres van en plural: Reclamos enviados, En proceso y Resueltos.' },
   { fecha: '2026-10-02', titulo: 'Buscador de escuela: la lupa en su lugar', texto: 'En el buscador de escuela del reclamo, la lupa ya no se corre al abrir los resultados: queda siempre dentro del campo.' },

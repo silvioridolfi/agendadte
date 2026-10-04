@@ -29,6 +29,13 @@ export function proximoEncuentro(encuentros: EncuentroNum[], fecha?: string, exc
   return base + planificadas.size + 1
 }
 
+// Las acciones del club ya realizadas que no tienen registro de encuentro (por ejemplo, las de una serie marcadas como realizadas sin completar
+// los datos) también son encuentros hechos: se suman a la lista para que cuenten al numerar los próximos.
+export function conRealizadosSinRegistro<E extends EncuentroNum>(encuentros: E[], realizadas: { id: string, fecha: string }[]): EncuentroNum[] {
+  const conRegistro = new Set(encuentros.map(e => e.agenda_item_id).filter(Boolean))
+  return [...encuentros, ...realizadas.filter(i => !conRegistro.has(i.id)).map(i => ({ encuentro_n: null, fecha: i.fecha, agenda_item_id: i.id, item: { estado: 'realizada' } }))]
+}
+
 // Una acción de club o práctica de hoy o anterior, todavía planificada, pasa a realizada cuando se cargan datos del encuentro
 // (participantes reales, descripción o cierre). Las canceladas y las futuras no se tocan.
 export function estadoAlCompletar(p: { accion: string | null, estado: Estado, fecha: string, hoy: string, inscriptos: string, asistentes: string, descripcion: string, esCierre: boolean }): Estado {

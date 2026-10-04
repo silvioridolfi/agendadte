@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { esPeatConGrupo, escuelaDelClub, contarUnidades, unidadDe, cambiaLaSerie, clubesDelDia, destinatarioEstudiantes, inscriptosDelClub, opcionesDestinatarios, partirDestinatarios, PROPUESTAS_DE_CLUB, unirDestinatarios, estadoAlCompletar, horariosSePisan, minEncuentros, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
+import { conRealizadosSinRegistro, esPeatConGrupo, escuelaDelClub, contarUnidades, unidadDe, cambiaLaSerie, clubesDelDia, destinatarioEstudiantes, inscriptosDelClub, opcionesDestinatarios, partirDestinatarios, PROPUESTAS_DE_CLUB, unirDestinatarios, estadoAlCompletar, horariosSePisan, minEncuentros, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
 
 describe('mínimo de encuentros (sólo informativo)', () => {
   it('los clubes tienen mínimo 8; las prácticas y el resto, ninguno', () => {
@@ -154,5 +154,24 @@ describe('grupos de PEAT en la agenda', () => {
     expect(esPeatConGrupo({ accion: 'PRÁCTICAS PROFESIONALIZANTES', club: null })).toBe(false)
     expect(esPeatConGrupo({ accion: 'PRÁCTICAS PROFESIONALIZANTES', club: { grupo: null } })).toBe(false)
     expect(esPeatConGrupo({ accion: 'CLUB DE TECNOLOGÍA', club: { grupo: '4°' } })).toBe(false)
+  })
+})
+
+describe('encuentros realizados sin registro', () => {
+  const dia = (n: number) => `2026-09-${String(n).padStart(2, '0')}`
+  // Encuentros 1 a 22 con registro (item realizado) y dos acciones de la serie realizadas sin completar los datos.
+  const registrados = Array.from({ length: 22 }, (_, k) => ({ encuentro_n: k + 1, fecha: `2026-07-${String(k + 1).padStart(2, '0')}`, agenda_item_id: `i${k + 1}`, item: { estado: 'realizada' } }))
+  const sinRegistro = [{ id: 'a', fecha: dia(28) }, { id: 'b', fecha: dia(30) }]
+  it('sin tenerlos en cuenta, el próximo número queda atrasado', () => {
+    expect(proximoEncuentro(registrados, '2026-10-05')).toBe(23)
+  })
+  it('las acciones realizadas sin registro suman al numerar el próximo', () => {
+    expect(proximoEncuentro(conRealizadosSinRegistro(registrados, sinRegistro), '2026-10-05')).toBe(25)
+  })
+  it('una acción que ya tiene registro no se cuenta dos veces', () => {
+    expect(proximoEncuentro(conRealizadosSinRegistro(registrados, [{ id: 'i22', fecha: '2026-07-22' }, ...sinRegistro]), '2026-10-05')).toBe(25)
+  })
+  it('las posteriores a la fecha no cuentan', () => {
+    expect(proximoEncuentro(conRealizadosSinRegistro(registrados, sinRegistro), '2026-09-29')).toBe(24)
   })
 })
