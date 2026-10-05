@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { avisoDeCambio, conexionDe, filtrarReclamos, origenDeNumero, resumenReclamos, esAbierto, type Reclamo } from '@/lib/reclamos-registro'
+import { avisoDeAlta, avisoDeCambio, conexionDe, filtrarReclamos, origenDeNumero, resumenReclamos, esAbierto, type Reclamo } from '@/lib/reclamos-registro'
 
 const e = (plan_enlace: string, subplan_enlace: string, plan_piso_tecnologico: string | null) => ({ plan_enlace, subplan_enlace, plan_piso_tecnologico })
 
@@ -54,5 +54,12 @@ describe('aviso al FED cuando cambia su reclamo', () => {
     expect(avisoDeCambio({ estado: 'en_proceso', nro_incidencia: 'x' }, { estado: 'en_proceso', nro_incidencia: 'x' }, rec)).toBeNull()
     expect(avisoDeCambio({ estado: 'enviado', nro_incidencia: null }, { estado: 'anulado', nro_incidencia: null }, rec)).toBeNull()
     expect(avisoDeCambio({ estado: 'resuelto', nro_incidencia: 'x' }, { estado: 'resuelto', nro_incidencia: 'x' }, rec)).toBeNull()
+  })
+})
+
+describe('aviso al CED por un reclamo nuevo', () => {
+  it('dice el CUE y el tipo de reclamo', () => {
+    expect(avisoDeAlta({ cue: 60897700, tipo_label: 'Sin conectividad' })).toBe('Nuevo reclamo de CUE 60897700 · Sin conectividad')
+    expect(avisoDeAlta({ cue: null, tipo_label: 'Sin conectividad' })).toBe('Nuevo reclamo de CUE — · Sin conectividad')
   })
 })

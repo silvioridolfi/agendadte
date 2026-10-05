@@ -97,8 +97,8 @@ Los demás tipos piden lo que indica la guía: formulario y plano (mudanza, soli
 Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la planilla manual. Se abre desde el menú de las iniciales (**Registro de reclamos**).
 ## Cómo se carga
 1. Armás el reclamo (**Armar reclamo de conectividad**) y lo mandás por mail al CED.
-2. Tocás **Reclamo enviado**: queda registrado con tu nombre, la escuela, el tipo de reclamo, el asunto y el tipo de conexión de la escuela.
-3. Cuando Nivel Central responde, el CED anota el **número de ticket (PBA) o de incidencia (Educar)** y, más tarde, marca el reclamo como **Resuelto**. Cada vez, el FED que lo envió recibe una notificación (al tocarla se abre el registro).
+2. Tocás **Reclamo enviado**: queda registrado con tu nombre, la escuela, el tipo de reclamo, el asunto y el tipo de conexión de la escuela. Al CED le llega una notificación de reclamo nuevo.
+3. Cuando Nivel Central responde, el CED anota el **número de ticket (PBA) o de incidencia (Educar)** y, más tarde, marca el reclamo como **Resuelto**. Cada vez, el FED que lo envió recibe una notificación (al tocarla se abre el registro). Estos avisos, y el del reclamo nuevo para el CED, aparecen también como **banner** arriba de la pantalla, con **Ver registro** y **Entendido**; si llegan varios, se juntan en un solo banner.
 ## Estados
 | Estado | Qué significa |
 | Reclamo enviado | Lo mandaste al CED; todavía no llegó un número. |
@@ -281,7 +281,7 @@ La **campanita** reúne tus notificaciones y se actualiza sola cada pocos segund
 | Amarillo | Avisos y recordatorios (por ejemplo, de la PVE). |
 | Verde | Confirmaciones de participación y entregas. |
 | Neutro | Informativas: te sumaron a una acción o la modificaron. |
-Lo que pide una acción tuya (aviso y recordatorio de PVE, PVE devuelta) aparece además como **banner** arriba de la pantalla, con **Ir a mis PVE** y **Entendido**, hasta que lo resolvés o lo cerrás.
+Lo que pide una acción tuya (aviso y recordatorio de PVE, PVE devuelta) aparece además como **banner** arriba de la pantalla, con **Ir a mis PVE** y **Entendido**, hasta que lo resolvés o lo cerrás. Lo mismo pasa con los avisos de reclamos de conectividad.
 ## Tipos de aviso
 | Aviso | Origen |
 | Te sumó a… | Otro integrante te incorporó a una acción. Podés responder **Participo** o **No puedo** desde el detalle. |
@@ -450,7 +450,7 @@ Las planillas devueltas quedan fuera del envío del mes. Una vez reentregadas, *
 [!!] Licencias y paros no se computan en métricas, informes ni planillas.` },
 
   { id: 'ced-notificaciones', titulo: 'Notificaciones y avisos de coordinación', para: ['ced'], md: () => `
-Las notificaciones llevan un color (rojo: urgente; amarillo: aviso; verde: confirmación; neutro: informativa). Lo que pide una acción tuya aparece además como banner arriba de la pantalla, hasta que lo cerrás con **Entendido**.
+Las notificaciones llevan un color (rojo: urgente; amarillo: aviso; verde: confirmación; neutro: informativa). Lo que pide una acción tuya y los avisos de reclamos de conectividad (varios juntos, en un solo banner) aparecen además como banner arriba de la pantalla, hasta que los cerrás con **Entendido**.
 | Aviso | Origen |
 | Entregó su PVE | Entrega o reentrega de una planilla. |
 | Cargó una Licencia | Licencia registrada por un FED, con el período. |

@@ -14,7 +14,7 @@ import { hoyAR } from '@/lib/hora'
 import { avisaPorFecha } from '@/lib/avisos'
 import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
 import { tipoDe, type EscuelaConectividad } from '@/lib/reclamos'
-import { ESTADOS_RECLAMO, avisoDeCambio, conexionDe, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
+import { ESTADOS_RECLAMO, avisoDeAlta, avisoDeCambio, conexionDe, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
 import { estadoAlCrear } from '@/lib/estado'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -103,6 +103,10 @@ async function registrarReclamoImpl(yo: Usuario, input: { school_id: string, tip
   const { data, error: e2 } = await db.from('reclamos_conectividad').insert(row).select('id').single()
   if (e2) throw new Error(e2.message)
   await audit('reclamos_conectividad', data.id as string, 'alta', yo.fed.id, row)
+  // Se avisa al CED (coordinación) del reclamo nuevo, salvo que lo haya registrado él mismo.
+  const { data: ceds } = await db.from('feds').select('id').eq('rol', 'coordinacion')
+  const avisos = (ceds ?? []).filter(c => c.id !== yo.fed.id).map(c => ({ fed_id: c.id as string, autor_id: yo.fed.id, tipo: 'reclamo', detalle: avisoDeAlta({ cue: esc.cue as number | null, tipo_label: tipo.asunto }) }))
+  if (avisos.length) await db.from('notificaciones').insert(avisos)
   return data.id as string
 }
 async function getReclamosImpl(): Promise<Reclamo[]> {
