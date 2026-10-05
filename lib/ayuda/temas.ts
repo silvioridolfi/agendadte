@@ -450,7 +450,7 @@ Las planillas devueltas quedan fuera del envío del mes. Una vez reentregadas, *
 [!!] Licencias y paros no se computan en métricas, informes ni planillas.` },
 
   { id: 'ced-notificaciones', titulo: 'Notificaciones y avisos de coordinación', para: ['ced'], md: () => `
-Las notificaciones llevan un color (rojo: urgente; amarillo: aviso; verde: confirmación; neutro: informativa). Lo que pide una acción tuya y los avisos de reclamos de conectividad (varios juntos, en un solo banner) aparecen además como banner arriba de la pantalla, hasta que los cerrás con **Entendido**.
+Las novedades importantes se anuncian además con un banner celeste, con **Ver cómo**, que te lleva al tema de la ayuda; se va cuando lo cerrás con **Entendido** (en ese dispositivo) o a los pocos días. Las notificaciones llevan un color (rojo: urgente; amarillo: aviso; verde: confirmación; neutro: informativa). Lo que pide una acción tuya y los avisos de reclamos de conectividad (varios juntos, en un solo banner) aparecen además como banner arriba de la pantalla, hasta que los cerrás con **Entendido**.
 | Aviso | Origen |
 | Entregó su PVE | Entrega o reentrega de una planilla. |
 | Cargó una Licencia | Licencia registrada por un FED, con el período. |

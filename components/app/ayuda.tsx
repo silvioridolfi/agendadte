@@ -64,13 +64,15 @@ function Bloques({ bloques, fam }: { bloques: Bloque[], fam: Familia }) {
 const fechaLarga = (f: string) => new Date(`${f}T12:00:00`).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
 
 // Ayuda de la agenda: temas según el rol, con buscador, y las novedades. El contenido sale de lib/ayuda.
-export function AyudaView({ rol, onVista }: { rol: Rol, onVista: () => void }) {
+// `tema`: tema que se abre al entrar (por ejemplo, desde el banner de una novedad).
+export function AyudaView({ rol, onVista, tema }: { rol: Rol, onVista: () => void, tema?: string }) {
   const [pestana, setPestana] = useState<'temas' | 'novedades'>('temas')
   const [q, setQ] = useState('')
-  const [abierto, setAbierto] = useState<string | null>(null)
+  const [abierto, setAbierto] = useState<string | null>(tema ?? null)
   // El contenido de un tema se arma la primera vez que se abre y queda, para que el pliegue también se anime.
-  const [armados, setArmados] = useState<ReadonlySet<string>>(new Set())
+  const [armados, setArmados] = useState<ReadonlySet<string>>(() => new Set(tema ? [tema] : []))
   const refs = useRef<Record<string, HTMLLIElement | null>>({})
+  useEffect(() => { if (tema) requestAnimationFrame(() => refs.current[tema]?.scrollIntoView({ behavior: 'smooth', block: 'start' })) }, [tema])
   useEffect(() => { if (pestana === 'novedades') onVista() }, [pestana, onVista])
   const temas = useMemo(() => TEMAS.filter(t => t.para.includes(rol)).map(t => { const bloques = parsear(t.md()); return { ...t, bloques, plano: normalizar(`${t.titulo} ${bloques.map(textoPlano).join(' ')}`) } }), [rol])
   const nq = normalizar(q.trim())

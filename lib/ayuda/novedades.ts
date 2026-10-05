@@ -2,9 +2,13 @@
 // en el mismo cambio que lo introduce (junto con su sección de la ayuda). La más nueva enciende el puntito del menú de Ayuda.
 import type { Rol } from '@/lib/ayuda/temas'
 
-export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[] }
+// `banner`: la novedad se anuncia además con un banner arriba de la pantalla para los roles de `para`, hasta que se cierra o pasa `hasta`
+// (inclusive). El botón lleva al tema `tema` de la ayuda.
+export type BannerNovedad = { para: Rol[], texto: string, corto: string, tema: string, hasta: string }
+export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[], banner?: BannerNovedad }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-05', titulo: 'Las novedades importantes, en un banner', texto: 'Cuando hay una novedad importante, la agenda la anuncia con un banner celeste arriba de la pantalla, con un botón que te lleva al tema de la ayuda. Se va cuando lo cerrás o a los pocos días, y las novedades siguen en la pestaña Novedades de la ayuda.', para: ['fed'] },
   { fecha: '2026-10-05', titulo: 'Avisos de reclamos también como banner', texto: 'Cuando un FED registra un reclamo de conectividad, al CED le llega una notificación. Los avisos de reclamos (reclamo nuevo para el CED; número de ticket o resolución para el FED) aparecen además como banner arriba de la pantalla, con el botón Ver registro. Si llegan varios, quedan juntos en un solo banner.' },
   { fecha: '2026-10-04', titulo: 'Agenda del equipo: territorio según la etiqueta', texto: 'En la vista En territorio, la Oficina R1 cuenta siempre (funciona en la EES 31, aunque se cargue con la DTE como sede) y la Asistencia remota nunca cuenta, porque es virtual. En una visita con varias etiquetas alcanza con que una cuente.', para: ['ced'] },
   { fecha: '2026-10-04', titulo: 'Número de encuentro más preciso', texto: 'Al numerar el próximo encuentro de un club o grupo de prácticas, ahora cuentan también las fechas marcadas como realizadas aunque no se hayan completado los datos del encuentro. Si una fecha quedó como realizada sin que hubiera encuentro, pasala a cancelada para que no corra la numeración.', para: ['fed'] },
@@ -17,7 +21,7 @@ export const NOVEDADES: Novedad[] = [
   { fecha: '2026-10-02', titulo: 'Avisos y Excel en el registro de reclamos', texto: 'Cuando el CED anota el número de ticket o de incidencia de tu reclamo, o lo marca resuelto, te llega una notificación (al tocarla se abre el registro). Además, el botón Excel del registro descarga la lista con tus filtros, con las mismas columnas de la planilla del CED.' },
   { fecha: '2026-10-02', titulo: 'Registro de reclamos de conectividad', texto: 'Al armar un reclamo y mandarlo al CED, tocá Reclamo enviado para registrarlo. En el menú de las iniciales, Registro de reclamos muestra los del equipo con su estado y el número de ticket o de incidencia que anota el CED cuando llega de Nivel Central. Si la escuela ya tiene un reclamo abierto, la agenda te avisa para seguir esa cadena.' },
   { fecha: '2026-10-02', titulo: 'Reclamos de conectividad: mensaje al CED y tu correo oficial', texto: 'El reclamo ahora está redactado para el CED, con el saludo según la hora, el contacto de la escuela con su cargo uno por renglón y sin firma. Se abre en Gmail con tu cuenta institucional y tiene botón Cancelar. Además, el logo y el título de la agenda te llevan siempre al inicio.' },
-  { fecha: '2026-10-02', titulo: 'Reclamos de conectividad armados por la agenda', texto: 'Desde el menú de las iniciales, la ficha de una escuela o una acción de Conectividad podés armar el reclamo: la agenda toma el enlace y el piso de la escuela, arma el asunto con el formato de la guía y el cuerpo del mail, y te dice qué adjuntar (checklist, foto del módem, plano). Después lo copiás o lo abrís en Gmail.' },
+  { fecha: '2026-10-02', titulo: 'Reclamos de conectividad armados por la agenda', texto: 'Desde el menú de las iniciales, la ficha de una escuela o una acción de Conectividad podés armar el reclamo: la agenda toma el enlace y el piso de la escuela, arma el asunto con el formato de la guía y el cuerpo del mail, y te dice qué adjuntar (checklist, foto del módem, plano). Después lo copiás o lo abrís en Gmail.', banner: { para: ['fed'], texto: '¡Novedad! Ahora podés armar tus reclamos de conectividad desde la agenda', corto: '¡Novedad! Reclamos de conectividad en la agenda', tema: 'reclamos', hasta: '2026-10-19' } },
   { fecha: '2026-10-02', titulo: 'Carpetas de fotos de PEAT con curso y grupo', texto: 'Las carpetas de fotos de los grupos de prácticas se nombran solo con el curso y el grupo, sin la escuela del encuentro. Las existentes se renombran solas en el próximo orden nocturno, o al tocar Ordenar ahora.', para: ['fed'] },
   { fecha: '2026-10-02', titulo: 'PEAT en la agenda: solo curso y grupo', texto: 'Las tarjetas de los grupos de prácticas muestran solo el curso y el grupo (por ejemplo, 7° Informática - Grupo 1), sin la escuela del encuentro. El detalle de la acción sigue indicando dónde fue.', para: ['fed'] },
   { fecha: '2026-10-02', titulo: 'Los grupos de PEAT se identifican por su escuela de origen', texto: 'Un grupo de prácticas ya no queda atado a una sede: se muestra con la escuela de origen de los estudiantes y cada encuentro lleva el lugar donde se hizo. Al crear un grupo nuevo, la escuela de origen es obligatoria.', para: ['fed'] },
@@ -38,3 +42,12 @@ export const NOVEDADES: Novedad[] = [
 ]
 
 export const ultimaNovedad = (rol: Rol): string | null => NOVEDADES.find(n => !n.para || n.para.includes(rol))?.fecha ?? null
+
+// Id de una novedad con banner (para recordar cuáles se cerraron).
+export const idBanner = (n: Pick<Novedad, 'fecha' | 'titulo'>) => `${n.fecha}|${n.titulo}`
+
+// Banner de novedad a mostrar: el de la novedad más reciente con banner para el rol, vigente hoy y que no se cerró.
+export function bannerVigente(rol: Rol, hoy: string, cerrados: readonly string[]): { id: string } & BannerNovedad | null {
+  const n = NOVEDADES.find(x => x.banner && x.banner.para.includes(rol) && hoy <= x.banner.hasta && !cerrados.includes(idBanner(x)))
+  return n?.banner ? { id: idBanner(n), ...n.banner } : null
+}

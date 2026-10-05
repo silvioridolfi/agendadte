@@ -58,6 +58,8 @@ export default function Page() {
   const [hayNovedades, marcarNovedades] = useNovedadesNuevas(rolAyuda)
   const setProfile = (f: Fed) => setSesion(s => (s ? { ...s, fed: f } : s))
   const [section, setSection] = useState<Seccion>('agenda')
+  // Tema de la ayuda que se abre al entrar (desde el banner de una novedad); desde el menú, la ayuda se abre sin tema.
+  const [temaAyuda, setTemaAyuda] = useState<string | undefined>()
   // La sección abierta se recuerda en la pestaña del navegador: al recargar se vuelve al mismo lugar.
   useEffect(() => { if (sesion) storage(() => sessionStorage.setItem(SECCION_KEY, section)) }, [section, sesion])
   const [cambiandoPass, setCambiandoPass] = useState(false)
@@ -156,7 +158,7 @@ export default function Page() {
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <button type="button" onClick={() => setBuscador(true)} aria-label="Buscar escuela" title="Buscar escuela" className="flex size-11 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-fondo hover:text-dte-tinta"><Search className="size-5" /></button>
         <NotificacionesBell feds={feds ?? []} onOpen={setSelected} onReclamos={() => { setVista(null); irA('reclamos') }} />
-        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} hayNovedades={hayNovedades} onReclamo={() => abrirReclamo(null)} onRegistroReclamos={() => { setVista(null); irA('reclamos') }} onAyuda={() => { setVista(null); irA('ayuda') }} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
+        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} hayNovedades={hayNovedades} onReclamo={() => abrirReclamo(null)} onRegistroReclamos={() => { setVista(null); irA('reclamos') }} onAyuda={() => { setVista(null); setTemaAyuda(undefined); irA('ayuda') }} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
         </div>
       </div>
     </header>
@@ -170,7 +172,7 @@ export default function Page() {
           <span className="hidden truncate sm:inline">{vista.tipo === 'equipo' ? <>Estás viendo el <b>tablero del equipo completo</b></> : <>Estás viendo la agenda de <b>{vista.fed.nombre_completo}</b></>} · Solo lectura</span></span>
         <button type="button" onClick={() => { setVista(null); irA('agenda') }} className="min-h-9 shrink-0 rounded-full bg-white px-3 text-xs font-semibold text-dte-petroleo shadow-e1 hover:bg-dte-tinte md:min-h-8"><span className="sm:hidden">Mi agenda</span><span className="hidden sm:inline">Volver a mi agenda</span></button></div>
     </div>}
-      <AvisosBanner feds={feds ?? []} puedeSubirPve={profile.rol === 'fed'} onIrAPve={() => { setVista(null); irA('mispve') }} onReclamos={() => { setVista(null); irA('reclamos') }} />
+      <AvisosBanner feds={feds ?? []} puedeSubirPve={profile.rol === 'fed'} onIrAPve={() => { setVista(null); irA('mispve') }} onReclamos={() => { setVista(null); irA('reclamos') }} rol={rolAyuda} onNovedad={tema => { setVista(null); setTemaAyuda(tema); irA('ayuda') }} />
     </div>
     {/* Cada pantalla entra con un fundido corto; cambiar de sección o de vista la vuelve a animar. */}
     <div key={`${section}-${vista?.tipo ?? ''}-${vista?.tipo === 'fed' ? vista.fed.id : ''}`} className="anim-entrada">
@@ -178,7 +180,7 @@ export default function Page() {
       : section === 'pve' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <PveEquipoView />
       : section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><div className="flex flex-col gap-4"><EventosPanel onSaved={changed} /><FeriadosView autorId={profile.id} onSaved={changed} /></div></main>
       : section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); irA('agenda') } }} />
-      : section === 'ayuda' ? <AyudaView rol={rolAyuda} onVista={marcarNovedades} />
+      : section === 'ayuda' ? <AyudaView key={temaAyuda ?? ''} rol={rolAyuda} onVista={marcarNovedades} tema={temaAyuda} />
       : section === 'fotos' ? <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-32 pt-6 lg:px-10"><SeccionFotos /></main>
       : section === 'mispve' && profile.rol === 'fed' ? <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-32 pt-6 lg:px-10"><SeccionPve /></main>
       : section === 'perfil'

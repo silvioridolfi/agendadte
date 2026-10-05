@@ -1,10 +1,13 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, ArrowRight, Bell, CheckCircle2, Info, OctagonAlert, X } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Bell, CheckCircle2, Info, OctagonAlert, Sparkles, X } from 'lucide-react'
 import { type AgendaItem, type Fed, type Notificacion } from '@/lib/agenda'
 import { bannerDe, clasePve, claseReclamo, nivelDe, type Nivel } from '@/lib/avisos'
-import { parse, fmt, cap, itemTitle, getNotificaciones, marcarLeidas } from '@/components/app/comun'
+import { parse, fmt, cap, itemTitle, getNotificaciones, marcarLeidas, storage } from '@/components/app/comun'
+import { bannerVigente } from '@/lib/ayuda/novedades'
+import type { Rol } from '@/lib/ayuda/temas'
+import { hoyAR } from '@/lib/hora'
 
 // Notificaciones del perfil: etiquetas en acciones de compañeros o de coordinación. Se revisan cada 20 s y al volver a la pestaña o a la app.
 // La campanita y el banner de arriba comparten la misma lista.
@@ -85,10 +88,11 @@ export function NotificacionesBell({ feds, onOpen, onReclamos }: { feds: Fed[], 
 
 // Banner de arriba para lo que pide una acción (PVE a entregar o devuelta, FED sin actividad) y los avisos de reclamos de conectividad
 // (varios juntos se muestran como un solo banner): sigue hasta leerlo o resolverlo.
-export function AvisosBanner({ feds, puedeSubirPve, onIrAPve, onReclamos }: { feds: Fed[], puedeSubirPve: boolean, onIrAPve: () => void, onReclamos?: () => void }) {
+export function AvisosBanner({ feds, puedeSubirPve, onIrAPve, onReclamos, rol, onNovedad }: { feds: Fed[], puedeSubirPve: boolean, onIrAPve: () => void, onReclamos?: () => void, rol: Rol, onNovedad: (tema: string) => void }) {
   const { list, leer } = useNotif()
   const b = bannerDe(list)
-  if (!b) return null
+  // Sin avisos pendientes, se muestra el banner de la novedad vigente (si hay).
+  if (!b) return <BannerNovedad rol={rol} onVer={onNovedad} />
   const { principal: n, otros, nivel, reclamos } = b
   const e = ESTILO[nivel === 'urgente' ? 'urgente' : nivel === 'ok' ? 'ok' : 'aviso']
   const color = nivel === 'urgente' ? 'border-peligro-borde bg-peligro-fondo text-peligro' : nivel === 'ok' ? 'border-exito/40 bg-exito-fondo text-exito' : 'border-aviso-borde bg-aviso-fondo-fuerte text-aviso-fuerte'
@@ -105,6 +109,27 @@ export function AvisosBanner({ feds, puedeSubirPve, onIrAPve, onReclamos }: { fe
         {irAPve && <button type="button" onClick={() => { leer([n.id]); onIrAPve() }} aria-label="Ir a mis PVE" className="flex min-h-9 min-w-9 items-center justify-center rounded-full bg-white px-0 text-xs font-semibold text-dte-petroleo shadow-e1 hover:bg-dte-tinte min-[24rem]:px-3 md:min-h-8"><ArrowRight className="size-4 min-[24rem]:hidden" aria-hidden /><span className="hidden min-[24rem]:inline sm:hidden">Ir a PVE</span><span className="hidden sm:inline">Ir a mis PVE</span></button>}
         {esReclamo && onReclamos && <button type="button" onClick={() => { leer(ids); onReclamos() }} aria-label="Ver registro de reclamos" className="flex min-h-9 min-w-9 items-center justify-center rounded-full bg-white px-0 text-xs font-semibold text-dte-petroleo shadow-e1 hover:bg-dte-tinte min-[24rem]:px-3 md:min-h-8"><ArrowRight className="size-4 min-[24rem]:hidden" aria-hidden /><span className="hidden min-[24rem]:inline">Ver registro</span></button>}
         <button type="button" onClick={() => leer(ids)} aria-label="Entendido" className="flex min-h-9 min-w-9 items-center justify-center rounded-full border border-current px-0 text-xs font-semibold hover:bg-white/60 sm:px-3 md:min-h-8"><X className="size-4 sm:hidden" aria-hidden /><span className="hidden sm:inline">Entendido</span></button>
+      </span>
+    </div>
+  </div>
+}
+
+const CLAVE_BANNER = 'agenda-territorial:banners-cerrados'
+const leerCerrados = (): string[] => storage(() => { const v = JSON.parse(localStorage.getItem(CLAVE_BANNER) ?? '[]'); return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [] }) ?? []
+
+// Banner de una novedad importante (celeste): lleva al tema de la ayuda y se recuerda como cerrado en este dispositivo.
+function BannerNovedad({ rol, onVer }: { rol: Rol, onVer: (tema: string) => void }) {
+  const [cerrados, setCerrados] = useState<string[]>(leerCerrados)
+  const b = bannerVigente(rol, hoyAR(), cerrados)
+  if (!b) return null
+  const cerrar = () => { const sig = [...cerrados, b.id]; setCerrados(sig); storage(() => localStorage.setItem(CLAVE_BANNER, JSON.stringify(sig))) }
+  return <div role="status" className="anim-banner border-b border-pba-celeste/50 bg-pba-celeste/15 px-4 py-1.5 text-sm text-dte-petroleo">
+    <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-2 lg:px-6">
+      <span className="flex min-w-0 items-center gap-1.5"><Sparkles className="size-4 shrink-0" aria-hidden />
+        <span className="line-clamp-2 min-w-0 text-[0.8125rem] font-semibold leading-snug sm:text-sm"><span className="sm:hidden">{b.corto}</span><span className="hidden sm:inline">{b.texto}</span></span></span>
+      <span className="flex shrink-0 items-center gap-1.5">
+        <button type="button" onClick={() => { cerrar(); onVer(b.tema) }} aria-label="Ver cómo en la ayuda" className="flex min-h-9 min-w-9 items-center justify-center rounded-full bg-white px-0 text-xs font-semibold text-dte-petroleo shadow-e1 hover:bg-dte-tinte min-[24rem]:px-3 md:min-h-8"><ArrowRight className="size-4 min-[24rem]:hidden" aria-hidden /><span className="hidden min-[24rem]:inline">Ver cómo</span></button>
+        <button type="button" onClick={cerrar} aria-label="Entendido" className="flex min-h-9 min-w-9 items-center justify-center rounded-full border border-current px-0 text-xs font-semibold hover:bg-white/60 sm:px-3 md:min-h-8"><X className="size-4 sm:hidden" aria-hidden /><span className="hidden sm:inline">Entendido</span></button>
       </span>
     </div>
   </div>

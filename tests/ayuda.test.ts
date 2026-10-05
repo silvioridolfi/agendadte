@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ACCIONES, ACCIONES_CED, SOLO_CED, CLUB_MIN_ENCUENTROS, nombreAccion } from '@/lib/agenda'
 import { DESTINATARIOS_BASE, PROPUESTAS_DE_CLUB } from '@/lib/encuentro'
-import { NOVEDADES } from '@/lib/ayuda/novedades'
+import { NOVEDADES, bannerVigente, idBanner } from '@/lib/ayuda/novedades'
 import { ALCANCE_CED, TEMAS } from '@/lib/ayuda/temas'
 import { ATAJOS, ESTILO_TEMA } from '@/lib/ayuda/estilo'
 import { normalizar, parsear, partesNegrita, textoPlano } from '@/lib/ayuda/formato'
@@ -64,5 +64,27 @@ describe('novedades', () => {
     const f = NOVEDADES.map(n => n.fecha)
     expect([...f].sort().reverse()).toEqual(f)
     for (const n of NOVEDADES) { expect(n.titulo.length).toBeGreaterThan(3); expect(n.texto.length).toBeGreaterThan(10) }
+  })
+})
+
+describe('banner de novedad', () => {
+  it('cada banner lleva a un tema que existe para los roles que lo ven y vence después de la novedad', () => {
+    for (const n of NOVEDADES) if (n.banner) {
+      for (const rol of n.banner.para) expect(TEMAS.find(t => t.id === n.banner!.tema)?.para, n.titulo).toContain(rol)
+      expect(n.banner.hasta >= n.fecha).toBe(true)
+      expect(n.banner.texto.length).toBeGreaterThan(10)
+      expect(n.banner.corto.length).toBeGreaterThan(10)
+    }
+  })
+  it('los FED ven el de reclamos hasta que vence o lo cierran; el CED no lo ve', () => {
+    const b = bannerVigente('fed', '2026-10-05', [])
+    expect(b?.tema).toBe('reclamos')
+    expect(bannerVigente('fed', '2026-10-19', [])).not.toBeNull()
+    expect(bannerVigente('fed', '2026-10-20', [])).toBeNull()
+    expect(bannerVigente('fed', '2026-10-05', [b!.id])).toBeNull()
+    expect(bannerVigente('ced', '2026-10-05', [])).toBeNull()
+  })
+  it('el id sale de la fecha y el título', () => {
+    expect(idBanner({ fecha: '2026-10-02', titulo: 'x' })).toBe('2026-10-02|x')
   })
 })
