@@ -82,7 +82,15 @@ describe('banner de novedad', () => {
     expect(bannerVigente('fed', '2026-10-19', [])).not.toBeNull()
     expect(bannerVigente('fed', '2026-10-20', [])).toBeNull()
     expect(bannerVigente('fed', '2026-10-05', [b!.id])).toBeNull()
-    expect(bannerVigente('ced', '2026-10-05', [])).toBeNull()
+    expect(bannerVigente('ced', '2026-10-05', [b!.id])?.tema).toBe('registro-reclamos') // el cierre de uno no tapa el del otro perfil
+  })
+  it('el CED ve el del registro de reclamos, con su propio texto y tema', () => {
+    const b = bannerVigente('ced', '2026-10-05', [])
+    expect(b?.tema).toBe('registro-reclamos')
+    expect(b?.texto).toContain('registro')
+    expect(b?.texto).not.toBe(bannerVigente('fed', '2026-10-05', [])?.texto)
+    expect(bannerVigente('ced', '2026-10-05', [b!.id])).toBeNull()
+    expect(bannerVigente('ced', '2026-10-20', [])).toBeNull()
   })
   it('el id sale de la fecha y el título', () => {
     expect(idBanner({ fecha: '2026-10-02', titulo: 'x' })).toBe('2026-10-02|x')
