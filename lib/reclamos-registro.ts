@@ -53,6 +53,9 @@ export const resumenReclamos = (lista: Reclamo[]) => ({
   enviados: lista.filter(r => r.estado === 'enviado').length, enProceso: lista.filter(r => r.estado === 'en_proceso').length, resueltos: lista.filter(r => r.estado === 'resuelto').length,
 })
 
+// Aviso al CED cuando un FED registra un reclamo nuevo.
+export const avisoDeAlta = (r: { cue: number | null, tipo_label: string }): string => `Nuevo reclamo de CUE ${r.cue ?? '—'} · ${r.tipo_label}`
+
 // Aviso al FED que envió un reclamo cuando el CED anota el número o lo marca como resuelto (null si no hay nada que avisar).
 export function avisoDeCambio(antes: { estado: string, nro_incidencia: string | null }, despues: { estado: string, nro_incidencia: string | null }, r: { cue: number | null, tipo_label: string }): string | null {
   const que = `CUE ${r.cue ?? '—'} · ${r.tipo_label}`

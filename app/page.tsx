@@ -170,7 +170,7 @@ export default function Page() {
           <span className="hidden truncate sm:inline">{vista.tipo === 'equipo' ? <>Estás viendo el <b>tablero del equipo completo</b></> : <>Estás viendo la agenda de <b>{vista.fed.nombre_completo}</b></>} · Solo lectura</span></span>
         <button type="button" onClick={() => { setVista(null); irA('agenda') }} className="min-h-9 shrink-0 rounded-full bg-white px-3 text-xs font-semibold text-dte-petroleo shadow-e1 hover:bg-dte-tinte md:min-h-8"><span className="sm:hidden">Mi agenda</span><span className="hidden sm:inline">Volver a mi agenda</span></button></div>
     </div>}
-      <AvisosBanner feds={feds ?? []} puedeSubirPve={profile.rol === 'fed'} onIrAPve={() => { setVista(null); irA('mispve') }} />
+      <AvisosBanner feds={feds ?? []} puedeSubirPve={profile.rol === 'fed'} onIrAPve={() => { setVista(null); irA('mispve') }} onReclamos={() => { setVista(null); irA('reclamos') }} />
     </div>
     {/* Cada pantalla entra con un fundido corto; cambiar de sección o de vista la vuelve a animar. */}
     <div key={`${section}-${vista?.tipo ?? ''}-${vista?.tipo === 'fed' ? vista.fed.id : ''}`} className="anim-entrada">

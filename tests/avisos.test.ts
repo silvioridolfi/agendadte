@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { avisaPorFecha, bannerDe, clasePve, esBanner, nivelDe, type NotifBase } from '@/lib/avisos'
+import { avisaPorFecha, bannerDe, clasePve, claseReclamo, esBanner, nivelDe, type NotifBase } from '@/lib/avisos'
 
 const n = (o: Partial<NotifBase>): NotifBase => ({ id: 'x', tipo: 'etiqueta', detalle: null, leida: false, created_at: '2026-10-01T10:00:00Z', autor_id: null, ...o })
 
@@ -50,5 +50,41 @@ describe('aviso a compañeros por fecha', () => {
     expect(avisaPorFecha('2026-09-15', '2026-10-01')).toBe(false)
     expect(avisaPorFecha('2026-10-01', '2026-10-01')).toBe(true)
     expect(avisaPorFecha('2026-10-05', '2026-10-01')).toBe(true)
+  })
+})
+
+describe('avisos de reclamos de conectividad', () => {
+  const nuevo = (o: Partial<NotifBase> = {}) => n({ tipo: 'reclamo', autor_id: 'f', detalle: 'Nuevo reclamo de CUE 60897700 · Sin conectividad', ...o })
+  const numero = (o: Partial<NotifBase> = {}) => n({ tipo: 'reclamo', autor_id: 'c', detalle: 'Llegó el número del reclamo de CUE 60897700 · Sin conectividad: NI-000123', ...o })
+  const resuelto = (o: Partial<NotifBase> = {}) => n({ tipo: 'reclamo', autor_id: 'c', detalle: 'Se resolvió el reclamo de CUE 60897700 · Sin conectividad', ...o })
+  it('se distingue el nuevo, el que trae número y el resuelto', () => {
+    expect(claseReclamo(nuevo())).toBe('nuevo')
+    expect(claseReclamo(numero())).toBe('numero')
+    expect(claseReclamo(resuelto())).toBe('resuelto')
+  })
+  it('nivel: nuevo, de aviso; con número, informativo; resuelto, de confirmación', () => {
+    expect(nivelDe(nuevo())).toBe('aviso')
+    expect(nivelDe(numero())).toBe('info')
+    expect(nivelDe(resuelto())).toBe('ok')
+  })
+  it('también se muestran como banner hasta que se leen', () => {
+    for (const f of [nuevo, numero, resuelto]) { expect(esBanner(f())).toBe(true); expect(esBanner(f({ leida: true }))).toBe(false) }
+  })
+  it('varios avisos de reclamos quedan en un solo banner', () => {
+    const b = bannerDe([nuevo({ id: 'a' }), nuevo({ id: 'b', created_at: '2026-10-02T10:00:00Z' }), numero({ id: 'c' })])
+    expect(b).toMatchObject({ principal: { id: 'b' }, otros: 0, nivel: 'aviso' })
+    expect(b?.reclamos.map(r => r.id).sort()).toEqual(['a', 'b', 'c'])
+  })
+  it('si todos son resoluciones, el banner es de confirmación; con un solo aviso, no se agrupa nada más', () => {
+    expect(bannerDe([resuelto({ id: 'a' }), resuelto({ id: 'b' })])).toMatchObject({ nivel: 'ok' })
+    expect(bannerDe([resuelto({ id: 'a' }), numero({ id: 'b' })])).toMatchObject({ nivel: 'aviso' })
+    expect(bannerDe([nuevo({ id: 'a' })])?.reclamos).toHaveLength(1)
+  })
+  it('junto con otros avisos cuenta como uno y el más urgente va primero', () => {
+    const dev = n({ id: 'd', tipo: 'pve', autor_id: 'c', detalle: 'Devolvió tu PVE' })
+    const b = bannerDe([nuevo({ id: 'a' }), nuevo({ id: 'b' }), dev])
+    expect(b).toMatchObject({ principal: { id: 'd' }, otros: 1 })
+    expect(b?.reclamos).toEqual([])
+    expect(bannerDe([nuevo({ id: 'a' }), nuevo({ id: 'b' }), n({ id: 'i', tipo: 'inactividad', autor_id: 'f', created_at: '2026-09-01T00:00:00Z' })])?.principal.tipo).toBe('reclamo') // mismo nivel: gana el más nuevo
   })
 })
