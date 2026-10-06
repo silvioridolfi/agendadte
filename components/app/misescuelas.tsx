@@ -14,7 +14,7 @@ import type { FichaEscuela } from '@/lib/escuela'
 import { ENLACE_LABEL, enlacesDe, tienePiso } from '@/lib/reclamos'
 import { titleCase } from '@/lib/format'
 import { siglaNombre } from '@/lib/siglas'
-import { ErrorBox, Skeleton, errMsg, eyebrow, fmt, getExtrasEscuela, getFichaEscuela, getMisEscuelas, parse, selectClass } from '@/components/app/comun'
+import { BotonVolver, ErrorBox, Skeleton, errMsg, eyebrow, fmt, getExtrasEscuela, getFichaEscuela, getMisEscuelas, parse, selectClass } from '@/components/app/comun'
 import { Ficha } from '@/components/app/escuelas'
 
 const POR_PAGINA = 60
@@ -22,7 +22,7 @@ const fechaCorta = (f: string) => fmt(parse(f), { day: 'numeric', month: 'short'
 const unicos = (l: (string | null | undefined)[]) => [...new Set(l.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'es'))
 
 // Las escuelas que tiene a cargo cada FED, con un resumen de cada una y su ficha completa. La coordinación y la administración ven todas.
-export function MisEscuelas({ profile, feds, esAdmin, puedeAgendar, onAgendar, onReclamo, onOpen }: { profile: Fed, feds: Fed[], esAdmin: boolean, puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
+export function MisEscuelas({ profile, feds, esAdmin, puedeAgendar, onAgendar, onReclamo, onOpen, volver }: { volver?: { destino: string, ir: () => void }, profile: Fed, feds: Fed[], esAdmin: boolean, puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
   const [lista, setLista] = useState<ResumenEscuela[] | null>(null)
   const [error, setError] = useState('')
   const [filtros, setFiltros] = useState<FiltrosEscuelas>(FILTROS_ESCUELAS_VACIOS)
@@ -41,6 +41,7 @@ export function MisEscuelas({ profile, feds, esAdmin, puedeAgendar, onAgendar, o
   const titulo = profile.rol === 'fed' && !veTodos ? 'Mis escuelas' : 'Escuelas'
 
   return <main className="mx-auto w-full min-w-0 max-w-5xl px-4 pb-32 pt-6 lg:px-10">
+    {volver && <BotonVolver onClick={volver.ir} destino={volver.destino} />}
     <p className={eyebrow}>Territorio</p>
     <h2 className="text-2xl font-bold">{titulo}</h2>
     <p className="mt-1 text-sm text-dte-gris">{veTodos ? 'Las escuelas de la región con su FED a cargo.' : 'Las escuelas que tenés a cargo, con lo que pasa en cada una.'} Tocá una para ver la ficha completa.</p>

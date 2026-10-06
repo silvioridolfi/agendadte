@@ -13,7 +13,7 @@ import { gmailAppUrl, gmailUrl, plataformaDe } from '@/lib/reclamos'
 import type { ContactoEscuela } from '@/lib/mis-escuelas'
 import { siglaNombre } from '@/lib/siglas'
 import { titleCase } from '@/lib/format'
-import { ErrorBox, Skeleton, eyebrow, errMsg, avisarCronograma, getContactosCronograma, getCronogramas, marcarCronograma, selectClass, sincronizarCronogramasAhora } from '@/components/app/comun'
+import { BotonVolver, ErrorBox, Skeleton, eyebrow, errMsg, avisarCronograma, getContactosCronograma, getCronogramas, marcarCronograma, selectClass, sincronizarCronogramasAhora } from '@/components/app/comun'
 
 const ZONA = 'America/Argentina/Buenos_Aires'
 const fechaHora = (iso: string) => new Date(iso).toLocaleString('es-AR', { timeZone: ZONA, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
@@ -24,7 +24,7 @@ const unicos = (l: (string | null | undefined)[]) => [...new Set(l.filter((x): x
 
 // Cronogramas de conectividad (reparaciones e instalaciones de piso y enlace, certificaciones…) tal como figuran en la planilla del consolidado.
 // Los datos de la planilla no se modifican; el equipo anota acá cómo salió cada uno (realizado, no se realizó, reprogramado).
-export function Cronogramas({ profile, feds, esAdmin, cuenta }: { profile: Fed, feds: Fed[], esAdmin: boolean, cuenta: string }) {
+export function Cronogramas({ profile, feds, esAdmin, cuenta, volver }: { profile: Fed, feds: Fed[], esAdmin: boolean, cuenta: string, volver?: { destino: string, ir: () => void } }) {
   const [datos, setDatos] = useState<Awaited<ReturnType<typeof getCronogramas>> | null>(null)
   const [error, setError] = useState('')
   const [filtros, setFiltros] = useState<FiltrosCronogramas>(FILTROS_VACIOS)
@@ -60,6 +60,7 @@ export function Cronogramas({ profile, feds, esAdmin, cuenta }: { profile: Fed, 
   const textoUltima = ultima?.fin ? `Última lectura de la planilla: ${fechaHora(ultima.fin)}${ultima.resultado && 'error' in ultima.resultado ? ' (con error)' : ''}.` : 'Todavía no se leyó la planilla.'
 
   return <main className="mx-auto w-full min-w-0 max-w-5xl px-4 pb-32 pt-6 lg:px-10">
+    {volver && <BotonVolver onClick={volver.ir} destino={volver.destino} />}
     <p className={eyebrow}>Conectividad</p>
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-2xl font-bold">Cronogramas</h2>
       {esAdmin && <Button type="button" variant="outline" size="sm" disabled={sincronizando} onClick={sincronizar}>{sincronizando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}Sincronizar ahora</Button>}
