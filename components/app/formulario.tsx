@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
-import { enlaceDe, esReunion, conEnlace } from '@/lib/reunion'
+import { enlaceDe, esReunion, conEnlace, normalizarEnlace } from '@/lib/reunion'
 import { cambiaLaSerie, clubesDelDia, destinatarioEstudiantes, escuelaDelClub, estadoAlCompletar, horariosSePisan, inscriptosDelClub, PROPUESTAS_DE_CLUB, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
 import { Destinatarios, PropuestaClub, PropuestaTaller } from '@/components/app/camposclub'
 import { etiquetaAccion, nombreAccion, iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, esAusencia, ACCIONES_CED, SOLO_CED, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
@@ -425,7 +425,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
 
     {esReunion(form.accion) && <div className="grid gap-4 sm:grid-cols-3">
       <Field label="Modalidad"><select className={`${selectClass} h-10`} value={form.modalidad_ev} onChange={e => { set('modalidad_ev', e.target.value as ModalidadEvento); limpiar('establecimiento'); limpiar('enlace') }}>{MODALIDADES_EVENTO.map(m => <option key={m}>{m}</option>)}</select></Field>
-      {conEnlace(form.modalidad_ev) && <Field id="campo-enlace" label="Enlace de la reunión" hint="(opcional)" className="scroll-mt-24 sm:col-span-2" error={errores.enlace} errorId="err-enlace"><Input type="url" inputMode="url" autoComplete="off" placeholder="https://meet.google.com/…" value={form.enlace} onChange={e => { set('enlace', e.target.value); limpiar('enlace') }} aria-invalid={!!errores.enlace || undefined} aria-describedby={errores.enlace ? 'err-enlace' : undefined} className="md:h-10" /></Field>}
+      {conEnlace(form.modalidad_ev) && <Field id="campo-enlace" label="Enlace de la reunión" hint="(opcional)" className="scroll-mt-24 sm:col-span-2" error={errores.enlace} errorId="err-enlace"><Input type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off" placeholder="https://meet.google.com/…" value={form.enlace} onChange={e => { set('enlace', e.target.value); limpiar('enlace') }} onBlur={() => { try { const n = normalizarEnlace(form.enlace); if (n && n !== form.enlace) set('enlace', n) } catch { /* el error se muestra al guardar */ } }} aria-invalid={!!errores.enlace || undefined} aria-describedby={errores.enlace ? 'err-enlace' : undefined} className="md:h-10" /></Field>}
     </div>}
     {!aDefinir && !esParo && !esLicencia && companeros.length > 0 && <fieldset>
       <legend className="mb-1.5 flex w-full items-center justify-between text-sm font-semibold"><span>Acompañado por <span className="font-normal text-dte-gris">(opcional)</span></span>

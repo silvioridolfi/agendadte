@@ -122,7 +122,7 @@ Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado,
 ${tiposPorCategoria(ACCIONES.filter(a => !SOLO_CED.includes(a)))}
 Las sugerencias de sub-acción reflejan las líneas de trabajo de la DTE.
 ## Reuniones virtuales
-En **Reunión** podés elegir la modalidad (presencial, virtual o híbrida). Si es virtual o híbrida, se carga el enlace y desde la tarjeta se puede entrar con un toque.
+En **Reunión** podés elegir la modalidad (presencial, virtual o híbrida). Si es virtual o híbrida, se carga el enlace y desde la tarjeta se puede entrar con un toque. Podés pegar la dirección sola (con o sin https://) o todo el texto de la invitación: la agenda se queda con el enlace de la videollamada.
 ## Visitas con varias acciones
 Si en una misma visita hiciste varias acciones (por ejemplo, visita técnica y conectividad), marcá todos los tipos en el mismo formulario. Se guarda un registro por tipo, con la misma escuela, fecha, horario y acompañantes, y se muestran en una única tarjeta. Los cambios de estado y la eliminación se aplican a toda la visita.
 [!] No se combinan con otros tipos: Club de Tecnología, PEAT, Paro, Licencia, Evento DTE y Formación interna.
