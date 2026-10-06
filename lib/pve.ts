@@ -93,6 +93,9 @@ export async function revisarPve(fedId: string): Promise<ResultadoPve> {
 }
 
 // Días hábiles de un mes (sin fines de semana ni los días no laborables indicados).
+// FED (de `todos`) que todavía no entregaron: sin una PVE con archivo en `entregadas` (filas de la tabla pve con fed_id).
+export const sinEntregar = (todos: { id: string }[], entregadas: { fed_id: string }[]): { id: string }[] => todos.filter(f => !entregadas.some(h => h.fed_id === f.id))
+
 export function habilesDelMes(mes: string, noLaborables: Set<string> = new Set()) {
   const out: string[] = []
   for (const d = new Date(`${mes}T12:00:00Z`); d.toISOString().slice(0, 7) === mes.slice(0, 7); d.setUTCDate(d.getUTCDate() + 1)) {

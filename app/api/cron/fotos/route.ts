@@ -1,7 +1,7 @@
 import { supabaseServer } from '@/lib/supabase-server'
 import { driveConfigurado } from '@/lib/drive'
 import { ordenarFotos } from '@/lib/fotos'
-import { avisoPve, hoyAR, inicioMes, noLaborables, revisarPve } from '@/lib/pve'
+import { avisoPve, hoyAR, inicioMes, noLaborables, revisarPve, sinEntregar } from '@/lib/pve'
 
 // Tarea nocturna (Vercel Cron): ordena por día las fotos sueltas de cada FED con carpeta cargada y revisa sus PVE.
 // PVE: aviso el 1.er día hábil del mes y recordatorio el 4.º (vencen el 5.º día hábil del mes siguiente).
@@ -22,14 +22,19 @@ export async function GET(request: Request) {
   const idRegistro = registro.data?.id as string | undefined
   const anotar = async (cambios: Record<string, unknown>) => { if (idRegistro) await db.from('cron_ejecuciones').update(cambios).eq('id', idRegistro) }
   // PVE del mes anterior: aviso el 1.er día hábil y recordatorio el 4.º a quienes todavía no la subieron (vence el 5.º).
-  // Va primero (sólo base de datos): ordenar fotos y revisar Drive de todos los FED puede agotar el tiempo de la función.
+  // Va primero: ordenar fotos y revisar Drive de todos los FED puede agotar el tiempo de la función. Sólo consulta el Drive de quienes figuran sin entregar.
   try {
     const hoy = hoyAR()
     const aviso = avisoPve(hoy, await noLaborables(inicioMes(hoy), inicioMes(hoy, 1)))
     if (aviso) {
       const { data: todos } = await db.from('feds').select('id').eq('rol', 'fed')
-      const { data: hechas } = await db.from('pve').select('fed_id').eq('mes', aviso.mes).not('file_id', 'is', null)
-      const faltan = (todos ?? []).filter(f => !(hechas ?? []).some(h => h.fed_id === f.id))
+      const entregadas = async () => (await db.from('pve').select('fed_id').eq('mes', aviso.mes).not('file_id', 'is', null)).data ?? []
+      // Antes de avisar se revisa el Drive de quienes figuran sin entregar: si la subieron hoy y la agenda todavía no la registró, no se les avisa.
+      for (const f of sinEntregar(todos ?? [], await entregadas())) {
+        if (Date.now() - inicio > TOPE_MS / 2) break
+        try { await revisarPve(f.id) } catch { /* sin acceso a Drive: se los avisa igual */ }
+      }
+      const faltan = sinEntregar(todos ?? [], await entregadas())
       // No se repite si la tarea corre dos veces el mismo día.
       const { data: ya } = await db.from('notificaciones').select('fed_id').eq('tipo', 'pve').eq('detalle', aviso.texto).gte('created_at', `${hoy}T00:00:00-03:00`)
       const avisar = faltan.filter(f => !(ya ?? []).some(y => y.fed_id === f.id))
