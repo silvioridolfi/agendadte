@@ -306,6 +306,12 @@ El **Tablero** presenta tu información del período elegido (día, semana, mes 
 - **Resumen y métricas:** acciones realizadas por categoría, escuelas alcanzadas, equipos intervenidos y encuentros.
 - **Mis clubes** y **Mis prácticas (PEAT).**
 - **Mis acciones:** listado con búsqueda y filtros.
+## Accesos rápidos
+Arriba del Tablero hay tres tarjetas con un número, para ver de un vistazo qué hay pendiente y entrar directo (siguen estando también en el menú de las iniciales):
+- **Mis escuelas:** cuántas escuelas tenés a cargo y cuántas tienen un reclamo abierto.
+- **Mis reclamos:** los reclamos abiertos de tus escuelas; abre el registro ya filtrado en **Solo los míos y de mis escuelas**.
+- **Cronogramas:** los cronogramas próximos en tus escuelas.
+El CED ve las mismas tarjetas con los números de todo el equipo. No dependen del período que elijas.
 ## Qué se computa
 Solo las acciones **realizadas**. No se computan las planificadas, reprogramadas o canceladas, ni las licencias y paros. Cada número del resumen permite ver las acciones que lo componen.
 [i] Las acciones de las que solo participás como acompañante no cuentan en tus métricas: cuentan para quien las creó.

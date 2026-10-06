@@ -19,6 +19,7 @@ import { BuscadorEscuelas } from '@/components/app/escuelas'
 import { ReclamoConectividad } from '@/components/app/reclamo'
 import { Cronogramas } from '@/components/app/cronogramas'
 import { MisEscuelas } from '@/components/app/misescuelas'
+import { AccesosRapidos } from '@/components/app/accesos'
 import { RegistroReclamos } from '@/components/app/registroreclamos'
 import { MenuPerfil, MiPerfilView } from '@/components/app/miperfil'
 import { AyudaView, useNovedadesNuevas } from '@/components/app/ayuda'
@@ -74,6 +75,8 @@ export default function Page() {
   const [editing, setEditing] = useState<{ item: AgendaItem | null, fecha?: string, preset?: ItemPreset } | null>(null)
   const [selected, setSelected] = useState<AgendaItem | null>(null)
   const [buscador, setBuscador] = useState(false)
+  // Al entrar a los reclamos desde el acceso del Tablero, el FED los ve ya filtrados en los suyos y los de sus escuelas.
+  const [reclamosDesdeAcceso, setReclamosDesdeAcceso] = useState(false)
   // Reclamo de conectividad: `k` reinicia el formulario cada vez que se abre.
   const [reclamo, setReclamo] = useState<{ escuela: School | null, k: number } | null>(null)
   const abrirReclamo = (escuela: School | null) => setReclamo({ escuela, k: Date.now() })
@@ -159,8 +162,8 @@ export default function Page() {
         <div className="flex shrink-0 items-center gap-1">
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <button type="button" onClick={() => setBuscador(true)} aria-label="Buscar escuela" title="Buscar escuela" className="flex size-11 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-fondo hover:text-dte-tinta"><Search className="size-5" /></button>
-        <NotificacionesBell feds={feds ?? []} onOpen={setSelected} onReclamos={() => { setVista(null); irA('reclamos') }} onCronogramas={() => { setVista(null); irA('cronogramas') }} />
-        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} hayNovedades={hayNovedades} onReclamo={() => abrirReclamo(null)} onRegistroReclamos={() => { setVista(null); irA('reclamos') }} onCronogramas={() => { setVista(null); irA('cronogramas') }} onEscuelas={() => { setVista(null); irA('escuelas') }} onAyuda={() => { setVista(null); setTemaAyuda(undefined); irA('ayuda') }} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
+        <NotificacionesBell feds={feds ?? []} onOpen={setSelected} onReclamos={() => { setVista(null); setReclamosDesdeAcceso(false); irA('reclamos') }} onCronogramas={() => { setVista(null); irA('cronogramas') }} />
+        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} hayNovedades={hayNovedades} onReclamo={() => abrirReclamo(null)} onRegistroReclamos={() => { setVista(null); setReclamosDesdeAcceso(false); irA('reclamos') }} onCronogramas={() => { setVista(null); irA('cronogramas') }} onEscuelas={() => { setVista(null); irA('escuelas') }} onAyuda={() => { setVista(null); setTemaAyuda(undefined); irA('ayuda') }} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
         </div>
       </div>
     </header>
@@ -174,11 +177,11 @@ export default function Page() {
           <span className="hidden truncate sm:inline">{vista.tipo === 'equipo' ? <>Estás viendo el <b>tablero del equipo completo</b></> : <>Estás viendo la agenda de <b>{vista.fed.nombre_completo}</b></>} · Solo lectura</span></span>
         <button type="button" onClick={() => { setVista(null); irA('agenda') }} className="min-h-9 shrink-0 rounded-full bg-white px-3 text-xs font-semibold text-dte-petroleo shadow-e1 hover:bg-dte-tinte md:min-h-8"><span className="sm:hidden">Mi agenda</span><span className="hidden sm:inline">Volver a mi agenda</span></button></div>
     </div>}
-      <AvisosBanner feds={feds ?? []} puedeSubirPve={profile.rol === 'fed'} onIrAPve={() => { setVista(null); irA('mispve') }} onReclamos={() => { setVista(null); irA('reclamos') }} rol={rolAyuda} onNovedad={tema => { setVista(null); setTemaAyuda(tema); irA('ayuda') }} />
+      <AvisosBanner feds={feds ?? []} puedeSubirPve={profile.rol === 'fed'} onIrAPve={() => { setVista(null); irA('mispve') }} onReclamos={() => { setVista(null); setReclamosDesdeAcceso(false); irA('reclamos') }} rol={rolAyuda} onNovedad={tema => { setVista(null); setTemaAyuda(tema); irA('ayuda') }} />
     </div>
     {/* Cada pantalla entra con un fundido corto; cambiar de sección o de vista la vuelve a animar. */}
     <div key={`${section}-${vista?.tipo ?? ''}-${vista?.tipo === 'fed' ? vista.fed.id : ''}`} className="anim-entrada">
-    {section === 'reclamos' ? <RegistroReclamos profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} />
+    {section === 'reclamos' ? <RegistroReclamos profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} soloMiosInicial={reclamosDesdeAcceso && profile.rol === 'fed'} />
       : section === 'escuelas' ? <MisEscuelas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
       : section === 'cronogramas' ? <Cronogramas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} cuenta={sesion.email} />
       : section === 'pve' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <PveEquipoView />
@@ -197,7 +200,7 @@ export default function Page() {
       ? <CoordinatorView key="equipo" feds={(feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} soloLectura />
       : section === 'agenda'
       ? <AgendaView fed={profile} feds={feds ?? []} reloadKey={reloadKey} onNew={fecha => setEditing({ item: null, fecha })} onSelect={setSelected} onCambio={changed} onRealizar={marcarRealizada} />
-      : <CoordinatorView key={profile.id} feds={profile.rol === 'fed' ? [profile] : (feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} onRealizar={marcarRealizada}
+      : <CoordinatorView key={profile.id} accesos={<AccesosRapidos profile={profile} onEscuelas={() => { setVista(null); irA('escuelas') }} onReclamos={() => { setVista(null); setReclamosDesdeAcceso(true); irA('reclamos') }} onCronogramas={() => { setVista(null); irA('cronogramas') }} />} feds={profile.rol === 'fed' ? [profile] : (feds ?? []).filter(f => f.rol !== 'coordinacion')} todos={feds ?? []} reloadKey={reloadKey} onSelect={setSelected} onRealizar={marcarRealizada}
           propio={profile.rol === 'fed' ? profile : undefined} onNuevaAccion={preset => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset })}
           onNuevaReunion={profile.rol !== 'coordinacion' ? undefined : () => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { accion: 'REUNIÓN', sub_accion: 'Reunión de equipo (CED/FED)', participantes: (feds ?? []).filter(f => f.id !== profile.id).map(f => f.id) } })} />}
     </div>

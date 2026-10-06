@@ -48,7 +48,7 @@ type Pestana = typeof PESTANAS[number]
 const TAB_KEY = 'agenda-territorial:tablero'
 
 // `propio`: tablero individual de un FED (sólo sus datos; sin Agenda del equipo ni Mi equipo). `onNuevaAccion`: abre el formulario con valores iniciales.
-export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion, propio, onNuevaAccion, soloLectura, onRealizar }: { onRealizar?: (item: AgendaItem) => void, feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void, propio?: Fed, onNuevaAccion?: (preset: ItemPreset) => void, soloLectura?: boolean }) {
+export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReunion, propio, onNuevaAccion, soloLectura, onRealizar, accesos }: { accesos?: React.ReactNode, onRealizar?: (item: AgendaItem) => void, feds: Fed[], todos: Fed[], reloadKey: number, onSelect: (item: AgendaItem) => void, onNuevaReunion?: () => void, propio?: Fed, onNuevaAccion?: (preset: ItemPreset) => void, soloLectura?: boolean }) {
   const [tab, setTab] = useState<Pestana>(() => { const t = storage(() => sessionStorage.getItem(TAB_KEY)) as Pestana | null; return t && PESTANAS.includes(t) && !(propio && (t === 'agenda' || t === 'equipo')) ? t : 'resumen' })
   useEffect(() => { storage(() => sessionStorage.setItem(TAB_KEY, tab)) }, [tab])
   // Pestañas accesibles: flechas izquierda/derecha, Inicio y Fin mueven el foco y activan la pestaña.
@@ -142,6 +142,8 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
         <WeekNav prevLabel={`${cap(rangeNames[range][1])} anterior`} nextLabel={`${cap(rangeNames[range][1])} siguiente`} onPrev={() => setAnchor(shift(anchor, range, -1))} onToday={() => setAnchor(fechaHoyAR())} onNext={() => setAnchor(shift(anchor, range, 1))} />
       </div>}
     </div>
+
+    {accesos}
 
     {/* Pestañas: en mobile, grilla fija de botones (sin desplazamiento lateral); en escritorio, subrayadas. */}
     <div role="tablist" aria-label="Vista del tablero" onKeyDown={teclaPestana} className="mt-6 grid grid-cols-2 gap-1.5 md:flex md:gap-1 md:border-b md:border-dte-linea">
