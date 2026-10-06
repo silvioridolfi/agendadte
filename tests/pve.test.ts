@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/supabase-server', () => ({ supabaseServer: () => ({}) }))
-import { avisoPve, carpetaMes, inicioMes, mesesEntregables, nombrePve, vencimientoPve } from '@/lib/pve'
+import { avisoPve, carpetaMes, inicioMes, mesesEntregables, nombrePve, sinEntregar, vencimientoPve } from '@/lib/pve'
 
 describe('PVE', () => {
   it('meses y carpetas', () => {
@@ -37,5 +37,14 @@ describe('aviso de la PVE', () => {
     expect(avisoPve('2026-11-02', new Set(['2026-11-02']))).toBeNull()
     expect(avisoPve('2026-11-03', new Set(['2026-11-02']))?.tipo).toBe('aviso')
     expect(avisoPve('2026-09-01')).toBeNull() // la PVE de agosto se entregó por fuera
+  })
+})
+
+describe('FED sin entregar', () => {
+  it('quedan los que no tienen una PVE con archivo', () => {
+    const todos = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
+    expect(sinEntregar(todos, [{ fed_id: 'b' }])).toEqual([{ id: 'a' }, { id: 'c' }])
+    expect(sinEntregar(todos, [])).toEqual(todos)
+    expect(sinEntregar(todos, [{ fed_id: 'a' }, { fed_id: 'b' }, { fed_id: 'c' }])).toEqual([])
   })
 })
