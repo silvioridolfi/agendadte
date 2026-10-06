@@ -22,7 +22,7 @@ const esEnlace = (t: string) => /^https?:\/\//i.test(t.trim())
 const ESTADO_CLASE: Record<EstadoSeguimiento, string> = { realizado: 'border-exito/30 bg-exito/10 text-exito', no_realizado: 'border-peligro/30 bg-peligro-fondo text-peligro', reprogramado: 'border-aviso-borde bg-aviso-fondo text-aviso-fuerte' }
 const unicos = (l: (string | null | undefined)[]) => [...new Set(l.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'es'))
 
-// Cronogramas (trabajos ya establecidos para las escuelas: mantenimiento y reparación de pisos, instalaciones…) tal como figuran en la planilla del consolidado.
+// Cronogramas de conectividad (reparaciones e instalaciones de piso y enlace, certificaciones…) tal como figuran en la planilla del consolidado.
 // Los datos de la planilla no se modifican; el equipo anota acá cómo salió cada uno (realizado, no se realizó, reprogramado).
 export function Cronogramas({ profile, feds, esAdmin, cuenta }: { profile: Fed, feds: Fed[], esAdmin: boolean, cuenta: string }) {
   const [datos, setDatos] = useState<Awaited<ReturnType<typeof getCronogramas>> | null>(null)
@@ -64,7 +64,7 @@ export function Cronogramas({ profile, feds, esAdmin, cuenta }: { profile: Fed, 
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-2xl font-bold">Cronogramas</h2>
       {esAdmin && <Button type="button" variant="outline" size="sm" disabled={sincronizando} onClick={sincronizar}>{sincronizando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}Sincronizar ahora</Button>}
     </div>
-    <p className="mt-1 text-sm text-dte-gris">Los trabajos ya establecidos para las escuelas (mantenimiento, instalaciones, reparaciones), con su fecha y su empresa, tomados de la pestaña Cronogramas del consolidado de conectividad.</p>
+    <p className="mt-1 text-sm text-dte-gris">Los cronogramas de conectividad de las escuelas (reparaciones, instalaciones, certificaciones), con su fecha y su empresa, tomados de la pestaña Cronogramas del consolidado de conectividad.</p>
     <p className="mt-3 flex items-center gap-1.5 rounded-control bg-dte-fondo px-3 py-2 text-xs font-semibold text-dte-gris"><Eye className="size-3.5 shrink-0" aria-hidden />Los datos vienen del consolidado de conectividad y se actualizan solos cada madrugada. El estado que anotás acá es el que cuenta; el de la planilla es sólo de referencia.</p>
     {veTodos && <p className="mt-2 text-xs text-dte-gris">{textoUltima}</p>}
     {mensaje && <p className="mt-2 rounded-control bg-exito/10 px-3 py-2 text-sm font-semibold text-exito" role="status">{mensaje}</p>}
@@ -218,7 +218,7 @@ function MensajeEscuela({ c, nombre, cuenta, avisada, onClose, onAvisada }: { c:
   return <Dialog open onOpenChange={o => !o && onClose()}>
     <DialogContent className="max-h-[90dvh] overflow-y-auto bg-white max-sm:top-[calc(env(safe-area-inset-top,0px)+0.5rem)]! max-sm:bottom-auto! max-sm:max-h-[calc(100dvh-1rem)]! max-sm:rounded-b-2xl! sm:max-w-lg">
       <DialogTitle>Avisar a la escuela</DialogTitle>
-      <DialogDescription>Mensaje informativo para el directivo con el trabajo, la fecha y el responsable.</DialogDescription>
+      <DialogDescription>Mensaje informativo para el directivo con la tarea, la fecha y el responsable.</DialogDescription>
       <div className="flex flex-col gap-1"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-dte-gris">Mensaje</span><Button type="button" variant="ghost" size="sm" onClick={copiar}>{copiado ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado ? 'Copiado' : 'Copiar'}</Button></div>
         <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-control bg-dte-fondo px-3 py-2 font-sans text-sm">{msg.cuerpo}</pre></div>
       <div className="flex flex-col gap-1.5"><span className="text-xs font-semibold text-dte-gris">Contactos de la escuela</span>

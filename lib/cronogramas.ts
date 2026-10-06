@@ -1,4 +1,4 @@
-// Cronogramas de trabajos en escuelas (pestaña "Cronogramas" del consolidado de conectividad): lectura de la planilla, tipos y filtros de la sección (puro).
+// Cronogramas de conectividad (pestaña "Cronogramas" del consolidado de conectividad): lectura de la planilla, tipos y filtros de la sección (puro).
 import { siglaNombre } from '@/lib/siglas'
 import { titleCase } from '@/lib/format'
 import { saludoDe } from '@/lib/reclamos'
@@ -280,20 +280,20 @@ export function personaDe(linea: string): string {
   return `${t ? `${t} ` : ''}(${tipo} ${numero})`
 }
 
-// Mensaje informativo para el directivo: qué trabajo se hace en la escuela, cuándo, quién lo hace y con qué empresa (los cronogramas los establece otro
+// Mensaje informativo para el directivo: qué tarea del cronograma de conectividad se hace en la escuela, cuándo, quién lo hace y con qué empresa (los cronogramas los establece otro
 // organismo: no se piden ni se cambian fechas). El responsable sale de la planilla con nombre y DNI o CUIL, o con el enlace que figura en la planilla.
 export function mensajeEscuela(c: Pick<Cronograma, 'cue' | 'fecha_inicio' | 'fecha_fin' | 'tipo' | 'proveedor' | 'instaladores'> & { school: { nombre: string | null } | null, nombre_planilla?: string | null }, fed: string, ahora: Date): { asunto: string, cuerpo: string } {
   const escuela = c.school?.nombre ? siglaNombre(titleCase(c.school.nombre)) : c.nombre_planilla ? titleCase(c.nombre_planilla) : `CUE ${c.cue}`
   const personal = (c.instaladores ?? '').split('\n').map(x => x.trim()).filter(Boolean)
   const enlaces = personal.filter(esEnlace), responsables = personal.filter(x => !esEnlace(x)).map(personaDe).filter(Boolean)
   const lineas = [
-    `Escuela: ${escuela}${escuela.startsWith('CUE ') ? '' : ` (CUE ${c.cue})`}`, `Trabajo: ${etiquetaTipo(c.tipo)}`, `Fecha: ${fechaTxt(c)}`, c.proveedor ? `Empresa: ${c.proveedor}` : null,
+    `Escuela: ${escuela}${escuela.startsWith('CUE ') ? '' : ` (CUE ${c.cue})`}`, `Tarea: ${etiquetaTipo(c.tipo)}`, `Fecha: ${fechaTxt(c)}`, c.proveedor ? `Empresa: ${c.proveedor}` : null,
     responsables.length === 1 ? `Responsable: ${responsables[0]}` : responsables.length > 1 ? `Responsables:\n${responsables.map(r => `- ${r}`).join('\n')}` : null,
     enlaces.length ? `Datos del responsable: ${enlaces.join(' ')}` : null,
   ].filter((x): x is string => !!x)
   return {
-    asunto: `Trabajos en ${escuela}: ${ventanaDe(c)}`,
-    cuerpo: `Hola, ${saludoDe(ahora)}.\n\nSoy ${fed}, de la Dirección de Tecnología Educativa (Región 1). Les informo que en la escuela está previsto el siguiente trabajo, según el cronograma establecido:\n\n${lineas.join('\n')}\n\nQuedo a disposición por cualquier consulta.\nSaludos cordiales.`,
+    asunto: `Cronograma de conectividad: ${escuela}, ${ventanaDe(c)}`,
+    cuerpo: `Hola, ${saludoDe(ahora)}.\n\nSoy ${fed}, de la Dirección de Tecnología Educativa (Región 1). Les informo que, según el cronograma de conectividad establecido, en la escuela está prevista la siguiente intervención:\n\n${lineas.join('\n')}\n\nQuedo a disposición por cualquier consulta.\nSaludos cordiales.`,
   }
 }
 
