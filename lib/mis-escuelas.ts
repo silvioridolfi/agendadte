@@ -55,3 +55,17 @@ export function armarResumen(
     }
   })
 }
+
+// Números de los accesos rápidos del Tablero. `escuelaIds`: las escuelas a cargo (o todas, para el CED). Los reclamos abiertos cuentan los de esas escuelas
+// y los que registró el propio FED; los cronogramas, los que todavía no terminaron en esas escuelas.
+export type Accesos = { escuelas: number, conReclamo: number, reclamosAbiertos: number, cronogramasProximos: number }
+export function contarAccesos(d: { escuelaIds: Set<string>, todas: boolean, miId: string, reclamosAbiertos: { school_id: string | null, fed_id: string | null }[], cronogramasProximos: { school_id: string | null }[] }): Accesos {
+  const mia = (id: string | null) => d.todas || (!!id && d.escuelaIds.has(id))
+  const reclamos = d.reclamosAbiertos.filter(r => mia(r.school_id) || r.fed_id === d.miId)
+  return {
+    escuelas: d.escuelaIds.size,
+    conReclamo: new Set(reclamos.map(r => r.school_id).filter((x): x is string => !!x && mia(x))).size,
+    reclamosAbiertos: reclamos.length,
+    cronogramasProximos: d.cronogramasProximos.filter(c => mia(c.school_id)).length,
+  }
+}

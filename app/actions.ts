@@ -17,7 +17,7 @@ import { tipoDe, type EscuelaConectividad } from '@/lib/reclamos'
 import { ESTADOS_RECLAMO, avisoDeAlta, avisoDeCambio, conexionDe, puedeResolverReclamo, sumarNota, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
 import { AVISOS_CRONOGRAMA, DIAS_ATRAS, ESTADOS_SEGUIMIENTO, MAX_NOTA, PIDE_MOTIVO, avisoDe, avisoEstadoCed, avisoJefaturaFed, esDelFed, haceDias, puedeAvisarJefatura, puedeMarcar, type AvisoCronograma, type Cronograma, type EstadoSeguimiento, type Seguimiento, type TipoSeguimiento } from '@/lib/cronogramas'
 import { sincronizarCronogramas, type ResultadoSync } from '@/lib/cronogramas-sync'
-import { armarResumen, type ContactoEscuela, type ResumenEscuela } from '@/lib/mis-escuelas'
+import { armarResumen, contarAccesos, type Accesos, type ContactoEscuela, type ResumenEscuela } from '@/lib/mis-escuelas'
 import { estadoAlCrear } from '@/lib/estado'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -249,6 +249,18 @@ async function getMisEscuelasImpl(yo: Usuario): Promise<ResumenEscuela[]> {
     fetchAll<{ school_id: string | null, fecha: string, estado: string }>((a, b) => db.from('agenda_items').select('school_id, fecha, estado').not('school_id', 'is', null).in('estado', ['realizada', 'planificada']).order('id').range(a, b)),
   ])
   return armarResumen(filas, { cronogramas, reclamos, acciones }, hoy)
+}
+// Números de los accesos rápidos del Tablero: las escuelas del FED (el CED, todas) con sus reclamos abiertos y cronogramas próximos.
+async function getAccesosImpl(yo: Usuario): Promise<Accesos> {
+  const db = supabaseServer(), hoy = hoyAR()
+  const todas = yo.fed.rol === 'coordinacion'
+  const escuelas = (await fetchAll<{ id: string, fed_a_cargo: string | null }>((a, b) => db.from('establecimientos').select('id, fed_a_cargo').order('id').range(a, b)))
+    .filter(e => todas || esDelFed(e.fed_a_cargo, yo.fed.nombre_completo))
+  const [reclamosAbiertos, cronogramasProximos] = await Promise.all([
+    fetchAll<{ school_id: string | null, fed_id: string | null }>((a, b) => db.from('reclamos_conectividad').select('school_id, fed_id').in('estado', ['enviado', 'en_proceso']).order('id').range(a, b)),
+    fetchAll<{ school_id: string | null }>((a, b) => db.from('cronogramas').select('school_id').eq('en_planilla', true).gte('fecha_fin', hoy).order('id').range(a, b)),
+  ])
+  return contarAccesos({ escuelaIds: new Set(escuelas.map(e => e.id)), todas, miId: yo.fed.id, reclamosAbiertos, cronogramasProximos })
 }
 // Lo que se suma a la ficha de una escuela a cargo: conectividad, reclamos, cronogramas y contactos. Sólo para el FED a cargo, la coordinación y la administración.
 export type ExtrasEscuela = { conectividad: EscuelaConectividad, reclamos: Reclamo[], cronogramas: Cronograma[], contactos: ContactoEscuela[] }
@@ -904,6 +916,7 @@ export const getFichaEscuela = async (id: string) => conUsuario(yo => getFichaEs
 export const getConectividadEscuela = async (id: string) => conUsuario(() => getConectividadEscuelaImpl(id))
 export const registrarReclamo = async (input: { school_id: string, tipo: string, asunto: string }) => conUsuario(yo => registrarReclamoImpl(yo, input))
 export const getReclamos = async () => conUsuario(() => getReclamosImpl())
+export const getAccesos = async () => conUsuario(yo => getAccesosImpl(yo))
 export const getMisEscuelas = async () => conUsuario(yo => getMisEscuelasImpl(yo))
 export const getExtrasEscuela = async (id: string) => conUsuario(yo => getExtrasEscuelaImpl(yo, id))
 export const getCronogramas = async () => conUsuario(yo => getCronogramasImpl(yo))

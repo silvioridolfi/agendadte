@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FILTROS_ESCUELAS_VACIOS, armarResumen, filtrarEscuelas, resumenEscuelas } from '@/lib/mis-escuelas'
+import { FILTROS_ESCUELAS_VACIOS, armarResumen, contarAccesos, filtrarEscuelas, resumenEscuelas } from '@/lib/mis-escuelas'
 
 const base = (id: string, cue: number, nombre: string, distrito: string, fed: string | null, nivel = 'Secundario') => ({ id, cue, nombre, distrito, ciudad: distrito, nivel, modalidad: null, fed_a_cargo: fed })
 const escuelas = [
@@ -55,4 +55,17 @@ describe('filtrarEscuelas', () => {
   })
   it('ordena por nombre', () => { expect(f({})).toEqual(['a', 'c', 'b', 'd']) })
   it('resume', () => { expect(resumenEscuelas(resumen)).toEqual({ total: 4, conCronograma: 1, conReclamo: 2 }) })
+})
+
+describe('contarAccesos', () => {
+  const base = { escuelaIds: new Set(['a', 'b', 'c']), todas: false, miId: 'f1', reclamosAbiertos: [{ school_id: 'a', fed_id: 'x' }, { school_id: 'a', fed_id: 'x' }, { school_id: 'b', fed_id: 'x' }, { school_id: 'z', fed_id: 'x' }, { school_id: 'y', fed_id: 'f1' }], cronogramasProximos: [{ school_id: 'a' }, { school_id: 'c' }, { school_id: 'z' }, { school_id: null }] }
+  it('cuenta lo de las escuelas a cargo y los reclamos que registró el FED', () => {
+    expect(contarAccesos(base)).toEqual({ escuelas: 3, conReclamo: 2, reclamosAbiertos: 4, cronogramasProximos: 2 })
+  })
+  it('el CED cuenta todo el equipo', () => {
+    expect(contarAccesos({ ...base, todas: true, escuelaIds: new Set(['a', 'b', 'c', 'y', 'z']) })).toEqual({ escuelas: 5, conReclamo: 4, reclamosAbiertos: 5, cronogramasProximos: 4 })
+  })
+  it('sin escuelas a cargo, sólo los reclamos propios', () => {
+    expect(contarAccesos({ ...base, escuelaIds: new Set() })).toEqual({ escuelas: 0, conReclamo: 0, reclamosAbiertos: 1, cronogramasProximos: 0 })
+  })
 })

@@ -17,11 +17,11 @@ const ZONA = 'America/Argentina/Buenos_Aires'
 const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString('es-AR', { timeZone: ZONA, day: '2-digit', month: '2-digit', year: 'numeric' })
 
 // Registro de reclamos de conectividad. El CED anota el N° de ticket (PBA) o de incidencia (Educar) y si se resolvió; la administración y los FED lo ven en modo lectura.
-export function RegistroReclamos({ profile, feds, esAdmin }: { profile: Fed, feds: Fed[], esAdmin: boolean }) {
+export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial }: { profile: Fed, feds: Fed[], esAdmin: boolean, soloMiosInicial?: boolean }) {
   const [lista, setLista] = useState<Reclamo[] | null>(null)
   const [error, setError] = useState('')
   const [filtros, setFiltros] = useState<FiltrosReclamo>({ estado: 'abiertos', fedId: '', conexion: '', busqueda: '' })
-  const [soloMios, setSoloMios] = useState(profile.rol === 'fed' && !esAdmin)
+  const [soloMios, setSoloMios] = useState((profile.rol === 'fed' && !esAdmin) || !!soloMiosInicial)
   const [editando, setEditando] = useState<Reclamo | null>(null)
   const [resolviendo, setResolviendo] = useState<Reclamo | null>(null)
   const puedeEditar = profile.rol === 'coordinacion'
