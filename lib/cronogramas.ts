@@ -1,4 +1,6 @@
 // Cronogramas de Nivel Central (pestaña "Cronogramas" del consolidado de conectividad): lectura de la planilla, tipos y filtros de la sección (puro).
+import { siglaNombre } from '@/lib/siglas'
+import { titleCase } from '@/lib/format'
 
 // Planilla y pestaña de donde se leen (la cuenta técnica de la agenda tiene permiso de lector).
 export const ID_CONSOLIDADO = '188st2Nu9AGTh9VbQzw3hPOnZQVQWED-jeOMaeJ-QOfQ'
@@ -117,17 +119,28 @@ export function haceDias(hoy: string, dias: number): string {
 
 // ---------- Sección Cronogramas ----------
 
+// Estado que el equipo anota en la agenda (la planilla de Nivel Central queda como referencia). El último que se anota es el vigente.
+export const ESTADOS_SEGUIMIENTO = ['realizado', 'no_realizado', 'reprogramado'] as const
+export type EstadoSeguimiento = typeof ESTADOS_SEGUIMIENTO[number]
+export const ESTADO_SEGUIMIENTO_LABEL: Record<EstadoSeguimiento, string> = { realizado: 'Realizado', no_realizado: 'No se realizó', reprogramado: 'Reprogramado' }
+// Para estos dos estados hay que anotar el motivo.
+export const PIDE_MOTIVO: EstadoSeguimiento[] = ['no_realizado', 'reprogramado']
+export const MAX_NOTA = 500
+export type Seguimiento = { estado: EstadoSeguimiento, nota: string | null, fed_id: string | null, created_at: string }
+
 export type Cronograma = {
   id: string, cue: number, fecha_inicio: string, fecha_fin: string, tipo: string | null, proveedor: string | null, nro: string | null, semana: string | null,
   estado_planilla: string | null, instaladores: string | null, descripcion: string | null, observaciones: string | null, nombre_planilla: string | null,
   primera_vez_at: string, actualizado_at: string,
+  // Del más nuevo al más viejo; el primero es el estado vigente.
+  historial: Seguimiento[],
   school: { id: string, nombre: string | null, distrito: string | null, ciudad: string | null, fed_a_cargo: string | null } | null,
 }
 export type PestanaCronogramas = 'proximos' | 'pasados' | 'todos'
-export type FiltrosCronogramas = { pestana: PestanaCronogramas, busqueda: string, distrito: string, fed: string, tipo: string, proveedor: string }
+export type FiltrosCronogramas = { pestana: PestanaCronogramas, busqueda: string, distrito: string, fed: string, tipo: string, proveedor: string, estado: '' | 'sin_marcar' | EstadoSeguimiento }
 
 const norm = (s: string | null | undefined) => sinTildes(s ?? '')
-export const FILTROS_VACIOS: FiltrosCronogramas = { pestana: 'proximos', busqueda: '', distrito: '', fed: '', tipo: '', proveedor: '' }
+export const FILTROS_VACIOS: FiltrosCronogramas = { pestana: 'proximos', busqueda: '', distrito: '', fed: '', tipo: '', proveedor: '', estado: '' }
 
 // FED a cargo de una escuela: en la base figura por nombre ("Macarena Duarte Buschiazzo"); acá se compara con el nombre del perfil ("Macarena Duarte").
 export function esDelFed(fedACargo: string | null | undefined, nombreFed: string): boolean {
@@ -136,6 +149,13 @@ export function esDelFed(fedACargo: string | null | undefined, nombreFed: string
 }
 
 export const SIN_FED = 'Sin FED asignado'
+export const sinFed = (fedACargo: string | null | undefined) => !fedACargo || norm(fedACargo) === norm(SIN_FED)
+
+export const estadoDe = (c: Pick<Cronograma, 'historial'>): EstadoSeguimiento | null => c.historial[0]?.estado ?? null
+
+// Quién puede anotar el estado: la coordinación, la administración y el FED a cargo de la escuela.
+export const puedeMarcar = (quien: { esAdmin: boolean, rol: string, nombre: string }, c: Pick<Cronograma, 'school'>) =>
+  quien.esAdmin || quien.rol === 'coordinacion' || esDelFed(c.school?.fed_a_cargo, quien.nombre)
 
 // Ventana del cronograma, por ejemplo "06/10 al 20/10" (o un solo día).
 export const ventanaDe = (c: Pick<Cronograma, 'fecha_inicio' | 'fecha_fin'>) => {
@@ -151,7 +171,8 @@ export function filtrarCronogramas(lista: Cronograma[], f: FiltrosCronogramas, h
     if (f.pestana === 'proximos' && !esProximo(c, hoy)) return false
     if (f.pestana === 'pasados' && esProximo(c, hoy)) return false
     if (f.distrito && norm(c.school?.distrito) !== norm(f.distrito)) return false
-    if (f.fed && !(f.fed === SIN_FED ? !c.school?.fed_a_cargo || norm(c.school.fed_a_cargo) === norm(SIN_FED) : esDelFed(c.school?.fed_a_cargo, f.fed))) return false
+    if (f.fed && !(f.fed === SIN_FED ? sinFed(c.school?.fed_a_cargo) : esDelFed(c.school?.fed_a_cargo, f.fed))) return false
+    if (f.estado && (f.estado === 'sin_marcar' ? estadoDe(c) !== null : estadoDe(c) !== f.estado)) return false
     if (f.tipo && c.tipo !== f.tipo) return false
     if (f.proveedor && c.proveedor !== f.proveedor) return false
     if (q && !norm(`${c.cue} ${c.school?.nombre ?? c.nombre_planilla ?? ''} ${c.nro ?? ''} ${c.proveedor ?? ''} ${etiquetaTipo(c.tipo)}`).includes(q)) return false
@@ -162,6 +183,50 @@ export function filtrarCronogramas(lista: Cronograma[], f: FiltrosCronogramas, h
 export const resumenCronogramas = (lista: Cronograma[], hoy: string) => ({
   proximos: lista.filter(c => esProximo(c, hoy)).length,
   pasados: lista.filter(c => !esProximo(c, hoy)).length,
-  sinFed: lista.filter(c => esProximo(c, hoy) && (!c.school?.fed_a_cargo || norm(c.school.fed_a_cargo) === norm(SIN_FED))).length,
+  sinFed: lista.filter(c => esProximo(c, hoy) && sinFed(c.school?.fed_a_cargo)).length,
+  // Ya terminaron y nadie anotó cómo salió.
+  sinCerrar: lista.filter(c => !esProximo(c, hoy) && estadoDe(c) === null).length,
   sinEscuela: lista.filter(c => esProximo(c, hoy) && !c.school).length,
 })
+
+// ---------- Avisos ----------
+
+// Reparte los cronogramas entre los FED según la escuela a cargo; los que no tienen FED asignado van aparte (resumen del CED).
+export function repartirPorFed<T extends { school: { fed_a_cargo: string | null } | null }>(filas: T[], feds: { id: string, nombre_completo: string }[]): { porFed: Map<string, T[]>, sinFed: T[] } {
+  const porFed = new Map<string, T[]>(), sin: T[] = []
+  for (const f of filas) {
+    const fed = feds.find(x => esDelFed(f.school?.fed_a_cargo, x.nombre_completo))
+    if (!fed) { sin.push(f); continue }
+    porFed.set(fed.id, [...(porFed.get(fed.id) ?? []), f])
+  }
+  return { porFed, sinFed: sin }
+}
+
+const corta = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`
+type ParaAviso = Pick<Cronograma, 'fecha_inicio' | 'fecha_fin' | 'tipo' | 'cue'> & { school: { nombre: string | null } | null }
+const quien = (c: ParaAviso) => `${c.school?.nombre ? siglaNombre(titleCase(c.school.nombre)) : `CUE ${c.cue}`} (${etiquetaTipo(c.tipo)}, ${ventanaDe(c)})`
+// Hasta tres cronogramas en el texto; el resto se cuenta.
+const lista = (cs: ParaAviso[]) => cs.slice(0, 3).map(quien).join(' · ') + (cs.length > 3 ? ` · y ${cs.length - 3} más` : '')
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
+
+export const avisoNuevosFed = (cs: ParaAviso[]) => `${plural(cs.length, 'cronograma nuevo', 'cronogramas nuevos')} en tus escuelas: ${lista(cs)}`
+export const avisoRecordatorioFed = (cs: ParaAviso[], cuando: string) => `Recordatorio: ${cs.length === 1 ? 'empieza' : 'empiezan'} ${cuando} ${plural(cs.length, 'cronograma', 'cronogramas')} en tus escuelas: ${lista(cs)}`
+const sinFedTxt = (n: number) => (n ? ` (${n} sin FED asignado)` : '')
+export const avisoNuevosCed = (total: number, sin: number) => `Cronogramas nuevos en la planilla: ${total}${sinFedTxt(sin)}`
+export const avisoRecordatorioCed = (total: number, sin: number, cuando: string) => `Recordatorio: ${cuando} ${total === 1 ? 'empieza' : 'empiezan'} ${plural(total, 'cronograma', 'cronogramas')}${sinFedTxt(sin)}`
+export const avisoEstadoCed = (estado: EstadoSeguimiento, c: ParaAviso, nota: string | null) => `${ESTADO_SEGUIMIENTO_LABEL[estado]}: ${quien(c)}${nota ? `. ${nota}` : ''}`
+
+// Próximo día hábil después de `hoy` (sin fines de semana ni no laborables).
+export function proximoHabil(hoy: string, noLab: Set<string> = new Set()): string {
+  const d = new Date(`${hoy}T12:00:00Z`)
+  do d.setUTCDate(d.getUTCDate() + 1); while (d.getUTCDay() === 0 || d.getUTCDay() === 6 || noLab.has(d.toISOString().slice(0, 10)))
+  return d.toISOString().slice(0, 10)
+}
+export const esHabil = (f: string, noLab: Set<string> = new Set()) => { const d = new Date(`${f}T12:00:00Z`).getUTCDay(); return d !== 0 && d !== 6 && !noLab.has(f) }
+// "mañana" si el próximo día hábil es el día siguiente; si no, "el lunes 12/10".
+export function cuandoEmpieza(hoy: string, habil: string): string {
+  const manana = new Date(`${hoy}T12:00:00Z`); manana.setUTCDate(manana.getUTCDate() + 1)
+  if (manana.toISOString().slice(0, 10) === habil) return 'mañana'
+  const dia = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][new Date(`${habil}T12:00:00Z`).getUTCDay()]
+  return `el ${dia} ${corta(habil)}`
+}

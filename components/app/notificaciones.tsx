@@ -42,6 +42,7 @@ function Titulo({ n, autor }: { n: Notificacion, autor: (id: string | null) => s
   const quien = n.autor_id && <b>{autor(n.autor_id)}</b>
   if (n.tipo === 'inactividad') return <>{quien} sin actividad reciente en la agenda</>
   if (n.tipo === 'reclamo') return claseReclamo(n) === 'nuevo' ? <>{quien} registró un <b>reclamo de conectividad</b></> : <><b>Reclamo de conectividad</b></>
+  if (n.tipo === 'cronograma') return <>{quien} <b>Cronogramas</b> de Nivel Central</>
   if (n.tipo === 'pve') {
     const c = clasePve(n)
     return <>{quien} {c === 'devuelta' ? <>devolvió tu <b>PVE</b></> : c === 'entrega' ? <>entregó su <b>PVE</b></> : <>Recordatorio de <b>PVE</b></>}</>
@@ -50,7 +51,7 @@ function Titulo({ n, autor }: { n: Notificacion, autor: (id: string | null) => s
   return <>{quien} {n.tipo === 'etiqueta' ? (n.item?.accion === 'LICENCIA' ? 'cargó una' : 'te sumó a') : n.tipo === 'respuesta' ? 'respondió sobre' : n.tipo === 'cancelacion' ? (n.item ? 'canceló' : '') : 'modificó'} {n.item ? <b>{cap(n.item.accion.toLowerCase())}</b> : n.tipo === 'cancelacion' ? '' : 'una acción que ya no existe'}</>
 }
 
-export function NotificacionesBell({ feds, onOpen, onReclamos }: { feds: Fed[], onOpen: (item: AgendaItem) => void, onReclamos?: () => void }) {
+export function NotificacionesBell({ feds, onOpen, onReclamos, onCronogramas }: { feds: Fed[], onOpen: (item: AgendaItem) => void, onReclamos?: () => void, onCronogramas?: () => void }) {
   const { list, unread, leer } = useNotif()
   const [open, setOpen] = useState(false)
   // La campanita se sacude una vez cuando llega una notificación sin leer más.
@@ -75,7 +76,7 @@ export function NotificacionesBell({ feds, onOpen, onReclamos }: { feds: Fed[], 
       <div className="flex items-center justify-between border-b border-dte-linea px-4 py-2.5"><p className="text-sm font-bold">Notificaciones</p>{unread > 0 && <button onClick={() => leer()} className="min-h-11 text-xs font-semibold text-dte-petroleo hover:opacity-80 sm:min-h-0">Marcar todas como leídas</button>}</div>
       {list.length ? <ul className="max-h-[70dvh] divide-y sm:max-h-96 divide-dte-linea overflow-y-auto">{list.map(n => {
         const nivel = nivelDe(n), e = ESTILO[nivel]
-        return <li key={n.id}><button onClick={() => { leer([n.id]); setOpen(false); if (n.item) onOpen(n.item); else if (n.tipo === 'reclamo') onReclamos?.() }} className={`flex w-full gap-3 border-l-4 px-4 py-3 text-left text-sm transition hover:bg-dte-tinte ${e.borde} ${n.leida ? '' : e.fondo}`}>
+        return <li key={n.id}><button onClick={() => { leer([n.id]); setOpen(false); if (n.item) onOpen(n.item); else if (n.tipo === 'reclamo') onReclamos?.(); else if (n.tipo === 'cronograma') onCronogramas?.() }} className={`flex w-full gap-3 border-l-4 px-4 py-3 text-left text-sm transition hover:bg-dte-tinte ${e.borde} ${n.leida ? '' : e.fondo}`}>
           <e.Icono aria-label={e.nombre} className={`mt-0.5 size-4 shrink-0 ${e.icono} ${n.leida ? 'opacity-60' : ''}`} />
           <span className="min-w-0"><span className={`block ${n.leida ? '' : 'font-medium'}`}><Titulo n={n} autor={autor} /></span>
             {n.detalle && <span className={`block text-xs ${nivel === 'urgente' ? 'text-peligro' : 'text-dte-tinta'}`}>{n.detalle}</span>}

@@ -110,14 +110,20 @@ Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la
 Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado, FED, tipo de conexión y búsqueda por CUE, escuela, número o nombre. Solo el CED los actualiza; la administración los ve en modo lectura. El botón **Excel** descarga la lista tal como la estás viendo, con las mismas columnas de la planilla del CED.
 [i] Al armar un reclamo de una escuela que ya tiene uno abierto, la agenda te avisa para que sigas esa cadena en lugar de abrir otra.` },
 
-  { id: 'cronogramas', titulo: 'Cronogramas de Nivel Central', para: ['ced'], md: () => `
-Son las visitas que Nivel Central programa en las escuelas (mantenimiento, reparación e instalación de piso, instalaciones de enlace, certificaciones…). La agenda las lee de la pestaña **Cronogramas** del consolidado de conectividad. Se abre desde el menú de las iniciales (**Cronogramas**). Por ahora es solo lectura y la ven el CED y la administración.
-## Qué muestra
-Una tarjeta por cronograma y escuela: la ventana de fechas, el tipo, el proveedor, el N° del cronograma o de la incidencia, el FED a cargo de la escuela y el estado que figura en la planilla. Al tocarla se ven los instaladores (nombre y DNI o CUIL, o el enlace que cargó Nivel Central), la descripción y las observaciones de territorio.
+  { id: 'cronogramas', titulo: 'Cronogramas de Nivel Central', para: ['fed', 'ced'], md: () => `
+Son las visitas que Nivel Central programa en las escuelas (mantenimiento, reparación e instalación de piso, instalaciones de enlace, certificaciones…). La agenda las lee de la pestaña **Cronogramas** del consolidado de conectividad. Se abre desde el menú de las iniciales (**Cronogramas**).
+## Qué ves
+Una tarjeta por cronograma y escuela: la ventana de fechas, el tipo, el proveedor, el N° del cronograma o de la incidencia, el FED a cargo de la escuela y el estado que figura en la planilla (sólo de referencia). Al tocarla se ven los instaladores (nombre y DNI o CUIL, o el enlace que cargó Nivel Central), la descripción y las observaciones de territorio. Cada FED ve los cronogramas de **sus escuelas**; el CED y la administración ven todos.
+## Cómo salió
+Dentro de la tarjeta, **Cómo salió** permite anotar **Realizado**, **No se realizó** o **Reprogramado**. Lo anota el FED a cargo de la escuela o el CED. Para No se realizó y Reprogramado hay que escribir el motivo, y el CED recibe una notificación. El último estado anotado es el que cuenta (queda el historial) y no se modifica la planilla.
+## Avisos
+- Cuando aparecen cronogramas nuevos en la planilla, cada FED recibe **un solo aviso** con los de sus escuelas; el CED recibe un resumen (con cuántos quedaron sin FED asignado).
+- El **día hábil anterior** al comienzo hay un recordatorio, también agrupado por FED y con resumen para el CED.
+- Los avisos llegan a las notificaciones y, al tocarlos, abren esta sección.
 ## Pestañas y filtros
-**Próximos** (los que todavía no terminaron), **Pasados** y **Todos**. Se puede filtrar por distrito, FED a cargo, tipo y proveedor, y buscar por CUE, escuela o número. Si una escuela no tiene FED asignado, figura como **${SIN_FED}**.
+**Próximos** (los que todavía no terminaron), **Pasados** y **Todos**. Se filtra por distrito, estado, tipo y proveedor, y se busca por CUE, escuela o número; el CED y la administración también filtran por FED a cargo. Si una escuela no tiene FED asignado, figura como **${SIN_FED}**. Arriba se cuentan los **pasados sin marcar**, para no dejar cronogramas sin cerrar.
 ## Cómo se actualiza
-Se lee sola cada madrugada y se guardan los cronogramas que terminaron hasta ${DIAS_ATRAS} días atrás. La administración puede tocar **Sincronizar ahora**. La agenda nunca modifica la planilla; si un cronograma desaparece de la planilla, deja de mostrarse.
+Se lee sola cada madrugada y se guardan los cronogramas que terminaron hasta ${DIAS_ATRAS} días atrás. La administración puede tocar **Sincronizar ahora**. Si un cronograma desaparece de la planilla, deja de mostrarse.
 [i] Los tipos LAC_M, LAC y LAC_R se muestran como ${etiquetaTipo('LAC_M')}, ${etiquetaTipo('LAC')} y ${etiquetaTipo('LAC_R')}.` },
 
   { id: 'registro', titulo: 'Registrar una acción', para: ['fed'], md: () => `

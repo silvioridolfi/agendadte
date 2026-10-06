@@ -158,7 +158,7 @@ export default function Page() {
         <div className="flex shrink-0 items-center gap-1">
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <button type="button" onClick={() => setBuscador(true)} aria-label="Buscar escuela" title="Buscar escuela" className="flex size-11 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-fondo hover:text-dte-tinta"><Search className="size-5" /></button>
-        <NotificacionesBell feds={feds ?? []} onOpen={setSelected} onReclamos={() => { setVista(null); irA('reclamos') }} />
+        <NotificacionesBell feds={feds ?? []} onOpen={setSelected} onReclamos={() => { setVista(null); irA('reclamos') }} onCronogramas={() => { setVista(null); irA('cronogramas') }} />
         <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} hayNovedades={hayNovedades} onReclamo={() => abrirReclamo(null)} onRegistroReclamos={() => { setVista(null); irA('reclamos') }} onCronogramas={() => { setVista(null); irA('cronogramas') }} onAyuda={() => { setVista(null); setTemaAyuda(undefined); irA('ayuda') }} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
         </div>
       </div>
@@ -178,7 +178,7 @@ export default function Page() {
     {/* Cada pantalla entra con un fundido corto; cambiar de sección o de vista la vuelve a animar. */}
     <div key={`${section}-${vista?.tipo ?? ''}-${vista?.tipo === 'fed' ? vista.fed.id : ''}`} className="anim-entrada">
     {section === 'reclamos' ? <RegistroReclamos profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} />
-      : section === 'cronogramas' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <Cronogramas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} />
+      : section === 'cronogramas' ? <Cronogramas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} />
       : section === 'pve' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <PveEquipoView />
       : section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><div className="flex flex-col gap-4"><EventosPanel onSaved={changed} /><FeriadosView autorId={profile.id} onSaved={changed} /></div></main>
       : section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); irA('agenda') } }} />
