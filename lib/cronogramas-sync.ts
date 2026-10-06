@@ -2,7 +2,7 @@ import 'server-only'
 import { createHash } from 'node:crypto'
 import { supabaseServer } from '@/lib/supabase-server'
 import { exportarHojaCsv } from '@/lib/drive'
-import { DIAS_ATRAS, GID_CRONOGRAMAS, ID_CONSOLIDADO, haceDias, leerCronogramas, type FilaCronograma } from '@/lib/cronogramas'
+import { DIAS_ATRAS, PESTANA_CRONOGRAMAS, ID_CONSOLIDADO, haceDias, leerCronogramas, type FilaCronograma } from '@/lib/cronogramas'
 import { hoyAR } from '@/lib/hora'
 
 export type ResultadoSync = { leidas: number, filas: number, nuevas: number, cambiadas: number, quitadas: number, sinEscuela: number, descartadas: number, duplicadas: number }
@@ -17,7 +17,7 @@ const huella = (f: FilaCronograma) => createHash('sha1').update(JSON.stringify([
 export async function sincronizarCronogramas(): Promise<ResultadoSync> {
   const db = supabaseServer()
   const inicioCorrida = new Date().toISOString()
-  const lectura = leerCronogramas(await exportarHojaCsv(ID_CONSOLIDADO, GID_CRONOGRAMAS))
+  const lectura = leerCronogramas(await exportarHojaCsv(ID_CONSOLIDADO, PESTANA_CRONOGRAMAS))
   const desde = haceDias(hoyAR(), DIAS_ATRAS)
   const filas = lectura.filas.filter(f => f.fecha_fin >= desde)
   if (!filas.length) throw new Error('La planilla no tiene cronogramas vigentes: no se actualizó nada')
