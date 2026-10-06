@@ -79,11 +79,14 @@ const claveDe = (nro: string | null, cue: number, inicio: string, tipo: string |
 
 // Filas de la pestaña: una por cronograma y CUE. Si cambiaron los encabezados, falla con un mensaje claro en lugar de cargar datos mal.
 export function leerCronogramas(csv: string): LecturaCronogramas {
-  const tabla = parsearCsv(csv)
+  const todas = parsearCsv(csv)
+  // El encabezado puede no estar en el primer renglón: se lo busca entre los primeros.
+  const idx = Math.max(0, todas.slice(0, 10).findIndex(f => f.map(sinTildes).includes(COLUMNAS.inicio)))
+  const tabla = todas.slice(idx)
   const encabezado = (tabla[0] ?? []).map(sinTildes)
   const col = Object.fromEntries(Object.entries(COLUMNAS).map(([k, nombre]) => [k, encabezado.indexOf(nombre)])) as Record<keyof typeof COLUMNAS, number>
   const faltan = OBLIGATORIAS.filter(k => col[k] < 0).map(k => COLUMNAS[k])
-  if (faltan.length) throw new Error(`La planilla cambió: no se encuentran las columnas ${faltan.join(', ')}`)
+  if (faltan.length) throw new Error(`La planilla cambió: no se encuentran las columnas ${faltan.join(', ')}. Primer renglón leído: ${(todas[0] ?? []).slice(0, 8).map(x => x.slice(0, 30)).join(' | ') || '(vacío)'} (${todas.length} renglones)`)
   const v = (f: string[], k: keyof typeof COLUMNAS) => (col[k] >= 0 ? f[col[k]] : undefined)
   const porClave = new Map<string, FilaCronograma>()
   let descartadas = 0, duplicadas = 0
