@@ -147,7 +147,7 @@ async function actualizarReclamoImpl(yo: Usuario, id: string, cambios: { estado?
 }
 
 // Cronogramas de Nivel Central (sincronizados desde el consolidado). La coordinación y la administración ven todos; cada FED, los de sus escuelas.
-const COLS_CRONOGRAMA = `id, cue, fecha_inicio, fecha_fin, tipo, proveedor, nro, semana, estado_planilla, instaladores, descripcion, observaciones, nombre_planilla, primera_vez_at, actualizado_at, school:establecimientos(id, nombre, distrito, ciudad, fed_a_cargo)`
+const COLS_CRONOGRAMA = `id, cue, fecha_inicio, fecha_fin, tipo, proveedor, nro, semana, estado_planilla, instaladores, descripcion, observaciones, nombre_planilla, primera_vez_at, actualizado_at, school:establecimientos(id, nombre, distrito, ciudad, fed_a_cargo, turnos, direccion, lat, lon, predio)`
 type UltimaSync = { fin: string | null, resultado: Record<string, unknown> | null } | null
 // Agrega a cada cronograma el historial de estados anotados (del más nuevo al más viejo).
 async function conHistorial(filas: Omit<Cronograma, 'historial'>[]): Promise<Cronograma[]> {
@@ -159,12 +159,23 @@ async function conHistorial(filas: Omit<Cronograma, 'historial'>[]): Promise<Cro
   }
   return filas.map(c => ({ ...c, historial: historial.get(c.id) ?? [] }))
 }
+// Agrega a cada cronograma las otras escuelas que comparten su predio (por ejemplo, si el rack está instalado en una de ellas).
+async function conComparte(filas: Cronograma[]): Promise<Cronograma[]> {
+  const predios = [...new Set(filas.map(c => c.school?.predio).filter((p): p is string => !!p))]
+  const porPredio = new Map<string, { id: string, cue: number | null, nombre: string | null }[]>()
+  for (let i = 0; i < predios.length; i += 100) {
+    const { data, error } = await supabaseServer().from('establecimientos').select('id, cue, nombre, predio').in('predio', predios.slice(i, i + 100))
+    if (error) throw new Error(error.message)
+    for (const e of data ?? []) porPredio.set(String(e.predio), [...(porPredio.get(String(e.predio)) ?? []), { id: e.id as string, cue: e.cue as number | null, nombre: e.nombre as string | null }])
+  }
+  return filas.map(c => ({ ...c, comparte: (c.school?.predio ? porPredio.get(c.school.predio) ?? [] : []).filter(o => o.id !== c.school?.id).map(o => ({ cue: o.cue, nombre: o.nombre })) }))
+}
 async function getCronogramasImpl(yo: Usuario): Promise<{ lista: Cronograma[], ultima: UltimaSync }> {
   const db = supabaseServer()
   const todos = yo.esAdmin || yo.fed.rol === 'coordinacion'
   const filas = (await fetchAll<Omit<Cronograma, 'historial'>>((a, b) => db.from('cronogramas').select(COLS_CRONOGRAMA).eq('en_planilla', true).gte('fecha_fin', haceDias(hoyAR(), DIAS_ATRAS))
     .order('fecha_inicio').order('cue').order('id').range(a, b))).filter(c => todos || esDelFed(c.school?.fed_a_cargo, yo.fed.nombre_completo))
-  const lista = await conHistorial(filas)
+  const lista = await conComparte(await conHistorial(filas))
   const { data } = await db.from('cron_ejecuciones').select('fin, resultado').in('tarea', ['cronogramas', 'cronogramas-manual']).not('fin', 'is', null).order('inicio', { ascending: false }).limit(1).maybeSingle()
   return { lista, ultima: todos ? ((data as UltimaSync) ?? null) : null }
 }

@@ -140,7 +140,9 @@ export type Cronograma = {
   primera_vez_at: string, actualizado_at: string,
   // Del más nuevo al más viejo; el primero es el estado vigente.
   historial: Seguimiento[],
-  school: { id: string, nombre: string | null, distrito: string | null, ciudad: string | null, fed_a_cargo: string | null } | null,
+  school: { id: string, nombre: string | null, distrito: string | null, ciudad: string | null, fed_a_cargo: string | null, turnos?: string | null, direccion?: string | null, lat?: number | null, lon?: number | null, predio?: string | null } | null,
+  // Otras escuelas del mismo predio (el rack puede estar en una de ellas: hay que avisar a ambas).
+  comparte?: { cue: number | null, nombre: string | null }[],
 }
 export type PestanaCronogramas = 'proximos' | 'pasados' | 'todos'
 export type FiltrosCronogramas = { pestana: PestanaCronogramas, busqueda: string, distrito: string, fed: string, tipo: string, proveedor: string, estado: '' | 'sin_marcar' | EstadoSeguimiento, aviso: '' | 'sin_escuela' | 'sin_jefatura' }
@@ -202,6 +204,20 @@ export const resumenCronogramas = (lista: Cronograma[], hoy: string) => ({
   sinCerrar: lista.filter(c => !esProximo(c, hoy) && estadoDe(c) === null).length,
   sinEscuela: lista.filter(c => esProximo(c, hoy) && !c.school).length,
 })
+
+// ---------- Referencia de la guía (programa, vigencia y puntos a tener en cuenta) ----------
+
+// Programa del cronograma, según cómo lo informa la planilla en "Semana en que fue informado" ("407 - Cronograma Educar 1/10/26", "… PBA … REPROGRAMACION").
+export const programaDe = (semana: string | null | undefined): 'Educar' | 'PBA' | null => (/\bpba\b/i.test(semana ?? '') ? 'PBA' : /\beducar\b/i.test(semana ?? '') ? 'Educar' : null)
+export const esReprogramacion = (semana: string | null | undefined) => /reprogram/i.test(semana ?? '')
+// La guía toma como rango de validez de un cronograma de 7 a 10 días desde las fechas indicadas.
+export const VALIDEZ_DIAS: [number, number] = [7, 10]
+export const validoHasta = (c: Pick<Cronograma, 'fecha_fin'>) => haceDias(c.fecha_fin, -VALIDEZ_DIAS[1])
+// En PBA los datos de contacto de los directivos se informan al menos 48 hs antes de la fecha del cronograma.
+export const HORAS_CONTACTO_PBA = 48
+export const limiteContactosPba = (c: Pick<Cronograma, 'fecha_inicio'>) => haceDias(c.fecha_inicio, HORAS_CONTACTO_PBA / 24)
+export const esVespertino = (turnos: string | null | undefined) => /vesp/i.test((turnos ?? '').normalize('NFD').replace(/[̀-ͯ]/g, ''))
+export const fechaCortaAR = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`
 
 // ---------- Avisos ----------
 
