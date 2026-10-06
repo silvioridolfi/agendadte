@@ -2,7 +2,7 @@
 
 // Planilla y pestaña de donde se leen (la cuenta técnica de la agenda tiene permiso de lector).
 export const ID_CONSOLIDADO = '188st2Nu9AGTh9VbQzw3hPOnZQVQWED-jeOMaeJ-QOfQ'
-export const GID_CRONOGRAMAS = '1587668737'
+export const PESTANA_CRONOGRAMAS = 'Cronogramas'
 // Se guardan los cronogramas que terminan desde unos días antes de hoy: lo anterior no hace falta para avisar ni para el seguimiento.
 export const DIAS_ATRAS = 45
 

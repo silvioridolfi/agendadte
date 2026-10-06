@@ -98,9 +98,9 @@ export async function descargar(id: string): Promise<ArrayBuffer> {
   if (!res.ok) throw new DriveError(`No se pudo descargar el archivo (${res.status})`, res.status)
   return res.arrayBuffer()
 }
-// Una pestaña de una planilla de Google como CSV, con los valores ya calculados (las fórmulas se leen por su resultado).
-export async function exportarHojaCsv(archivoId: string, gid: string): Promise<string> {
-  const res = await fetch(`https://docs.google.com/spreadsheets/d/${archivoId}/export?format=csv&gid=${gid}`, { headers: { Authorization: `Bearer ${await token()}` } })
+// Una pestaña de una planilla de Google, por su nombre, como CSV con los valores ya calculados (las fórmulas se leen por su resultado).
+export async function exportarHojaCsv(archivoId: string, pestana: string): Promise<string> {
+  const res = await fetch(`https://docs.google.com/spreadsheets/d/${archivoId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(pestana)}`, { headers: { Authorization: `Bearer ${await token()}` } })
   if (!res.ok) throw new DriveError(res.status === 403 || res.status === 404 ? 'La cuenta técnica no tiene acceso a la planilla de conectividad' : `No se pudo leer la planilla (${res.status})`, res.status)
   return res.text()
 }
