@@ -14,7 +14,7 @@ import { hoyAR } from '@/lib/hora'
 import { avisaPorFecha } from '@/lib/avisos'
 import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
 import { tipoDe, type EscuelaConectividad } from '@/lib/reclamos'
-import { ESTADOS_RECLAMO, avisoDeAlta, avisoDeCambio, conexionDe, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
+import { ESTADOS_RECLAMO, avisoDeAlta, avisoDeCambio, conexionDe, puedeResolverReclamo, sumarNota, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
 import { AVISOS_CRONOGRAMA, DIAS_ATRAS, ESTADOS_SEGUIMIENTO, MAX_NOTA, PIDE_MOTIVO, avisoDe, avisoEstadoCed, avisoJefaturaFed, esDelFed, haceDias, puedeAvisarJefatura, puedeMarcar, type AvisoCronograma, type Cronograma, type EstadoSeguimiento, type Seguimiento, type TipoSeguimiento } from '@/lib/cronogramas'
 import { sincronizarCronogramas, type ResultadoSync } from '@/lib/cronogramas-sync'
 import { armarResumen, type ContactoEscuela, type ResumenEscuela } from '@/lib/mis-escuelas'
@@ -88,7 +88,7 @@ async function getConectividadEscuelaImpl(id: string): Promise<EscuelaConectivid
 }
 
 // ---- Registro de reclamos de conectividad: el FED registra el que armó y mandó al CED; el CED anota el N° de ticket o incidencia y si se resolvió.
-const COLS_RECLAMO = '*, school:establecimientos(nombre, distrito, ciudad)'
+const COLS_RECLAMO = '*, school:establecimientos(nombre, distrito, ciudad, fed_a_cargo)'
 async function registrarReclamoImpl(yo: Usuario, input: { school_id: string, tipo: string, asunto: string }): Promise<string> {
   if (!UUID.test(input.school_id)) throw new Error('Escuela inválida')
   const tipo = tipoDe(input.tipo)
@@ -121,6 +121,24 @@ async function reclamosAbiertosDeImpl(schoolId: string): Promise<Reclamo[]> {
   const { data, error } = await supabaseServer().from('reclamos_conectividad').select(COLS_RECLAMO).eq('school_id', schoolId).in('estado', ['enviado', 'en_proceso']).order('enviado_at', { ascending: false }).limit(10)
   if (error) throw new Error(error.message)
   return (data ?? []) as unknown as Reclamo[]
+}
+// El FED a cargo de la escuela (o quien registró el reclamo) puede marcarlo como resuelto, con una nota opcional. No avisa a nadie: se usa para dejar al día reclamos
+// que la escuela ya dio por solucionados (muchos, de meses anteriores). El resto de los cambios sigue siendo del CED.
+async function resolverReclamoImpl(yo: Usuario, id: string, nota: string | null): Promise<void> {
+  if (!UUID.test(id)) throw new Error('Reclamo inválido')
+  const db = supabaseServer()
+  const { data: r, error } = await db.from('reclamos_conectividad').select('estado, fed_id, notas, school:establecimientos(fed_a_cargo)').eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!r) throw new Error('No se encontró el reclamo')
+  const reclamo = r as unknown as Pick<Reclamo, 'estado' | 'fed_id' | 'notas' | 'school'>
+  if (!puedeResolverReclamo({ id: yo.fed.id, nombre: yo.fed.nombre_completo }, reclamo)) throw new Error(reclamo.estado === 'resuelto' || reclamo.estado === 'anulado' ? 'El reclamo ya no está abierto' : 'Sólo el FED a cargo de la escuela puede marcarlo como resuelto')
+  const texto = opt(nota)
+  if ((texto ?? '').length > 500) throw new Error('La nota es demasiado larga')
+  const notas = sumarNota(reclamo.notas, texto)
+  const ahora = new Date().toISOString()
+  const up = await db.from('reclamos_conectividad').update({ estado: 'resuelto', notas, resuelto_at: ahora, actualizado_por: yo.fed.id, updated_at: ahora }).eq('id', id).in('estado', ['enviado', 'en_proceso'])
+  if (up.error) throw new Error(up.error.message)
+  await audit('reclamos_conectividad', id, 'estado', yo.fed.id, { antes: { estado: reclamo.estado }, despues: { estado: 'resuelto', nota: texto }, por: 'fed' })
 }
 // Sólo el CED (coordinación) actualiza el registro; la administración lo ve en modo lectura.
 async function actualizarReclamoImpl(yo: Usuario, id: string, cambios: { estado?: EstadoReclamo, nro_incidencia?: string | null, notas?: string | null }): Promise<void> {
@@ -894,6 +912,7 @@ export const getContactosCronograma = async (id: string) => conUsuario(yo => get
 export const marcarCronograma = async (id: string, estado: EstadoSeguimiento, nota: string) => conUsuario(yo => marcarCronogramaImpl(yo, id, estado, nota))
 export const sincronizarCronogramasAhora = async () => conUsuario(yo => sincronizarCronogramasAhoraImpl(yo))
 export const reclamosAbiertosDe = async (schoolId: string) => conUsuario(() => reclamosAbiertosDeImpl(schoolId))
+export const resolverReclamo = async (id: string, nota: string | null) => conUsuario(yo => resolverReclamoImpl(yo, id, nota))
 export const actualizarReclamo = async (id: string, cambios: { estado?: EstadoReclamo, nro_incidencia?: string | null, notas?: string | null }) => conUsuario(yo => actualizarReclamoImpl(yo, id, cambios))
 
 // Jefaturas distritales y regional (organismos descentralizados, con código propio en lugar de CUE).

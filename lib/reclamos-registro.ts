@@ -1,5 +1,6 @@
 // Registro de reclamos de conectividad: estados, tipo de conexión, tipo de número y filtros del panel (puro).
 import { enlacesDe, tienePiso } from '@/lib/reclamos'
+import { esDelFed } from '@/lib/cronogramas'
 
 export const ESTADOS_RECLAMO = ['enviado', 'en_proceso', 'resuelto', 'anulado'] as const
 export type EstadoReclamo = typeof ESTADOS_RECLAMO[number]
@@ -13,10 +14,19 @@ export const ESTADO_RECLAMO_CLASE: Record<EstadoReclamo, string> = {
 }
 export const esAbierto = (e: string) => e === 'enviado' || e === 'en_proceso'
 
+// Un FED puede marcar como resuelto un reclamo abierto de una escuela a su cargo (o que registró él): muchas veces la escuela le avisa a él y no al CED.
+// Sólo "Resuelto" y sin avisos: el CED sigue siendo quien anota números y el resto de los estados.
+export const puedeResolverReclamo = (quien: { id: string, nombre: string }, r: Pick<Reclamo, 'estado' | 'fed_id' | 'school'>) =>
+  esAbierto(r.estado) && (r.fed_id === quien.id || esDelFed(r.school?.fed_a_cargo, quien.nombre))
+// Notas del reclamo: la nueva se suma a la que ya había, en otro renglón.
+export const sumarNota = (previa: string | null | undefined, nueva: string | null | undefined) => [previa, nueva].map(x => (x ?? '').trim()).filter(Boolean).join('\n') || null
+
 export type Reclamo = {
   id: string, fed_id: string | null, school_id: string | null, cue: number | null, tipo: string, tipo_label: string, conexion: string | null, asunto: string,
   enviado_at: string, estado: EstadoReclamo, nro_incidencia: string | null, notas: string | null, resuelto_at: string | null, origen: 'app' | 'planilla',
-  school: { nombre: string | null, distrito: string | null, ciudad: string | null } | null,
+  // Quién hizo el último cambio (el CED o el FED que lo marcó resuelto).
+  actualizado_por?: string | null,
+  school: { nombre: string | null, distrito: string | null, ciudad: string | null, fed_a_cargo?: string | null } | null,
 }
 
 // Tipo de conexión como lo anota el CED: "Piso PNCE y Enlace PBA", "Piso y Enlace PNCE", "Enlace PBA (Sin piso)".

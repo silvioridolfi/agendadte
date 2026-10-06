@@ -7,9 +7,10 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { type Fed } from '@/lib/agenda'
-import { ESTADOS_RECLAMO, ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL, ESTADO_RECLAMO_PLURAL, filtrarReclamos, origenDeNumero, resumenReclamos, type EstadoReclamo, type FiltrosReclamo, type Reclamo } from '@/lib/reclamos-registro'
+import { ESTADOS_RECLAMO, ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL, ESTADO_RECLAMO_PLURAL, filtrarReclamos, origenDeNumero, puedeResolverReclamo, resumenReclamos, sumarNota, type EstadoReclamo, type FiltrosReclamo, type Reclamo } from '@/lib/reclamos-registro'
 import { titleCase } from '@/lib/format'
-import { ErrorBox, Skeleton, actualizarReclamo, eyebrow, errMsg, getReclamos, selectClass } from '@/components/app/comun'
+import { esDelFed } from '@/lib/cronogramas'
+import { ErrorBox, Skeleton, actualizarReclamo, eyebrow, errMsg, getReclamos, resolverReclamo, selectClass } from '@/components/app/comun'
 import { Field } from '@/components/app/formulario'
 
 const ZONA = 'America/Argentina/Buenos_Aires'
@@ -22,13 +23,14 @@ export function RegistroReclamos({ profile, feds, esAdmin }: { profile: Fed, fed
   const [filtros, setFiltros] = useState<FiltrosReclamo>({ estado: 'abiertos', fedId: '', conexion: '', busqueda: '' })
   const [soloMios, setSoloMios] = useState(profile.rol === 'fed' && !esAdmin)
   const [editando, setEditando] = useState<Reclamo | null>(null)
+  const [resolviendo, setResolviendo] = useState<Reclamo | null>(null)
   const puedeEditar = profile.rol === 'coordinacion'
   const [exportando, setExportando] = useState(false)
   const [errorExcel, setErrorExcel] = useState('')
   const cargar = useCallback(() => { getReclamos().then(setLista).catch(e => setError(errMsg(e))) }, [])
   useEffect(() => { cargar() }, [cargar])
   const nombreFed = useCallback((id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Ex integrante', [feds])
-  const propios = useMemo(() => (lista ?? []).filter(r => !soloMios || r.fed_id === profile.id), [lista, soloMios, profile.id])
+  const propios = useMemo(() => (lista ?? []).filter(r => !soloMios || r.fed_id === profile.id || esDelFed(r.school?.fed_a_cargo, profile.nombre_completo)), [lista, soloMios, profile.id, profile.nombre_completo])
   const visibles = useMemo(() => filtrarReclamos(propios, filtros, nombreFed), [propios, filtros, nombreFed])
   const resumen = resumenReclamos(propios)
   const conexiones = useMemo(() => [...new Set((lista ?? []).map(r => r.conexion).filter((x): x is string => !!x))].sort(), [lista])
@@ -54,7 +56,7 @@ export function RegistroReclamos({ profile, feds, esAdmin }: { profile: Fed, fed
           <select aria-label="Estado" className={`${selectClass} md:w-40`} value={filtros.estado} onChange={e => set('estado', e.target.value as FiltrosReclamo['estado'])}><option value="abiertos">Abiertos</option><option value="todos">Todos</option>{ESTADOS_RECLAMO.map(e => <option key={e} value={e}>{ESTADO_RECLAMO_LABEL[e]}</option>)}</select>
           <select aria-label="FED" className={`${selectClass} md:w-44`} value={filtros.fedId} onChange={e => set('fedId', e.target.value)}><option value="">Todo el equipo</option>{feds.map(f => <option key={f.id} value={f.id}>{f.nombre_completo}</option>)}</select>
           <select aria-label="Tipo de conexión" className={`${selectClass} md:w-52`} value={filtros.conexion} onChange={e => set('conexion', e.target.value)}><option value="">Toda conexión</option>{conexiones.map(c => <option key={c} value={c}>{c}</option>)}</select>
-          <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-0"><input type="checkbox" checked={soloMios} onChange={e => setSoloMios(e.target.checked)} className="size-4" />Solo los míos</label>
+          <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-0"><input type="checkbox" checked={soloMios} onChange={e => setSoloMios(e.target.checked)} className="size-4" />Solo los míos y de mis escuelas</label>
         </div>
 
         <p className="mt-3 text-xs text-dte-gris" aria-live="polite">{visibles.length} {visibles.length === 1 ? 'reclamo' : 'reclamos'}</p>
@@ -63,7 +65,8 @@ export function RegistroReclamos({ profile, feds, esAdmin }: { profile: Fed, fed
           return <li key={r.id} className="rounded-card border border-dte-linea bg-white p-3.5 shadow-e1">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${ESTADO_RECLAMO_CLASE[r.estado]}`}>{ESTADO_RECLAMO_LABEL[r.estado]}</span>
-              {puedeEditar && <Button type="button" variant="outline" size="sm" onClick={() => setEditando(r)}><Pencil data-icon="inline-start" />Actualizar</Button>}
+              {puedeEditar ? <Button type="button" variant="outline" size="sm" onClick={() => setEditando(r)}><Pencil data-icon="inline-start" />Actualizar</Button>
+                : puedeResolverReclamo({ id: profile.id, nombre: profile.nombre_completo }, r) && <Button type="button" variant="outline" size="sm" onClick={() => setResolviendo(r)}><Check data-icon="inline-start" />Marcar resuelto</Button>}
             </div>
             <p className="mt-2 break-words font-mono text-[0.8125rem] font-medium">{r.asunto}</p>
             <p className="mt-1 text-sm font-semibold">{r.school?.nombre ? titleCase(r.school.nombre) : `CUE ${r.cue ?? '—'}`}{r.school?.distrito && <span className="font-normal text-dte-gris"> · {titleCase(r.school.distrito)}</span>}</p>
@@ -72,11 +75,12 @@ export function RegistroReclamos({ profile, feds, esAdmin }: { profile: Fed, fed
               {r.nro_incidencia && <p><span className="text-xs font-semibold text-dte-gris">{origen ? `Número (${origen}): ` : 'Número: '}</span><b className="break-words tabular-nums">{r.nro_incidencia}</b></p>}
               {r.notas && <p className="mt-0.5 break-words text-dte-tinta">{r.notas}</p>}
             </div>}
-            {r.estado === 'resuelto' && r.resuelto_at && <p className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-exito"><Check className="size-3.5" aria-hidden />Resuelto el {fechaCorta(r.resuelto_at)}</p>}
+            {r.estado === 'resuelto' && r.resuelto_at && <p className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-exito"><Check className="size-3.5" aria-hidden />Resuelto el {fechaCorta(r.resuelto_at)}{r.actualizado_por && ` · lo marcó ${nombreFed(r.actualizado_por)}`}</p>}
           </li>
         })}</ul> : <div className="mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-dte-linea px-4 py-10 text-center text-sm text-dte-gris"><ClipboardList className="size-6" aria-hidden />{propios.length ? 'No hay reclamos con esos filtros.' : 'Todavía no hay reclamos registrados.'}</div>}
       </>}
 
+    {resolviendo && <ResolverReclamo key={resolviendo.id} reclamo={resolviendo} onClose={() => setResolviendo(null)} onResuelto={(r, nota) => { setLista(l => l && l.map(x => (x.id === r.id ? { ...x, estado: 'resuelto', notas: sumarNota(x.notas, nota), resuelto_at: new Date().toISOString(), actualizado_por: profile.id } : x))); setResolviendo(null) }} />}
     {editando && <EditarReclamo key={editando.id} reclamo={editando} onClose={() => setEditando(null)} onGuardado={r => { setLista(l => l && l.map(x => (x.id === r.id ? r : x))); setEditando(null) }} />}
   </main>
 }
@@ -105,6 +109,26 @@ function EditarReclamo({ reclamo, onClose, onGuardado }: { reclamo: Reclamo, onC
       <Field label="Notas" hint="(opcional)"><Textarea value={notas} onChange={e => setNotas(e.target.value)} placeholder="Respuesta de Nivel Central u otra información" className="min-h-20" /></Field>
       {error && <ErrorBox message={error} />}
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={onClose}>Cancelar</Button><Button type="button" onClick={guardar} disabled={guardando}>{guardando && <Loader2 className="animate-spin" data-icon="inline-start" />}Guardar</Button></div>
+    </DialogContent>
+  </Dialog>
+}
+
+// Un FED marca como resuelto un reclamo de una escuela a su cargo (por lo general, porque la escuela le avisó). No se avisa a nadie.
+function ResolverReclamo({ reclamo, onClose, onResuelto }: { reclamo: Reclamo, onClose: () => void, onResuelto: (r: Reclamo, nota: string | null) => void }) {
+  const [nota, setNota] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+  async function guardar() {
+    setGuardando(true); setError('')
+    try { await resolverReclamo(reclamo.id, nota); onResuelto(reclamo, nota.trim() || null) } catch (e) { setError(errMsg(e)); setGuardando(false) }
+  }
+  return <Dialog open onOpenChange={o => !o && onClose()}>
+    <DialogContent className="max-h-[90dvh] overflow-y-auto bg-white max-sm:top-[calc(env(safe-area-inset-top,0px)+0.5rem)]! max-sm:bottom-auto! max-sm:rounded-b-2xl! sm:max-w-md">
+      <DialogTitle>Marcar como resuelto</DialogTitle>
+      <DialogDescription className="break-words">{reclamo.school?.nombre ? titleCase(reclamo.school.nombre) : `CUE ${reclamo.cue ?? '—'}`} · {reclamo.tipo_label}. No se envía ningún aviso; el CED lo ve en el registro.</DialogDescription>
+      <Field label="Nota" hint="(opcional)"><Textarea value={nota} onChange={e => setNota(e.target.value)} maxLength={500} placeholder="Ej.: la escuela confirmó por teléfono que ya funciona" className="min-h-20" /></Field>
+      {error && <ErrorBox message={error} />}
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={onClose}>Cancelar</Button><Button type="button" onClick={guardar} disabled={guardando}>{guardando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Marcar resuelto</Button></div>
     </DialogContent>
   </Dialog>
 }
