@@ -38,6 +38,13 @@ describe('leerCronogramas', () => {
     const r = leerCronogramas([ENC, f, f, fila({ 7: '61457700' }), fila({ 3: '6/10/2026' })].join('\n'))
     expect(r.filas).toHaveLength(1); expect(r.duplicadas).toBe(1); expect(r.descartadas).toBe(2)
   })
+  it('encuentra el encabezado aunque no esté en el primer renglón', () => {
+    const f = fila({ 3: '6/10/2026', 4: '6/10/2026', 7: '61457700', 10: 'LAC' })
+    expect(leerCronogramas(['Cronogramas 2026', ENC, f].join('\n')).filas).toHaveLength(1)
+  })
+  it('el error dice qué se leyó', () => {
+    expect(() => leerCronogramas('Total,Otra\n1,2')).toThrow(/Primer renglón leído: Total \| Otra/)
+  })
   it('falla con un mensaje claro si cambiaron los encabezados', () => {
     expect(() => leerCronogramas('A,B\n1,2')).toThrow(/La planilla cambió/)
   })
