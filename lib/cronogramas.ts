@@ -250,18 +250,34 @@ export function cuandoEmpieza(hoy: string, habil: string): string {
 const fechaTxt = (c: Pick<Cronograma, 'fecha_inicio' | 'fecha_fin'>) => (c.fecha_fin === c.fecha_inicio ? `el ${corta(c.fecha_inicio)}` : `del ${corta(c.fecha_inicio)} al ${corta(c.fecha_fin)}`)
 const esEnlace = (t: string) => /^https?:\/\//i.test(t.trim())
 
-// Mensaje para avisar a la escuela (directivo) que Nivel Central va a visitarla: fecha, tarea, empresa y quién concurre (nombre y DNI o CUIL, o el enlace que cargó Nivel Central).
+// Una línea de la columna de instaladores, lista para leer: sin el código inicial ("DT01 Cañete.Zenteno"), con los puntos entre apellidos como espacio,
+// en formato nombre si venía todo en mayúsculas, y el DNI o CUIL entre paréntesis y sin puntos ("Sadoski Victor (DNI 35610950)"). Lo que no es un nombre
+// ("DINA BA15") se deja como viene.
+export function personaDe(linea: string): string {
+  let t = linea.replace(/[ \t]+/g, ' ').trim()
+  const doc = t.match(/[,;\-–]?\s*\b(DNI|CUIL|CUIT)\b[:.]?\s*([\d][\d.\-]*\d)/i)
+  if (doc) t = t.replace(doc[0], ' ')
+  t = t.replace(/^[A-Za-z]{1,3}\d{1,3}\s+(?=\S)/, '').replace(/(?<=\p{L})\.(?=\p{L})/gu, ' ').replace(/[\s,;\-–]+$/, '').replace(/\s+/g, ' ').trim()
+  if (t === t.toUpperCase() && /\s/.test(t) && !/\d/.test(t)) t = titleCase(t)
+  if (!doc) return t
+  const tipo = doc[1].toUpperCase(), numero = tipo === 'DNI' ? doc[2].replace(/\D/g, '') : doc[2]
+  return `${t ? `${t} ` : ''}(${tipo} ${numero})`
+}
+
+// Mensaje informativo para el directivo: qué trabajo se hace en la escuela, cuándo, quién lo hace y con qué empresa (los cronogramas los establece otro
+// organismo: no se piden ni se cambian fechas). El responsable sale de la planilla con nombre y DNI o CUIL, o con el enlace que cargó Nivel Central.
 export function mensajeEscuela(c: Pick<Cronograma, 'cue' | 'fecha_inicio' | 'fecha_fin' | 'tipo' | 'proveedor' | 'instaladores'> & { school: { nombre: string | null } | null, nombre_planilla?: string | null }, fed: string, ahora: Date): { asunto: string, cuerpo: string } {
   const escuela = c.school?.nombre ? siglaNombre(titleCase(c.school.nombre)) : c.nombre_planilla ? titleCase(c.nombre_planilla) : `CUE ${c.cue}`
   const personal = (c.instaladores ?? '').split('\n').map(x => x.trim()).filter(Boolean)
-  const enlaces = personal.filter(esEnlace), nombres = personal.filter(x => !esEnlace(x))
+  const enlaces = personal.filter(esEnlace), responsables = personal.filter(x => !esEnlace(x)).map(personaDe).filter(Boolean)
   const lineas = [
-    `Escuela: ${escuela}${escuela.startsWith('CUE ') ? '' : ` (CUE ${c.cue})`}`, `Tarea: ${etiquetaTipo(c.tipo)}`, `Fecha: ${fechaTxt(c)}`, c.proveedor ? `Empresa: ${c.proveedor}` : null,
-    nombres.length ? `Personal que concurre:\n${nombres.map(n => `- ${n}`).join('\n')}` : null, enlaces.length ? `Datos del personal: ${enlaces.join(' ')}` : null,
+    `Escuela: ${escuela}${escuela.startsWith('CUE ') ? '' : ` (CUE ${c.cue})`}`, `Trabajo: ${etiquetaTipo(c.tipo)}`, `Fecha: ${fechaTxt(c)}`, c.proveedor ? `Empresa: ${c.proveedor}` : null,
+    responsables.length === 1 ? `Responsable: ${responsables[0]}` : responsables.length > 1 ? `Responsables:\n${responsables.map(r => `- ${r}`).join('\n')}` : null,
+    enlaces.length ? `Datos del responsable: ${enlaces.join(' ')}` : null,
   ].filter((x): x is string => !!x)
   return {
-    asunto: `Visita de Nivel Central a ${escuela}: ${ventanaDe(c)}`,
-    cuerpo: `Hola, ${saludoDe(ahora)}.\n\nSoy ${fed}, de la Dirección de Tecnología Educativa (Región 1). Les escribo para avisarles que Nivel Central programó una visita a la escuela:\n\n${lineas.join('\n')}\n\nLes pedimos que faciliten el ingreso del personal y que nos avisen si no pueden recibirlo en esas fechas.\n\nMuchas gracias.`,
+    asunto: `Trabajos en ${escuela}: ${ventanaDe(c)}`,
+    cuerpo: `Hola, ${saludoDe(ahora)}.\n\nSoy ${fed}, de la Dirección de Tecnología Educativa (Región 1). Les informo que en la escuela está previsto el siguiente trabajo, según el cronograma establecido:\n\n${lineas.join('\n')}\n\nQuedo a disposición por cualquier consulta.\nSaludos cordiales.`,
   }
 }
 
