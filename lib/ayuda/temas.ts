@@ -6,7 +6,7 @@ import { UMBRAL_DIAS_HABILES } from '@/lib/actividad'
 import { DESTINATARIOS_BASE, PROPUESTAS_DE_CLUB } from '@/lib/encuentro'
 import { TOLERANCIA } from '@/lib/horas'
 import { DIA_HABIL_AVISO, DIA_HABIL_RECORDATORIO, DIA_HABIL_VENCIMIENTO } from '@/lib/pve-reglas'
-import { DIAS_ATRAS, SIN_FED, etiquetaTipo } from '@/lib/cronogramas'
+import { DIAS_ATRAS, HORAS_CONTACTO_PBA, SIN_FED, VALIDEZ_DIAS, etiquetaTipo } from '@/lib/cronogramas'
 
 export type Rol = 'fed' | 'ced'
 export type Tema = { id: string, titulo: string, para: Rol[], md: () => string }
@@ -142,6 +142,10 @@ Cada aviso queda con quién y cuándo lo anotó. El filtro **Todo aviso** deja v
 - Cuando aparecen cronogramas nuevos en la planilla, cada FED recibe **un solo aviso** con los de sus escuelas; el CED recibe un resumen (con cuántos quedaron sin FED asignado).
 - El **día hábil anterior** al comienzo hay un recordatorio, también agrupado por FED y con resumen para el CED.
 - Los avisos llegan a las notificaciones y, al tocarlos, abren esta sección.
+## Programa, vigencia y puntos a tener en cuenta
+Cada tarjeta indica si el cronograma es de **Educar** o de **PBA** (según cómo lo informa la planilla) y si es una **Reprogramación**. Al abrirla, **Para tener en cuenta** muestra la vigencia (la guía toma de ${VALIDEZ_DIAS[0]} a ${VALIDEZ_DIAS[1]} días desde las fechas indicadas), si la escuela funciona en **turno vespertino** (hace falta un contacto alternativo de 8 a 16 h) y si **comparte predio** con otra escuela (hay que avisar a los directivos de ambas).
+## Guía para el CED
+Quien cumple el rol de CED (y la administración) ve además, en cada tarjeta, los pasos de la guía como referencia: en PBA, informar los datos de contacto de los directivos al menos ${HORAS_CONTACTO_PBA} hs antes (se muestra la fecha límite); en Educar, el contacto es el CED; verificar el domicilio de la escuela; avisar al establecimiento; y completar el Estado en la planilla. La agenda **no gestiona** estos pasos ni modifica la planilla: es solo una referencia y una vista.
 ## Pestañas y filtros
 **Próximos** (los que todavía no terminaron), **Pasados** y **Todos**. Se filtra por distrito, estado, tipo y proveedor, y se busca por CUE, escuela o número; el CED y la administración también filtran por FED a cargo. Si una escuela no tiene FED asignado, figura como **${SIN_FED}**. Arriba se cuentan los **pasados sin marcar**, para no dejar cronogramas sin cerrar.
 ## Cómo se actualiza

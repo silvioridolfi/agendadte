@@ -1,13 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Check, ChevronDown, Copy, Eye, Loader2, Mail, Phone, RefreshCw, Search, Send } from 'lucide-react'
+import { CalendarClock, Check, ChevronDown, Copy, Eye, Info, Loader2, Mail, MapPin, Phone, RefreshCw, Search, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { type Fed } from '@/lib/agenda'
-import { ESTADOS_SEGUIMIENTO, ESTADO_SEGUIMIENTO_LABEL, FILTROS_VACIOS, avisoDe, mensajeEscuela, puedeAvisarJefatura, MAX_NOTA, PIDE_MOTIVO, SIN_FED, esDelFed, estadoDe, etiquetaTipo, filtrarCronogramas, puedeMarcar, resumenCronogramas, ventanaDe, type AvisoCronograma, type Cronograma, type EstadoSeguimiento, type FiltrosCronogramas, type PestanaCronogramas } from '@/lib/cronogramas'
+import { ESTADOS_SEGUIMIENTO, ESTADO_SEGUIMIENTO_LABEL, FILTROS_VACIOS, HORAS_CONTACTO_PBA, VALIDEZ_DIAS, avisoDe, esReprogramacion, esVespertino, fechaCortaAR, limiteContactosPba, programaDe, validoHasta, mensajeEscuela, puedeAvisarJefatura, MAX_NOTA, PIDE_MOTIVO, SIN_FED, esDelFed, estadoDe, etiquetaTipo, filtrarCronogramas, puedeMarcar, resumenCronogramas, ventanaDe, type AvisoCronograma, type Cronograma, type EstadoSeguimiento, type FiltrosCronogramas, type PestanaCronogramas } from '@/lib/cronogramas'
 import { hoyAR } from '@/lib/hora'
 import { gmailAppUrl, gmailUrl, plataformaDe } from '@/lib/reclamos'
 import type { ContactoEscuela } from '@/lib/mis-escuelas'
@@ -90,13 +90,13 @@ export function Cronogramas({ profile, feds, esAdmin, cuenta }: { profile: Fed, 
 
         {(resumen.sinCerrar > 0 || resumen.sinAvisarEscuela > 0 || (veTodos && resumen.sinFed > 0)) && <p className="mt-3 text-xs text-dte-gris">{[resumen.sinAvisarEscuela > 0 && <span key="a">Próximos con la escuela sin avisar: <b className="tabular-nums">{resumen.sinAvisarEscuela}</b></span>, resumen.sinCerrar > 0 && <span key="c">Pasados sin marcar: <b className="tabular-nums">{resumen.sinCerrar}</b></span>, veTodos && resumen.sinFed > 0 && <span key="f">Próximos sin FED asignado: <b className="tabular-nums">{resumen.sinFed}</b></span>].filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x]))}</p>}
         <p className="mt-3 text-xs text-dte-gris" aria-live="polite">{visibles.length} {visibles.length === 1 ? 'cronograma' : 'cronogramas'}</p>
-        {visibles.length ? <ul className="mt-2 flex flex-col gap-2">{visibles.map(c => <Tarjeta key={c.id} c={c} hoy={hoy} abierta={abierto === c.id} onAbrir={() => setAbierto(a => (a === c.id ? null : c.id))} puedeMarcar={puedeMarcar(quien, c)} avisaJefatura={avisaJefatura} nombre={profile.nombre_completo} cuenta={cuenta} nombreFed={nombreFed} onAnotado={h => anotado(c.id, h)} />)}</ul>
+        {visibles.length ? <ul className="mt-2 flex flex-col gap-2">{visibles.map(c => <Tarjeta key={c.id} c={c} hoy={hoy} abierta={abierto === c.id} onAbrir={() => setAbierto(a => (a === c.id ? null : c.id))} puedeMarcar={puedeMarcar(quien, c)} avisaJefatura={avisaJefatura} esCed={veTodos} nombre={profile.nombre_completo} cuenta={cuenta} nombreFed={nombreFed} onAnotado={h => anotado(c.id, h)} />)}</ul>
           : <div className="mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-dte-linea px-4 py-10 text-center text-sm text-dte-gris"><CalendarClock className="size-6" aria-hidden />{propios.length ? 'No hay cronogramas con esos filtros.' : 'Todavía no hay cronogramas cargados.'}</div>}
       </>}
   </main>
 }
 
-function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, avisaJefatura, nombre: miNombre, cuenta, nombreFed, onAnotado }: { c: Cronograma, hoy: string, abierta: boolean, onAbrir: () => void, puedeMarcar: boolean, avisaJefatura: boolean, nombre: string, cuenta: string, nombreFed: (id: string | null) => string, onAnotado: (h: Cronograma['historial'][number]) => void }) {
+function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, avisaJefatura, esCed, nombre: miNombre, cuenta, nombreFed, onAnotado }: { c: Cronograma, hoy: string, abierta: boolean, onAbrir: () => void, puedeMarcar: boolean, avisaJefatura: boolean, esCed: boolean, nombre: string, cuenta: string, nombreFed: (id: string | null) => string, onAnotado: (h: Cronograma['historial'][number]) => void }) {
   const [copiado, setCopiado] = useState(false)
   const nombre = c.school?.nombre ? titleCase(c.school.nombre) : c.nombre_planilla ? titleCase(c.nombre_planilla) : `CUE ${c.cue}`
   const fed = c.school?.fed_a_cargo
@@ -111,6 +111,8 @@ function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, avisaJefatura, nombre:
           <span className="inline-flex items-center rounded-full border border-dte-petroleo/30 bg-dte-tinte px-2 py-0.5 text-xs font-semibold tabular-nums text-dte-petroleo-oscuro">{ventanaDe(c)}</span>
           {enCurso && <span className="inline-flex items-center rounded-full border border-exito/30 bg-exito/10 px-2 py-0.5 text-xs font-semibold text-exito">En curso</span>}
           <span className="inline-flex items-center rounded-full border border-dte-linea px-2 py-0.5 text-xs font-semibold">{etiquetaTipo(c.tipo)}</span>
+          {programaDe(c.semana) && <span className="inline-flex items-center rounded-full border border-dte-linea px-2 py-0.5 text-xs font-semibold">{programaDe(c.semana)}</span>}
+          {esReprogramacion(c.semana) && <span className="inline-flex items-center rounded-full border border-aviso-borde bg-aviso-fondo px-2 py-0.5 text-xs font-semibold text-aviso-fuerte">Reprogramación</span>}
           {estado && <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${ESTADO_CLASE[estado]}`}>{ESTADO_SEGUIMIENTO_LABEL[estado]}</span>}
           {avisoDe(c, 'jefatura_avisada') && <span className="inline-flex items-center gap-1 rounded-full border border-dte-linea bg-dte-fondo px-2 py-0.5 text-xs font-semibold text-dte-gris"><Check className="size-3" aria-hidden />Jefatura avisada</span>}
           {avisoDe(c, 'escuela_avisada') && <span className="inline-flex items-center gap-1 rounded-full border border-dte-linea bg-dte-fondo px-2 py-0.5 text-xs font-semibold text-dte-gris"><Check className="size-3" aria-hidden />Escuela avisada</span>}
@@ -127,6 +129,7 @@ function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, avisaJefatura, nombre:
         <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold text-dte-gris">Instaladores</span><Button type="button" variant="outline" size="sm" onClick={copiar}>{copiado ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado ? 'Copiado' : 'Copiar'}</Button></div>
         <ul className="mt-1 flex flex-col gap-0.5">{instaladores.map((l, i) => <li key={i} className="break-words">{esEnlace(l) ? <a href={l.trim()} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline">{l.trim()}</a> : l}</li>)}</ul>
       </div>}
+      <Referencia c={c} esCed={esCed} />
       <Avisos c={c} puedeMarcar={puedeMarcar} avisaJefatura={avisaJefatura} nombre={miNombre} cuenta={cuenta} nombreFed={nombreFed} onAnotado={onAnotado} />
       <Seguimiento c={c} puedeMarcar={puedeMarcar} nombreFed={nombreFed} onAnotado={onAnotado} />
       {c.descripcion && <p><span className="text-xs font-semibold text-dte-gris">Descripción: </span><span className="break-words">{c.descripcion}</span></p>}
@@ -235,4 +238,33 @@ function MensajeEscuela({ c, nombre, cuenta, avisada, onClose, onAvisada }: { c:
       {!avisada && <p className="text-xs text-dte-gris">Cuando lo hayas mandado (o hayas llamado), tocá Ya avisé a la escuela para dejarlo anotado.</p>}
     </DialogContent>
   </Dialog>
+}
+
+// Lo que indica la guía para esta visita, a modo de referencia (la agenda no gestiona estos pasos ni modifica la planilla).
+function Referencia({ c, esCed }: { c: Cronograma, esCed: boolean }) {
+  const programa = programaDe(c.semana)
+  const comparte = c.comparte ?? []
+  const nombres = comparte.map(o => (o.nombre ? titleCase(o.nombre) : `CUE ${o.cue}`)).join(', ')
+  const notas = [
+    `Vigencia: la guía toma de ${VALIDEZ_DIAS[0]} a ${VALIDEZ_DIAS[1]} días desde las fechas indicadas (hasta el ${fechaCortaAR(validoHasta(c))}).`,
+    esVespertino(c.school?.turnos) && 'La escuela funciona en turno vespertino: hace falta un contacto alternativo en el horario de 8 a 16 h.',
+    comparte.length > 0 && `Comparte predio con ${nombres}: si el rack está instalado en otra escuela, hay que avisar a los directivos de ambas.`,
+  ].filter((x): x is string => !!x)
+  const mapa = c.school?.lat != null && c.school?.lon != null ? `${c.school.lat},${c.school.lon}` : c.school?.direccion ? `${c.school.direccion}, ${c.school.ciudad ?? ''}, Buenos Aires, Argentina` : null
+  const estado = estadoDe(c)
+  return <div className="rounded-control border border-dte-linea px-3 py-2">
+    <p className="flex items-center gap-1 text-xs font-semibold text-dte-gris"><Info className="size-3.5" aria-hidden />Para tener en cuenta</p>
+    <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-4 text-sm">{notas.map(n => <li key={n} className="break-words">{n}</li>)}</ul>
+    {esCed && <div className="mt-2.5 border-t border-dte-linea pt-2">
+      <p className="text-xs font-semibold text-dte-gris">Guía para el CED</p>
+      <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-4 text-sm">
+        <li>{programa === 'PBA' ? <>Cronograma de <b>PBA</b>: informar los datos de contacto de los directivos (nombre, teléfono, franja horaria y si la escuela está notificada) en la hoja Contactos al menos {HORAS_CONTACTO_PBA} hs antes, o sea hasta el <b>{fechaCortaAR(limiteContactosPba(c))}</b>. Hasta que figure el SI de notificada, el cronograma no se da por validado y se reprograma.</>
+          : programa === 'Educar' ? <>Cronograma de <b>Educar</b>: el contacto es el CED.</> : 'No figura si es de PBA o de Educar: se identifica en la planilla.'}</li>
+        <li>Verificar que el domicilio y las coordenadas del establecimiento sean correctos{c.school?.direccion ? <>: <b>{titleCase(c.school.direccion)}</b>{c.school.lat != null && c.school.lon != null && ` (${c.school.lat}, ${c.school.lon})`}</> : ' (la escuela no tiene dirección cargada)'}.
+          {mapa && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapa)}`} target="_blank" rel="noopener noreferrer" className="ml-1 inline-flex items-center gap-1 font-semibold text-dte-petroleo underline underline-offset-2"><MapPin className="size-3.5" aria-hidden />Cómo llegar</a>} Si hay un error, corresponde el reclamo «Error en dirección».</li>
+        <li>Avisar al establecimiento y gestionar que los directivos estén presentes para recibir a los técnicos: {avisoDe(c, 'escuela_avisada') ? 'escuela avisada.' : 'todavía sin avisar.'}</li>
+        <li>Completar el Estado (columna A) en la hoja Cronogramas del consolidado, indicando si se cumplió, si se realizó la instalación, etc. La agenda no modifica la planilla{estado ? `; en la agenda figura: ${ESTADO_SEGUIMIENTO_LABEL[estado]}` : ''}{c.estado_planilla ? `; en la planilla: ${c.estado_planilla}` : ''}.</li>
+      </ul>
+    </div>}
+  </div>
 }

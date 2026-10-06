@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { avisoDe, avisoJefaturaFed, mensajeEscuela, personaDe, puedeAvisarJefatura, FILTROS_VACIOS, avisoNuevosCed, avisoNuevosFed, avisoRecordatorioCed, avisoRecordatorioFed, cuandoEmpieza, esHabil, estadoDe, proximoHabil, puedeMarcar, repartirPorFed, cuesDe, esDelFed, etiquetaTipo, fechaDe, filtrarCronogramas, haceDias, leerCronogramas, parsearCsv, resumenCronogramas, ventanaDe, type Cronograma } from '@/lib/cronogramas'
+import { esReprogramacion, esVespertino, limiteContactosPba, programaDe, validoHasta, avisoDe, avisoJefaturaFed, mensajeEscuela, personaDe, puedeAvisarJefatura, FILTROS_VACIOS, avisoNuevosCed, avisoNuevosFed, avisoRecordatorioCed, avisoRecordatorioFed, cuandoEmpieza, esHabil, estadoDe, proximoHabil, puedeMarcar, repartirPorFed, cuesDe, esDelFed, etiquetaTipo, fechaDe, filtrarCronogramas, haceDias, leerCronogramas, parsearCsv, resumenCronogramas, ventanaDe, type Cronograma } from '@/lib/cronogramas'
 
 const ENC = 'ESTADO,PREDIO,Region,Fecha de Inicio,Fecha de Fin,Instalador Responsable,Proveedor,Cues involucrados,Nombre de las escuelas,Semana en que fue informado,Tipo,Distrito,Nro cronograma o incidencia,Descripcion de incidencia,Observaciones de territorio,Tipo de establecimiento'
 
@@ -174,5 +174,26 @@ describe('avisos a la jefatura y a la escuela', () => {
   it('avisa al FED que falta la escuela', () => {
     expect(avisoJefaturaFed(c)).toContain('Se avisó a la jefatura: EES N° 31')
     expect(avisoJefaturaFed(c)).toContain('Falta avisar a la escuela')
+  })
+})
+
+describe('referencia de la guía', () => {
+  it('programa y reprogramación salen de la semana informada', () => {
+    expect(programaDe('407 - Cronograma Educar 1/10/26')).toBe('Educar')
+    expect(programaDe('409 - Cronograma PBA 5/10/26 REPROGRAMACION')).toBe('PBA')
+    expect(programaDe('Cronograma Telecom')).toBeNull()
+    expect(programaDe(null)).toBeNull()
+    expect(esReprogramacion('394 - Cronograma PBA 4/9/26 REPROGRAMACION')).toBe(true)
+    expect(esReprogramacion('407 - Cronograma Educar 1/10/26')).toBe(false)
+  })
+  it('vigencia de 10 días y límite de 48 hs para los contactos de PBA', () => {
+    expect(validoHasta({ fecha_fin: '2026-10-08' })).toBe('2026-10-18')
+    expect(validoHasta({ fecha_fin: '2026-10-25' })).toBe('2026-11-04')
+    expect(limiteContactosPba({ fecha_inicio: '2026-10-12' })).toBe('2026-10-10')
+  })
+  it('detecta el turno vespertino', () => {
+    expect(esVespertino('Mañana, Tarde y Vespertino')).toBe(true)
+    expect(esVespertino('"Mañana","Tarde"')).toBe(false)
+    expect(esVespertino(null)).toBe(false)
   })
 })
