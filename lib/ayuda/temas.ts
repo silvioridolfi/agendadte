@@ -133,7 +133,12 @@ Son las visitas que Nivel Central programa en las escuelas (mantenimiento, repar
 Una tarjeta por cronograma y escuela: la ventana de fechas, el tipo, el proveedor, el N° del cronograma o de la incidencia, el FED a cargo de la escuela y el estado que figura en la planilla (sólo de referencia). Al tocarla se ven los instaladores (nombre y DNI o CUIL, o el enlace que cargó Nivel Central), la descripción y las observaciones de territorio. Cada FED ve los cronogramas de **sus escuelas**; el CED y la administración ven todos.
 ## Cómo salió
 Dentro de la tarjeta, **Cómo salió** permite anotar **Realizado**, **No se realizó** o **Reprogramado**. Lo anota el FED a cargo de la escuela o el CED. Para No se realizó y Reprogramado hay que escribir el motivo, y el CED recibe una notificación. El último estado anotado es el que cuenta (queda el historial) y no se modifica la planilla.
-## Avisos
+## Avisar a la escuela y a la jefatura
+Cada visita tiene dos avisos, que se anotan dentro de la tarjeta (**Avisos**):
+- **Jefatura distrital:** la avisa el CED (**Marcar avisada**). Cuando lo hace, el FED a cargo recibe una notificación: le falta avisar a la escuela.
+- **Escuela:** la avisa el FED a cargo (o el CED). **Armar mensaje** prepara el texto para el directivo, con la escuela, la tarea, la fecha, la empresa y quién concurre (nombre y DNI o CUIL, o el enlace que cargó Nivel Central), y muestra los **contactos de la escuela** (de la base de contactos) con teléfono para llamar y correo para elegir a quién escribirle. Se **copia** o se **abre en tu correo** (Gmail, con tu cuenta institucional). Cuando lo mandaste, tocá **Ya avisé a la escuela** (o **Marcar avisada** si avisaste por teléfono).
+Cada aviso queda con quién y cuándo lo anotó. El filtro **Todo aviso** deja ver las visitas con la escuela sin avisar (y, para el CED, con la jefatura sin avisar), y arriba se cuentan las que faltan. Los datos de contacto los ven solo el FED a cargo de la escuela, el CED y la administración.
+## Avisos automáticos
 - Cuando aparecen cronogramas nuevos en la planilla, cada FED recibe **un solo aviso** con los de sus escuelas; el CED recibe un resumen (con cuántos quedaron sin FED asignado).
 - El **día hábil anterior** al comienzo hay un recordatorio, también agrupado por FED y con resumen para el CED.
 - Los avisos llegan a las notificaciones y, al tocarlos, abren esta sección.

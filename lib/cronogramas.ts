@@ -1,6 +1,7 @@
 // Cronogramas de Nivel Central (pestaña "Cronogramas" del consolidado de conectividad): lectura de la planilla, tipos y filtros de la sección (puro).
 import { siglaNombre } from '@/lib/siglas'
 import { titleCase } from '@/lib/format'
+import { saludoDe } from '@/lib/reclamos'
 
 // Planilla y pestaña de donde se leen (la cuenta técnica de la agenda tiene permiso de lector).
 export const ID_CONSOLIDADO = '188st2Nu9AGTh9VbQzw3hPOnZQVQWED-jeOMaeJ-QOfQ'
@@ -126,7 +127,12 @@ export const ESTADO_SEGUIMIENTO_LABEL: Record<EstadoSeguimiento, string> = { rea
 // Para estos dos estados hay que anotar el motivo.
 export const PIDE_MOTIVO: EstadoSeguimiento[] = ['no_realizado', 'reprogramado']
 export const MAX_NOTA = 500
-export type Seguimiento = { estado: EstadoSeguimiento, nota: string | null, fed_id: string | null, created_at: string }
+// Avisos que se anotan en el mismo historial: la jefatura distrital (la avisa el CED) y la escuela (la avisa el FED a cargo).
+export const AVISOS_CRONOGRAMA = ['jefatura_avisada', 'escuela_avisada'] as const
+export type AvisoCronograma = typeof AVISOS_CRONOGRAMA[number]
+export type TipoSeguimiento = EstadoSeguimiento | AvisoCronograma
+export const TIPO_SEGUIMIENTO_LABEL: Record<TipoSeguimiento, string> = { ...ESTADO_SEGUIMIENTO_LABEL, jefatura_avisada: 'Jefatura avisada', escuela_avisada: 'Escuela avisada' }
+export type Seguimiento = { estado: TipoSeguimiento, nota: string | null, fed_id: string | null, created_at: string }
 
 export type Cronograma = {
   id: string, cue: number, fecha_inicio: string, fecha_fin: string, tipo: string | null, proveedor: string | null, nro: string | null, semana: string | null,
@@ -137,10 +143,10 @@ export type Cronograma = {
   school: { id: string, nombre: string | null, distrito: string | null, ciudad: string | null, fed_a_cargo: string | null } | null,
 }
 export type PestanaCronogramas = 'proximos' | 'pasados' | 'todos'
-export type FiltrosCronogramas = { pestana: PestanaCronogramas, busqueda: string, distrito: string, fed: string, tipo: string, proveedor: string, estado: '' | 'sin_marcar' | EstadoSeguimiento }
+export type FiltrosCronogramas = { pestana: PestanaCronogramas, busqueda: string, distrito: string, fed: string, tipo: string, proveedor: string, estado: '' | 'sin_marcar' | EstadoSeguimiento, aviso: '' | 'sin_escuela' | 'sin_jefatura' }
 
 const norm = (s: string | null | undefined) => sinTildes(s ?? '')
-export const FILTROS_VACIOS: FiltrosCronogramas = { pestana: 'proximos', busqueda: '', distrito: '', fed: '', tipo: '', proveedor: '', estado: '' }
+export const FILTROS_VACIOS: FiltrosCronogramas = { pestana: 'proximos', busqueda: '', distrito: '', fed: '', tipo: '', proveedor: '', estado: '', aviso: '' }
 
 // FED a cargo de una escuela: en la base figura por nombre ("Macarena Duarte Buschiazzo"); acá se compara con el nombre del perfil ("Macarena Duarte").
 export function esDelFed(fedACargo: string | null | undefined, nombreFed: string): boolean {
@@ -151,7 +157,11 @@ export function esDelFed(fedACargo: string | null | undefined, nombreFed: string
 export const SIN_FED = 'Sin FED asignado'
 export const sinFed = (fedACargo: string | null | undefined) => !fedACargo || norm(fedACargo) === norm(SIN_FED)
 
-export const estadoDe = (c: Pick<Cronograma, 'historial'>): EstadoSeguimiento | null => c.historial[0]?.estado ?? null
+// Cómo salió (el último anotado); los avisos a la jefatura y a la escuela no cuentan como resultado.
+export const estadoDe = (c: Pick<Cronograma, 'historial'>): EstadoSeguimiento | null => (c.historial.find(h => (ESTADOS_SEGUIMIENTO as readonly string[]).includes(h.estado))?.estado as EstadoSeguimiento | undefined) ?? null
+export const avisoDe = (c: Pick<Cronograma, 'historial'>, aviso: AvisoCronograma): Seguimiento | null => c.historial.find(h => h.estado === aviso) ?? null
+// Aviso a la jefatura: el CED y la administración; a la escuela: quien puede anotar el estado.
+export const puedeAvisarJefatura = (quien: { esAdmin: boolean, rol: string }) => quien.esAdmin || quien.rol === 'coordinacion'
 
 // Quién puede anotar el estado: la coordinación, la administración y el FED a cargo de la escuela.
 export const puedeMarcar = (quien: { esAdmin: boolean, rol: string, nombre: string }, c: Pick<Cronograma, 'school'>) =>
@@ -172,6 +182,8 @@ export function filtrarCronogramas(lista: Cronograma[], f: FiltrosCronogramas, h
     if (f.pestana === 'pasados' && esProximo(c, hoy)) return false
     if (f.distrito && norm(c.school?.distrito) !== norm(f.distrito)) return false
     if (f.fed && !(f.fed === SIN_FED ? sinFed(c.school?.fed_a_cargo) : esDelFed(c.school?.fed_a_cargo, f.fed))) return false
+    if (f.aviso === 'sin_escuela' && avisoDe(c, 'escuela_avisada')) return false
+    if (f.aviso === 'sin_jefatura' && avisoDe(c, 'jefatura_avisada')) return false
     if (f.estado && (f.estado === 'sin_marcar' ? estadoDe(c) !== null : estadoDe(c) !== f.estado)) return false
     if (f.tipo && c.tipo !== f.tipo) return false
     if (f.proveedor && c.proveedor !== f.proveedor) return false
@@ -184,6 +196,8 @@ export const resumenCronogramas = (lista: Cronograma[], hoy: string) => ({
   proximos: lista.filter(c => esProximo(c, hoy)).length,
   pasados: lista.filter(c => !esProximo(c, hoy)).length,
   sinFed: lista.filter(c => esProximo(c, hoy) && sinFed(c.school?.fed_a_cargo)).length,
+  // Próximos a los que todavía no se les avisó a la escuela.
+  sinAvisarEscuela: lista.filter(c => esProximo(c, hoy) && !avisoDe(c, 'escuela_avisada')).length,
   // Ya terminaron y nadie anotó cómo salió.
   sinCerrar: lista.filter(c => !esProximo(c, hoy) && estadoDe(c) === null).length,
   sinEscuela: lista.filter(c => esProximo(c, hoy) && !c.school).length,
@@ -230,3 +244,26 @@ export function cuandoEmpieza(hoy: string, habil: string): string {
   const dia = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][new Date(`${habil}T12:00:00Z`).getUTCDay()]
   return `el ${dia} ${corta(habil)}`
 }
+
+// ---------- Mensaje a la escuela ----------
+
+const fechaTxt = (c: Pick<Cronograma, 'fecha_inicio' | 'fecha_fin'>) => (c.fecha_fin === c.fecha_inicio ? `el ${corta(c.fecha_inicio)}` : `del ${corta(c.fecha_inicio)} al ${corta(c.fecha_fin)}`)
+const esEnlace = (t: string) => /^https?:\/\//i.test(t.trim())
+
+// Mensaje para avisar a la escuela (directivo) que Nivel Central va a visitarla: fecha, tarea, empresa y quién concurre (nombre y DNI o CUIL, o el enlace que cargó Nivel Central).
+export function mensajeEscuela(c: Pick<Cronograma, 'cue' | 'fecha_inicio' | 'fecha_fin' | 'tipo' | 'proveedor' | 'instaladores'> & { school: { nombre: string | null } | null, nombre_planilla?: string | null }, fed: string, ahora: Date): { asunto: string, cuerpo: string } {
+  const escuela = c.school?.nombre ? siglaNombre(titleCase(c.school.nombre)) : c.nombre_planilla ? titleCase(c.nombre_planilla) : `CUE ${c.cue}`
+  const personal = (c.instaladores ?? '').split('\n').map(x => x.trim()).filter(Boolean)
+  const enlaces = personal.filter(esEnlace), nombres = personal.filter(x => !esEnlace(x))
+  const lineas = [
+    `Escuela: ${escuela}${escuela.startsWith('CUE ') ? '' : ` (CUE ${c.cue})`}`, `Tarea: ${etiquetaTipo(c.tipo)}`, `Fecha: ${fechaTxt(c)}`, c.proveedor ? `Empresa: ${c.proveedor}` : null,
+    nombres.length ? `Personal que concurre:\n${nombres.map(n => `- ${n}`).join('\n')}` : null, enlaces.length ? `Datos del personal: ${enlaces.join(' ')}` : null,
+  ].filter((x): x is string => !!x)
+  return {
+    asunto: `Visita de Nivel Central a ${escuela}: ${ventanaDe(c)}`,
+    cuerpo: `Hola, ${saludoDe(ahora)}.\n\nSoy ${fed}, de la Dirección de Tecnología Educativa (Región 1). Les escribo para avisarles que Nivel Central programó una visita a la escuela:\n\n${lineas.join('\n')}\n\nLes pedimos que faciliten el ingreso del personal y que nos avisen si no pueden recibirlo en esas fechas.\n\nMuchas gracias.`,
+  }
+}
+
+// Aviso al FED a cargo cuando el CED avisó a la jefatura.
+export const avisoJefaturaFed = (c: ParaAviso) => `Se avisó a la jefatura: ${quien(c)}. Falta avisar a la escuela`

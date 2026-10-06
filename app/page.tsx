@@ -180,7 +180,7 @@ export default function Page() {
     <div key={`${section}-${vista?.tipo ?? ''}-${vista?.tipo === 'fed' ? vista.fed.id : ''}`} className="anim-entrada">
     {section === 'reclamos' ? <RegistroReclamos profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} />
       : section === 'escuelas' ? <MisEscuelas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
-      : section === 'cronogramas' ? <Cronogramas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} />
+      : section === 'cronogramas' ? <Cronogramas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} cuenta={sesion.email} />
       : section === 'pve' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <PveEquipoView />
       : section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><div className="flex flex-col gap-4"><EventosPanel onSaved={changed} /><FeriadosView autorId={profile.id} onSaved={changed} /></div></main>
       : section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); irA('agenda') } }} />
