@@ -135,10 +135,10 @@ describe('avisos a la jefatura y a la escuela', () => {
   const c = { cue: 61000001, fecha_inicio: '2026-10-12', fecha_fin: '2026-10-16', tipo: 'LAC_M', proveedor: 'PBA', instaladores: 'Juan Pérez DNI 30111222\nANA GÓMEZ CUIL 27-30111222-4', school: { nombre: 'ESCUELA DE EDUCACIÓN SECUNDARIA N° 31' } }
   it('arma el mensaje informativo para el directivo', () => {
     const m = mensajeEscuela(c, 'Silvio Ridolfi', new Date('2026-10-06T13:00:00Z'))
-    expect(m.asunto).toBe('Trabajos en EES N° 31: 12/10 al 16/10')
+    expect(m.asunto).toBe('Cronograma de conectividad: EES N° 31, 12/10 al 16/10')
     expect(m.cuerpo).toContain('Hola, buen día.')
-    expect(m.cuerpo).toContain('Soy Silvio Ridolfi, de la Dirección de Tecnología Educativa (Región 1). Les informo que en la escuela está previsto el siguiente trabajo, según el cronograma establecido:')
-    expect(m.cuerpo).toContain('Escuela: EES N° 31 (CUE 61000001)\nTrabajo: Mantenimiento de piso\nFecha: del 12/10 al 16/10\nEmpresa: PBA\nResponsables:\n- Juan Pérez (DNI 30111222)\n- Ana Gómez (CUIL 27-30111222-4)')
+    expect(m.cuerpo).toContain('Soy Silvio Ridolfi, de la Dirección de Tecnología Educativa (Región 1). Les informo que, según el cronograma de conectividad establecido, en la escuela está prevista la siguiente intervención:')
+    expect(m.cuerpo).toContain('Escuela: EES N° 31 (CUE 61000001)\nTarea: Mantenimiento de piso\nFecha: del 12/10 al 16/10\nEmpresa: PBA\nResponsables:\n- Juan Pérez (DNI 30111222)\n- Ana Gómez (CUIL 27-30111222-4)')
     expect(m.cuerpo).toContain('Quedo a disposición por cualquier consulta.\nSaludos cordiales.')
     expect(m.cuerpo).not.toMatch(/programó|facilit|avisen/)
   })

@@ -88,7 +88,7 @@ Escribí el nombre, la sigla o el CUE (por ejemplo "EP 4" o "ees 31"). También 
 Al tocar una escuela se abre la ficha del buscador (datos, próximas acciones, clubes y prácticas, historial) con cuatro secciones más:
 - **Conectividad:** enlace, piso tecnológico, proveedores, ANI y recurso primario.
 - **Reclamos** de esa escuela, con su estado y número.
-- **Cronogramas** de trabajos en la escuela, con el estado que anotó el equipo.
+- **Cronogramas de conectividad** de la escuela, con el estado que anotó el equipo.
 - **Contactos** del directivo, con teléfono y correo para llamar o escribir.
 Desde la ficha también podés **agendar** una acción o **armar un reclamo** con la escuela ya elegida.
 ## Quién ve qué
@@ -127,8 +127,8 @@ Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la
 Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado, FED, tipo de conexión y búsqueda por CUE, escuela, número o nombre. Solo el CED los actualiza; la administración los ve en modo lectura. El botón **Excel** descarga la lista tal como la estás viendo, con las mismas columnas de la planilla del CED.
 [i] Al armar un reclamo de una escuela que ya tiene uno abierto, la agenda te avisa para que sigas esa cadena en lugar de abrir otra.` },
 
-  { id: 'cronogramas', titulo: 'Cronogramas de trabajos en escuelas', para: ['fed', 'ced'], md: () => `
-Son los trabajos que ya vienen establecidos por otro organismo para realizarse en las escuelas (mantenimiento, reparación e instalación de piso, instalaciones de enlace, certificaciones…), con su fecha y su empresa. La agenda no los programa ni puede cambiarles la fecha: los lee de la pestaña **Cronogramas** del consolidado de conectividad para que el equipo los tenga a mano, avise a las escuelas y anote cómo salieron. Se abre desde el menú de las iniciales (**Cronogramas**).
+  { id: 'cronogramas', titulo: 'Cronogramas de conectividad', para: ['fed', 'ced'], md: () => `
+Son los cronogramas de conectividad (reparaciones e instalaciones de piso tecnológico y de enlace, certificaciones…), tanto de Educar como de PBA, que ya vienen establecidos por otro organismo, con su fecha y su empresa. La agenda no los programa ni puede cambiarles la fecha: los lee de la pestaña **Cronogramas** del consolidado de conectividad para que el equipo los tenga a mano, avise a las escuelas y anote cómo salieron. Se abre desde el menú de las iniciales (**Cronogramas**).
 ## Qué ves
 Una tarjeta por cronograma y escuela: la ventana de fechas, el tipo, el proveedor, el N° del cronograma o de la incidencia, el FED a cargo de la escuela y el estado que figura en la planilla (sólo de referencia). Al tocarla se ven los instaladores (nombre y DNI o CUIL, o el enlace que figura en la planilla), la descripción y las observaciones de territorio. Cada FED ve los cronogramas de **sus escuelas**; el CED y la administración ven todos.
 ## Cómo salió
@@ -136,7 +136,7 @@ Dentro de la tarjeta, **Cómo salió** permite anotar **Realizado**, **No se rea
 ## Avisar a la escuela y a la jefatura
 Cada visita tiene dos avisos, que se anotan dentro de la tarjeta (**Avisos**):
 - **Jefatura distrital:** la avisa el CED (**Marcar avisada**). Cuando lo hace, el FED a cargo recibe una notificación: le falta avisar a la escuela.
-- **Escuela:** la avisa el FED a cargo (o el CED). **Armar mensaje** prepara un texto informativo para el directivo, con la escuela, el trabajo, la fecha, la empresa y el responsable (nombre con DNI o CUIL, o el enlace que figura en la planilla; el nombre se ordena y el DNI va sin puntos). Los cronogramas ya vienen establecidos por otro organismo, por eso el mensaje solo informa: no pide cambiar fechas. También muestra los **contactos de la escuela** (de la base de contactos) con teléfono para llamar y correo para elegir a quién escribirle. Se **copia** o se **abre en tu correo** (Gmail, con tu cuenta institucional). Cuando lo mandaste, tocá **Ya avisé a la escuela** (o **Marcar avisada** si avisaste por teléfono).
+- **Escuela:** la avisa el FED a cargo (o el CED). **Armar mensaje** prepara un texto informativo para el directivo, con la escuela, la tarea, la fecha, la empresa y el responsable (nombre con DNI o CUIL, o el enlace que figura en la planilla; el nombre se ordena y el DNI va sin puntos). Los cronogramas ya vienen establecidos por otro organismo, por eso el mensaje solo informa: no pide cambiar fechas. También muestra los **contactos de la escuela** (de la base de contactos) con teléfono para llamar y correo para elegir a quién escribirle. Se **copia** o se **abre en tu correo** (Gmail, con tu cuenta institucional). Cuando lo mandaste, tocá **Ya avisé a la escuela** (o **Marcar avisada** si avisaste por teléfono).
 Cada aviso queda con quién y cuándo lo anotó. El filtro **Todo aviso** deja ver las visitas con la escuela sin avisar (y, para el CED, con la jefatura sin avisar), y arriba se cuentan las que faltan. Los datos de contacto los ven solo el FED a cargo de la escuela, el CED y la administración.
 ## Avisos automáticos
 - Cuando aparecen cronogramas nuevos en la planilla, cada FED recibe **un solo aviso** con los de sus escuelas; el CED recibe un resumen (con cuántos quedaron sin FED asignado).
