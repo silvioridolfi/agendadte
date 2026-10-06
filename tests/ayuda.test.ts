@@ -68,6 +68,8 @@ describe('novedades', () => {
 })
 
 describe('banner de novedad', () => {
+  // Las novedades más nuevas tapan a las anteriores: estas pruebas miran los banners de reclamos con el de cronogramas ya cerrado.
+  const SIN_CRONO = NOVEDADES.filter(n => n.banner?.tema === 'cronogramas').map(idBanner)
   it('cada banner lleva a un tema que existe para los roles que lo ven y vence después de la novedad', () => {
     for (const n of NOVEDADES) if (n.banner) {
       for (const rol of n.banner.para) expect(TEMAS.find(t => t.id === n.banner!.tema)?.para, n.titulo).toContain(rol)
@@ -77,20 +79,23 @@ describe('banner de novedad', () => {
     }
   })
   it('los FED ven el de reclamos hasta que vence o lo cierran; el CED no lo ve', () => {
-    const b = bannerVigente('fed', '2026-10-05', [])
+    const b = bannerVigente('fed', '2026-10-05', SIN_CRONO)
     expect(b?.tema).toBe('reclamos')
-    expect(bannerVigente('fed', '2026-10-19', [])).not.toBeNull()
-    expect(bannerVigente('fed', '2026-10-20', [])).toBeNull()
-    expect(bannerVigente('fed', '2026-10-05', [b!.id])).toBeNull()
-    expect(bannerVigente('ced', '2026-10-05', [b!.id])?.tema).toBe('registro-reclamos') // el cierre de uno no tapa el del otro perfil
+    expect(bannerVigente('fed', '2026-10-19', SIN_CRONO)).not.toBeNull()
+    expect(bannerVigente('fed', '2026-10-20', SIN_CRONO)).toBeNull()
+    expect(bannerVigente('fed', '2026-10-05', [...SIN_CRONO, b!.id])).toBeNull()
+    expect(bannerVigente('ced', '2026-10-05', [...SIN_CRONO, b!.id])?.tema).toBe('registro-reclamos') // el cierre de uno no tapa el del otro perfil
   })
   it('el CED ve el del registro de reclamos, con su propio texto y tema', () => {
-    const b = bannerVigente('ced', '2026-10-05', [])
+    const b = bannerVigente('ced', '2026-10-05', SIN_CRONO)
     expect(b?.tema).toBe('registro-reclamos')
     expect(b?.texto).toContain('registro')
-    expect(b?.texto).not.toBe(bannerVigente('fed', '2026-10-05', [])?.texto)
-    expect(bannerVigente('ced', '2026-10-05', [b!.id])).toBeNull()
-    expect(bannerVigente('ced', '2026-10-20', [])).toBeNull()
+    expect(b?.texto).not.toBe(bannerVigente('fed', '2026-10-05', SIN_CRONO)?.texto)
+    expect(bannerVigente('ced', '2026-10-05', [...SIN_CRONO, b!.id])).toBeNull()
+    expect(bannerVigente('ced', '2026-10-20', SIN_CRONO)).toBeNull()
+  })
+  it('el de cronogramas lo ven los FED y el CED hasta que vence', () => {
+    for (const rol of ['fed', 'ced'] as const) { expect(bannerVigente(rol, '2026-10-06', [])?.tema).toBe('cronogramas'); expect(bannerVigente(rol, '2026-10-21', [])?.tema).not.toBe('cronogramas') }
   })
   it('el id sale de la fecha y el título', () => {
     expect(idBanner({ fecha: '2026-10-02', titulo: 'x' })).toBe('2026-10-02|x')

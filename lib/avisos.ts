@@ -17,6 +17,8 @@ export function nivelDe(n: Pick<NotifBase, 'tipo' | 'detalle' | 'autor_id'>): Ni
   if (n.tipo === 'inactividad') return 'aviso'
   // Reclamo nuevo: amarillo (aviso); resuelto: verde; con número de ticket o incidencia: informativo.
   if (n.tipo === 'reclamo') { const c = claseReclamo(n); return c === 'nuevo' ? 'aviso' : c === 'resuelto' ? 'ok' : 'info' }
+  // Recordatorio de cronograma: amarillo; el resto (nuevos, estados), informativo.
+  if (n.tipo === 'cronograma') return /^Recordatorio/.test(n.detalle ?? '') ? 'aviso' : 'info'
   return 'info'
 }
 

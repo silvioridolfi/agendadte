@@ -4,20 +4,23 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarClock, Check, ChevronDown, Copy, Eye, Loader2, RefreshCw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { type Fed } from '@/lib/agenda'
-import { FILTROS_VACIOS, SIN_FED, esDelFed, etiquetaTipo, filtrarCronogramas, resumenCronogramas, ventanaDe, type Cronograma, type FiltrosCronogramas, type PestanaCronogramas } from '@/lib/cronogramas'
+import { ESTADOS_SEGUIMIENTO, ESTADO_SEGUIMIENTO_LABEL, FILTROS_VACIOS, MAX_NOTA, PIDE_MOTIVO, SIN_FED, esDelFed, estadoDe, etiquetaTipo, filtrarCronogramas, puedeMarcar, resumenCronogramas, ventanaDe, type Cronograma, type EstadoSeguimiento, type FiltrosCronogramas, type PestanaCronogramas } from '@/lib/cronogramas'
 import { hoyAR } from '@/lib/hora'
 import { siglaNombre } from '@/lib/siglas'
 import { titleCase } from '@/lib/format'
-import { ErrorBox, Skeleton, eyebrow, errMsg, getCronogramas, selectClass, sincronizarCronogramasAhora } from '@/components/app/comun'
+import { ErrorBox, Skeleton, eyebrow, errMsg, getCronogramas, marcarCronograma, selectClass, sincronizarCronogramasAhora } from '@/components/app/comun'
 
 const ZONA = 'America/Argentina/Buenos_Aires'
 const fechaHora = (iso: string) => new Date(iso).toLocaleString('es-AR', { timeZone: ZONA, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 const PESTANAS: [PestanaCronogramas, string][] = [['proximos', 'Próximos'], ['pasados', 'Pasados'], ['todos', 'Todos']]
 const esEnlace = (t: string) => /^https?:\/\//i.test(t.trim())
+const ESTADO_CLASE: Record<EstadoSeguimiento, string> = { realizado: 'border-exito/30 bg-exito/10 text-exito', no_realizado: 'border-peligro/30 bg-peligro-fondo text-peligro', reprogramado: 'border-aviso-borde bg-aviso-fondo text-aviso-fuerte' }
 const unicos = (l: (string | null | undefined)[]) => [...new Set(l.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'es'))
 
-// Cronogramas de Nivel Central (mantenimiento y reparación de pisos, instalaciones…) tal como figuran en la planilla del consolidado. Sólo lectura.
+// Cronogramas de Nivel Central (mantenimiento y reparación de pisos, instalaciones…) tal como figuran en la planilla del consolidado.
+// Los datos de la planilla no se modifican; el equipo anota acá cómo salió cada uno (realizado, no se realizó, reprogramado).
 export function Cronogramas({ profile, feds, esAdmin }: { profile: Fed, feds: Fed[], esAdmin: boolean }) {
   const [datos, setDatos] = useState<Awaited<ReturnType<typeof getCronogramas>> | null>(null)
   const [error, setError] = useState('')
@@ -27,12 +30,16 @@ export function Cronogramas({ profile, feds, esAdmin }: { profile: Fed, feds: Fe
   const [sincronizando, setSincronizando] = useState(false)
   const [mensaje, setMensaje] = useState('')
   const hoy = hoyAR()
+  const veTodos = esAdmin || profile.rol === 'coordinacion'
+  const quien = { esAdmin, rol: profile.rol, nombre: profile.nombre_completo }
   const cargar = useCallback(() => { getCronogramas().then(setDatos).catch(e => setError(errMsg(e))) }, [])
   useEffect(() => { cargar() }, [cargar])
   const lista = datos?.lista
   const propios = useMemo(() => (lista ?? []).filter(c => !soloMios || esDelFed(c.school?.fed_a_cargo, profile.nombre_completo)), [lista, soloMios, profile.nombre_completo])
   const visibles = useMemo(() => filtrarCronogramas(propios, filtros, hoy), [propios, filtros, hoy])
   const resumen = resumenCronogramas(propios, hoy)
+  const nombreFed = (id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Ex integrante'
+  const anotado = (id: string, h: Cronograma['historial'][number]) => setDatos(d => d && ({ ...d, lista: d.lista.map(c => (c.id === id ? { ...c, historial: [h, ...c.historial] } : c)) }))
   const set = <K extends keyof FiltrosCronogramas>(k: K, v: FiltrosCronogramas[K]) => setFiltros(f => ({ ...f, [k]: v }))
   const distritos = useMemo(() => unicos((lista ?? []).map(c => c.school?.distrito)), [lista])
   const tipos = useMemo(() => unicos((lista ?? []).map(c => c.tipo)), [lista])
@@ -54,8 +61,8 @@ export function Cronogramas({ profile, feds, esAdmin }: { profile: Fed, feds: Fe
       {esAdmin && <Button type="button" variant="outline" size="sm" disabled={sincronizando} onClick={sincronizar}>{sincronizando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}Sincronizar ahora</Button>}
     </div>
     <p className="mt-1 text-sm text-dte-gris">Las visitas de Nivel Central a las escuelas (mantenimiento, instalaciones, reparaciones), tomadas de la pestaña Cronogramas del consolidado de conectividad.</p>
-    <p className="mt-3 flex items-center gap-1.5 rounded-control bg-dte-fondo px-3 py-2 text-xs font-semibold text-dte-gris"><Eye className="size-3.5 shrink-0" aria-hidden />Modo lectura: se actualiza sola cada madrugada. El estado que figura es el de la planilla.</p>
-    <p className="mt-2 text-xs text-dte-gris">{textoUltima}</p>
+    <p className="mt-3 flex items-center gap-1.5 rounded-control bg-dte-fondo px-3 py-2 text-xs font-semibold text-dte-gris"><Eye className="size-3.5 shrink-0" aria-hidden />Los datos vienen de la planilla de Nivel Central y se actualizan solos cada madrugada. El estado que anotás acá es el que cuenta; el de la planilla es sólo de referencia.</p>
+    {veTodos && <p className="mt-2 text-xs text-dte-gris">{textoUltima}</p>}
     {mensaje && <p className="mt-2 rounded-control bg-exito/10 px-3 py-2 text-sm font-semibold text-exito" role="status">{mensaje}</p>}
 
     {error ? <div className="mt-4"><ErrorBox message={error} onRetry={() => { setError(''); cargar() }} /></div>
@@ -69,25 +76,27 @@ export function Cronogramas({ profile, feds, esAdmin }: { profile: Fed, feds: Fe
         <div className="mt-3 flex flex-col gap-2 rounded-card border border-dte-linea bg-white p-3 shadow-e1 md:flex-row md:flex-wrap md:items-center">
           <div className="relative min-w-0 flex-1 md:min-w-56"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" aria-hidden /><Input value={filtros.busqueda} onChange={e => set('busqueda', e.target.value)} placeholder="Buscar CUE, escuela, número o proveedor…" aria-label="Buscar" className="h-11 bg-dte-fondo pl-9 md:h-9" /></div>
           <select aria-label="Distrito" className={`${selectClass} md:w-40`} value={filtros.distrito} onChange={e => set('distrito', e.target.value)}><option value="">Todo distrito</option>{distritos.map(d => <option key={d} value={d}>{titleCase(d)}</option>)}</select>
-          <select aria-label="FED a cargo" className={`${selectClass} md:w-44`} value={filtros.fed} onChange={e => set('fed', e.target.value)}><option value="">Todo el equipo</option>{feds.filter(f => f.rol === 'fed').map(f => <option key={f.id} value={f.nombre_completo}>{f.nombre_completo}</option>)}<option value={SIN_FED}>{SIN_FED}</option></select>
+          {veTodos && <select aria-label="FED a cargo" className={`${selectClass} md:w-44`} value={filtros.fed} onChange={e => set('fed', e.target.value)}><option value="">Todo el equipo</option>{feds.filter(f => f.rol === 'fed').map(f => <option key={f.id} value={f.nombre_completo}>{f.nombre_completo}</option>)}<option value={SIN_FED}>{SIN_FED}</option></select>}
+          <select aria-label="Estado" className={`${selectClass} md:w-40`} value={filtros.estado} onChange={e => set('estado', e.target.value as FiltrosCronogramas['estado'])}><option value="">Todo estado</option><option value="sin_marcar">Sin marcar</option>{ESTADOS_SEGUIMIENTO.map(e => <option key={e} value={e}>{ESTADO_SEGUIMIENTO_LABEL[e]}</option>)}</select>
           <select aria-label="Tipo" className={`${selectClass} md:w-52`} value={filtros.tipo} onChange={e => set('tipo', e.target.value)}><option value="">Todo tipo</option>{tipos.map(t => <option key={t} value={t}>{etiquetaTipo(t)}</option>)}</select>
           <select aria-label="Proveedor" className={`${selectClass} md:w-40`} value={filtros.proveedor} onChange={e => set('proveedor', e.target.value)}><option value="">Todo proveedor</option>{proveedores.map(p => <option key={p} value={p}>{p}</option>)}</select>
-          {esAdmin && <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-0"><input type="checkbox" checked={soloMios} onChange={e => setSoloMios(e.target.checked)} className="size-4" />Solo los míos</label>}
+          {veTodos && <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-0"><input type="checkbox" checked={soloMios} onChange={e => setSoloMios(e.target.checked)} className="size-4" />Solo los míos</label>}
         </div>
 
-        {filtros.pestana !== 'pasados' && (resumen.sinFed > 0 || resumen.sinEscuela > 0) && <p className="mt-3 text-xs text-dte-gris">Próximos sin FED asignado: <b className="tabular-nums">{resumen.sinFed}</b>{resumen.sinEscuela > 0 && <> · con un CUE que no está en la agenda: <b className="tabular-nums">{resumen.sinEscuela}</b></>}</p>}
+        {(resumen.sinCerrar > 0 || (veTodos && resumen.sinFed > 0)) && <p className="mt-3 text-xs text-dte-gris">{resumen.sinCerrar > 0 && <>Pasados sin marcar: <b className="tabular-nums">{resumen.sinCerrar}</b></>}{resumen.sinCerrar > 0 && veTodos && resumen.sinFed > 0 && ' · '}{veTodos && resumen.sinFed > 0 && <>Próximos sin FED asignado: <b className="tabular-nums">{resumen.sinFed}</b></>}</p>}
         <p className="mt-3 text-xs text-dte-gris" aria-live="polite">{visibles.length} {visibles.length === 1 ? 'cronograma' : 'cronogramas'}</p>
-        {visibles.length ? <ul className="mt-2 flex flex-col gap-2">{visibles.map(c => <Tarjeta key={c.id} c={c} hoy={hoy} abierta={abierto === c.id} onAbrir={() => setAbierto(a => (a === c.id ? null : c.id))} />)}</ul>
+        {visibles.length ? <ul className="mt-2 flex flex-col gap-2">{visibles.map(c => <Tarjeta key={c.id} c={c} hoy={hoy} abierta={abierto === c.id} onAbrir={() => setAbierto(a => (a === c.id ? null : c.id))} puedeMarcar={puedeMarcar(quien, c)} nombreFed={nombreFed} onAnotado={h => anotado(c.id, h)} />)}</ul>
           : <div className="mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-dte-linea px-4 py-10 text-center text-sm text-dte-gris"><CalendarClock className="size-6" aria-hidden />{propios.length ? 'No hay cronogramas con esos filtros.' : 'Todavía no hay cronogramas cargados.'}</div>}
       </>}
   </main>
 }
 
-function Tarjeta({ c, hoy, abierta, onAbrir }: { c: Cronograma, hoy: string, abierta: boolean, onAbrir: () => void }) {
+function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, nombreFed, onAnotado }: { c: Cronograma, hoy: string, abierta: boolean, onAbrir: () => void, puedeMarcar: boolean, nombreFed: (id: string | null) => string, onAnotado: (h: Cronograma['historial'][number]) => void }) {
   const [copiado, setCopiado] = useState(false)
   const nombre = c.school?.nombre ? titleCase(c.school.nombre) : c.nombre_planilla ? titleCase(c.nombre_planilla) : `CUE ${c.cue}`
   const fed = c.school?.fed_a_cargo
   const enCurso = c.fecha_inicio <= hoy && c.fecha_fin >= hoy
+  const estado = estadoDe(c)
   const instaladores = c.instaladores?.split('\n') ?? []
   const copiar = async () => { try { await navigator.clipboard.writeText(c.instaladores ?? ''); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { setCopiado(false) } }
   return <li className="rounded-card border border-dte-linea bg-white shadow-e1">
@@ -97,6 +106,7 @@ function Tarjeta({ c, hoy, abierta, onAbrir }: { c: Cronograma, hoy: string, abi
           <span className="inline-flex items-center rounded-full border border-dte-petroleo/30 bg-dte-tinte px-2 py-0.5 text-xs font-semibold tabular-nums text-dte-petroleo-oscuro">{ventanaDe(c)}</span>
           {enCurso && <span className="inline-flex items-center rounded-full border border-exito/30 bg-exito/10 px-2 py-0.5 text-xs font-semibold text-exito">En curso</span>}
           <span className="inline-flex items-center rounded-full border border-dte-linea px-2 py-0.5 text-xs font-semibold">{etiquetaTipo(c.tipo)}</span>
+          {estado && <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${ESTADO_CLASE[estado]}`}>{ESTADO_SEGUIMIENTO_LABEL[estado]}</span>}
           {c.estado_planilla && <span className="inline-flex items-center rounded-full border border-dte-linea bg-dte-fondo px-2 py-0.5 text-xs text-dte-gris">Planilla: {c.estado_planilla}</span>}
         </span>
         <span className="mt-1.5 block break-words text-sm font-semibold">{c.school?.nombre ? siglaNombre(nombre) : nombre}<span className="font-normal text-dte-gris"> · CUE {c.cue}{c.school?.distrito && ` · ${titleCase(c.school.distrito)}`}</span></span>
@@ -110,9 +120,39 @@ function Tarjeta({ c, hoy, abierta, onAbrir }: { c: Cronograma, hoy: string, abi
         <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold text-dte-gris">Instaladores</span><Button type="button" variant="outline" size="sm" onClick={copiar}>{copiado ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado ? 'Copiado' : 'Copiar'}</Button></div>
         <ul className="mt-1 flex flex-col gap-0.5">{instaladores.map((l, i) => <li key={i} className="break-words">{esEnlace(l) ? <a href={l.trim()} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline">{l.trim()}</a> : l}</li>)}</ul>
       </div>}
+      <Seguimiento c={c} puedeMarcar={puedeMarcar} nombreFed={nombreFed} onAnotado={onAnotado} />
       {c.descripcion && <p><span className="text-xs font-semibold text-dte-gris">Descripción: </span><span className="break-words">{c.descripcion}</span></p>}
       {c.observaciones && <p><span className="text-xs font-semibold text-dte-gris">Observaciones de territorio: </span><span className="break-words">{c.observaciones}</span></p>}
       <p className="text-xs text-dte-gris">{[c.semana && `Informado: ${c.semana}`, `Visto por primera vez el ${fechaHora(c.primera_vez_at)}`, `Última actualización ${fechaHora(c.actualizado_at)}`].filter(Boolean).join(' · ')}</p>
     </div>}
   </li>
+}
+
+const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString('es-AR', { timeZone: ZONA, day: '2-digit', month: '2-digit' })
+
+// Estado anotado en la agenda: botones para marcarlo (el FED a cargo, el CED y la administración) e historial.
+function Seguimiento({ c, puedeMarcar, nombreFed, onAnotado }: { c: Cronograma, puedeMarcar: boolean, nombreFed: (id: string | null) => string, onAnotado: (h: Cronograma['historial'][number]) => void }) {
+  const [eligiendo, setEligiendo] = useState<EstadoSeguimiento | null>(null)
+  const [nota, setNota] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+  const pideMotivo = !!eligiendo && PIDE_MOTIVO.includes(eligiendo)
+  async function guardar() {
+    if (!eligiendo) return
+    setGuardando(true); setError('')
+    try { onAnotado(await marcarCronograma(c.id, eligiendo, nota)); setEligiendo(null); setNota('') }
+    catch (e) { setError(errMsg(e)) } finally { setGuardando(false) }
+  }
+  return <div className="rounded-control border border-dte-linea px-3 py-2">
+    <p className="text-xs font-semibold text-dte-gris">Cómo salió</p>
+    {puedeMarcar && !eligiendo && <div className="mt-1.5 flex flex-wrap gap-1.5">{ESTADOS_SEGUIMIENTO.map(e => <Button key={e} type="button" variant="outline" size="sm" onClick={() => { setEligiendo(e); setError('') }}>{ESTADO_SEGUIMIENTO_LABEL[e]}</Button>)}</div>}
+    {eligiendo && <div className="mt-1.5 flex flex-col gap-2">
+      <p className="text-sm font-semibold">{ESTADO_SEGUIMIENTO_LABEL[eligiendo]}</p>
+      <Textarea value={nota} onChange={e => setNota(e.target.value)} maxLength={MAX_NOTA} placeholder={pideMotivo ? 'Motivo (obligatorio)' : 'Nota (opcional)'} aria-label="Motivo o nota" className="min-h-16" />
+      {error && <ErrorBox message={error} />}
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" size="sm" onClick={() => { setEligiendo(null); setError('') }}>Cancelar</Button><Button type="button" size="sm" onClick={guardar} disabled={guardando || (pideMotivo && !nota.trim())}>{guardando && <Loader2 className="animate-spin" data-icon="inline-start" />}Guardar</Button></div>
+    </div>}
+    {c.historial.length ? <ul className="mt-2 flex flex-col gap-1">{c.historial.map((h, i) => <li key={`${h.created_at}-${i}`} className="text-sm"><b className={i === 0 ? '' : 'font-semibold text-dte-gris'}>{ESTADO_SEGUIMIENTO_LABEL[h.estado]}</b><span className="text-xs text-dte-gris"> · {nombreFed(h.fed_id)} · {fechaCorta(h.created_at)}</span>{h.nota && <span className="block break-words text-dte-tinta">{h.nota}</span>}</li>)}</ul>
+      : !eligiendo && <p className="mt-1 text-sm text-dte-gris">Todavía sin marcar{puedeMarcar ? '.' : ': lo anota el FED a cargo o el CED.'}</p>}
+  </div>
 }

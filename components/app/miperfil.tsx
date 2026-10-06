@@ -55,7 +55,7 @@ export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyu
       <div role="separator" className="my-1 border-t border-dte-linea" />
       <button role="menuitem" onClick={() => { setOpen(false); onReclamo() }} className={item}><Wifi className="size-4 text-dte-petroleo" />Armar reclamo de conectividad</button>
       <button role="menuitem" onClick={() => { setOpen(false); onRegistroReclamos() }} className={item}><ClipboardList className="size-4 text-dte-petroleo" />Registro de reclamos</button>
-      {(admin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onCronogramas() }} className={item}><CalendarClock className="size-4 text-dte-petroleo" />Cronogramas</button>}
+      <button role="menuitem" onClick={() => { setOpen(false); onCronogramas() }} className={item}><CalendarClock className="size-4 text-dte-petroleo" />Cronogramas</button>
       {(admin || profile.rol === 'coordinacion') && <div role="separator" className="my-1 border-t border-dte-linea" />}
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}

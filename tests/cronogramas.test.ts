@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FILTROS_VACIOS, cuesDe, esDelFed, etiquetaTipo, fechaDe, filtrarCronogramas, haceDias, leerCronogramas, parsearCsv, resumenCronogramas, ventanaDe, type Cronograma } from '@/lib/cronogramas'
+import { FILTROS_VACIOS, avisoNuevosCed, avisoNuevosFed, avisoRecordatorioCed, avisoRecordatorioFed, cuandoEmpieza, esHabil, estadoDe, proximoHabil, puedeMarcar, repartirPorFed, cuesDe, esDelFed, etiquetaTipo, fechaDe, filtrarCronogramas, haceDias, leerCronogramas, parsearCsv, resumenCronogramas, ventanaDe, type Cronograma } from '@/lib/cronogramas'
 
 const ENC = 'ESTADO,PREDIO,Region,Fecha de Inicio,Fecha de Fin,Instalador Responsable,Proveedor,Cues involucrados,Nombre de las escuelas,Semana en que fue informado,Tipo,Distrito,Nro cronograma o incidencia,Descripcion de incidencia,Observaciones de territorio,Tipo de establecimiento'
 
@@ -51,7 +51,7 @@ describe('leerCronogramas', () => {
 })
 
 describe('filtros de la sección', () => {
-  const c = (o: Partial<Cronograma>): Cronograma => ({ id: '1', cue: 1, fecha_inicio: '2026-10-06', fecha_fin: '2026-10-10', tipo: 'LAC_M', proveedor: 'PBA', nro: null, semana: null, estado_planilla: null, instaladores: null, descripcion: null, observaciones: null, nombre_planilla: null, primera_vez_at: '', actualizado_at: '', school: { id: 's', nombre: 'EES N° 1', distrito: 'LA PLATA', ciudad: null, fed_a_cargo: 'Macarena Duarte Buschiazzo' }, ...o })
+  const c = (o: Partial<Cronograma>): Cronograma => ({ id: '1', cue: 1, fecha_inicio: '2026-10-06', fecha_fin: '2026-10-10', tipo: 'LAC_M', proveedor: 'PBA', nro: null, semana: null, estado_planilla: null, instaladores: null, descripcion: null, observaciones: null, nombre_planilla: null, primera_vez_at: '', actualizado_at: '', historial: [], school: { id: 's', nombre: 'EES N° 1', distrito: 'LA PLATA', ciudad: null, fed_a_cargo: 'Macarena Duarte Buschiazzo' }, ...o })
   it('esDelFed compara el nombre del perfil con el de la base', () => {
     expect(esDelFed('Macarena Duarte Buschiazzo', 'Macarena Duarte')).toBe(true)
     expect(esDelFed('Marcos Pettiná', 'Macarena Duarte')).toBe(false)
@@ -76,5 +76,45 @@ describe('filtros de la sección', () => {
     expect(ventanaDe({ fecha_inicio: '2026-10-06', fecha_fin: '2026-10-06' })).toBe('06/10')
     expect(etiquetaTipo('LAC_R')).toBe('Reparación de piso')
     expect(etiquetaTipo(null)).toBe('Sin tipo')
+  })
+})
+
+describe('estado anotado y permisos', () => {
+  const base = { school: { id: 's', nombre: 'EES N° 1', distrito: 'LA PLATA', ciudad: null, fed_a_cargo: 'Macarena Duarte Buschiazzo' } }
+  it('el estado vigente es el último anotado', () => {
+    expect(estadoDe({ historial: [] })).toBeNull()
+    expect(estadoDe({ historial: [{ estado: 'no_realizado', nota: 'x', fed_id: null, created_at: '2' }, { estado: 'realizado', nota: null, fed_id: null, created_at: '1' }] })).toBe('no_realizado')
+  })
+  it('anota el FED a cargo, el CED y la administración', () => {
+    expect(puedeMarcar({ esAdmin: false, rol: 'fed', nombre: 'Macarena Duarte' }, base)).toBe(true)
+    expect(puedeMarcar({ esAdmin: false, rol: 'fed', nombre: 'Marcos Pettiná' }, base)).toBe(false)
+    expect(puedeMarcar({ esAdmin: false, rol: 'coordinacion', nombre: 'Julio Machado' }, base)).toBe(true)
+    expect(puedeMarcar({ esAdmin: true, rol: 'fed', nombre: 'Silvio Ridolfi' }, base)).toBe(true)
+    expect(puedeMarcar({ esAdmin: false, rol: 'fed', nombre: 'Macarena Duarte' }, { school: { ...base.school, fed_a_cargo: 'Sin FED asignado' } })).toBe(false)
+  })
+})
+
+describe('avisos', () => {
+  const feds = [{ id: 'f1', nombre_completo: 'Macarena Duarte' }, { id: 'f2', nombre_completo: 'Marcos Pettiná' }]
+  const c = (cue: number, fed: string | null) => ({ cue, fecha_inicio: '2026-10-12', fecha_fin: '2026-10-16', tipo: 'LAC_M', school: { nombre: 'ESCUELA DE EDUCACIÓN SECUNDARIA N° 31', fed_a_cargo: fed } })
+  it('reparte por FED y deja aparte los que no tienen', () => {
+    const { porFed, sinFed } = repartirPorFed([c(1, 'Macarena Duarte Buschiazzo'), c(2, 'Macarena Duarte Buschiazzo'), c(3, 'Marcos Pettiná'), c(4, 'Sin FED asignado'), c(5, null)], feds)
+    expect(porFed.get('f1')).toHaveLength(2); expect(porFed.get('f2')).toHaveLength(1); expect(sinFed).toHaveLength(2)
+  })
+  it('arma los textos', () => {
+    expect(avisoNuevosFed([c(1, 'x')])).toBe('1 cronograma nuevo en tus escuelas: EES N° 31 (Mantenimiento de piso, 12/10 al 16/10)')
+    expect(avisoNuevosFed([c(1, 'x'), c(2, 'x'), c(3, 'x'), c(4, 'x'), c(5, 'x')])).toContain('· y 2 más')
+    expect(avisoNuevosCed(8, 2)).toBe('Cronogramas nuevos en la planilla: 8 (2 sin FED asignado)')
+    expect(avisoNuevosCed(3, 0)).toBe('Cronogramas nuevos en la planilla: 3')
+    expect(avisoRecordatorioFed([c(1, 'x')], 'mañana')).toMatch(/^Recordatorio: empieza mañana 1 cronograma en tus escuelas/)
+    expect(avisoRecordatorioCed(4, 1, 'el lunes 12/10')).toBe('Recordatorio: el lunes 12/10 empiezan 4 cronogramas (1 sin FED asignado)')
+  })
+  it('el recordatorio va el día hábil anterior', () => {
+    expect(proximoHabil('2026-10-08')).toBe('2026-10-09')
+    expect(proximoHabil('2026-10-09')).toBe('2026-10-12')
+    expect(proximoHabil('2026-10-09', new Set(['2026-10-12']))).toBe('2026-10-13')
+    expect(esHabil('2026-10-10')).toBe(false); expect(esHabil('2026-10-12', new Set(['2026-10-12']))).toBe(false); expect(esHabil('2026-10-07')).toBe(true)
+    expect(cuandoEmpieza('2026-10-08', '2026-10-09')).toBe('mañana')
+    expect(cuandoEmpieza('2026-10-09', '2026-10-12')).toBe('el lunes 12/10')
   })
 })
