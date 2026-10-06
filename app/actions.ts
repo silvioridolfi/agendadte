@@ -241,14 +241,16 @@ async function getContactosCronogramaImpl(yo: Usuario, id: string): Promise<Cont
 async function getMisEscuelasImpl(yo: Usuario): Promise<ResumenEscuela[]> {
   const db = supabaseServer(), hoy = hoyAR()
   const todos = yo.esAdmin || yo.fed.rol === 'coordinacion'
-  const filas = (await fetchAll<Pick<ResumenEscuela, 'id' | 'cue' | 'nombre' | 'distrito' | 'ciudad' | 'nivel' | 'modalidad' | 'fed_a_cargo'>>((a, b) => db.from('establecimientos').select('id, cue, nombre, distrito, ciudad, nivel, modalidad, fed_a_cargo').order('nombre').order('id').range(a, b)))
+  const filas = (await fetchAll<Pick<ResumenEscuela, 'id' | 'cue' | 'nombre' | 'distrito' | 'ciudad' | 'nivel' | 'modalidad' | 'fed_a_cargo' | 'direccion'>>((a, b) => db.from('establecimientos').select('id, cue, nombre, distrito, ciudad, nivel, modalidad, fed_a_cargo, direccion').order('nombre').order('id').range(a, b)))
     .filter(e => todos || esDelFed(e.fed_a_cargo, yo.fed.nombre_completo))
-  const [cronogramas, reclamos, acciones] = await Promise.all([
+  const cues = new Set(filas.map(e => e.cue).filter((c): c is number => c != null))
+  const [contactos, cronogramas, reclamos, acciones] = await Promise.all([
+    fetchAll<ContactoEscuela & { cue: number | null }>((a, b) => db.from('contactos').select('cue, nombre, apellido, cargo, telefono, correo, correo_laboral, es_principal').order('id').range(a, b)).then(l => l.filter(c => c.cue != null && cues.has(c.cue))),
     fetchAll<{ school_id: string | null, fecha_inicio: string, fecha_fin: string, tipo: string | null }>((a, b) => db.from('cronogramas').select('school_id, fecha_inicio, fecha_fin, tipo').eq('en_planilla', true).gte('fecha_fin', hoy).order('id').range(a, b)),
     fetchAll<{ school_id: string | null }>((a, b) => db.from('reclamos_conectividad').select('school_id').in('estado', ['enviado', 'en_proceso']).order('id').range(a, b)),
     fetchAll<{ school_id: string | null, fecha: string, estado: string }>((a, b) => db.from('agenda_items').select('school_id, fecha, estado').not('school_id', 'is', null).in('estado', ['realizada', 'planificada']).order('id').range(a, b)),
   ])
-  return armarResumen(filas, { cronogramas, reclamos, acciones }, hoy)
+  return armarResumen(filas, { contactos, cronogramas, reclamos, acciones }, hoy)
 }
 // Números de los accesos rápidos del Tablero: las escuelas del FED (el CED, todas) con sus reclamos abiertos y cronogramas próximos.
 async function getAccesosImpl(yo: Usuario): Promise<Accesos> {
