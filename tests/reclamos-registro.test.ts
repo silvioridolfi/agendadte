@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { avisoDeAlta, avisoDeCambio, conexionDe, filtrarReclamos, origenDeNumero, resumenReclamos, esAbierto, type Reclamo } from '@/lib/reclamos-registro'
+import { avisoDeAlta, avisoDeCambio, conexionDe, filtrarReclamos, origenDeNumero, resumenReclamos, esAbierto, puedeResolverReclamo, sumarNota, type Reclamo } from '@/lib/reclamos-registro'
 
 const e = (plan_enlace: string, subplan_enlace: string, plan_piso_tecnologico: string | null) => ({ plan_enlace, subplan_enlace, plan_piso_tecnologico })
 
@@ -61,5 +61,31 @@ describe('aviso al CED por un reclamo nuevo', () => {
   it('dice el CUE y el tipo de reclamo', () => {
     expect(avisoDeAlta({ cue: 60897700, tipo_label: 'Sin conectividad' })).toBe('Nuevo reclamo de CUE 60897700 · Sin conectividad')
     expect(avisoDeAlta({ cue: null, tipo_label: 'Sin conectividad' })).toBe('Nuevo reclamo de CUE — · Sin conectividad')
+  })
+})
+
+describe('marcar resuelto desde un FED', () => {
+  const yo = { id: 'f1', nombre: 'Silvio Ridolfi' }
+  const r = (o: Partial<Pick<Reclamo, 'estado' | 'fed_id' | 'school'>>) => ({ estado: 'enviado' as const, fed_id: 'otro', school: { nombre: 'EP 13', distrito: 'LA PLATA', ciudad: null, fed_a_cargo: 'Silvio Ridolfi' }, ...o })
+  it('el FED a cargo de la escuela puede resolver un reclamo abierto', () => {
+    expect(puedeResolverReclamo(yo, r({}))).toBe(true)
+    expect(puedeResolverReclamo(yo, r({ estado: 'en_proceso' }))).toBe(true)
+  })
+  it('también quien lo registró', () => {
+    expect(puedeResolverReclamo(yo, r({ fed_id: 'f1', school: { nombre: null, distrito: null, ciudad: null, fed_a_cargo: 'Marcos Pettiná' } }))).toBe(true)
+  })
+  it('no si la escuela es de otro FED y no lo registró', () => {
+    expect(puedeResolverReclamo(yo, r({ school: { nombre: null, distrito: null, ciudad: null, fed_a_cargo: 'Marcos Pettiná' } }))).toBe(false)
+    expect(puedeResolverReclamo(yo, r({ school: null }))).toBe(false)
+  })
+  it('no si ya está resuelto o anulado', () => {
+    expect(puedeResolverReclamo(yo, r({ estado: 'resuelto' }))).toBe(false)
+    expect(puedeResolverReclamo(yo, r({ estado: 'anulado' }))).toBe(false)
+  })
+  it('la nota se suma a la anterior', () => {
+    expect(sumarNota(null, 'La escuela confirmó')).toBe('La escuela confirmó')
+    expect(sumarNota('Respuesta de Nivel Central', 'La escuela confirmó')).toBe('Respuesta de Nivel Central\nLa escuela confirmó')
+    expect(sumarNota('Respuesta', '  ')).toBe('Respuesta')
+    expect(sumarNota(null, null)).toBeNull()
   })
 })

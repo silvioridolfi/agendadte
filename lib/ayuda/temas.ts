@@ -124,7 +124,7 @@ Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la
 | Resuelto | Se solucionó. |
 | Anulado | Se registró por error o se dejó sin efecto. |
 ## Quién ve y quién edita
-Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado, FED, tipo de conexión y búsqueda por CUE, escuela, número o nombre. Solo el CED los actualiza; la administración los ve en modo lectura. El botón **Excel** descarga la lista tal como la estás viendo, con las mismas columnas de la planilla del CED.
+Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado, FED, tipo de conexión y búsqueda por CUE, escuela, número o nombre. Solo el CED los actualiza (números, estados y notas); la administración los ve en modo lectura. Una excepción: el **FED a cargo de la escuela** (o quien registró el reclamo) puede tocar **Marcar resuelto** en un reclamo abierto, con una nota opcional, porque muchas veces la escuela le avisa a él y no al CED. No cambia otros datos ni envía ningún aviso; en la tarjeta queda "lo marcó" con su nombre. Por defecto el filtro **Solo los míos y de mis escuelas** deja a la vista los reclamos que podés cerrar. El botón **Excel** descarga la lista tal como la estás viendo, con las mismas columnas de la planilla del CED.
 [i] Al armar un reclamo de una escuela que ya tiene uno abierto, la agenda te avisa para que sigas esa cadena en lugar de abrir otra.` },
 
   { id: 'cronogramas', titulo: 'Cronogramas de conectividad', para: ['fed', 'ced'], md: () => `
