@@ -215,7 +215,7 @@ function MensajeEscuela({ c, nombre, cuenta, avisada, onClose, onAvisada }: { c:
   return <Dialog open onOpenChange={o => !o && onClose()}>
     <DialogContent className="max-h-[90dvh] overflow-y-auto bg-white max-sm:top-[calc(env(safe-area-inset-top,0px)+0.5rem)]! max-sm:bottom-auto! max-sm:max-h-[calc(100dvh-1rem)]! max-sm:rounded-b-2xl! sm:max-w-lg">
       <DialogTitle>Avisar a la escuela</DialogTitle>
-      <DialogDescription>Mensaje para el directivo con la fecha, la tarea y quién concurre.</DialogDescription>
+      <DialogDescription>Mensaje informativo para el directivo con el trabajo, la fecha y el responsable.</DialogDescription>
       <div className="flex flex-col gap-1"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-dte-gris">Mensaje</span><Button type="button" variant="ghost" size="sm" onClick={copiar}>{copiado ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado ? 'Copiado' : 'Copiar'}</Button></div>
         <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-control bg-dte-fondo px-3 py-2 font-sans text-sm">{msg.cuerpo}</pre></div>
       <div className="flex flex-col gap-1.5"><span className="text-xs font-semibold text-dte-gris">Contactos de la escuela</span>

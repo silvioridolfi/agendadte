@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { avisoDe, avisoJefaturaFed, mensajeEscuela, puedeAvisarJefatura, FILTROS_VACIOS, avisoNuevosCed, avisoNuevosFed, avisoRecordatorioCed, avisoRecordatorioFed, cuandoEmpieza, esHabil, estadoDe, proximoHabil, puedeMarcar, repartirPorFed, cuesDe, esDelFed, etiquetaTipo, fechaDe, filtrarCronogramas, haceDias, leerCronogramas, parsearCsv, resumenCronogramas, ventanaDe, type Cronograma } from '@/lib/cronogramas'
+import { avisoDe, avisoJefaturaFed, mensajeEscuela, personaDe, puedeAvisarJefatura, FILTROS_VACIOS, avisoNuevosCed, avisoNuevosFed, avisoRecordatorioCed, avisoRecordatorioFed, cuandoEmpieza, esHabil, estadoDe, proximoHabil, puedeMarcar, repartirPorFed, cuesDe, esDelFed, etiquetaTipo, fechaDe, filtrarCronogramas, haceDias, leerCronogramas, parsearCsv, resumenCronogramas, ventanaDe, type Cronograma } from '@/lib/cronogramas'
 
 const ENC = 'ESTADO,PREDIO,Region,Fecha de Inicio,Fecha de Fin,Instalador Responsable,Proveedor,Cues involucrados,Nombre de las escuelas,Semana en que fue informado,Tipo,Distrito,Nro cronograma o incidencia,Descripcion de incidencia,Observaciones de territorio,Tipo de establecimiento'
 
@@ -132,28 +132,44 @@ describe('avisos a la jefatura y a la escuela', () => {
     expect(puedeAvisarJefatura({ esAdmin: true, rol: 'fed' })).toBe(true)
     expect(puedeAvisarJefatura({ esAdmin: false, rol: 'fed' })).toBe(false)
   })
-  const c = { cue: 61000001, fecha_inicio: '2026-10-12', fecha_fin: '2026-10-16', tipo: 'LAC_M', proveedor: 'PBA', instaladores: 'Juan Pérez - DNI 30111222\nAna Gómez - CUIL 27-30111222-4', school: { nombre: 'ESCUELA DE EDUCACIÓN SECUNDARIA N° 31' } }
-  it('arma el mensaje para el directivo', () => {
+  const c = { cue: 61000001, fecha_inicio: '2026-10-12', fecha_fin: '2026-10-16', tipo: 'LAC_M', proveedor: 'PBA', instaladores: 'Juan Pérez DNI 30111222\nANA GÓMEZ CUIL 27-30111222-4', school: { nombre: 'ESCUELA DE EDUCACIÓN SECUNDARIA N° 31' } }
+  it('arma el mensaje informativo para el directivo', () => {
     const m = mensajeEscuela(c, 'Silvio Ridolfi', new Date('2026-10-06T13:00:00Z'))
-    expect(m.asunto).toBe('Visita de Nivel Central a EES N° 31: 12/10 al 16/10')
+    expect(m.asunto).toBe('Trabajos en EES N° 31: 12/10 al 16/10')
     expect(m.cuerpo).toContain('Hola, buen día.')
-    expect(m.cuerpo).toContain('Soy Silvio Ridolfi, de la Dirección de Tecnología Educativa (Región 1)')
-    expect(m.cuerpo).toContain('Escuela: EES N° 31 (CUE 61000001)')
-    expect(m.cuerpo).toContain('Tarea: Mantenimiento de piso')
-    expect(m.cuerpo).toContain('Fecha: del 12/10 al 16/10')
-    expect(m.cuerpo).toContain('Empresa: PBA')
-    expect(m.cuerpo).toContain('- Juan Pérez - DNI 30111222\n- Ana Gómez - CUIL 27-30111222-4')
+    expect(m.cuerpo).toContain('Soy Silvio Ridolfi, de la Dirección de Tecnología Educativa (Región 1). Les informo que en la escuela está previsto el siguiente trabajo, según el cronograma establecido:')
+    expect(m.cuerpo).toContain('Escuela: EES N° 31 (CUE 61000001)\nTrabajo: Mantenimiento de piso\nFecha: del 12/10 al 16/10\nEmpresa: PBA\nResponsables:\n- Juan Pérez (DNI 30111222)\n- Ana Gómez (CUIL 27-30111222-4)')
+    expect(m.cuerpo).toContain('Quedo a disposición por cualquier consulta.\nSaludos cordiales.')
+    expect(m.cuerpo).not.toMatch(/programó|facilit|avisen/)
   })
-  it('un solo día y enlace en lugar de nombres', () => {
-    const m = mensajeEscuela({ ...c, fecha_fin: '2026-10-12', proveedor: null, instaladores: 'https://drive.google.com/abc' }, 'Silvio Ridolfi', new Date('2026-10-06T23:00:00Z'))
+  it('un responsable, un solo día y sin empresa', () => {
+    const m = mensajeEscuela({ ...c, fecha_fin: '2026-10-12', proveedor: null, instaladores: 'DT01 Cañete.Zenteno' }, 'Silvio Ridolfi', new Date('2026-10-06T23:00:00Z'))
     expect(m.cuerpo).toContain('Hola, buenas noches.')
     expect(m.cuerpo).toContain('Fecha: el 12/10')
     expect(m.cuerpo).not.toContain('Empresa')
-    expect(m.cuerpo).toContain('Datos del personal: https://drive.google.com/abc')
-    expect(m.cuerpo).not.toContain('Personal que concurre')
+    expect(m.cuerpo).toContain('Responsable: Cañete Zenteno')
+  })
+  it('un enlace en lugar de nombres', () => {
+    const m = mensajeEscuela({ ...c, instaladores: 'https://drive.google.com/abc' }, 'X', new Date())
+    expect(m.cuerpo).toContain('Datos del responsable: https://drive.google.com/abc')
+    expect(m.cuerpo).not.toContain('Responsable:')
   })
   it('sin escuela cargada usa el CUE', () => {
     expect(mensajeEscuela({ ...c, school: null }, 'X', new Date()).cuerpo).toContain('Escuela: CUE 61000001\n')
+  })
+  it('ordena el nombre del responsable', () => {
+    expect(personaDe('DT01 Cañete.Zenteno')).toBe('Cañete Zenteno')
+    expect(personaDe('DT01 Cañete.Martin')).toBe('Cañete Martin')
+    expect(personaDe('SADOSKI VICTOR HERNAN DNI 35610950')).toBe('Sadoski Victor Hernan (DNI 35610950)')
+    expect(personaDe('Ivan Bento, DNI 30958127')).toBe('Ivan Bento (DNI 30958127)')
+    expect(personaDe('PADOVANI LLANOS FACUNDO HUMBER DNI: 45038779')).toBe('Padovani Llanos Facundo Humber (DNI 45038779)')
+    expect(personaDe('Maquieira Santiago Luis DNI 29.371.730')).toBe('Maquieira Santiago Luis (DNI 29371730)')
+    expect(personaDe('Walter Villalba')).toBe('Walter Villalba')
+    expect(personaDe('Leonardo Hector Rodriguez')).toBe('Leonardo Hector Rodriguez')
+  })
+  it('lo que no es un nombre se deja como viene', () => {
+    expect(personaDe('DINA BA15')).toBe('DINA BA15')
+    expect(personaDe('DINA BA3')).toBe('DINA BA3')
   })
   it('avisa al FED que falta la escuela', () => {
     expect(avisoJefaturaFed(c)).toContain('Se avisó a la jefatura: EES N° 31')
