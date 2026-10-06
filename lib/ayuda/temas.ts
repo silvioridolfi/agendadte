@@ -65,6 +65,8 @@ El botón **Guardar** se habilita al modificar algún dato; **Descartar** revier
 Los feriados, recesos y aniversarios distritales se marcan en el calendario; los eventos DTE, con una marca violeta.` },
   { id: 'buscador', titulo: 'Buscador de escuelas', para: ['fed', 'ced'], md: () => `
 La **lupa** de la barra de arriba abre el buscador de escuelas. Escribí el nombre, la sigla o el CUE (por ejemplo "EP 4" o "ees 31") y elegí la escuela.
+## Qué devuelve
+Con una sigla y un número trae solo ese tipo de escuela y ese número: "ees 1" no mezcla las técnicas ni las agrarias N° 1, y "eest 1" trae solo las técnicas. Sumá el distrito para afinar ("ep 4 berisso"). Las extensiones y anexos de la escuela pedida aparecen al final. Entienden siglas como EP, EES, EEST, EESA, JI, EEE, CFP, CENS, CEC, CEF, ISFD e ISFT; sin sigla se busca por palabras del nombre, la localidad o el distrito.
 ## Qué muestra la ficha
 - **Datos:** CUE, distrito, dirección con **Cómo llegar**, FED a cargo, nivel, modalidad, turnos, matrícula y secciones.
 - **Resumen:** acciones realizadas, cuántos FED distintos las hicieron y la fecha de la última visita.
