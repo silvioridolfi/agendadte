@@ -27,8 +27,18 @@ describe('reuniones virtuales', () => {
     expect(normalizarEnlace('   ')).toBeNull()
     expect(normalizarEnlace(null)).toBeNull()
   })
-  it('rechaza lo que no es un enlace https', () => {
-    for (const malo of ['http://meet.google.com/abc', 'javascript:alert(1)', 'ftp://x.com/a', 'https://', 'https:// meet.google.com', 'hola que tal', 'meet', `https://a.com/${'x'.repeat(500)}`])
+  it('si pegan un texto más largo, toma la primera dirección', () => {
+    expect(normalizarEnlace('Enlace de la videollamada: https://meet.google.com/abc-defg-hij')).toBe('https://meet.google.com/abc-defg-hij')
+    expect(normalizarEnlace('Unirse con Google Meet\nhttps://meet.google.com/abc-defg-hij\nTeléfono: +54 11 1234')).toBe('https://meet.google.com/abc-defg-hij')
+    expect(normalizarEnlace('Unirse: meet.google.com/abc-defg-hij.')).toBe('https://meet.google.com/abc-defg-hij')
+    expect(normalizarEnlace('(https://us02web.zoom.us/j/123?pwd=abc)')).toBe('https://us02web.zoom.us/j/123?pwd=abc')
+  })
+  it('http:// pasa a https://', () => {
+    expect(normalizarEnlace('http://meet.google.com/abc')).toBe('https://meet.google.com/abc')
+    expect(normalizarEnlace('https:// meet.google.com/abc')).toBe('https://meet.google.com/abc') // espacio de más
+  })
+  it('rechaza lo que no es un enlace', () => {
+    for (const malo of ['javascript:alert(1)', 'javascript:alert(document.cookie)', 'ftp://x.com/a', 'https://', 'hola que tal', 'meet', 'e.g.', `https://a.com/${'x'.repeat(500)}`])
       expect(() => normalizarEnlace(malo), malo).toThrow(MENSAJE_ENLACE)
   })
   it('sólo las reuniones no presenciales guardan el enlace', () => {

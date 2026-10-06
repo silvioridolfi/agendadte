@@ -7,12 +7,17 @@ export const esReunion = (a: Accion | null | undefined) => !!a && ACCIONES_REUNI
 // Virtual o híbrida: no depende de un lugar físico y puede tener enlace.
 export const conEnlace = (m: ModalidadEvento | string | null | undefined) => m === 'Virtual' || m === 'Híbrido'
 
-export const MENSAJE_ENLACE = 'El enlace debe empezar con https:// (ej.: https://meet.google.com/abc-defg-hij).'
-// Enlace listo para guardar: sólo https (nada de javascript: ni http), sin espacios; si falta el "https://" y parece una dirección, se lo agrega.
+export const MENSAJE_ENLACE = 'No encontramos un enlace de videollamada. Pegá la dirección completa (ej.: https://meet.google.com/abc-defg-hij).'
+// Enlace listo para guardar: sólo https (nada de javascript: ni ftp:). Si pegaron un texto más largo (la invitación de Meet o Zoom, por ejemplo),
+// se toma la primera dirección que aparece; una dirección sin "https://" lo recibe, y "http://" pasa a "https://".
+const sinPuntuacionFinal = (t: string) => t.replace(/[.,;:!?)\]}>'"]+$/, '')
 export function normalizarEnlace(s: string | null | undefined): string | null {
-  let e = (s ?? '').trim()
-  if (!e) return null
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(e) && /^[\w-]+(\.[\w-]+)+(\/|$)/.test(e)) e = `https://${e}`
+  const texto = (s ?? '').trim()
+  if (!texto) return null
+  const conEsquema = texto.match(/https?:\/\/[^\s<>"']+/i)?.[0]
+  const sinEsquema = texto.split(/\s+/).map(sinPuntuacionFinal).find(t => /^[\w-]+(\.[\w-]+)*\.[a-z]{2,}(\/\S*)?$/i.test(t))
+  let e = conEsquema ? sinPuntuacionFinal(conEsquema) : sinEsquema ? `https://${sinEsquema}` : texto
+  e = e.replace(/^http:\/\//i, 'https://')
   if (!/^https:\/\/[^\s/]+\S*$/i.test(e) || e.length > 500) throw new Error(MENSAJE_ENLACE)
   return e
 }
