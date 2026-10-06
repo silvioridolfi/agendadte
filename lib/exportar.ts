@@ -1,6 +1,7 @@
 // Exportación a Excel (planilla mensual por FED y consolidado regional). Se genera en el navegador.
 import { escuelaDelClub } from '@/lib/encuentro'
 import { ESTADO_RECLAMO_LABEL, type Reclamo } from '@/lib/reclamos-registro'
+import { nombreContacto, type ResumenEscuela } from '@/lib/mis-escuelas'
 import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, clubEstado, cuentaHecha, esAusencia, iniciado, ordenGrupo, ultimaActividad, type AgendaItem, type Club, type Encuentro, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
 import { graficosInforme, type Grafico } from '@/lib/graficos'
@@ -281,5 +282,29 @@ export async function exportarReclamos(reclamos: Reclamo[], nombreFed: (id: stri
   const buf = await wb.xlsx.writeBuffer()
   const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
   const a = document.createElement('a'); a.href = url; a.download = nombreArchivo(`Reclamos de conectividad ${new Date().toLocaleDateString('en-CA', { timeZone: ZONA })}`); a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+}
+
+// Lista de escuelas tal como se ve en pantalla: escuela, CUE, dirección, localidad, distrito y contacto (para comparar con un registro propio).
+export async function exportarEscuelas(escuelas: ResumenEscuela[]) {
+  const ExcelJS = (await import('exceljs')).default
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'Agenda Territorial DTE'; wb.created = new Date()
+  const ws = wb.addWorksheet('Escuelas', { views: [{ state: 'frozen', ySplit: 1 }] })
+  const cols = [['Escuela', 46], ['CUE', 11], ['Dirección', 32], ['Localidad', 20], ['Distrito', 16], ['Contacto', 28], ['Cargo', 18], ['Teléfono', 16], ['Correo', 32], ['Otros contactos', 15]] as const
+  cols.forEach(([h, w], i) => { ws.getRow(1).getCell(i + 1).value = h; ws.getColumn(i + 1).width = w })
+  ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PETROLEO } }
+  escuelas.forEach((e, n) => {
+    const c = e.contacto
+    const row = ws.addRow([e.nombre ? titleCase(e.nombre) : '', e.cue ?? '', e.direccion ? titleCase(e.direccion) : '', e.ciudad ? titleCase(e.ciudad) : '', e.distrito ? titleCase(e.distrito) : '',
+      nombreContacto(c), c?.cargo ?? '', c?.telefono ?? '', c?.correo_laboral || c?.correo || '', e.contactosExtra || ''])
+    row.alignment = { vertical: 'top', wrapText: true }
+    if (n % 2) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } }
+  })
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols.length } }
+  const buf = await wb.xlsx.writeBuffer()
+  const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
+  const a = document.createElement('a'); a.href = url; a.download = nombreArchivo(`Escuelas ${new Date().toLocaleDateString('en-CA', { timeZone: ZONA })}`); a.click()
   setTimeout(() => URL.revokeObjectURL(url), 5000)
 }

@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { FILTROS_ESCUELAS_VACIOS, armarResumen, contarAccesos, filtrarEscuelas, resumenEscuelas } from '@/lib/mis-escuelas'
+import { FILTROS_ESCUELAS_VACIOS, armarResumen, contarAccesos, elegirContacto, filtrarEscuelas, nombreContacto, ordenarEscuelas, resumenEscuelas } from '@/lib/mis-escuelas'
 
-const base = (id: string, cue: number, nombre: string, distrito: string, fed: string | null, nivel = 'Secundario') => ({ id, cue, nombre, distrito, ciudad: distrito, nivel, modalidad: null, fed_a_cargo: fed })
+const base = (id: string, cue: number, nombre: string, distrito: string, fed: string | null, nivel = 'Secundario', direccion: string | null = null) => ({ id, cue, nombre, distrito, ciudad: distrito, nivel, modalidad: null, fed_a_cargo: fed, direccion })
 const escuelas = [
   base('a', 61000001, 'ESCUELA DE EDUCACIÓN SECUNDARIA N° 31', 'LA PLATA', 'Jorge Pérez'),
   base('b', 61000002, 'ESCUELA PRIMARIA N° 4 LEANDRO N. ALEM', 'BERISSO', 'Jorge Pérez', 'Primario'),
   base('c', 61000003, 'ESCUELA ESPECIAL N° 501', 'LA PLATA', 'Sin FED asignado', 'Especial'),
-  base('d', 61000004, 'JARDÍN DE INFANTES N° 902', 'ENSENADA', null, 'Inicial'),
+  base('d', 61000004, 'JARDÍN DE INFANTES N° 902', 'ENSENADA', null, 'Inicial', 'CALLE 5 Y 120'),
 ]
 const hoy = '2026-10-06'
+const ct = (cue: number, nombre: string, extra: Partial<{ apellido: string, telefono: string, correo: string, es_principal: boolean }> = {}) => ({ cue, nombre, apellido: null, cargo: 'Directora', telefono: null, correo: null, correo_laboral: null, es_principal: false, ...extra })
 const resumen = armarResumen(escuelas, {
+  contactos: [ct(61000001, 'Ana', { apellido: 'Gómez', telefono: '221 555-0101', correo: 'ees31@abc.gob.ar' }), ct(61000001, 'Luis', { es_principal: true, apellido: 'Pérez' }), ct(61000004, 'Marisol'), ct(61000002, '')],
   cronogramas: [
     { school_id: 'a', fecha_inicio: '2026-10-12', fecha_fin: '2026-10-16', tipo: 'LAC_M' }, { school_id: 'a', fecha_inicio: '2026-10-08', fecha_fin: '2026-10-09', tipo: 'LAC' },
     { school_id: 'b', fecha_inicio: '2026-08-01', fecha_fin: '2026-08-05', tipo: 'LAC_M' }, { school_id: null, fecha_inicio: '2026-10-12', fecha_fin: '2026-10-12', tipo: 'LAC' },
@@ -67,5 +69,26 @@ describe('contarAccesos', () => {
   })
   it('sin escuelas a cargo, sólo los reclamos propios', () => {
     expect(contarAccesos({ ...base, escuelaIds: new Set() })).toEqual({ escuelas: 0, conReclamo: 0, reclamosAbiertos: 1, cronogramasProximos: 0 })
+  })
+})
+
+describe('contactos y lista', () => {
+  it('toma el contacto principal y cuenta los demás', () => {
+    expect(nombreContacto(resumen[0].contacto)).toBe('Luis Pérez'); expect(resumen[0].contactosExtra).toBe(1)
+    expect(nombreContacto(resumen[3].contacto)).toBe('Marisol'); expect(resumen[3].contactosExtra).toBe(0)
+  })
+  it('un contacto vacío no cuenta', () => {
+    expect(resumen[1].contacto).toBeNull(); expect(resumen[1].contactosExtra).toBe(0)
+    expect(elegirContacto([])).toEqual({ contacto: null, extra: 0 })
+  })
+  it('se busca también por dirección y por contacto', () => {
+    const f = (busqueda: string) => filtrarEscuelas(resumen, { ...FILTROS_ESCUELAS_VACIOS, busqueda }).map(e => e.id)
+    expect(f('calle 5')).toEqual(['d']); expect(f('perez')).toEqual(['a']); expect(f('marisol')).toEqual(['d'])
+  })
+  it('ordena por columna, con los vacíos al final', () => {
+    expect(ordenarEscuelas(resumen, 'cue', false).map(e => e.id)).toEqual(['d', 'c', 'b', 'a'])
+    expect(ordenarEscuelas(resumen, 'distrito').map(e => e.id)).toEqual(['b', 'd', 'a', 'c'])
+    expect(ordenarEscuelas(resumen, 'direccion').map(e => e.id)).toEqual(['d', 'a', 'c', 'b'])
+    expect(ordenarEscuelas(resumen, 'nombre').map(e => e.id)).toEqual(['a', 'c', 'b', 'd'])
   })
 })

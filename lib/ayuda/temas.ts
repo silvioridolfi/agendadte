@@ -81,9 +81,13 @@ De las acciones de otros integrantes ves la fecha, el tipo, el estado y quién l
   { id: 'mis-escuelas', titulo: 'Mis escuelas', para: ['fed', 'ced'], md: () => `
 Es el listado de las escuelas que tenés a cargo, con lo que pasa en cada una. Se abre desde el menú de las iniciales (**Mis escuelas**) o desde el acceso del Tablero; en el celular, **Volver** (arriba) te lleva a la pantalla de la que venías. El FED a cargo de cada escuela sale de la base de establecimientos: si falta una tuya o sobra una, avisale al CED.
 ## Qué ves
-Una tarjeta por escuela, con su sigla, CUE, localidad y distrito, y de un vistazo: el **próximo cronograma**, los **reclamos de conectividad abiertos**, la **próxima acción** planificada y la **última visita**. Arriba se cuentan las escuelas, las que tienen cronograma y las que tienen un reclamo abierto.
+En las tarjetas, una por escuela, con su sigla, CUE, localidad y distrito, y de un vistazo: el **próximo cronograma**, los **reclamos de conectividad abiertos**, la **próxima acción** planificada y la **última visita**. Arriba se cuentan las escuelas, las que tienen cronograma y las que tienen un reclamo abierto.
 ## Buscar y filtrar
-Escribí el nombre, la sigla o el CUE (por ejemplo "EP 4" o "ees 31"). También podés filtrar por distrito y nivel, y quedarte con las que tienen cronograma o reclamo abierto.
+El **buscador** está arriba y es lo primero que ves. Escribí el nombre, la sigla, el CUE, la dirección o el nombre de un contacto (por ejemplo "EP 4", "ees 31" o "calle 12") y la lista se acorta mientras escribís; la **✕** del costado borra la búsqueda. Debajo podés filtrar por distrito y nivel, y quedarte con las que tienen cronograma o reclamo abierto (**Quitar filtros** los limpia, sin borrar lo que escribiste).
+## Lista o tarjetas
+Con **Lista** ves una fila por escuela con la escuela, el **CUE**, la **dirección**, la **localidad**, el **distrito** y el **contacto** (nombre y cargo, teléfono y correo para llamar o escribir, y cuántos contactos más hay). En la computadora es una tabla y tocando el título de cada columna se **ordena**; en el celular cada escuela es una fila compacta. **Tarjetas** muestra el resumen de cada una (próximo cronograma, reclamos abiertos, próxima acción y última visita). La vista que elegís queda guardada en tu navegador.
+## Excel
+**Excel** descarga la lista tal como la estás viendo (con tu búsqueda, tus filtros y el orden), con las columnas Escuela, CUE, Dirección, Localidad, Distrito, Contacto, Cargo, Teléfono, Correo y Otros contactos: sirve para comparar con tu registro propio y ponerlo al día.
 ## La ficha completa
 Al tocar una escuela se abre la ficha del buscador (datos, próximas acciones, clubes y prácticas, historial) con cuatro secciones más:
 - **Conectividad:** enlace, piso tecnológico, proveedores, ANI y recurso primario.
