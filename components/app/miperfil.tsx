@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Briefcase, Camera, CalendarOff, CircleHelp, CalendarClock, ClipboardList, ExternalLink, EyeOff, Globe, Wifi, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
+import { Briefcase, Building2, Camera, CalendarOff, CircleHelp, CalendarClock, ClipboardList, ExternalLink, EyeOff, Globe, Wifi, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +17,7 @@ const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 // Menú del avatar: Mi perfil (sólo FED) y cambio de perfil. Se cierra con Escape o tocando afuera.
 const CLAVE_PRESENTACION = 'agenda-territorial:presentacion'
 
-export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyuda, onReclamo, onRegistroReclamos, onCronogramas, onPerfil, onFotos, onMisPve, onUsuarios, onFeriados, onPve, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, hayNovedades?: boolean, onAyuda: () => void, onReclamo: () => void, onRegistroReclamos: () => void, onCronogramas: () => void, onPerfil: () => void, onFotos: () => void, onMisPve: () => void, onUsuarios: () => void, onFeriados: () => void, onPve: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
+export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyuda, onReclamo, onRegistroReclamos, onCronogramas, onEscuelas, onPerfil, onFotos, onMisPve, onUsuarios, onFeriados, onPve, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, hayNovedades?: boolean, onAyuda: () => void, onReclamo: () => void, onRegistroReclamos: () => void, onCronogramas: () => void, onEscuelas: () => void, onPerfil: () => void, onFotos: () => void, onMisPve: () => void, onUsuarios: () => void, onFeriados: () => void, onPve: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
   const [open, setOpen] = useState(false)
   // Modo presentación (sólo administración): oculta las opciones de administración en este navegador.
   // Se vuelve a mostrar entrando con #admin en la dirección.
@@ -50,6 +50,7 @@ export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyu
     </button>
     {open && <div role="menu" aria-label="Opciones de perfil" className="animate-in fade-in-0 slide-in-from-top-1 duration-150 absolute right-0 top-12 z-modal w-60 overflow-hidden rounded-card border border-dte-linea bg-white py-1 shadow-e3">
       <button role="menuitem" onClick={() => { setOpen(false); onPerfil() }} className={item}><UserRound className="size-4 text-dte-petroleo" />Mi perfil y DD.JJ.</button>
+      <button role="menuitem" onClick={() => { setOpen(false); onEscuelas() }} className={item}><Building2 className="size-4 text-dte-petroleo" />{profile.rol === 'fed' && !admin ? 'Mis escuelas' : 'Escuelas'}</button>
       <button role="menuitem" onClick={() => { setOpen(false); onFotos() }} className={item}><Camera className="size-4 text-dte-petroleo" />Fotos de las acciones</button>
       {profile.rol === 'fed' && <button role="menuitem" onClick={() => { setOpen(false); onMisPve() }} className={item}><FileText className="size-4 text-dte-petroleo" />Planillas de Visita (PVE)</button>}
       <div role="separator" className="my-1 border-t border-dte-linea" />

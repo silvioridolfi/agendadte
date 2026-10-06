@@ -17,6 +17,7 @@ import { tipoDe, type EscuelaConectividad } from '@/lib/reclamos'
 import { ESTADOS_RECLAMO, avisoDeAlta, avisoDeCambio, conexionDe, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
 import { DIAS_ATRAS, ESTADOS_SEGUIMIENTO, MAX_NOTA, PIDE_MOTIVO, avisoEstadoCed, esDelFed, haceDias, puedeMarcar, type Cronograma, type EstadoSeguimiento, type Seguimiento } from '@/lib/cronogramas'
 import { sincronizarCronogramas, type ResultadoSync } from '@/lib/cronogramas-sync'
+import { armarResumen, type ContactoEscuela, type ResumenEscuela } from '@/lib/mis-escuelas'
 import { estadoAlCrear } from '@/lib/estado'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -148,20 +149,57 @@ async function actualizarReclamoImpl(yo: Usuario, id: string, cambios: { estado?
 // Cronogramas de Nivel Central (sincronizados desde el consolidado). La coordinación y la administración ven todos; cada FED, los de sus escuelas.
 const COLS_CRONOGRAMA = `id, cue, fecha_inicio, fecha_fin, tipo, proveedor, nro, semana, estado_planilla, instaladores, descripcion, observaciones, nombre_planilla, primera_vez_at, actualizado_at, school:establecimientos(id, nombre, distrito, ciudad, fed_a_cargo)`
 type UltimaSync = { fin: string | null, resultado: Record<string, unknown> | null } | null
+// Agrega a cada cronograma el historial de estados anotados (del más nuevo al más viejo).
+async function conHistorial(filas: Omit<Cronograma, 'historial'>[]): Promise<Cronograma[]> {
+  const historial = new Map<string, Seguimiento[]>()
+  for (let i = 0; i < filas.length; i += 200) {
+    const { data, error } = await supabaseServer().from('cronogramas_seguimiento').select('cronograma_id, estado, nota, fed_id, created_at').in('cronograma_id', filas.slice(i, i + 200).map(c => c.id)).order('created_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    for (const h of data ?? []) historial.set(h.cronograma_id as string, [...(historial.get(h.cronograma_id as string) ?? []), { estado: h.estado as EstadoSeguimiento, nota: h.nota as string | null, fed_id: h.fed_id as string | null, created_at: h.created_at as string }])
+  }
+  return filas.map(c => ({ ...c, historial: historial.get(c.id) ?? [] }))
+}
 async function getCronogramasImpl(yo: Usuario): Promise<{ lista: Cronograma[], ultima: UltimaSync }> {
   const db = supabaseServer()
   const todos = yo.esAdmin || yo.fed.rol === 'coordinacion'
   const filas = (await fetchAll<Omit<Cronograma, 'historial'>>((a, b) => db.from('cronogramas').select(COLS_CRONOGRAMA).eq('en_planilla', true).gte('fecha_fin', haceDias(hoyAR(), DIAS_ATRAS))
     .order('fecha_inicio').order('cue').order('id').range(a, b))).filter(c => todos || esDelFed(c.school?.fed_a_cargo, yo.fed.nombre_completo))
-  const historial = new Map<string, Seguimiento[]>()
-  for (let i = 0; i < filas.length; i += 200) {
-    const { data, error } = await db.from('cronogramas_seguimiento').select('cronograma_id, estado, nota, fed_id, created_at').in('cronograma_id', filas.slice(i, i + 200).map(c => c.id)).order('created_at', { ascending: false })
-    if (error) throw new Error(error.message)
-    for (const h of data ?? []) historial.set(h.cronograma_id as string, [...(historial.get(h.cronograma_id as string) ?? []), { estado: h.estado as EstadoSeguimiento, nota: h.nota as string | null, fed_id: h.fed_id as string | null, created_at: h.created_at as string }])
-  }
-  const lista = filas.map(c => ({ ...c, historial: historial.get(c.id) ?? [] }))
+  const lista = await conHistorial(filas)
   const { data } = await db.from('cron_ejecuciones').select('fin, resultado').in('tarea', ['cronogramas', 'cronogramas-manual']).not('fin', 'is', null).order('inicio', { ascending: false }).limit(1).maybeSingle()
   return { lista, ultima: todos ? ((data as UltimaSync) ?? null) : null }
+}
+// ---- Mis escuelas: las escuelas que tiene a cargo cada FED (establecimientos.fed_a_cargo). La coordinación y la administración ven todas.
+async function getMisEscuelasImpl(yo: Usuario): Promise<ResumenEscuela[]> {
+  const db = supabaseServer(), hoy = hoyAR()
+  const todos = yo.esAdmin || yo.fed.rol === 'coordinacion'
+  const filas = (await fetchAll<Pick<ResumenEscuela, 'id' | 'cue' | 'nombre' | 'distrito' | 'ciudad' | 'nivel' | 'modalidad' | 'fed_a_cargo'>>((a, b) => db.from('establecimientos').select('id, cue, nombre, distrito, ciudad, nivel, modalidad, fed_a_cargo').order('nombre').order('id').range(a, b)))
+    .filter(e => todos || esDelFed(e.fed_a_cargo, yo.fed.nombre_completo))
+  const [cronogramas, reclamos, acciones] = await Promise.all([
+    fetchAll<{ school_id: string | null, fecha_inicio: string, fecha_fin: string, tipo: string | null }>((a, b) => db.from('cronogramas').select('school_id, fecha_inicio, fecha_fin, tipo').eq('en_planilla', true).gte('fecha_fin', hoy).order('id').range(a, b)),
+    fetchAll<{ school_id: string | null }>((a, b) => db.from('reclamos_conectividad').select('school_id').in('estado', ['enviado', 'en_proceso']).order('id').range(a, b)),
+    fetchAll<{ school_id: string | null, fecha: string, estado: string }>((a, b) => db.from('agenda_items').select('school_id, fecha, estado').not('school_id', 'is', null).in('estado', ['realizada', 'planificada']).order('id').range(a, b)),
+  ])
+  return armarResumen(filas, { cronogramas, reclamos, acciones }, hoy)
+}
+// Lo que se suma a la ficha de una escuela a cargo: conectividad, reclamos, cronogramas y contactos. Sólo para el FED a cargo, la coordinación y la administración.
+export type ExtrasEscuela = { conectividad: EscuelaConectividad, reclamos: Reclamo[], cronogramas: Cronograma[], contactos: ContactoEscuela[] }
+async function getExtrasEscuelaImpl(yo: Usuario, id: string): Promise<ExtrasEscuela> {
+  if (!UUID.test(id)) throw new Error('Escuela inválida')
+  const db = supabaseServer()
+  const { data: e, error } = await db.from('establecimientos').select('cue, fed_a_cargo').eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!e) throw new Error('No se encontró la escuela')
+  if (!yo.esAdmin && yo.fed.rol !== 'coordinacion' && !esDelFed(e.fed_a_cargo as string | null, yo.fed.nombre_completo)) throw new Error('Estos datos los ve el FED a cargo de la escuela')
+  const [conectividad, rec, cro, con] = await Promise.all([
+    getConectividadEscuelaImpl(id),
+    db.from('reclamos_conectividad').select(COLS_RECLAMO).eq('school_id', id).order('enviado_at', { ascending: false }).limit(20),
+    db.from('cronogramas').select(COLS_CRONOGRAMA).eq('school_id', id).eq('en_planilla', true).gte('fecha_fin', haceDias(hoyAR(), DIAS_ATRAS)).order('fecha_inicio'),
+    e.cue == null ? Promise.resolve({ data: [], error: null }) : db.from('contactos').select('nombre, apellido, cargo, telefono, correo, correo_laboral, es_principal').eq('cue', e.cue).order('es_principal', { ascending: false }),
+  ])
+  if (rec.error) throw new Error(rec.error.message)
+  if (cro.error) throw new Error(cro.error.message)
+  if (con.error) throw new Error(con.error.message)
+  return { conectividad, reclamos: (rec.data ?? []) as unknown as Reclamo[], cronogramas: await conHistorial((cro.data ?? []) as unknown as Omit<Cronograma, 'historial'>[]), contactos: (con.data ?? []) as ContactoEscuela[] }
 }
 // Anota cómo salió un cronograma (el último que se anota es el vigente). Si no se realizó o se reprogramó, hace falta el motivo y se avisa al CED.
 async function marcarCronogramaImpl(yo: Usuario, id: string, estado: EstadoSeguimiento, nota: string): Promise<Seguimiento> {
@@ -797,6 +835,8 @@ export const getFichaEscuela = async (id: string) => conUsuario(yo => getFichaEs
 export const getConectividadEscuela = async (id: string) => conUsuario(() => getConectividadEscuelaImpl(id))
 export const registrarReclamo = async (input: { school_id: string, tipo: string, asunto: string }) => conUsuario(yo => registrarReclamoImpl(yo, input))
 export const getReclamos = async () => conUsuario(() => getReclamosImpl())
+export const getMisEscuelas = async () => conUsuario(yo => getMisEscuelasImpl(yo))
+export const getExtrasEscuela = async (id: string) => conUsuario(yo => getExtrasEscuelaImpl(yo, id))
 export const getCronogramas = async () => conUsuario(yo => getCronogramasImpl(yo))
 export const marcarCronograma = async (id: string, estado: EstadoSeguimiento, nota: string) => conUsuario(yo => marcarCronogramaImpl(yo, id, estado, nota))
 export const sincronizarCronogramasAhora = async () => conUsuario(yo => sincronizarCronogramasAhoraImpl(yo))
