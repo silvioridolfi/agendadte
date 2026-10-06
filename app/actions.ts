@@ -15,6 +15,8 @@ import { avisaPorFecha } from '@/lib/avisos'
 import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
 import { tipoDe, type EscuelaConectividad } from '@/lib/reclamos'
 import { ESTADOS_RECLAMO, avisoDeAlta, avisoDeCambio, conexionDe, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
+import { DIAS_ATRAS, haceDias, type Cronograma } from '@/lib/cronogramas'
+import { sincronizarCronogramas, type ResultadoSync } from '@/lib/cronogramas-sync'
 import { estadoAlCrear } from '@/lib/estado'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -141,6 +143,25 @@ async function actualizarReclamoImpl(yo: Usuario, id: string, cambios: { estado?
   // Se avisa al FED que envió el reclamo cuando llega el número o se resuelve (no a quien hizo el cambio).
   const aviso = avisoDeCambio({ estado: antes.estado as string, nro_incidencia: antes.nro_incidencia as string | null }, { estado, nro_incidencia: nro }, { cue: antes.cue as number | null, tipo_label: antes.tipo_label as string })
   if (aviso && antes.fed_id && antes.fed_id !== yo.fed.id) await db.from('notificaciones').insert({ fed_id: antes.fed_id, autor_id: yo.fed.id, tipo: 'reclamo', detalle: aviso })
+}
+
+// Cronogramas de Nivel Central (sincronizados desde el consolidado). En esta primera entrega sólo los ven la administración y el CED.
+const COLS_CRONOGRAMA = `id, cue, fecha_inicio, fecha_fin, tipo, proveedor, nro, semana, estado_planilla, instaladores, descripcion, observaciones, nombre_planilla, primera_vez_at, actualizado_at, school:establecimientos(id, nombre, distrito, ciudad, fed_a_cargo)`
+type UltimaSync = { fin: string | null, resultado: Record<string, unknown> | null } | null
+async function getCronogramasImpl(yo: Usuario): Promise<{ lista: Cronograma[], ultima: UltimaSync }> {
+  if (!yo.esAdmin && yo.fed.rol !== 'coordinacion') throw new Error('No tenés permiso para ver los cronogramas')
+  const lista = await fetchAll<Cronograma>((a, b) => supabaseServer().from('cronogramas').select(COLS_CRONOGRAMA).eq('en_planilla', true).gte('fecha_fin', haceDias(hoyAR(), DIAS_ATRAS))
+    .order('fecha_inicio').order('cue').order('id').range(a, b))
+  const { data } = await supabaseServer().from('cron_ejecuciones').select('fin, resultado').in('tarea', ['cronogramas', 'cronogramas-manual']).not('fin', 'is', null).order('inicio', { ascending: false }).limit(1).maybeSingle()
+  return { lista, ultima: (data as UltimaSync) ?? null }
+}
+async function sincronizarCronogramasAhoraImpl(yo: Usuario): Promise<ResultadoSync> {
+  if (!yo.esAdmin) throw new Error('Sólo la administración puede sincronizar ahora')
+  const db = supabaseServer()
+  const reg = await db.from('cron_ejecuciones').insert({ tarea: 'cronogramas-manual' }).select('id').single()
+  const cerrar = async (resultado: Record<string, unknown>) => { if (reg.data?.id) await db.from('cron_ejecuciones').update({ fin: new Date().toISOString(), resultado }).eq('id', reg.data.id) }
+  try { const r = await sincronizarCronogramas(); await cerrar({ ...r }); return r }
+  catch (e) { await cerrar({ error: errMsgServer(e) }); throw e }
 }
 
 // PostgREST devuelve como máximo 1000 filas por consulta: se pide por páginas (la vista anual supera ese límite).
@@ -744,6 +765,8 @@ export const getFichaEscuela = async (id: string) => conUsuario(yo => getFichaEs
 export const getConectividadEscuela = async (id: string) => conUsuario(() => getConectividadEscuelaImpl(id))
 export const registrarReclamo = async (input: { school_id: string, tipo: string, asunto: string }) => conUsuario(yo => registrarReclamoImpl(yo, input))
 export const getReclamos = async () => conUsuario(() => getReclamosImpl())
+export const getCronogramas = async () => conUsuario(yo => getCronogramasImpl(yo))
+export const sincronizarCronogramasAhora = async () => conUsuario(yo => sincronizarCronogramasAhoraImpl(yo))
 export const reclamosAbiertosDe = async (schoolId: string) => conUsuario(() => reclamosAbiertosDeImpl(schoolId))
 export const actualizarReclamo = async (id: string, cambios: { estado?: EstadoReclamo, nro_incidencia?: string | null, notas?: string | null }) => conUsuario(yo => actualizarReclamoImpl(yo, id, cambios))
 
