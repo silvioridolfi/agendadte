@@ -69,7 +69,12 @@ export default function Page() {
   // Administración: ver el tablero del equipo completo o la agenda de otro integrante (solo lectura).
   const [vista, setVista] = useState<{ tipo: 'equipo' } | { tipo: 'fed', fed: Fed } | null>(null)
   // La vista del equipo completo es sólo el Tablero: al ir a otra sección se vuelve a los datos propios.
-  const irA = (s: Seccion) => { setSection(s); if (s !== 'board') setVista(v => (v?.tipo === 'equipo' ? null : v)) }
+  // De dónde se vino: en el celular las secciones nuevas ofrecen un botón para volver ahí.
+  const [anterior, setAnterior] = useState<Seccion | null>(null)
+  const irA = (s: Seccion) => { if (s !== section) setAnterior(section); setSection(s); if (s !== 'board') setVista(v => (v?.tipo === 'equipo' ? null : v)) }
+  const NOMBRE_SECCION: Partial<Record<Seccion, string>> = { agenda: 'Mi agenda', board: 'Tablero', perfil: 'Mi perfil', fotos: 'Fotos', mispve: 'mis PVE', usuarios: 'Usuarios', feriados: 'Feriados', pve: 'PVE del equipo', reclamos: 'Reclamos', cronogramas: 'Cronogramas', escuelas: 'Escuelas', ayuda: 'Ayuda' }
+  const destinoVolver: Seccion = anterior && anterior !== section ? anterior : profile?.rol === 'coordinacion' ? 'board' : 'agenda'
+  const volver = { destino: NOMBRE_SECCION[destinoVolver] ?? 'inicio', ir: () => { setVista(null); irA(destinoVolver); window.scrollTo({ top: 0 }) } }
   const irAlInicio = () => { setVista(null); irA(profile?.rol === 'coordinacion' ? 'board' : 'agenda'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   // `preset`: valores iniciales (ej.: reunión de equipo con todo el equipo invitado).
   const [editing, setEditing] = useState<{ item: AgendaItem | null, fecha?: string, preset?: ItemPreset } | null>(null)
@@ -181,9 +186,9 @@ export default function Page() {
     </div>
     {/* Cada pantalla entra con un fundido corto; cambiar de sección o de vista la vuelve a animar. */}
     <div key={`${section}-${vista?.tipo ?? ''}-${vista?.tipo === 'fed' ? vista.fed.id : ''}`} className="anim-entrada">
-    {section === 'reclamos' ? <RegistroReclamos profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} soloMiosInicial={reclamosDesdeAcceso && profile.rol === 'fed'} />
-      : section === 'escuelas' ? <MisEscuelas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
-      : section === 'cronogramas' ? <Cronogramas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} cuenta={sesion.email} />
+    {section === 'reclamos' ? <RegistroReclamos profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} soloMiosInicial={reclamosDesdeAcceso && profile.rol === 'fed'} volver={volver} />
+      : section === 'escuelas' ? <MisEscuelas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} volver={volver} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
+      : section === 'cronogramas' ? <Cronogramas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} cuenta={sesion.email} volver={volver} />
       : section === 'pve' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <PveEquipoView />
       : section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><div className="flex flex-col gap-4"><EventosPanel onSaved={changed} /><FeriadosView autorId={profile.id} onSaved={changed} /></div></main>
       : section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); irA('agenda') } }} />

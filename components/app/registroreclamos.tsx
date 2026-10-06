@@ -10,14 +10,14 @@ import { type Fed } from '@/lib/agenda'
 import { ESTADOS_RECLAMO, ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL, ESTADO_RECLAMO_PLURAL, filtrarReclamos, origenDeNumero, puedeResolverReclamo, resumenReclamos, sumarNota, type EstadoReclamo, type FiltrosReclamo, type Reclamo } from '@/lib/reclamos-registro'
 import { titleCase } from '@/lib/format'
 import { esDelFed } from '@/lib/cronogramas'
-import { ErrorBox, Skeleton, actualizarReclamo, eyebrow, errMsg, getReclamos, resolverReclamo, selectClass } from '@/components/app/comun'
+import { BotonVolver, ErrorBox, Skeleton, actualizarReclamo, eyebrow, errMsg, getReclamos, resolverReclamo, selectClass } from '@/components/app/comun'
 import { Field } from '@/components/app/formulario'
 
 const ZONA = 'America/Argentina/Buenos_Aires'
 const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString('es-AR', { timeZone: ZONA, day: '2-digit', month: '2-digit', year: 'numeric' })
 
 // Registro de reclamos de conectividad. El CED anota el N° de ticket (PBA) o de incidencia (Educar) y si se resolvió; la administración y los FED lo ven en modo lectura.
-export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial }: { profile: Fed, feds: Fed[], esAdmin: boolean, soloMiosInicial?: boolean }) {
+export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial, volver }: { profile: Fed, feds: Fed[], esAdmin: boolean, soloMiosInicial?: boolean, volver?: { destino: string, ir: () => void } }) {
   const [lista, setLista] = useState<Reclamo[] | null>(null)
   const [error, setError] = useState('')
   const [filtros, setFiltros] = useState<FiltrosReclamo>({ estado: 'abiertos', fedId: '', conexion: '', busqueda: '' })
@@ -37,6 +37,7 @@ export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial }: { 
   const set = <K extends keyof FiltrosReclamo>(k: K, v: FiltrosReclamo[K]) => setFiltros(f => ({ ...f, [k]: v }))
 
   return <main className="mx-auto w-full min-w-0 max-w-5xl px-4 pb-32 pt-6 lg:px-10">
+    {volver && <BotonVolver onClick={volver.ir} destino={volver.destino} />}
     <p className={eyebrow}>Conectividad</p>
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-2xl font-bold">Registro de reclamos</h2>
       {lista && <Button type="button" variant="outline" size="sm" disabled={exportando || !visibles.length} onClick={async () => { setExportando(true); setErrorExcel(''); try { const { exportarReclamos } = await import('@/lib/exportar'); await exportarReclamos(visibles, nombreFed) } catch (e) { setErrorExcel(errMsg(e)) } finally { setExportando(false) } }}>{exportando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}Excel ({visibles.length})</Button>}

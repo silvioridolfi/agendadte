@@ -79,7 +79,7 @@ De las acciones de otros integrantes ves la fecha, el tipo, el estado y quién l
 ## Agendar desde la ficha
 **Agendar acá** abre el formulario con la escuela ya elegida. No aparece cuando estás mirando la agenda de otra persona (solo lectura).` },
   { id: 'mis-escuelas', titulo: 'Mis escuelas', para: ['fed', 'ced'], md: () => `
-Es el listado de las escuelas que tenés a cargo, con lo que pasa en cada una. Se abre desde el menú de las iniciales (**Mis escuelas**). El FED a cargo de cada escuela sale de la base de establecimientos: si falta una tuya o sobra una, avisale al CED.
+Es el listado de las escuelas que tenés a cargo, con lo que pasa en cada una. Se abre desde el menú de las iniciales (**Mis escuelas**) o desde el acceso del Tablero; en el celular, **Volver** (arriba) te lleva a la pantalla de la que venías. El FED a cargo de cada escuela sale de la base de establecimientos: si falta una tuya o sobra una, avisale al CED.
 ## Qué ves
 Una tarjeta por escuela, con su sigla, CUE, localidad y distrito, y de un vistazo: el **próximo cronograma**, los **reclamos de conectividad abiertos**, la **próxima acción** planificada y la **última visita**. Arriba se cuentan las escuelas, las que tienen cronograma y las que tienen un reclamo abierto.
 ## Buscar y filtrar
@@ -112,7 +112,7 @@ Los demás tipos piden lo que indica la guía: formulario y plano (mudanza, soli
 [i] El mail va a ${RECLAMOS_PARA}: lo recibe el CED, que lo reenvía a la DTE (ella lo deriva a PBA o a Educar). Un mail por escuela y con el CUE de 8 dígitos. El botón abre Gmail con tu cuenta institucional; en el celular lo abre directo en la app de Gmail (con la cuenta que tengas activa ahí) y, si no la tenés instalada, en el navegador. Los archivos los adjuntás vos, la agenda no los envía.
 [!] Si la escuela ya tiene un reclamo abierto, no abras una cadena nueva: respondé en la original, sin el "Fwd" antes del código. Si lo enviás más tarde, volvé a armar el reclamo para que el asunto lleve la hora correcta.` },
   { id: 'registro-reclamos', titulo: 'Registro de reclamos de conectividad', para: ['fed', 'ced'], md: () => `
-Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la planilla manual. Se abre desde el menú de las iniciales (**Registro de reclamos**).
+Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la planilla manual. Se abre desde el menú de las iniciales (**Registro de reclamos**) o desde el acceso del Tablero; en el celular, **Volver** (arriba) te lleva a la pantalla de la que venías.
 ## Cómo se carga
 1. Armás el reclamo (**Armar reclamo de conectividad**) y lo mandás por mail al CED.
 2. Tocás **Reclamo enviado**: queda registrado con tu nombre, la escuela, el tipo de reclamo, el asunto y el tipo de conexión de la escuela. Al CED le llega una notificación de reclamo nuevo.
@@ -128,7 +128,7 @@ Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado,
 [i] Al armar un reclamo de una escuela que ya tiene uno abierto, la agenda te avisa para que sigas esa cadena en lugar de abrir otra.` },
 
   { id: 'cronogramas', titulo: 'Cronogramas de conectividad', para: ['fed', 'ced'], md: () => `
-Son los cronogramas de conectividad (reparaciones e instalaciones de piso tecnológico y de enlace, certificaciones…), tanto de Educar como de PBA, que ya vienen establecidos por otro organismo, con su fecha y su empresa. La agenda no los programa ni puede cambiarles la fecha: los lee de la pestaña **Cronogramas** del consolidado de conectividad para que el equipo los tenga a mano, avise a las escuelas y anote cómo salieron. Se abre desde el menú de las iniciales (**Cronogramas**).
+Son los cronogramas de conectividad (reparaciones e instalaciones de piso tecnológico y de enlace, certificaciones…), tanto de Educar como de PBA, que ya vienen establecidos por otro organismo, con su fecha y su empresa. La agenda no los programa ni puede cambiarles la fecha: los lee de la pestaña **Cronogramas** del consolidado de conectividad para que el equipo los tenga a mano, avise a las escuelas y anote cómo salieron. Se abre desde el menú de las iniciales (**Cronogramas**) o desde el acceso del Tablero; en el celular, **Volver** (arriba) te lleva a la pantalla de la que venías.
 ## Qué ves
 Una tarjeta por cronograma y escuela: la ventana de fechas, el tipo, el proveedor, el N° del cronograma o de la incidencia, el FED a cargo de la escuela y el estado que figura en la planilla (sólo de referencia). Al tocarla se ven los instaladores (nombre y DNI o CUIL, o el enlace que figura en la planilla), la descripción y las observaciones de territorio. Cada FED ve los cronogramas de **sus escuelas**; el CED y la administración ven todos.
 ## Cómo salió
