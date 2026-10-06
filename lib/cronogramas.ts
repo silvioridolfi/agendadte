@@ -1,4 +1,4 @@
-// Cronogramas de Nivel Central (pestaña "Cronogramas" del consolidado de conectividad): lectura de la planilla, tipos y filtros de la sección (puro).
+// Cronogramas de trabajos en escuelas (pestaña "Cronogramas" del consolidado de conectividad): lectura de la planilla, tipos y filtros de la sección (puro).
 import { siglaNombre } from '@/lib/siglas'
 import { titleCase } from '@/lib/format'
 import { saludoDe } from '@/lib/reclamos'
@@ -120,7 +120,7 @@ export function haceDias(hoy: string, dias: number): string {
 
 // ---------- Sección Cronogramas ----------
 
-// Estado que el equipo anota en la agenda (la planilla de Nivel Central queda como referencia). El último que se anota es el vigente.
+// Estado que el equipo anota en la agenda (la planilla queda como referencia). El último que se anota es el vigente.
 export const ESTADOS_SEGUIMIENTO = ['realizado', 'no_realizado', 'reprogramado'] as const
 export type EstadoSeguimiento = typeof ESTADOS_SEGUIMIENTO[number]
 export const ESTADO_SEGUIMIENTO_LABEL: Record<EstadoSeguimiento, string> = { realizado: 'Realizado', no_realizado: 'No se realizó', reprogramado: 'Reprogramado' }
@@ -265,7 +265,7 @@ export function personaDe(linea: string): string {
 }
 
 // Mensaje informativo para el directivo: qué trabajo se hace en la escuela, cuándo, quién lo hace y con qué empresa (los cronogramas los establece otro
-// organismo: no se piden ni se cambian fechas). El responsable sale de la planilla con nombre y DNI o CUIL, o con el enlace que cargó Nivel Central.
+// organismo: no se piden ni se cambian fechas). El responsable sale de la planilla con nombre y DNI o CUIL, o con el enlace que figura en la planilla.
 export function mensajeEscuela(c: Pick<Cronograma, 'cue' | 'fecha_inicio' | 'fecha_fin' | 'tipo' | 'proveedor' | 'instaladores'> & { school: { nombre: string | null } | null, nombre_planilla?: string | null }, fed: string, ahora: Date): { asunto: string, cuerpo: string } {
   const escuela = c.school?.nombre ? siglaNombre(titleCase(c.school.nombre)) : c.nombre_planilla ? titleCase(c.nombre_planilla) : `CUE ${c.cue}`
   const personal = (c.instaladores ?? '').split('\n').map(x => x.trim()).filter(Boolean)

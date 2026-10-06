@@ -42,7 +42,7 @@ function Titulo({ n, autor }: { n: Notificacion, autor: (id: string | null) => s
   const quien = n.autor_id && <b>{autor(n.autor_id)}</b>
   if (n.tipo === 'inactividad') return <>{quien} sin actividad reciente en la agenda</>
   if (n.tipo === 'reclamo') return claseReclamo(n) === 'nuevo' ? <>{quien} registró un <b>reclamo de conectividad</b></> : <><b>Reclamo de conectividad</b></>
-  if (n.tipo === 'cronograma') return <>{quien} <b>Cronogramas</b> de Nivel Central</>
+  if (n.tipo === 'cronograma') return <>{quien} <b>Cronogramas</b></>
   if (n.tipo === 'pve') {
     const c = clasePve(n)
     return <>{quien} {c === 'devuelta' ? <>devolvió tu <b>PVE</b></> : c === 'entrega' ? <>entregó su <b>PVE</b></> : <>Recordatorio de <b>PVE</b></>}</>
