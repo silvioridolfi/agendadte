@@ -6,6 +6,7 @@ import { UMBRAL_DIAS_HABILES } from '@/lib/actividad'
 import { DESTINATARIOS_BASE, PROPUESTAS_DE_CLUB } from '@/lib/encuentro'
 import { TOLERANCIA } from '@/lib/horas'
 import { DIA_HABIL_AVISO, DIA_HABIL_RECORDATORIO, DIA_HABIL_VENCIMIENTO } from '@/lib/pve-reglas'
+import { DIAS_ATRAS, SIN_FED, etiquetaTipo } from '@/lib/cronogramas'
 
 export type Rol = 'fed' | 'ced'
 export type Tema = { id: string, titulo: string, para: Rol[], md: () => string }
@@ -108,6 +109,16 @@ Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la
 ## Quién ve y quién edita
 Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado, FED, tipo de conexión y búsqueda por CUE, escuela, número o nombre. Solo el CED los actualiza; la administración los ve en modo lectura. El botón **Excel** descarga la lista tal como la estás viendo, con las mismas columnas de la planilla del CED.
 [i] Al armar un reclamo de una escuela que ya tiene uno abierto, la agenda te avisa para que sigas esa cadena en lugar de abrir otra.` },
+
+  { id: 'cronogramas', titulo: 'Cronogramas de Nivel Central', para: ['ced'], md: () => `
+Son las visitas que Nivel Central programa en las escuelas (mantenimiento, reparación e instalación de piso, instalaciones de enlace, certificaciones…). La agenda las lee de la pestaña **Cronogramas** del consolidado de conectividad. Se abre desde el menú de las iniciales (**Cronogramas**). Por ahora es solo lectura y la ven el CED y la administración.
+## Qué muestra
+Una tarjeta por cronograma y escuela: la ventana de fechas, el tipo, el proveedor, el N° del cronograma o de la incidencia, el FED a cargo de la escuela y el estado que figura en la planilla. Al tocarla se ven los instaladores (nombre y DNI o CUIL, o el enlace que cargó Nivel Central), la descripción y las observaciones de territorio.
+## Pestañas y filtros
+**Próximos** (los que todavía no terminaron), **Pasados** y **Todos**. Se puede filtrar por distrito, FED a cargo, tipo y proveedor, y buscar por CUE, escuela o número. Si una escuela no tiene FED asignado, figura como **${SIN_FED}**.
+## Cómo se actualiza
+Se lee sola cada madrugada y se guardan los cronogramas que terminaron hasta ${DIAS_ATRAS} días atrás. La administración puede tocar **Sincronizar ahora**. La agenda nunca modifica la planilla; si un cronograma desaparece de la planilla, deja de mostrarse.
+[i] Los tipos LAC_M, LAC y LAC_R se muestran como ${etiquetaTipo('LAC_M')}, ${etiquetaTipo('LAC')} y ${etiquetaTipo('LAC_R')}.` },
 
   { id: 'registro', titulo: 'Registrar una acción', para: ['fed'], md: () => `
 ## Paso a paso
