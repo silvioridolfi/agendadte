@@ -76,6 +76,21 @@ Los datos de la escuela se agrupan en tarjetas de color (ubicación, institució
 De las acciones de otros integrantes ves la fecha, el tipo, el estado y quién la hizo. El detalle (descripción, participantes, fotos) lo ves solo en las tuyas, en las que te etiquetaron y, si sos CED, en todas.
 ## Agendar desde la ficha
 **Agendar acá** abre el formulario con la escuela ya elegida. No aparece cuando estás mirando la agenda de otra persona (solo lectura).` },
+  { id: 'mis-escuelas', titulo: 'Mis escuelas', para: ['fed', 'ced'], md: () => `
+Es el listado de las escuelas que tenés a cargo, con lo que pasa en cada una. Se abre desde el menú de las iniciales (**Mis escuelas**). El FED a cargo de cada escuela sale de la base de establecimientos: si falta una tuya o sobra una, avisale al CED.
+## Qué ves
+Una tarjeta por escuela, con su sigla, CUE, localidad y distrito, y de un vistazo: el **próximo cronograma** de Nivel Central, los **reclamos de conectividad abiertos**, la **próxima acción** planificada y la **última visita**. Arriba se cuentan las escuelas, las que tienen cronograma y las que tienen un reclamo abierto.
+## Buscar y filtrar
+Escribí el nombre, la sigla o el CUE (por ejemplo "EP 4" o "ees 31"). También podés filtrar por distrito y nivel, y quedarte con las que tienen cronograma o reclamo abierto.
+## La ficha completa
+Al tocar una escuela se abre la ficha del buscador (datos, próximas acciones, clubes y prácticas, historial) con cuatro secciones más:
+- **Conectividad:** enlace, piso tecnológico, proveedores, ANI y recurso primario.
+- **Reclamos** de esa escuela, con su estado y número.
+- **Cronogramas** de Nivel Central, con el estado que anotó el equipo.
+- **Contactos** del directivo, con teléfono y correo para llamar o escribir.
+Desde la ficha también podés **agendar** una acción o **armar un reclamo** con la escuela ya elegida.
+## Quién ve qué
+Cada FED ve sus escuelas y, de ellas, todo el detalle. El CED y la administración ven todas las escuelas, con un filtro por FED a cargo (las que no tienen figuran como **${SIN_FED}**); la administración puede quedarse solo con las suyas. De una escuela de otro FED, el buscador (la lupa) muestra los datos y el historial, pero no la conectividad, los reclamos, los cronogramas ni los contactos.` },
   { id: 'reclamos', titulo: 'Reclamos de conectividad', para: ['fed', 'ced'], md: () => `
 Arma el asunto y el cuerpo del mail de un reclamo de conectividad, con la lista de lo que hay que adjuntar, según la guía de la DTE. Se abre desde el menú de las iniciales (**Reclamo de conectividad**), desde la ficha de una escuela y desde una acción de **Conectividad** (con la escuela ya elegida).
 ## Cómo se arma
