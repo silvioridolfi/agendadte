@@ -15,7 +15,7 @@ import { avisaPorFecha } from '@/lib/avisos'
 import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
 import { tipoDe, type EscuelaConectividad } from '@/lib/reclamos'
 import { ESTADOS_RECLAMO, avisoDeAlta, avisoDeCambio, conexionDe, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
-import { DIAS_ATRAS, ESTADOS_SEGUIMIENTO, MAX_NOTA, PIDE_MOTIVO, avisoEstadoCed, esDelFed, haceDias, puedeMarcar, type Cronograma, type EstadoSeguimiento, type Seguimiento } from '@/lib/cronogramas'
+import { AVISOS_CRONOGRAMA, DIAS_ATRAS, ESTADOS_SEGUIMIENTO, MAX_NOTA, PIDE_MOTIVO, avisoDe, avisoEstadoCed, avisoJefaturaFed, esDelFed, haceDias, puedeAvisarJefatura, puedeMarcar, type AvisoCronograma, type Cronograma, type EstadoSeguimiento, type Seguimiento, type TipoSeguimiento } from '@/lib/cronogramas'
 import { sincronizarCronogramas, type ResultadoSync } from '@/lib/cronogramas-sync'
 import { armarResumen, type ContactoEscuela, type ResumenEscuela } from '@/lib/mis-escuelas'
 import { estadoAlCrear } from '@/lib/estado'
@@ -155,7 +155,7 @@ async function conHistorial(filas: Omit<Cronograma, 'historial'>[]): Promise<Cro
   for (let i = 0; i < filas.length; i += 200) {
     const { data, error } = await supabaseServer().from('cronogramas_seguimiento').select('cronograma_id, estado, nota, fed_id, created_at').in('cronograma_id', filas.slice(i, i + 200).map(c => c.id)).order('created_at', { ascending: false })
     if (error) throw new Error(error.message)
-    for (const h of data ?? []) historial.set(h.cronograma_id as string, [...(historial.get(h.cronograma_id as string) ?? []), { estado: h.estado as EstadoSeguimiento, nota: h.nota as string | null, fed_id: h.fed_id as string | null, created_at: h.created_at as string }])
+    for (const h of data ?? []) historial.set(h.cronograma_id as string, [...(historial.get(h.cronograma_id as string) ?? []), { estado: h.estado as TipoSeguimiento, nota: h.nota as string | null, fed_id: h.fed_id as string | null, created_at: h.created_at as string }])
   }
   return filas.map(c => ({ ...c, historial: historial.get(c.id) ?? [] }))
 }
@@ -168,6 +168,46 @@ async function getCronogramasImpl(yo: Usuario): Promise<{ lista: Cronograma[], u
   const { data } = await db.from('cron_ejecuciones').select('fin, resultado').in('tarea', ['cronogramas', 'cronogramas-manual']).not('fin', 'is', null).order('inicio', { ascending: false }).limit(1).maybeSingle()
   return { lista, ultima: todos ? ((data as UltimaSync) ?? null) : null }
 }
+// Anota que se avisó a la jefatura (el CED) o a la escuela (el FED a cargo, el CED o la administración). Una sola vez por cronograma.
+// Cuando el CED avisa a la jefatura, el FED a cargo recibe una notificación: le falta avisar a la escuela.
+async function avisarCronogramaImpl(yo: Usuario, id: string, aviso: AvisoCronograma): Promise<Seguimiento> {
+  if (!UUID.test(id)) throw new Error('Cronograma inválido')
+  if (!AVISOS_CRONOGRAMA.includes(aviso)) throw new Error('Aviso inválido')
+  const db = supabaseServer()
+  const { data: c, error } = await db.from('cronogramas').select('id, cue, fecha_inicio, fecha_fin, tipo, school:establecimientos(nombre, fed_a_cargo)').eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  const crono = c as unknown as (Pick<Cronograma, 'id' | 'cue' | 'fecha_inicio' | 'fecha_fin' | 'tipo'> & { school: { nombre: string | null, fed_a_cargo: string | null } | null }) | null
+  if (!crono) throw new Error('No se encontró el cronograma')
+  const quien = { esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }
+  if (aviso === 'jefatura_avisada' ? !puedeAvisarJefatura(quien) : !puedeMarcar(quien, { school: crono.school ? { id: '', nombre: crono.school.nombre, distrito: null, ciudad: null, fed_a_cargo: crono.school.fed_a_cargo } : null })) throw new Error(aviso === 'jefatura_avisada' ? 'Sólo el CED puede anotar que se avisó a la jefatura' : 'Sólo el FED a cargo de la escuela o el CED pueden anotar este aviso')
+  const { data: previos, error: e0 } = await db.from('cronogramas_seguimiento').select('estado, nota, fed_id, created_at').eq('cronograma_id', id).eq('estado', aviso).order('created_at', { ascending: false }).limit(1)
+  if (e0) throw new Error(e0.message)
+  if (previos?.length && avisoDe({ historial: previos as unknown as Seguimiento[] }, aviso)) return previos[0] as unknown as Seguimiento
+  const fila = { cronograma_id: id, estado: aviso, nota: null, fed_id: yo.fed.id }
+  const { data: nuevo, error: e2 } = await db.from('cronogramas_seguimiento').insert(fila).select('created_at').single()
+  if (e2) throw new Error(e2.message)
+  await audit('cronogramas', id, 'estado', yo.fed.id, fila)
+  if (aviso === 'jefatura_avisada') {
+    const { data: feds } = await db.from('feds').select('id, nombre_completo').eq('rol', 'fed')
+    const dest = (feds ?? []).filter(f => f.id !== yo.fed.id && esDelFed(crono.school?.fed_a_cargo, f.nombre_completo as string))
+    if (dest.length) await db.from('notificaciones').insert(dest.map(f => ({ fed_id: f.id as string, autor_id: yo.fed.id, tipo: 'cronograma', detalle: avisoJefaturaFed(crono) })))
+  }
+  return { estado: aviso, nota: null, fed_id: yo.fed.id, created_at: nuevo.created_at as string }
+}
+// Contactos de la escuela de un cronograma, para armar el mensaje de aviso (el FED a cargo, el CED y la administración).
+async function getContactosCronogramaImpl(yo: Usuario, id: string): Promise<ContactoEscuela[]> {
+  if (!UUID.test(id)) throw new Error('Cronograma inválido')
+  const db = supabaseServer()
+  const { data: c, error } = await db.from('cronogramas').select('cue, school:establecimientos(nombre, fed_a_cargo)').eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  const crono = c as unknown as { cue: number, school: { nombre: string | null, fed_a_cargo: string | null } | null } | null
+  if (!crono) throw new Error('No se encontró el cronograma')
+  if (!puedeMarcar({ esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }, { school: crono.school ? { id: '', nombre: crono.school.nombre, distrito: null, ciudad: null, fed_a_cargo: crono.school.fed_a_cargo } : null })) throw new Error('Estos datos los ve el FED a cargo de la escuela')
+  const { data, error: e2 } = await db.from('contactos').select('nombre, apellido, cargo, telefono, correo, correo_laboral, es_principal').eq('cue', crono.cue).order('es_principal', { ascending: false })
+  if (e2) throw new Error(e2.message)
+  return (data ?? []) as ContactoEscuela[]
+}
+
 // ---- Mis escuelas: las escuelas que tiene a cargo cada FED (establecimientos.fed_a_cargo). La coordinación y la administración ven todas.
 async function getMisEscuelasImpl(yo: Usuario): Promise<ResumenEscuela[]> {
   const db = supabaseServer(), hoy = hoyAR()
@@ -838,6 +878,8 @@ export const getReclamos = async () => conUsuario(() => getReclamosImpl())
 export const getMisEscuelas = async () => conUsuario(yo => getMisEscuelasImpl(yo))
 export const getExtrasEscuela = async (id: string) => conUsuario(yo => getExtrasEscuelaImpl(yo, id))
 export const getCronogramas = async () => conUsuario(yo => getCronogramasImpl(yo))
+export const avisarCronograma = async (id: string, aviso: AvisoCronograma) => conUsuario(yo => avisarCronogramaImpl(yo, id, aviso))
+export const getContactosCronograma = async (id: string) => conUsuario(yo => getContactosCronogramaImpl(yo, id))
 export const marcarCronograma = async (id: string, estado: EstadoSeguimiento, nota: string) => conUsuario(yo => marcarCronogramaImpl(yo, id, estado, nota))
 export const sincronizarCronogramasAhora = async () => conUsuario(yo => sincronizarCronogramasAhoraImpl(yo))
 export const reclamosAbiertosDe = async (schoolId: string) => conUsuario(() => reclamosAbiertosDeImpl(schoolId))
