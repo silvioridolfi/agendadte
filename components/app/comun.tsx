@@ -4,6 +4,7 @@ import { claseDestacado, type Destacados } from '@/lib/destacados'
 import { createContext, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, ArrowUp, Check, Loader2, ChevronLeft, ChevronRight, CircleAlert, PartyPopper, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { esVersionVieja } from '@/lib/version'
 import * as api from '@/app/actions'
 import { guardarCache, leerCache } from '@/components/app/offline'
 import { titleCase } from '@/lib/format'
@@ -101,8 +102,14 @@ export const districtsLabel = (f: Fed) => (f.distritos_a_cargo.length ? f.distri
 
 // Desenvuelve el Result de las server actions: lanza con el mensaje real del servidor.
 // Sesión vencida o cerrada en el servidor: se avisa a la página para volver a la pantalla de ingreso.
+// Cuando se publica una versión nueva, una pestaña que quedó abierta con la anterior pide acciones del servidor que ya no existen
+// ("Server Action … was not found"): se avisa a la página para ofrecer actualizarla y se muestra un mensaje claro.
 export const call = <A extends unknown[], T>(fn: (...a: A) => Promise<api.Result<T>>) => async (...a: A): Promise<T> => {
-  const r = await fn(...a)
+  let r: api.Result<T>
+  try { r = await fn(...a) } catch (e) {
+    if (esVersionVieja(e instanceof Error ? e.message : String(e))) { if (typeof window !== 'undefined') window.dispatchEvent(new Event('agenda-version-nueva')); throw new Error('La agenda se actualizó. Actualizá la página para seguir.') }
+    throw e
+  }
   if (!r.ok) {
     if (r.error === 'SESION_VENCIDA') { if (typeof window !== 'undefined') window.dispatchEvent(new Event('agenda-sesion-vencida')); throw new Error('Tu sesión venció. Ingresá de nuevo.') }
     throw new Error(r.error)

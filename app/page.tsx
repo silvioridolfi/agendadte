@@ -67,6 +67,8 @@ export default function Page() {
   // La sección abierta se recuerda en la pestaña del navegador: al recargar se vuelve al mismo lugar.
   useEffect(() => { if (sesion) storage(() => sessionStorage.setItem(SECCION_KEY, section)) }, [section, sesion])
   const [cambiandoPass, setCambiandoPass] = useState(false)
+  // Se publicó una versión nueva mientras esta pestaña estaba abierta: hay que actualizarla.
+  const [versionNueva, setVersionNueva] = useState(false)
   // Administración: ver el tablero del equipo completo o la agenda de otro integrante (solo lectura).
   const [vista, setVista] = useState<{ tipo: 'equipo' } | { tipo: 'fed', fed: Fed } | null>(null)
   // La vista del equipo completo es sólo el Tablero: al ir a otra sección se vuelve a los datos propios.
@@ -110,8 +112,10 @@ export default function Page() {
   useEffect(() => {
     cargarSesion()
     const vencida = () => setSesion(null)
+    const nueva = () => setVersionNueva(true)
     window.addEventListener('agenda-sesion-vencida', vencida)
-    return () => window.removeEventListener('agenda-sesion-vencida', vencida)
+    window.addEventListener('agenda-version-nueva', nueva)
+    return () => { window.removeEventListener('agenda-sesion-vencida', vencida); window.removeEventListener('agenda-version-nueva', nueva) }
   }, [cargarSesion])
   const cerrarSesion = async () => { try { await salir() } finally { storage(() => sessionStorage.removeItem(SECCION_KEY)); limpiarCache(); setSesion(null); setVista(null); setFeds(null); setEditing(null); setSelected(null) } }
   const changed = (message: string, acciones: AccionAviso[] = []) => { setReloadKey(k => k + 1); setToast(message); setToastAcciones(acciones) }
@@ -183,6 +187,12 @@ export default function Page() {
           <span className="hidden truncate sm:inline">{vista.tipo === 'equipo' ? <>Estás viendo el <b>tablero del equipo completo</b></> : <>Estás viendo la agenda de <b>{vista.fed.nombre_completo}</b></>} · Solo lectura</span></span>
         <button type="button" onClick={() => { setVista(null); irA('agenda') }} className="min-h-9 shrink-0 rounded-full bg-white px-3 text-xs font-semibold text-dte-petroleo shadow-e1 hover:bg-dte-tinte md:min-h-8"><span className="sm:hidden">Mi agenda</span><span className="hidden sm:inline">Volver a mi agenda</span></button></div>
     </div>}
+      {versionNueva && <div role="alert" className="border-b border-aviso-borde bg-aviso-fondo px-4 py-2 text-aviso-fuerte">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-2 text-sm lg:px-6">
+          <span className="min-w-0 font-semibold">La agenda se actualizó. Actualizá la página para seguir trabajando.</span>
+          <button type="button" onClick={() => window.location.reload()} className="min-h-9 shrink-0 rounded-full bg-aviso-fuerte px-4 text-sm font-semibold text-white">Actualizar</button>
+        </div>
+      </div>}
       <AvisosBanner feds={feds ?? []} puedeSubirPve={profile.rol === 'fed'} onIrAPve={() => { setVista(null); irA('mispve') }} onReclamos={() => { setVista(null); setReclamosDesdeAcceso(false); irA('reclamos') }} rol={rolAyuda} onNovedad={tema => { setVista(null); setTemaAyuda(tema); irA('ayuda') }} />
     </div>
     {/* Cada pantalla entra con un fundido corto; cambiar de sección o de vista la vuelve a animar. */}
