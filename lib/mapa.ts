@@ -11,6 +11,8 @@ export const ubicacionEnRegion = (lat: number, lon: number) => lat >= REGION.lat
 export type PuntoMapa = {
   id: string, tipo: 'escuela' | 'jefatura', nombre: string, lat: number, lon: number,
   cue: number | null, distrito: string | null, direccion: string | null, fed: string | null, nivel: string | null, predio: number | null,
+  // Próximo cronograma de conectividad en una línea (sólo escuelas).
+  crono: string | null,
 }
 export type Vista = { lat: number, lon: number, z: number }
 

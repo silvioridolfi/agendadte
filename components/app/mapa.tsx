@@ -94,6 +94,7 @@ export function SeccionMapa({ profile, feds, esAdmin, puedeAgendar, onAgendar, o
             <button type="button" onClick={() => setElegido(null)} aria-label="Cerrar" className="-mr-1 -mt-1 flex size-10 shrink-0 items-center justify-center rounded-full text-dte-gris hover:bg-dte-fondo"><X className="size-5" aria-hidden /></button></div>
           {elegido.direccion && <p className="mt-1 break-words text-sm">{titleCase(elegido.direccion)}</p>}
           {elegido.tipo === 'escuela' && <p className="mt-0.5 text-sm text-dte-gris">FED a cargo: {elegido.fed ?? 'sin asignar'}</p>}
+          {elegido.crono && <p className="mt-0.5 break-words text-sm font-medium text-pba-celeste-texto">Cronograma próximo: {elegido.crono}</p>}
           {hermanas.length > 0 && <div className="mt-1.5 text-sm"><p className="text-dte-gris">{hermanas.length === 1 ? 'Comparte el predio' : 'Comparten el predio'} {elegido.predio} con:</p>
             <ul className="flex flex-col">{hermanas.map(h => <li key={h.id}><button type="button" onClick={() => setFicha({ tipo: 'escuela', id: h.id })} className="min-h-9 text-left font-semibold text-dte-petroleo underline underline-offset-2">{nombreHermana(h)}</button></li>)}</ul></div>}
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">

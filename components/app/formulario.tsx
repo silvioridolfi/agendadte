@@ -83,7 +83,8 @@ export function SchoolPicker({ value, onChange, onOrganismo, enLinea }: { value:
             <span className="block text-xs text-dte-gris">Código {x.o.codigo}{x.o.localidad ? ` · ${titleCase(x.o.localidad)}` : ''}</span></>
           : <><span className="block font-semibold leading-snug">{schoolName(x.s)}</span>
             <span className="block text-xs text-dte-gris">CUE {x.s.cue ?? '—'}{schoolPlace(x.s) ? ` · ${schoolPlace(x.s)}` : ''}</span>
-            {lineaPredio(x.s) && <span className="block break-words text-xs font-medium text-club-violeta">{lineaPredio(x.s)}</span>}</>}
+            {lineaPredio(x.s) && <span className="block break-words text-xs font-medium text-club-violeta">{lineaPredio(x.s)}</span>}
+            {x.s.crono && <span className="block break-words text-xs font-medium text-pba-celeste-texto">Cronograma próximo: {x.s.crono}</span>}</>}
         </button>)}
     </div>}
   </div>

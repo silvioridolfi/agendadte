@@ -22,7 +22,7 @@ import { estadoAlCrear } from '@/lib/estado'
 import { COLS_ORGANISMO, cambiosDeOrganismo, type Jefatura, type JefaturaResumen, type ValoresOrganismo } from '@/lib/organismos'
 import type { PuntoMapa, PuntosMapa } from '@/lib/mapa'
 import { gruposPorPredio, hermanasDe } from '@/lib/predio'
-import { cruceDe, type CronoCorto, type CruceReclamo, type EstadoCrono } from '@/lib/cruce'
+import { cruceDe, proximosDe, resumenProximos, type CronoCorto, type CruceReclamo, type EstadoCrono } from '@/lib/cruce'
 import { CLAVES_CONECTIVIDAD, COLS_EDITABLES, ORIGEN_OPCIONES, cambiosDeEscuela, historialDeContacto, nivelEdicion, resumenContacto, seccionDe, validarContacto, type ContactoEditable, type ContactoInput, type EdicionEscuela, type NivelEdicion, type OpcionesEscuela, type ValoresEscuela } from '@/lib/escuelas-edicion'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -63,7 +63,8 @@ async function searchSchoolsImpl(query: string): Promise<School[]> {
     gruposDePredio(db),
   ])
   const predioDe = new Map((predios.data ?? []).map(r => [r.id as string, r.predio as number | null]))
-  return escuelas.map(e => ({ ...e, predio: predioDe.get(e.id) ?? null, comparte: hermanasDe(grupos, e.id, predioDe.get(e.id)) }))
+  const proximos = await proximosPorEscuela(db, escuelas.map(e => e.id))
+  return escuelas.map(e => ({ ...e, predio: predioDe.get(e.id) ?? null, comparte: hermanasDe(grupos, e.id, predioDe.get(e.id)), crono: resumenProximos(proximos.get(e.id) ?? []) }))
 }
 
 // Ficha de una escuela. Todos ven el historial de la escuela; el detalle de cada acción sólo llega para quien participó o es de coordinación.
@@ -90,6 +91,7 @@ async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuel
   const escuela = { ...resto, lat, lon, predio: predioValidoServidor(resto.predio), comparte: hermanasDe(grupos, id, resto.predio as number | null), mapa: lat != null && lon != null ? `${lat},${lon}` : texto } as unknown as DatosEscuela
   const jefatura = await jefaturaDe(db, escuela.distrito)
   const contactos = await contactosDe(db, escuela.cue)
+  const proximos = (await proximosPorEscuela(db, [id])).get(id) ?? []
   const todo = yo.fed.rol === 'coordinacion'
   const historial: FilaHistorial[] = ((its.data ?? []) as unknown as AgendaItem[]).filter(i => !esAusencia(i.accion)).map(i => {
     const propia = i.fed_id === yo.fed.id || (i.participantes ?? []).some(p => p.fed_id === yo.fed.id)
@@ -98,7 +100,7 @@ async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuel
   const clubes: ClubDeEscuela[] = ((cls.data ?? []) as unknown as (Omit<ClubDeEscuela, 'realizados' | 'esOrigen'> & { school_id: string | null, encuentros: { item: { estado: string } | { estado: string }[] | null }[] })[]).map(({ encuentros, school_id, ...c }) => ({
     ...c, esOrigen: school_id !== id, realizados: encuentros.filter(x => [x.item].flat().some(it => it?.estado === 'realizada')).length,
   }))
-  return { escuela, jefatura, contactos, conectividad, historial, clubes, puedeEditar: nivelEdicion({ esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }, escuela.fed_a_cargo) !== null }
+  return { escuela, jefatura, contactos, proximos, conectividad, historial, clubes, puedeEditar: nivelEdicion({ esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }, escuela.fed_a_cargo) !== null }
 }
 
 // Contactos de la escuela con algún dato, el principal primero. Los ven todos.
@@ -443,11 +445,12 @@ async function getPuntosMapaImpl(): Promise<PuntosMapa> {
   ])
   if (orgs.error) throw new Error(orgs.error.message)
   const puntos: PuntoMapa[] = [], sinUbicacion: PuntosMapa['sinUbicacion'] = []
+  const proximos = await proximosPorEscuela(db, null)
   for (const e of escuelas) {
-    if (e.lat != null && e.lon != null) puntos.push({ id: e.id, tipo: 'escuela', nombre: e.nombre ?? `CUE ${e.cue ?? ''}`, lat: Number(e.lat), lon: Number(e.lon), cue: e.cue, distrito: e.distrito, direccion: [e.direccion, e.ciudad].filter(Boolean).join(', ') || null, fed: e.fed_a_cargo, nivel: e.nivel, predio: predioValidoServidor(e.predio) })
+    if (e.lat != null && e.lon != null) puntos.push({ id: e.id, tipo: 'escuela', nombre: e.nombre ?? `CUE ${e.cue ?? ''}`, lat: Number(e.lat), lon: Number(e.lon), cue: e.cue, distrito: e.distrito, direccion: [e.direccion, e.ciudad].filter(Boolean).join(', ') || null, fed: e.fed_a_cargo, nivel: e.nivel, predio: predioValidoServidor(e.predio), crono: resumenProximos(proximos.get(e.id) ?? []) })
     else sinUbicacion.push({ id: e.id, cue: e.cue, nombre: e.nombre ?? `CUE ${e.cue ?? ''}`, distrito: e.distrito, fed: e.fed_a_cargo, predio: predioValidoServidor(e.predio) })
   }
-  for (const o of orgs.data ?? []) if (o.latitud != null && o.longitud != null) puntos.push({ id: o.id as string, tipo: 'jefatura', nombre: o.nombre as string, lat: Number(o.latitud), lon: Number(o.longitud), cue: null, distrito: o.distrito as string | null, direccion: [o.domicilio, o.localidad].filter(Boolean).join(', ') || null, fed: null, nivel: null, predio: null })
+  for (const o of orgs.data ?? []) if (o.latitud != null && o.longitud != null) puntos.push({ id: o.id as string, tipo: 'jefatura', nombre: o.nombre as string, lat: Number(o.latitud), lon: Number(o.longitud), cue: null, distrito: o.distrito as string | null, direccion: [o.domicilio, o.localidad].filter(Boolean).join(', ') || null, fed: null, nivel: null, predio: null, crono: null })
   return { puntos, sinUbicacion }
 }
 async function getJefaturaImpl(yo: Usuario, id: string): Promise<Jefatura> {
@@ -471,6 +474,30 @@ async function guardarJefaturaImpl(yo: Usuario, id: string, cambios: Record<stri
   await db.from('auditoria').insert({ tabla: 'organismos_descentralizados', registro_id: id, operacion: 'update', autor_id: yo.fed.id, datos: { cambios: lista.map(c => ({ campo: c.label, antes: c.anterior, despues: c.nuevo })) } })
   return lista.length
 }
+// Cronogramas de conectividad (en planilla) de esas escuelas, con cómo salió cada uno, agrupados por escuela. Sin lista de escuelas: los que no terminaron, de todas.
+async function cronogramasDeEscuelas(db: ReturnType<typeof supabaseServer>, ids: string[] | null, hoy = hoyAR()): Promise<Map<string, CronoCorto[]>> {
+  const filas: { id: string, school_id: string, tipo: string | null, fecha_inicio: string, fecha_fin: string, proveedor: string | null }[] = []
+  const traer = async (q: PromiseLike<{ data: unknown[] | null, error: { message: string } | null }>) => { const { data, error } = await q; if (error) throw new Error(error.message); for (const c of (data ?? []) as Record<string, unknown>[]) filas.push({ id: c.id as string, school_id: c.school_id as string, tipo: c.tipo as string | null, fecha_inicio: String(c.fecha_inicio), fecha_fin: String(c.fecha_fin), proveedor: c.proveedor as string | null }) }
+  const cols = 'id, school_id, tipo, fecha_inicio, fecha_fin, proveedor'
+  if (ids === null) await traer(db.from('cronogramas').select(cols).eq('en_planilla', true).not('school_id', 'is', null).gte('fecha_fin', hoy))
+  else for (let i = 0; i < ids.length; i += 100) await traer(db.from('cronogramas').select(cols).eq('en_planilla', true).in('school_id', ids.slice(i, i + 100)))
+  // Cómo salió cada uno (el último resultado anotado).
+  const estados = new Map<string, EstadoCrono>()
+  for (let i = 0; i < filas.length; i += 100) {
+    const { data: sg, error } = await db.from('cronogramas_seguimiento').select('cronograma_id, estado, created_at').in('cronograma_id', filas.slice(i, i + 100).map(c => c.id)).in('estado', ['realizado', 'no_realizado', 'reprogramado']).order('created_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    for (const x of sg ?? []) if (!estados.has(x.cronograma_id as string)) estados.set(x.cronograma_id as string, x.estado as EstadoCrono)
+  }
+  const porEscuela = new Map<string, CronoCorto[]>()
+  for (const c of filas) porEscuela.set(c.school_id, [...(porEscuela.get(c.school_id) ?? []), { id: c.id, tipo: c.tipo, fecha_inicio: c.fecha_inicio, fecha_fin: c.fecha_fin, proveedor: c.proveedor, estado: estados.get(c.id) ?? null }])
+  return porEscuela
+}
+// Próximos cronogramas por escuela (los ve cualquiera, como la conectividad).
+async function proximosPorEscuela(db: ReturnType<typeof supabaseServer>, ids: string[] | null): Promise<Map<string, CronoCorto[]>> {
+  const hoy = hoyAR(), todos = await cronogramasDeEscuelas(db, ids, hoy), out = new Map<string, CronoCorto[]>()
+  for (const [id, l] of todos) { const p = proximosDe(l, hoy); if (p.length) out.set(id, p) }
+  return out
+}
 // Para cada reclamo abierto, los cronogramas de conectividad de su escuela (próximos, o el último posterior al reclamo). Sólo de las escuelas que el usuario ve en Cronogramas.
 async function getCruceReclamosImpl(yo: Usuario): Promise<Record<string, CruceReclamo>> {
   const db = supabaseServer(), hoy = hoyAR()
@@ -480,21 +507,7 @@ async function getCruceReclamosImpl(yo: Usuario): Promise<Record<string, CruceRe
   const rec = ((data ?? []) as unknown as { id: string, school_id: string, estado: string, enviado_at: string, school: { fed_a_cargo: string | null } | { fed_a_cargo: string | null }[] | null }[])
     .filter(r => todos || esDelFed([r.school].flat()[0]?.fed_a_cargo, yo.fed.nombre_completo))
   const escuelas = [...new Set(rec.map(r => r.school_id))]
-  const cronos: (CronoCorto & { school_id: string })[] = []
-  for (let i = 0; i < escuelas.length; i += 100) {
-    const { data: cs, error: e2 } = await db.from('cronogramas').select('id, school_id, tipo, fecha_inicio, fecha_fin, proveedor').eq('en_planilla', true).in('school_id', escuelas.slice(i, i + 100))
-    if (e2) throw new Error(e2.message)
-    for (const c of cs ?? []) cronos.push({ id: c.id as string, school_id: c.school_id as string, tipo: c.tipo as string | null, fecha_inicio: String(c.fecha_inicio), fecha_fin: String(c.fecha_fin), proveedor: c.proveedor as string | null, estado: null })
-  }
-  // Cómo salió cada uno (el último resultado anotado).
-  const estados = new Map<string, EstadoCrono>()
-  for (let i = 0; i < cronos.length; i += 100) {
-    const { data: sg, error: e3 } = await db.from('cronogramas_seguimiento').select('cronograma_id, estado, created_at').in('cronograma_id', cronos.slice(i, i + 100).map(c => c.id)).in('estado', ['realizado', 'no_realizado', 'reprogramado']).order('created_at', { ascending: false })
-    if (e3) throw new Error(e3.message)
-    for (const s of sg ?? []) if (!estados.has(s.cronograma_id as string)) estados.set(s.cronograma_id as string, s.estado as EstadoCrono)
-  }
-  const porEscuela = new Map<string, CronoCorto[]>()
-  for (const c of cronos) porEscuela.set(c.school_id, [...(porEscuela.get(c.school_id) ?? []), { id: c.id, tipo: c.tipo, fecha_inicio: c.fecha_inicio, fecha_fin: c.fecha_fin, proveedor: c.proveedor, estado: estados.get(c.id) ?? null }])
+  const porEscuela = await cronogramasDeEscuelas(db, escuelas)
   const out: Record<string, CruceReclamo> = {}
   for (const r of rec) { const x = cruceDe(r, porEscuela.get(r.school_id) ?? [], hoy); if (x.proximos.length || x.pasado) out[r.id] = x }
   return out
