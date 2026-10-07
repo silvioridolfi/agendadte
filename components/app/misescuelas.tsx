@@ -1,12 +1,13 @@
 'use client'
 
+import { EtiquetaTipo } from '@/components/app/tipocrono'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Building2, Map as MapIcono, CalendarClock, ChevronRight, FileSpreadsheet, Loader2, Mail, Phone, School as SchoolIcon, Search, Wifi, X } from 'lucide-react'
+import { ArrowLeft, Building2, Map as MapIcono, ChevronRight, FileSpreadsheet, Loader2, Mail, Phone, School as SchoolIcon, Search, Wifi, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { type AgendaItem, type Fed, type School } from '@/lib/agenda'
-import { SIN_FED, etiquetaTipo, ventanaDe } from '@/lib/cronogramas'
+import { SIN_FED, ventanaDe } from '@/lib/cronogramas'
 import { FILTROS_ESCUELAS_VACIOS, filtrarEscuelas, nombreContacto, ordenarEscuelas, resumenEscuelas, type ColumnaEscuelas, type FiltrosEscuelas, type ResumenEscuela } from '@/lib/mis-escuelas'
 import type { FichaEscuela } from '@/lib/escuela'
 import { titleCase } from '@/lib/format'
@@ -160,7 +161,7 @@ function Tarjeta({ e, veTodos, onAbrir }: { e: ResumenEscuela, veTodos: boolean,
       <span className="mt-0.5 block break-words text-xs text-dte-gris">{[e.nombre && nombre !== siglaNombre(nombre) ? nombre : null, lugar].filter(Boolean).join(' · ')}</span>
       <span className="mt-2 flex flex-wrap gap-1.5">
         <PredioTag e={e} />
-        {c && <span className="inline-flex items-center gap-1 rounded-full border border-dte-petroleo/30 bg-dte-tinte px-2 py-0.5 text-xs font-semibold text-dte-petroleo-oscuro"><CalendarClock className="size-3" aria-hidden />{etiquetaTipo(c.tipo)} {ventanaDe(c)}{e.cronogramas > 1 ? ` (+${e.cronogramas - 1})` : ''}</span>}
+        {c && <EtiquetaTipo tipo={c.tipo} extra={`${ventanaDe(c)}${e.cronogramas > 1 ? ` (+${e.cronogramas - 1})` : ''}`} />}
         {e.reclamosAbiertos > 0 && <span className="inline-flex items-center gap-1 rounded-full border border-aviso-borde bg-aviso-fondo px-2 py-0.5 text-xs font-semibold text-aviso-fuerte"><Wifi className="size-3" aria-hidden />{e.reclamosAbiertos} {e.reclamosAbiertos === 1 ? 'reclamo abierto' : 'reclamos abiertos'}</span>}
         {e.proximaAccion && <span className="inline-flex items-center rounded-full border border-dte-linea px-2 py-0.5 text-xs font-semibold">Próxima acción {fechaCorta(e.proximaAccion)}</span>}
       </span>

@@ -202,3 +202,14 @@ describe('referencia de la guía', () => {
     expect(esVespertino(null)).toBe(false)
   })
 })
+
+describe('familias de color por tipo', () => {
+  it('agrupa los tipos en familias', async () => {
+    const { familiaTipo } = await import('@/lib/cronogramas')
+    expect(familiaTipo('LAC_M')).toBe('mantenimiento')
+    expect(['LAC', 'Instalación SDWAN', 'Instalación Enlace/Certificación'].map(familiaTipo)).toEqual(['instalacion', 'instalacion', 'instalacion'])
+    expect(familiaTipo('LAC_R')).toBe('reparacion')
+    expect(['Enlace', 'Certificación'].map(familiaTipo)).toEqual(['enlace', 'enlace'])
+    expect([familiaTipo('Asistencia técnica'), familiaTipo('Reubicación'), familiaTipo(null), familiaTipo('raro')]).toEqual(['otros', 'otros', 'otros', 'otros'])
+  })
+})

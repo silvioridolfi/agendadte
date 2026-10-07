@@ -23,6 +23,21 @@ export const TIPOS_CRONOGRAMA: Record<string, string> = {
 }
 export const etiquetaTipo = (t: string | null | undefined) => (t ? TIPOS_CRONOGRAMA[t.trim()] ?? t.trim() : 'Sin tipo')
 
+// Cada tipo pertenece a una familia de color: así se reconocen de un vistazo en las listas.
+export type FamiliaTipo = 'mantenimiento' | 'instalacion' | 'reparacion' | 'enlace' | 'otros'
+export const FAMILIAS_TIPO: { id: FamiliaTipo, nombre: string, tipos: string }[] = [
+  { id: 'mantenimiento', nombre: 'Mantenimiento', tipos: 'Mantenimiento de piso' },
+  { id: 'instalacion', nombre: 'Instalación', tipos: 'Instalación de piso, SDWAN, enlace y certificación' },
+  { id: 'reparacion', nombre: 'Reparación', tipos: 'Reparación de piso' },
+  { id: 'enlace', nombre: 'Enlace y certificación', tipos: 'Enlace, Certificación' },
+  { id: 'otros', nombre: 'Otros', tipos: 'Asistencia técnica, Reubicación' },
+]
+const FAMILIA_DE: Record<string, FamiliaTipo> = {
+  LAC_M: 'mantenimiento', LAC: 'instalacion', 'Instalación SDWAN': 'instalacion', 'Instalación Enlace/Certificación': 'instalacion',
+  LAC_R: 'reparacion', Enlace: 'enlace', 'Certificación': 'enlace',
+}
+export const familiaTipo = (t: string | null | undefined): FamiliaTipo => FAMILIA_DE[(t ?? '').trim()] ?? 'otros'
+
 // ---------- Lectura de la planilla (CSV) ----------
 
 // CSV según RFC 4180: comillas dobles, "" para una comilla y saltos de línea dentro de las celdas (los instaladores vienen uno por renglón).
