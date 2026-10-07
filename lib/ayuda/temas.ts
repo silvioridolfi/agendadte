@@ -38,6 +38,8 @@ Cuando quieras, desde el menú de las iniciales, **Cambiar contraseña**: te pid
 Instalada, se abre como una aplicación, a pantalla completa.
 ## Sitio DTE Región 1
 En el menú de las iniciales, **Sitio DTE Región 1** abre el sitio de la Dirección de Tecnología Educativa en una pestaña nueva. Necesitás haber iniciado sesión de Google con tu cuenta institucional (abc.gob.ar).
+## Si aparece "La agenda se actualizó"
+Cuando se publica una versión nueva y tenías la agenda abierta de antes, puede aparecer un aviso arriba (**La agenda se actualizó**) o un error al guardar o subir algo. Tocá **Actualizar** (o recargá la página) y seguí: no se pierde nada de lo ya guardado.
 ## Si olvidás la contraseña
 El administrador de la agenda genera una contraseña temporal nueva. En equipos compartidos conviene usar **Cerrar sesión** desde el menú de las iniciales.
 ## Uso sin conexión
