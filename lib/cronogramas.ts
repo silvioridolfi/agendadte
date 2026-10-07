@@ -143,12 +143,14 @@ export type Cronograma = {
   school: { id: string, nombre: string | null, distrito: string | null, ciudad: string | null, fed_a_cargo: string | null, turnos?: string | null, direccion?: string | null, lat?: number | null, lon?: number | null, predio?: string | null } | null,
   // Otras escuelas del mismo predio (el rack puede estar en una de ellas: hay que avisar a ambas).
   comparte?: { cue: number | null, nombre: string | null }[],
+  // Reclamos de conectividad abiertos de la escuela (sólo para mostrar el cruce).
+  reclamos?: { id: string, tipo_label: string, estado: string, nro_incidencia: string | null, enviado_at: string }[],
 }
 export type PestanaCronogramas = 'proximos' | 'pasados' | 'todos'
-export type FiltrosCronogramas = { pestana: PestanaCronogramas, busqueda: string, distrito: string, fed: string, tipo: string, proveedor: string, estado: '' | 'sin_marcar' | EstadoSeguimiento, aviso: '' | 'sin_escuela' | 'sin_jefatura' }
+export type FiltrosCronogramas = { pestana: PestanaCronogramas, busqueda: string, distrito: string, fed: string, tipo: string, proveedor: string, estado: '' | 'sin_marcar' | EstadoSeguimiento, aviso: '' | 'sin_escuela' | 'sin_jefatura', conReclamo: boolean }
 
 const norm = (s: string | null | undefined) => sinTildes(s ?? '')
-export const FILTROS_VACIOS: FiltrosCronogramas = { pestana: 'proximos', busqueda: '', distrito: '', fed: '', tipo: '', proveedor: '', estado: '', aviso: '' }
+export const FILTROS_VACIOS: FiltrosCronogramas = { pestana: 'proximos', busqueda: '', distrito: '', fed: '', tipo: '', proveedor: '', estado: '', aviso: '', conReclamo: false }
 
 // FED a cargo de una escuela: en la base figura por nombre ("Macarena Duarte Buschiazzo"); acá se compara con el nombre del perfil ("Macarena Duarte").
 export function esDelFed(fedACargo: string | null | undefined, nombreFed: string): boolean {
@@ -187,6 +189,7 @@ export function filtrarCronogramas(lista: Cronograma[], f: FiltrosCronogramas, h
     if (f.aviso === 'sin_escuela' && avisoDe(c, 'escuela_avisada')) return false
     if (f.aviso === 'sin_jefatura' && avisoDe(c, 'jefatura_avisada')) return false
     if (f.estado && (f.estado === 'sin_marcar' ? estadoDe(c) !== null : estadoDe(c) !== f.estado)) return false
+    if (f.conReclamo && !c.reclamos?.length) return false
     if (f.tipo && c.tipo !== f.tipo) return false
     if (f.proveedor && c.proveedor !== f.proveedor) return false
     if (q && !norm(`${c.cue} ${c.school?.nombre ?? c.nombre_planilla ?? ''} ${c.nro ?? ''} ${c.proveedor ?? ''} ${etiquetaTipo(c.tipo)}`).includes(q)) return false
