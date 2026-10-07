@@ -1,5 +1,6 @@
 'use client'
 
+import { PuntoTipo } from '@/components/app/tipocrono'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarClock, Check, ClipboardList, Eye, FileSpreadsheet, Loader2, Pencil, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -77,8 +78,8 @@ export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial, volv
             <p className="mt-2 break-words font-mono text-[0.8125rem] font-medium">{r.asunto}</p>
             <p className="mt-1 text-sm font-semibold">{r.school?.nombre ? titleCase(r.school.nombre) : `CUE ${r.cue ?? '—'}`}{r.school?.distrito && <span className="font-normal text-dte-gris"> · {titleCase(r.school.distrito)}</span>}</p>
             <p className="mt-0.5 text-xs text-dte-gris">{[nombreFed(r.fed_id), `enviado el ${fechaCorta(r.enviado_at)}`, r.conexion].filter(Boolean).join(' · ')}</p>
-            {prox ? <p className="mt-2 flex items-start gap-2 rounded-control border border-dte-petroleo/30 bg-dte-tinte px-3 py-2 text-sm"><CalendarClock className="mt-0.5 size-4 shrink-0 text-dte-petroleo" aria-hidden /><span className="min-w-0 break-words"><b>Cronograma próximo en la escuela:</b> {etiquetaTipo(prox.tipo)} · {ventanaDe(prox)}{prox.proveedor ? ` · ${prox.proveedor}` : ''}{x.proximos.length > 1 ? ` (+${x.proximos.length - 1})` : ''}</span></p> : null}
-            {pasado ? <p className="mt-2 flex items-start gap-2 rounded-control border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso-fuerte"><CalendarClock className="mt-0.5 size-4 shrink-0" aria-hidden /><span className="min-w-0 break-words"><b>Hubo un cronograma posterior al reclamo:</b> {etiquetaTipo(pasado.tipo)} · {ventanaDe(pasado)}{pasado.estado === 'realizado' ? ' (anotado como realizado)' : ''}. ¿Se resolvió? Si ya funciona, marcalo como resuelto.</span></p> : null}
+            {prox ? <p className="mt-2 flex items-start gap-2 rounded-control border border-dte-petroleo/30 bg-dte-tinte px-3 py-2 text-sm"><CalendarClock className="mt-0.5 size-4 shrink-0 text-dte-petroleo" aria-hidden /><span className="min-w-0 break-words"><b>Cronograma próximo en la escuela:</b> <PuntoTipo tipo={prox.tipo} />{etiquetaTipo(prox.tipo)} · {ventanaDe(prox)}{prox.proveedor ? ` · ${prox.proveedor}` : ''}{x.proximos.length > 1 ? ` (+${x.proximos.length - 1})` : ''}</span></p> : null}
+            {pasado ? <p className="mt-2 flex items-start gap-2 rounded-control border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso-fuerte"><CalendarClock className="mt-0.5 size-4 shrink-0" aria-hidden /><span className="min-w-0 break-words"><b>Hubo un cronograma posterior al reclamo:</b> <PuntoTipo tipo={pasado.tipo} />{etiquetaTipo(pasado.tipo)} · {ventanaDe(pasado)}{pasado.estado === 'realizado' ? ' (anotado como realizado)' : ''}. ¿Se resolvió? Si ya funciona, marcalo como resuelto.</span></p> : null}
             {(r.nro_incidencia || r.notas) && <div className="mt-2 rounded-control bg-dte-fondo px-3 py-2 text-sm">
               {r.nro_incidencia && <p><span className="text-xs font-semibold text-dte-gris">{origen ? `Número (${origen}): ` : 'Número: '}</span><b className="break-words tabular-nums">{r.nro_incidencia}</b></p>}
               {r.notas && <p className="mt-0.5 break-words text-dte-tinta">{r.notas}</p>}

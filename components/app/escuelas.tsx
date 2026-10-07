@@ -1,5 +1,6 @@
 'use client'
 
+import { EtiquetaTipo } from '@/components/app/tipocrono'
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Building2, CalendarClock, CalendarPlus, ChevronDown, Contact, History, Loader2, Mail, MapPin, Navigation, Phone, Search, School as SchoolIcon, Trophy, TriangleAlert, Wifi, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,7 +10,7 @@ import { type Accion, type AgendaItem, type Estado, type Fed, type School } from
 import { FAMILIAS, type Familia } from '@/lib/ayuda/estilo'
 import { CAMPOS_ESCUELA, CLAVES_CONECTIVIDAD } from '@/lib/escuelas-edicion'
 import { nombreContacto } from '@/lib/mis-escuelas'
-import { ESTADO_SEGUIMIENTO_LABEL, estadoDe, etiquetaTipo, ventanaDe } from '@/lib/cronogramas'
+import { ESTADO_SEGUIMIENTO_LABEL, estadoDe, ventanaDe } from '@/lib/cronogramas'
 import { resumenProximos } from '@/lib/cruce'
 import { ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL, esAbierto } from '@/lib/reclamos-registro'
 import type { ExtrasEscuela } from '@/app/actions'
@@ -166,10 +167,10 @@ export function Ficha({ ficha, feds, extras, puedeAgendar, onAgendar, onReclamo,
       </Desplegable>}
       <Desplegable id="cronogramas" tono={TONO.cronogramas} titulo="Cronogramas de conectividad" cantidad={extras ? extras.cronogramas.length : proximos.length}>
         {extras ? (extras.cronogramas.length ? <ul className="divide-y divide-dte-linea overflow-hidden rounded-tile border border-dte-linea">{extras.cronogramas.map(cr => { const est = estadoDe(cr); return <li key={cr.id} className="flex flex-col gap-0.5 px-3 py-2.5">
-          <span className="text-sm font-semibold">{ventanaDe(cr)} · {etiquetaTipo(cr.tipo)}</span>
+          <span className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">{ventanaDe(cr)}<EtiquetaTipo tipo={cr.tipo} /></span>
           <span className="text-xs text-dte-gris">{[cr.proveedor, cr.nro && `N° ${cr.nro}`, est ? ESTADO_SEGUIMIENTO_LABEL[est] : 'Sin marcar'].filter(Boolean).join(' · ')}</span>
         </li> })}</ul> : <Vacio>Sin cronogramas en los últimos días.</Vacio>)
-          : proximos.length ? <ul className="flex flex-col gap-1">{proximos.map(c => <li key={c.id} className="break-words text-sm"><span className="font-semibold tabular-nums">{ventanaDe(c)}</span> · {etiquetaTipo(c.tipo)}{c.proveedor && <span className="text-dte-gris"> · {c.proveedor}</span>}</li>)}</ul> : <Vacio>Sin cronogramas próximos de conectividad.</Vacio>}
+          : proximos.length ? <ul className="flex flex-col gap-1">{proximos.map(c => <li key={c.id} className="break-words text-sm"><span className="font-semibold tabular-nums">{ventanaDe(c)}</span> · <EtiquetaTipo tipo={c.tipo} />{c.proveedor && <span className="text-dte-gris"> · {c.proveedor}</span>}</li>)}</ul> : <Vacio>Sin cronogramas próximos de conectividad.</Vacio>}
       </Desplegable>
       <Desplegable id="acciones" tono={TONO.proximas} titulo="Próximas acciones" cantidad={proximas.length}>
         {proximas.length ? <Filas filas={proximas} feds={feds} onOpen={onOpen} inicial={5} /> : <Vacio>No hay acciones planificadas en esta escuela.</Vacio>}

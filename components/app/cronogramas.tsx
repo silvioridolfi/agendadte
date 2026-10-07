@@ -13,6 +13,7 @@ import { gmailAppUrl, gmailUrl, plataformaDe } from '@/lib/reclamos'
 import type { ContactoEscuela } from '@/lib/mis-escuelas'
 import { siglaNombre } from '@/lib/siglas'
 import { titleCase } from '@/lib/format'
+import { EtiquetaTipo, LeyendaTipos } from '@/components/app/tipocrono'
 import { BotonVolver, ErrorBox, Skeleton, eyebrow, errMsg, avisarCronograma, getContactosCronograma, getCronogramas, marcarCronograma, selectClass, sincronizarCronogramasAhora } from '@/components/app/comun'
 
 const ZONA = 'America/Argentina/Buenos_Aires'
@@ -92,7 +93,8 @@ export function Cronogramas({ profile, feds, esAdmin, cuenta, volver }: { profil
 
         {(resumen.sinCerrar > 0 || resumen.sinAvisarEscuela > 0 || (veTodos && resumen.sinFed > 0)) && <p className="mt-3 text-xs text-dte-gris">{[resumen.sinAvisarEscuela > 0 && <span key="a">Próximos con la escuela sin avisar: <b className="tabular-nums">{resumen.sinAvisarEscuela}</b></span>, resumen.sinCerrar > 0 && <span key="c">Pasados sin marcar: <b className="tabular-nums">{resumen.sinCerrar}</b></span>, veTodos && resumen.sinFed > 0 && <span key="f">Próximos sin FED asignado: <b className="tabular-nums">{resumen.sinFed}</b></span>].filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x]))}</p>}
         <p className="mt-3 text-xs text-dte-gris" aria-live="polite">{visibles.length} {visibles.length === 1 ? 'cronograma' : 'cronogramas'}</p>
-        {visibles.length ? <ul className="mt-2 flex flex-col gap-2">{visibles.map(c => <Tarjeta key={c.id} c={c} hoy={hoy} abierta={abierto === c.id} onAbrir={() => setAbierto(a => (a === c.id ? null : c.id))} puedeMarcar={puedeMarcar(quien, c)} avisaJefatura={avisaJefatura} esCed={veTodos} nombre={profile.nombre_completo} cuenta={cuenta} nombreFed={nombreFed} onAnotado={h => anotado(c.id, h)} />)}</ul>
+        <LeyendaTipos />
+        {visibles.length ? <ul className="mt-3 flex flex-col gap-2">{visibles.map(c => <Tarjeta key={c.id} c={c} hoy={hoy} abierta={abierto === c.id} onAbrir={() => setAbierto(a => (a === c.id ? null : c.id))} puedeMarcar={puedeMarcar(quien, c)} avisaJefatura={avisaJefatura} esCed={veTodos} nombre={profile.nombre_completo} cuenta={cuenta} nombreFed={nombreFed} onAnotado={h => anotado(c.id, h)} />)}</ul>
           : <div className="mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-dte-linea px-4 py-10 text-center text-sm text-dte-gris"><CalendarClock className="size-6" aria-hidden />{propios.length ? 'No hay cronogramas con esos filtros.' : 'Todavía no hay cronogramas cargados.'}</div>}
       </>}
   </main>
@@ -112,7 +114,7 @@ function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, avisaJefatura, esCed, 
         <span className="flex flex-wrap items-center gap-1.5">
           <span className="inline-flex items-center rounded-full border border-dte-petroleo/30 bg-dte-tinte px-2 py-0.5 text-xs font-semibold tabular-nums text-dte-petroleo-oscuro">{ventanaDe(c)}</span>
           {enCurso && <span className="inline-flex items-center rounded-full border border-exito/30 bg-exito/10 px-2 py-0.5 text-xs font-semibold text-exito">En curso</span>}
-          <span className="inline-flex items-center rounded-full border border-dte-linea px-2 py-0.5 text-xs font-semibold">{etiquetaTipo(c.tipo)}</span>
+          <EtiquetaTipo tipo={c.tipo} />
           {programaDe(c.semana) && <span className="inline-flex items-center rounded-full border border-dte-linea px-2 py-0.5 text-xs font-semibold">{programaDe(c.semana)}</span>}
           {esReprogramacion(c.semana) && <span className="inline-flex items-center rounded-full border border-aviso-borde bg-aviso-fondo px-2 py-0.5 text-xs font-semibold text-aviso-fuerte">Reprogramación</span>}
           {estado && <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${ESTADO_CLASE[estado]}`}>{ESTADO_SEGUIMIENTO_LABEL[estado]}</span>}
