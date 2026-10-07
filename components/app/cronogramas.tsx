@@ -117,12 +117,13 @@ function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, avisaJefatura, esCed, 
           {esReprogramacion(c.semana) && <span className="inline-flex items-center rounded-full border border-aviso-borde bg-aviso-fondo px-2 py-0.5 text-xs font-semibold text-aviso-fuerte">Reprogramación</span>}
           {estado && <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${ESTADO_CLASE[estado]}`}>{ESTADO_SEGUIMIENTO_LABEL[estado]}</span>}
           {c.reclamos?.length ? <span className="inline-flex items-center gap-1 rounded-full border border-aviso-borde bg-aviso-fondo px-2 py-0.5 text-xs font-semibold text-aviso-fuerte"><Wifi className="size-3" aria-hidden />{c.reclamos.length} {c.reclamos.length === 1 ? 'reclamo abierto' : 'reclamos abiertos'}</span> : null}
-          {avisoDe(c, 'jefatura_avisada') && <span className="inline-flex items-center gap-1 rounded-full border border-dte-linea bg-dte-fondo px-2 py-0.5 text-xs font-semibold text-dte-gris"><Check className="size-3" aria-hidden />Jefatura avisada</span>}
-          {avisoDe(c, 'escuela_avisada') && <span className="inline-flex items-center gap-1 rounded-full border border-dte-linea bg-dte-fondo px-2 py-0.5 text-xs font-semibold text-dte-gris"><Check className="size-3" aria-hidden />Escuela avisada</span>}
+          {avisoDe(c, 'jefatura_avisada') && <span className="inline-flex items-center gap-1 rounded-full border border-club-lila/40 bg-club-violeta-fondo px-2 py-0.5 text-xs font-semibold text-club-violeta"><Check className="size-3" aria-hidden />Jefatura avisada</span>}
+          {avisoDe(c, 'escuela_avisada') && <span className="inline-flex items-center gap-1 rounded-full border border-pba-celeste/40 bg-pba-celeste/10 px-2 py-0.5 text-xs font-semibold text-pba-celeste-texto"><Check className="size-3" aria-hidden />Escuela avisada</span>}
           {c.estado_planilla && <span className="inline-flex items-center rounded-full border border-dte-linea bg-dte-fondo px-2 py-0.5 text-xs text-dte-gris">Planilla: {c.estado_planilla}</span>}
         </span>
         <span className="mt-1.5 block break-words text-sm font-semibold">{c.school?.nombre ? siglaNombre(nombre) : nombre}<span className="font-normal text-dte-gris"> · CUE {c.cue}{c.school?.distrito && ` · ${titleCase(c.school.distrito)}`}</span></span>
         <span className="mt-0.5 block text-xs text-dte-gris">{[c.proveedor, c.nro && `N° ${c.nro}`, fed ? `FED: ${fed}` : c.school ? SIN_FED : 'CUE sin cargar en la agenda'].filter(Boolean).join(' · ')}</span>
+        {c.comparte?.length ? <span className="mt-0.5 block break-words text-xs font-medium text-club-violeta">Comparte predio con {c.comparte.map(o => `${o.nombre ? siglaNombre(titleCase(o.nombre)) : 'Escuela'} (CUE ${o.cue ?? '—'})`).join(', ')}</span> : null}
       </span>
       <ChevronDown className={`mt-1 size-4 shrink-0 text-dte-gris transition ${abierta ? 'rotate-180' : ''}`} aria-hidden />
     </button>

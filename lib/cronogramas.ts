@@ -192,7 +192,7 @@ export function filtrarCronogramas(lista: Cronograma[], f: FiltrosCronogramas, h
     if (f.conReclamo && !c.reclamos?.length) return false
     if (f.tipo && c.tipo !== f.tipo) return false
     if (f.proveedor && c.proveedor !== f.proveedor) return false
-    if (q && !norm(`${c.cue} ${c.school?.nombre ?? c.nombre_planilla ?? ''} ${c.nro ?? ''} ${c.proveedor ?? ''} ${etiquetaTipo(c.tipo)}`).includes(q)) return false
+    if (q && !norm(`${c.cue} ${c.school?.nombre ?? c.nombre_planilla ?? ''} ${c.nro ?? ''} ${c.proveedor ?? ''} ${etiquetaTipo(c.tipo)} ${(c.comparte ?? []).map(o => `${o.cue ?? ''} ${o.nombre ?? ''}`).join(' ')}`).includes(q)) return false
     return true
   }).sort((a, b) => (f.pestana === 'pasados' ? b.fecha_inicio.localeCompare(a.fecha_inicio) : a.fecha_inicio.localeCompare(b.fecha_inicio)) || a.cue - b.cue)
 }

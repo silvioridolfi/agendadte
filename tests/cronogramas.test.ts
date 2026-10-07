@@ -58,6 +58,11 @@ describe('filtros de la sección', () => {
     expect(esDelFed(null, 'Macarena Duarte')).toBe(false)
   })
   const lista = [c({ id: 'a' }), c({ id: 'b', fecha_fin: '2026-09-01', fecha_inicio: '2026-09-01' }), c({ id: 'c', school: { id: 's', nombre: 'EP 2', distrito: 'BERISSO', ciudad: null, fed_a_cargo: 'Sin FED asignado' }, tipo: 'LAC' })]
+  it('la búsqueda también encuentra por las escuelas que comparten predio', () => {
+    const con = [c({ id: 'x', comparte: [{ cue: 60123400, nombre: 'CENTRO DE ADULTOS N° 7' }] }), c({ id: 'y' })]
+    expect(filtrarCronogramas(con, { ...FILTROS_VACIOS, busqueda: 'centro de adultos' }, '2026-10-06').map(r => r.id)).toEqual(['x'])
+    expect(filtrarCronogramas(con, { ...FILTROS_VACIOS, busqueda: '60123400' }, '2026-10-06').map(r => r.id)).toEqual(['x'])
+  })
   it('separa próximos y pasados', () => {
     expect(filtrarCronogramas(lista, FILTROS_VACIOS, '2026-10-06').map(x => x.id)).toEqual(['a', 'c'])
     expect(filtrarCronogramas(lista, { ...FILTROS_VACIOS, pestana: 'pasados' }, '2026-10-06').map(x => x.id)).toEqual(['b'])
