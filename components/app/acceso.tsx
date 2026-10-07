@@ -55,6 +55,7 @@ export function Ingreso({ onIngreso }: { onIngreso: () => void }) {
 
 // Cambio de contraseña: obligatorio con una temporal; también disponible desde el menú.
 export function CambiarPassword({ obligatorio, onListo, onCancelar }: { obligatorio: boolean, onListo: () => void, onCancelar?: () => void }) {
+  const [actual, setActual] = useState('')
   const [nueva, setNueva] = useState('')
   const [repetir, setRepetir] = useState('')
   const [error, setError] = useState('')
@@ -63,9 +64,10 @@ export function CambiarPassword({ obligatorio, onListo, onCancelar }: { obligato
     e.preventDefault(); setError('')
     if (nueva !== repetir) { setError('Las contraseñas no coinciden.'); return }
     setBusy(true)
-    try { await cambiarPassword(nueva); onListo() } catch (err) { setError(errMsg(err)); setBusy(false) }
+    try { await cambiarPassword(nueva, actual); onListo() } catch (err) { setError(errMsg(err)); setBusy(false) }
   }
   const form = <form onSubmit={enviar} className="flex flex-col gap-4">
+    {!obligatorio && <CampoPassword id="actual" label="Contraseña actual" value={actual} onChange={setActual} autoComplete="current-password" />}
     <CampoPassword id="nueva" label="Nueva contraseña" value={nueva} onChange={setNueva} autoComplete="new-password" />
     <CampoPassword id="repetir" label="Repetila" value={repetir} onChange={setRepetir} autoComplete="new-password" />
     <ul className="text-xs text-dte-gris"><li>Al menos 10 caracteres, con letras y números.</li><li>Sin tu usuario de correo ni secuencias obvias.</li></ul>
