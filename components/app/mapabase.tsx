@@ -105,7 +105,7 @@ export function MapaBase({ puntos, propios, seleccionId, onSelect, inicial, clas
 
 // Mapa chico de una sola escuela (la ficha): arrastrable y con zoom con los botones, sin rueda para no trabar el scroll de la ficha.
 export function MapaChico({ lat, lon, nombre }: { lat: number, lon: number, nombre: string }) {
-  const puntos = useMemo<PuntoMapa[]>(() => [{ id: 'unico', tipo: 'escuela', nombre, lat, lon, cue: null, distrito: null, direccion: null, fed: null, nivel: null, predio: null }], [lat, lon, nombre])
+  const puntos = useMemo<PuntoMapa[]>(() => [{ id: 'unico', tipo: 'escuela', nombre, lat, lon, cue: null, distrito: null, direccion: null, fed: null, nivel: null, predio: null, crono: null }], [lat, lon, nombre])
   const inicial = useMemo(() => ({ lat, lon, z: 16 }), [lat, lon])
   return <MapaBase key={`${lat},${lon}`} puntos={puntos} inicial={inicial} agrupa={false} rueda={false} className="h-48" etiqueta={`Ubicación de ${nombre} en el mapa`} />
 }

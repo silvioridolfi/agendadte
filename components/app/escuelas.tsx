@@ -9,6 +9,7 @@ import { type Accion, type AgendaItem, type Estado, type Fed, type School } from
 import { FAMILIAS, type Familia } from '@/lib/ayuda/estilo'
 import { CAMPOS_ESCUELA, CLAVES_CONECTIVIDAD } from '@/lib/escuelas-edicion'
 import { nombreContacto } from '@/lib/mis-escuelas'
+import { etiquetaTipo, ventanaDe } from '@/lib/cronogramas'
 import { resumenHistorial, separarHistorial, type FichaEscuela, type FilaHistorial } from '@/lib/escuela'
 import { hoyAR } from '@/lib/hora'
 import { titleCase } from '@/lib/format'
@@ -24,7 +25,7 @@ const fechaCorta = (f: string) => cap(fmt(parse(f), { weekday: 'short', day: 'nu
 type Tono = { familia: Familia, Icono: LucideIcon }
 const TONO = {
   ubicacion: { familia: 'celeste', Icono: MapPin }, institucion: { familia: 'violeta', Icono: Building2 }, alumnado: { familia: 'amarillo', Icono: Users },
-  proximas: { familia: 'celeste', Icono: CalendarClock }, conectividad: { familia: 'celeste', Icono: Wifi }, contactos: { familia: 'azul', Icono: Contact }, clubes: { familia: 'violeta', Icono: Trophy }, historial: { familia: 'azul', Icono: History },
+  proximas: { familia: 'celeste', Icono: CalendarClock }, proximos: { familia: 'celeste', Icono: CalendarClock }, conectividad: { familia: 'celeste', Icono: Wifi }, contactos: { familia: 'azul', Icono: Contact }, clubes: { familia: 'violeta', Icono: Trophy }, historial: { familia: 'azul', Icono: History },
 } satisfies Record<string, Tono>
 const sinComillas = (t: string | null) => (t ? titleCase(t.replace(/["“”]/g, '').trim()) : null)
 
@@ -68,7 +69,7 @@ function Filas({ filas, feds, onOpen, inicial }: { filas: FilaHistorial[], feds:
 }
 
 export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen, onEditado, onEscuela }: { onEscuela?: (id: string) => void, ficha: FichaEscuela, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void, onEditado: () => void }) {
-  const { escuela: e, historial, clubes, conectividad, jefatura, contactos } = ficha
+  const { escuela: e, historial, clubes, conectividad, jefatura, contactos, proximos } = ficha
   const [verJefatura, setVerJefatura] = useState(false)
   const filasConectividad = CAMPOS_ESCUELA.filter(c => CLAVES_CONECTIVIDAD.includes(c.clave) && conectividad[c.clave])
   const { proximas, anteriores } = separarHistorial(historial, hoyAR())
@@ -116,6 +117,9 @@ export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen,
       </div>
       <div className="sm:col-span-2"><Tarjeta tono={TONO.conectividad} titulo="Conectividad" columnas>
         {filasConectividad.length ? filasConectividad.map(c => <Dato key={c.clave} label={c.label}>{conectividad[c.clave]}</Dato>) : <p className="text-sm text-dte-gris">Sin datos de conectividad cargados.</p>}
+      </Tarjeta></div>
+      <div className="sm:col-span-2"><Tarjeta tono={TONO.proximos} titulo={`Próximos cronogramas de conectividad${proximos.length ? ` (${proximos.length})` : ''}`} lista>
+        {proximos.length ? <ul className="flex flex-col gap-1">{proximos.map(c => <li key={c.id} className="break-words text-sm"><span className="font-semibold tabular-nums">{ventanaDe(c)}</span> · {etiquetaTipo(c.tipo)}{c.proveedor && <span className="text-dte-gris"> · {c.proveedor}</span>}</li>)}</ul> : <p className="text-sm text-dte-gris">Sin cronogramas próximos de conectividad.</p>}
       </Tarjeta></div>
       <div className="sm:col-span-2"><Tarjeta tono={TONO.contactos} titulo={`Contactos${contactos.length ? ` (${contactos.length})` : ''}`} lista>
         {contactos.length ? <ul className="flex flex-col divide-y divide-black/10">{contactos.map((k, i) => { const mail = k.correo_laboral || k.correo; return <li key={i} className="flex flex-col gap-1 py-2 first:pt-0 last:pb-0">
@@ -180,7 +184,7 @@ export function BuscadorEscuelas({ open, onClose, feds, puedeAgendar, onAgendar,
         {results.length > 0 && <ul className="divide-y divide-dte-linea rounded-tile border border-dte-linea">{results.map(s => <li key={s.id}>
           <button type="button" onClick={() => abrir(s)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-dte-tinte">
             <MapPin className="size-4 shrink-0 text-dte-gris-claro" aria-hidden />
-            <span className="min-w-0"><span className="block truncate text-sm font-semibold">{schoolName(s)}</span><span className="block truncate text-xs text-dte-gris">CUE {s.cue ?? '—'}{schoolPlace(s) ? ` · ${schoolPlace(s)}` : ''}</span>{lineaPredio(s) && <span className="block break-words text-xs font-medium text-club-violeta">{lineaPredio(s)}</span>}</span>
+            <span className="min-w-0"><span className="block truncate text-sm font-semibold">{schoolName(s)}</span><span className="block truncate text-xs text-dte-gris">CUE {s.cue ?? '—'}{schoolPlace(s) ? ` · ${schoolPlace(s)}` : ''}</span>{lineaPredio(s) && <span className="block break-words text-xs font-medium text-club-violeta">{lineaPredio(s)}</span>}{s.crono && <span className="flex items-center gap-1 break-words text-xs font-medium text-pba-celeste-texto"><CalendarClock className="size-3 shrink-0" aria-hidden />Cronograma próximo: {s.crono}</span>}</span>
           </button></li>)}</ul>}
       </>}
     </DialogContent>
