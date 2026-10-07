@@ -103,7 +103,7 @@ export function MisEscuelas({ profile, feds, esAdmin, puedeAgendar, onAgendar, o
         </> : <div className="mt-3 flex flex-col items-center gap-2 rounded-card border border-dashed border-dte-linea px-4 py-10 text-center text-sm text-dte-gris"><SchoolIcon className="size-6" aria-hidden />{base.length ? 'No hay escuelas con esa búsqueda o esos filtros.' : 'Todavía no tenés escuelas a cargo en la base.'}</div>}
       </>}
 
-    {abierta && <FichaCompleta key={abierta.id} e={abierta} feds={feds} puedeAgendar={puedeAgendar} onClose={() => setAbierta(null)} onAgendar={onAgendar} onReclamo={onReclamo} onOpen={onOpen} />}
+    {abierta && <FichaCompleta key={abierta.id} onCambio={cargar} e={abierta} feds={feds} puedeAgendar={puedeAgendar} onClose={() => setAbierta(null)} onAgendar={onAgendar} onReclamo={onReclamo} onOpen={onOpen} />}
   </main>
 }
 
@@ -165,7 +165,7 @@ function Tarjeta({ e, veTodos, onAbrir }: { e: ResumenEscuela, veTodos: boolean,
 }
 
 // Ficha de la escuela (la misma del buscador) con conectividad, reclamos, cronogramas y contactos.
-function FichaCompleta({ e, feds, puedeAgendar, onClose, onAgendar, onReclamo, onOpen }: { e: ResumenEscuela, feds: Fed[], puedeAgendar: boolean, onClose: () => void, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
+function FichaCompleta({ e, feds, puedeAgendar, onClose, onAgendar, onReclamo, onOpen, onCambio }: { onCambio: () => void, e: ResumenEscuela, feds: Fed[], puedeAgendar: boolean, onClose: () => void, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
   const [ficha, setFicha] = useState<FichaEscuela | null>(null)
   const [extras, setExtras] = useState<Awaited<ReturnType<typeof getExtrasEscuela>> | null>(null)
   const [error, setError] = useState('')
@@ -183,7 +183,7 @@ function FichaCompleta({ e, feds, puedeAgendar, onClose, onAgendar, onReclamo, o
       {error ? <ErrorBox message={error} onRetry={() => { setError(''); setIntento(n => n + 1) }} />
         : !ficha || !extras ? <div className="flex flex-col gap-3"><Skeleton className="h-12" /><Skeleton className="h-24" /><Skeleton className="h-40" /></div>
         : <div className="flex flex-col gap-5">
-          <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { onClose(); onAgendar(s) }} onReclamo={s => { onClose(); onReclamo(s) }} onOpen={i => { onClose(); onOpen(i) }} />
+          <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { onClose(); onAgendar(s) }} onReclamo={s => { onClose(); onReclamo(s) }} onOpen={i => { onClose(); onOpen(i) }} onEditado={() => { onCambio(); setIntento(n => n + 1) }} />
           <Extras x={extras} feds={feds} />
         </div>}
     </DialogContent>

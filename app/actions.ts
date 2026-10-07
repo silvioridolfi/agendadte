@@ -19,6 +19,7 @@ import { AVISOS_CRONOGRAMA, DIAS_ATRAS, ESTADOS_SEGUIMIENTO, MAX_NOTA, PIDE_MOTI
 import { sincronizarCronogramas, type ResultadoSync } from '@/lib/cronogramas-sync'
 import { armarResumen, contarAccesos, type Accesos, type ContactoEscuela, type ResumenEscuela } from '@/lib/mis-escuelas'
 import { estadoAlCrear } from '@/lib/estado'
+import { COLS_EDITABLES, cambiosDeEscuela, historialDeContacto, nivelEdicion, resumenContacto, seccionDe, validarContacto, type ContactoEditable, type ContactoInput, type EdicionEscuela, type NivelEdicion, type OpcionesEscuela, type ValoresEscuela } from '@/lib/escuelas-edicion'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
@@ -72,7 +73,7 @@ async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuel
   const clubes: ClubDeEscuela[] = ((cls.data ?? []) as unknown as (Omit<ClubDeEscuela, 'realizados' | 'esOrigen'> & { school_id: string | null, encuentros: { item: { estado: string } | { estado: string }[] | null }[] })[]).map(({ encuentros, school_id, ...c }) => ({
     ...c, esOrigen: school_id !== id, realizados: encuentros.filter(x => [x.item].flat().some(it => it?.estado === 'realizada')).length,
   }))
-  return { escuela, historial, clubes }
+  return { escuela, historial, clubes, puedeEditar: nivelEdicion({ esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }, escuela.fed_a_cargo) !== null }
 }
 
 // Lo que la base sabe de la conectividad de una escuela (enlace, piso y proveedores): para armar reclamos de conectividad.
@@ -283,6 +284,105 @@ async function getExtrasEscuelaImpl(yo: Usuario, id: string): Promise<ExtrasEscu
   if (cro.error) throw new Error(cro.error.message)
   if (con.error) throw new Error(con.error.message)
   return { conectividad, reclamos: (rec.data ?? []) as unknown as Reclamo[], cronogramas: await conHistorial((cro.data ?? []) as unknown as Omit<Cronograma, 'historial'>[]), contactos: (con.data ?? []) as ContactoEscuela[] }
+}
+// ── Edición de los datos de una escuela ──
+// El FED a cargo edita los datos del día a día y los contactos; el CED y la administración, todo. Cada cambio queda en historial_cambios con su autor. No se avisa a nadie.
+const COLS_CONTACTO_EDITABLE = 'id, nombre, apellido, cargo, telefono, correo, correo_laboral, es_principal'
+async function escuelaEditable(yo: Usuario, id: string) {
+  if (!UUID.test(id)) throw new Error('Escuela inválida')
+  const db = supabaseServer()
+  const { data, error } = await db.from('establecimientos').select([...new Set(['id', 'cue', 'fed_a_cargo', ...COLS_EDITABLES.split(', ')])].join(', ')).eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error('No se encontró la escuela')
+  const e = data as unknown as ValoresEscuela & { id: string, cue: number | null, nombre: string | null, fed_a_cargo: string | null }
+  const nivel = nivelEdicion({ esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }, e.fed_a_cargo)
+  if (!nivel) throw new Error('Sólo el FED a cargo de la escuela, el CED o la administración pueden editarla')
+  return { db, e, nivel }
+}
+const unicosOrdenados = (l: (string | null | undefined)[]) => [...new Set(l.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'es'))
+async function opcionesEscuela(db: ReturnType<typeof supabaseServer>): Promise<OpcionesEscuela> {
+  const [filas, feds] = await Promise.all([
+    fetchAll<Record<string, string | null>>((a, b) => db.from('establecimientos').select('distrito, tipo_establecimiento, ambito, nivel, modalidad, turnos, id').order('id').range(a, b)),
+    db.from('feds').select('nombre_completo').eq('rol', 'fed'),
+  ])
+  const de = (k: string) => unicosOrdenados(filas.map(f => f[k]))
+  return { distrito: de('distrito'), tipo_establecimiento: de('tipo_establecimiento'), ambito: de('ambito'), nivel: de('nivel'), modalidad: de('modalidad'), turnos: de('turnos'), fed_a_cargo: unicosOrdenados((feds.data ?? []).map(f => f.nombre_completo as string)) }
+}
+async function anotarCambios(db: ReturnType<typeof supabaseServer>, escuelaId: string, autorId: string, filas: { seccion: string, campo: string, valor_anterior: string | null, valor_nuevo: string | null }[]) {
+  if (!filas.length) return
+  const { error } = await db.from('historial_cambios').insert(filas.map(f => ({ ...f, establecimiento_id: escuelaId, autor_id: autorId })))
+  if (error) throw new Error(error.message)
+}
+async function getEdicionEscuelaImpl(yo: Usuario, id: string): Promise<EdicionEscuela> {
+  const { db, e, nivel } = await escuelaEditable(yo, id)
+  const [con, his, feds, opciones] = await Promise.all([
+    e.cue == null ? Promise.resolve({ data: [], error: null }) : db.from('contactos').select(COLS_CONTACTO_EDITABLE).eq('cue', e.cue).order('es_principal', { ascending: false }).order('apellido'),
+    db.from('historial_cambios').select('id, seccion, campo, valor_anterior, valor_nuevo, created_at, autor_id').eq('establecimiento_id', id).order('created_at', { ascending: false }).limit(60),
+    db.from('feds').select('id, nombre_completo'),
+    opcionesEscuela(db),
+  ])
+  if (con.error) throw new Error(con.error.message)
+  if (his.error) throw new Error(his.error.message)
+  const autor = (a: string | null) => (a ? (feds.data ?? []).find(f => f.id === a)?.nombre_completo as string | undefined ?? 'Ex integrante' : null)
+  const { id: _id, cue, ...valores } = e
+  return {
+    id, cue, nombre: e.nombre, nivel, valores, opciones,
+    contactos: (con.data ?? []) as unknown as ContactoEditable[],
+    historial: (his.data ?? []).map(h => ({ id: h.id as string, seccion: h.seccion as string, campo: h.campo as string, valor_anterior: h.valor_anterior as string | null, valor_nuevo: h.valor_nuevo as string | null, created_at: h.created_at as string, autor: autor(h.autor_id as string | null) })),
+  }
+}
+// Guarda sólo lo que cambió. Devuelve cuántos datos se modificaron.
+async function guardarEscuelaImpl(yo: Usuario, id: string, cambios: Record<string, unknown>): Promise<number> {
+  const { db, e, nivel } = await escuelaEditable(yo, id)
+  const lista = cambiosDeEscuela(e, cambios, nivel as NivelEdicion, await opcionesEscuela(db))
+  if (!lista.length) return 0
+  const { error } = await db.from('establecimientos').update(Object.fromEntries(lista.map(c => [c.clave, c.valor]))).eq('id', id)
+  if (error) throw new Error(error.message)
+  await anotarCambios(db, id, yo.fed.id, lista.map(c => ({ seccion: seccionDe(c.clave), campo: c.label, valor_anterior: c.anterior, valor_nuevo: c.nuevo })))
+  return lista.length
+}
+async function contactoDe(db: ReturnType<typeof supabaseServer>, cue: number | null, contactoId: string) {
+  if (!UUID.test(contactoId)) throw new Error('Contacto inválido')
+  const { data, error } = await db.from('contactos').select(COLS_CONTACTO_EDITABLE).eq('id', contactoId).eq('cue', cue ?? -1).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error('No se encontró el contacto en esta escuela')
+  return data as unknown as ContactoEditable
+}
+// Alta (sin contactoId) o edición de un contacto de la escuela.
+async function guardarContactoImpl(yo: Usuario, id: string, contactoId: string | null, input: ContactoInput): Promise<void> {
+  const { db, e } = await escuelaEditable(yo, id)
+  if (e.cue == null) throw new Error('La escuela no tiene CUE')
+  const nuevo = validarContacto(input)
+  if (!contactoId) {
+    const { error } = await db.from('contactos').insert({ ...nuevo, cue: e.cue, distrito: e.distrito, fed_a_cargo: e.fed_a_cargo, es_principal: false })
+    if (error) throw new Error(error.message)
+    await anotarCambios(db, id, yo.fed.id, [{ seccion: 'Contacto', campo: 'Contacto agregado', valor_anterior: null, valor_nuevo: resumenContacto(nuevo) }])
+    return
+  }
+  const antes = await contactoDe(db, e.cue, contactoId)
+  const filas = historialDeContacto(antes, nuevo)
+  if (!filas.length) return
+  const { error } = await db.from('contactos').update(nuevo).eq('id', contactoId)
+  if (error) throw new Error(error.message)
+  await anotarCambios(db, id, yo.fed.id, filas)
+}
+async function borrarContactoImpl(yo: Usuario, id: string, contactoId: string): Promise<void> {
+  const { db, e } = await escuelaEditable(yo, id)
+  const antes = await contactoDe(db, e.cue, contactoId)
+  const { error } = await db.from('contactos').delete().eq('id', contactoId)
+  if (error) throw new Error(error.message)
+  await anotarCambios(db, id, yo.fed.id, [{ seccion: 'Contacto', campo: 'Contacto eliminado', valor_anterior: resumenContacto(antes), valor_nuevo: null }])
+}
+// El contacto principal es el que se muestra primero en los listados: queda uno solo por escuela.
+async function principalContactoImpl(yo: Usuario, id: string, contactoId: string): Promise<void> {
+  const { db, e } = await escuelaEditable(yo, id)
+  const c = await contactoDe(db, e.cue, contactoId)
+  if (c.es_principal) return
+  const sacar = await db.from('contactos').update({ es_principal: false }).eq('cue', e.cue as number).eq('es_principal', true)
+  if (sacar.error) throw new Error(sacar.error.message)
+  const poner = await db.from('contactos').update({ es_principal: true }).eq('id', contactoId)
+  if (poner.error) throw new Error(poner.error.message)
+  await anotarCambios(db, id, yo.fed.id, [{ seccion: 'Contacto', campo: 'Contacto principal', valor_anterior: null, valor_nuevo: resumenContacto(c) }])
 }
 // Anota cómo salió un cronograma (el último que se anota es el vigente). Si no se realizó o se reprogramó, hace falta el motivo y se avisa al CED.
 async function marcarCronogramaImpl(yo: Usuario, id: string, estado: EstadoSeguimiento, nota: string): Promise<Seguimiento> {
@@ -921,6 +1021,11 @@ export const getReclamos = async () => conUsuario(() => getReclamosImpl())
 export const getAccesos = async () => conUsuario(yo => getAccesosImpl(yo))
 export const getMisEscuelas = async () => conUsuario(yo => getMisEscuelasImpl(yo))
 export const getExtrasEscuela = async (id: string) => conUsuario(yo => getExtrasEscuelaImpl(yo, id))
+export const getEdicionEscuela = async (id: string) => conUsuario(yo => getEdicionEscuelaImpl(yo, id))
+export const guardarEscuela = async (id: string, cambios: Record<string, unknown>) => conUsuario(yo => guardarEscuelaImpl(yo, id, cambios))
+export const guardarContacto = async (id: string, contactoId: string | null, contacto: ContactoInput) => conUsuario(yo => guardarContactoImpl(yo, id, contactoId, contacto))
+export const borrarContacto = async (id: string, contactoId: string) => conUsuario(yo => borrarContactoImpl(yo, id, contactoId))
+export const contactoPrincipal = async (id: string, contactoId: string) => conUsuario(yo => principalContactoImpl(yo, id, contactoId))
 export const getCronogramas = async () => conUsuario(yo => getCronogramasImpl(yo))
 export const avisarCronograma = async (id: string, aviso: AvisoCronograma) => conUsuario(yo => avisarCronogramaImpl(yo, id, aviso))
 export const getContactosCronograma = async (id: string) => conUsuario(yo => getContactosCronogramaImpl(yo, id))
