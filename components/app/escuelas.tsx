@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Building2, CalendarClock, CalendarPlus, History, Loader2, MapPin, Navigation, Search, School as SchoolIcon, Trophy, Users, Wifi, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Building2, CalendarClock, CalendarPlus, Contact, History, Loader2, Mail, MapPin, Navigation, Phone, Search, School as SchoolIcon, Trophy, Users, Wifi, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { type Accion, type AgendaItem, type Estado, type Fed, type School } from '@/lib/agenda'
 import { FAMILIAS, type Familia } from '@/lib/ayuda/estilo'
 import { CAMPOS_ESCUELA, CLAVES_CONECTIVIDAD } from '@/lib/escuelas-edicion'
+import { nombreContacto } from '@/lib/mis-escuelas'
 import { resumenHistorial, separarHistorial, type FichaEscuela, type FilaHistorial } from '@/lib/escuela'
 import { hoyAR } from '@/lib/hora'
 import { titleCase } from '@/lib/format'
@@ -23,7 +24,7 @@ const fechaCorta = (f: string) => cap(fmt(parse(f), { weekday: 'short', day: 'nu
 type Tono = { familia: Familia, Icono: LucideIcon }
 const TONO = {
   ubicacion: { familia: 'celeste', Icono: MapPin }, institucion: { familia: 'violeta', Icono: Building2 }, alumnado: { familia: 'amarillo', Icono: Users },
-  proximas: { familia: 'celeste', Icono: CalendarClock }, conectividad: { familia: 'celeste', Icono: Wifi }, clubes: { familia: 'violeta', Icono: Trophy }, historial: { familia: 'azul', Icono: History },
+  proximas: { familia: 'celeste', Icono: CalendarClock }, conectividad: { familia: 'celeste', Icono: Wifi }, contactos: { familia: 'azul', Icono: Contact }, clubes: { familia: 'violeta', Icono: Trophy }, historial: { familia: 'azul', Icono: History },
 } satisfies Record<string, Tono>
 const sinComillas = (t: string | null) => (t ? titleCase(t.replace(/["“”]/g, '').trim()) : null)
 
@@ -31,11 +32,11 @@ function Dato({ label, children }: { label: string, children: React.ReactNode })
   return children ? <div className="min-w-0"><dt className="text-xs font-semibold text-dte-gris">{label}</dt><dd className="text-sm font-medium">{children}</dd></div> : null
 }
 
-function Tarjeta({ tono, titulo, children, columnas }: { tono: Tono, titulo: string, children: React.ReactNode, columnas?: boolean }) {
+function Tarjeta({ tono, titulo, children, columnas, lista }: { tono: Tono, titulo: string, children: React.ReactNode, columnas?: boolean, lista?: boolean }) {
   const f = FAMILIAS[tono.familia]
   return <section className={`min-w-0 rounded-card border-l-4 p-3.5 ${f.fondo} ${f.borde}`}>
     <h3 className={`mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider ${f.texto}`}><tono.Icono className="size-4" aria-hidden />{titulo}</h3>
-    <dl className={columnas ? 'grid gap-x-4 gap-y-2 sm:grid-cols-2' : 'flex flex-col gap-2'}>{children}</dl>
+    {lista ? <div>{children}</div> : <dl className={columnas ? 'grid gap-x-4 gap-y-2 sm:grid-cols-2' : 'flex flex-col gap-2'}>{children}</dl>}
   </section>
 }
 
@@ -67,7 +68,7 @@ function Filas({ filas, feds, onOpen, inicial }: { filas: FilaHistorial[], feds:
 }
 
 export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen, onEditado, onEscuela }: { onEscuela?: (id: string) => void, ficha: FichaEscuela, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void, onEditado: () => void }) {
-  const { escuela: e, historial, clubes, conectividad, jefatura } = ficha
+  const { escuela: e, historial, clubes, conectividad, jefatura, contactos } = ficha
   const [verJefatura, setVerJefatura] = useState(false)
   const filasConectividad = CAMPOS_ESCUELA.filter(c => CLAVES_CONECTIVIDAD.includes(c.clave) && conectividad[c.clave])
   const { proximas, anteriores } = separarHistorial(historial, hoyAR())
@@ -115,6 +116,12 @@ export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen,
       </div>
       <div className="sm:col-span-2"><Tarjeta tono={TONO.conectividad} titulo="Conectividad" columnas>
         {filasConectividad.length ? filasConectividad.map(c => <Dato key={c.clave} label={c.label}>{conectividad[c.clave]}</Dato>) : <p className="text-sm text-dte-gris">Sin datos de conectividad cargados.</p>}
+      </Tarjeta></div>
+      <div className="sm:col-span-2"><Tarjeta tono={TONO.contactos} titulo={`Contactos${contactos.length ? ` (${contactos.length})` : ''}`} lista>
+        {contactos.length ? <ul className="flex flex-col divide-y divide-black/10">{contactos.map((k, i) => { const mail = k.correo_laboral || k.correo; return <li key={i} className="flex flex-col gap-1 py-2 first:pt-0 last:pb-0">
+          <span className="break-words text-sm font-semibold">{nombreContacto(k) || 'Sin nombre'}{k.cargo && <span className="font-normal text-dte-gris"> · {k.cargo}</span>}{k.es_principal && <span className="ml-1.5 text-xs font-normal text-dte-gris">(principal)</span>}</span>
+          <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">{k.telefono && <a href={`tel:${k.telefono}`} className="inline-flex min-h-8 items-center gap-1 font-semibold text-dte-petroleo underline underline-offset-2"><Phone className="size-3.5" aria-hidden />{k.telefono}</a>}{mail && <a href={`mailto:${mail}`} className="inline-flex min-h-8 items-center gap-1 break-all font-semibold text-dte-petroleo underline underline-offset-2"><Mail className="size-3.5" aria-hidden />{mail}</a>}{!k.telefono && !mail && <span className="text-xs text-dte-gris">Sin teléfono ni correo</span>}</span>
+        </li> })}</ul> : <p className="text-sm text-dte-gris">Sin datos de contacto cargados.</p>}
       </Tarjeta></div>
     </div>
     {proximas.length > 0 && <Seccion tono={TONO.proximas} titulo="Próximas acciones" cantidad={proximas.length}><Filas filas={proximas} feds={feds} onOpen={onOpen} inicial={5} /></Seccion>}
