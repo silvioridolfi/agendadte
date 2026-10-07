@@ -108,7 +108,7 @@ Desde la ficha también podés **agendar** una acción o **armar un reclamo** co
 Si la escuela es tuya (o sos del CED o de la administración), la ficha tiene el botón **Editar datos**, tanto en el buscador como en Mis escuelas. Se abre con tres solapas:
 - **Datos:** ${CAMPOS_ESCUELA.filter(c => !c.avanzado).map(c => c.label.toLowerCase()).join(', ')}. Varones y mujeres no pueden sumar más que la matrícula. Latitud y longitud ubican la escuela en el mapa (ver **Mapa de la región**). Solo se guardan los datos que cambiaste. ${CAMPOS_ESCUELA.filter(c => c.avanzado).map(c => c.label.toLowerCase()).join(', ')} los cambian solo el CED y la administración.
 - **Conectividad** (solo CED y administración): enlace, PNCE, PBA, piso tecnológico y ANI. El plan de enlace, el subplan y el plan de piso se eligen de una lista (de ahí sale el enlace que se usa al armar un reclamo); las fechas se eligen con el calendario y el ancho de banda lleva solo números.
-- **Contactos:** agregar, editar, eliminar y marcar el **principal** (el que se muestra primero en las listas). El correo laboral tiene que terminar en ${DOMINIO_LABORAL}.
+- **Contactos:** agregar, editar, eliminar y marcar el **principal** (el que se muestra primero en las listas). Cada contacto tiene dos correos: el **institucional** (el de la escuela) y el **laboral** (el del directivo), que tiene que terminar en ${DOMINIO_LABORAL}.
 - **Historial:** quién cambió cada dato, cuándo, y qué había antes, por si hay que volver atrás.
 Los cambios se guardan al instante y no se avisa a nadie. Las escuelas sin FED asignado las edita solo el CED o la administración; las de otro FED las ves pero no las editás.
 ## Quién ve qué
