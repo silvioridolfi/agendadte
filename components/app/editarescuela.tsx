@@ -8,11 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input'
 import { Segmented } from '@/components/ui/segmented'
 import { Textarea } from '@/components/ui/textarea'
-import { CAMPOS_ESCUELA, DOMINIO_LABORAL, resumenContacto, type CampoEscuela, type ContactoEditable, type ContactoInput, type EdicionEscuela } from '@/lib/escuelas-edicion'
+import { CAMPOS_ESCUELA, DOMINIO_LABORAL, fechaAIso, fechaDeIso, resumenContacto, type CampoEscuela, type ContactoEditable, type ContactoInput, type EdicionEscuela } from '@/lib/escuelas-edicion'
 import { Field } from '@/components/app/formulario'
 import { ErrorBox, Skeleton, borrarContacto, contactoPrincipal, errMsg, fmt, getEdicionEscuela, guardarContacto, guardarEscuela, selectClass } from '@/components/app/comun'
 
-type Vista = 'datos' | 'contactos' | 'historial'
+type Vista = 'datos' | 'conectividad' | 'contactos' | 'historial'
 const GRUPOS: { titulo: string, claves: string[], avanzado?: boolean }[] = [
   { titulo: 'Ubicación', claves: ['direccion'] },
   { titulo: 'Institución', claves: ['alias', 'nivel', 'modalidad', 'turnos'] },
@@ -20,9 +20,14 @@ const GRUPOS: { titulo: string, claves: string[], avanzado?: boolean }[] = [
   { titulo: 'Notas', claves: ['observaciones'] },
   { titulo: 'Datos de la escuela (solo CED y administración)', claves: ['nombre', 'predio', 'distrito', 'ciudad', 'fed_a_cargo', 'tipo_establecimiento', 'ambito'], avanzado: true },
 ]
+const GRUPOS_CONECTIVIDAD: typeof GRUPOS = [
+  { titulo: 'Enlace', claves: ['plan_enlace', 'subplan_enlace', 'fecha_inicio_conectividad', 'mb', 'listado_conexion_internet'] },
+  { titulo: 'PNCE', claves: ['proveedor_internet_pnce', 'fecha_instalacion_pnce'] },
+  { titulo: 'PBA', claves: ['estado_instalacion_pba', 'proveedor_asignado_pba'] },
+  { titulo: 'Piso tecnológico', claves: ['plan_piso_tecnologico', 'tipo_piso_instalado', 'proveedor_piso_tecnologico_cue', 'fecha_terminado_piso_tecnologico_cue'] },
+  { titulo: 'Otros', claves: ['reclamos_grupo_1_ani', 'recurso_primario', 'access_id'] },
+]
 const hora = (iso: string) => fmt(new Date(iso), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(/\./g, '')
-const OPCIONES_DE: Record<string, keyof EdicionEscuela['opciones']> = { distrito: 'distrito', fed_a_cargo: 'fed_a_cargo', tipo_establecimiento: 'tipo_establecimiento', ambito: 'ambito' }
-const SUGERENCIAS: Record<string, keyof EdicionEscuela['opciones']> = { nivel: 'nivel', modalidad: 'modalidad', turnos: 'turnos' }
 
 // Edición de los datos de una escuela, en tres solapas: datos, contactos e historial de cambios. El servidor vuelve a validar todo y no se avisa a nadie.
 export function EditarEscuela({ id, nombre, onClose, onCambio }: { id: string, nombre: string, onClose: () => void, onCambio: () => void }) {
@@ -39,8 +44,9 @@ export function EditarEscuela({ id, nombre, onClose, onCambio }: { id: string, n
       {error ? <ErrorBox message={error} onRetry={() => { setError(''); cargar() }} />
         : !datos ? <div className="flex flex-col gap-3"><Skeleton className="h-10" /><Skeleton className="h-40" /><Skeleton className="h-24" /></div>
         : <>
-          <Segmented<Vista> label="Qué editar" value={vista} onChange={setVista} options={[['datos', 'Datos'], ['contactos', `Contactos (${datos.contactos.length})`], ['historial', 'Historial']]} className="sm:w-full" />
-          {vista === 'datos' && <Datos datos={datos} onGuardado={cambio} />}
+          <Segmented<Vista> label="Qué editar" value={vista} onChange={setVista} options={[['datos', 'Datos'], ...(datos.nivel === 'todo' ? [['conectividad', 'Conectividad'] as const] : []), ['contactos', `Contactos (${datos.contactos.length})`], ['historial', 'Historial']]} className="sm:w-full" />
+          {vista === 'datos' && <Datos datos={datos} grupos={GRUPOS} onGuardado={cambio} />}
+          {vista === 'conectividad' && datos.nivel === 'todo' && <Datos datos={datos} grupos={GRUPOS_CONECTIVIDAD} onGuardado={cambio} />}
           {vista === 'contactos' && <Contactos datos={datos} onCambio={cambio} />}
           {vista === 'historial' && <Historial datos={datos} />}
         </>}
@@ -49,31 +55,31 @@ export function EditarEscuela({ id, nombre, onClose, onCambio }: { id: string, n
 }
 
 function Control({ campo, valor, onChange, datos }: { campo: CampoEscuela, valor: string, onChange: (v: string) => void, datos: EdicionEscuela }) {
-  const lista = OPCIONES_DE[campo.clave], sugerencias = SUGERENCIAS[campo.clave]
+  const opciones = datos.opciones[campo.clave] ?? []
   if (campo.tipo === 'largo') return <Textarea value={valor} onChange={e => onChange(e.target.value)} maxLength={campo.max} className="min-h-20" />
-  if (lista) {
-    const opciones = datos.opciones[lista]
-    return <select value={valor} onChange={e => onChange(e.target.value)} className={selectClass}>
-      {campo.clave === 'fed_a_cargo' && <option value="">Sin FED asignado</option>}
-      {valor && !opciones.includes(valor) && <option value={valor}>{valor}</option>}
-      {opciones.map(o => <option key={o} value={o}>{o}</option>)}
-    </select>
-  }
-  const listId = sugerencias ? `lista-${campo.clave}` : undefined
+  if (campo.tipo === 'fecha') return <Input type="date" value={fechaAIso(valor)} onChange={e => onChange(fechaDeIso(e.target.value))} min="2000-01-01" max="2100-12-31" className="h-11 md:h-9" />
+  if (campo.tipo === 'lista') return <select value={valor} onChange={e => onChange(e.target.value)} className={selectClass}>
+    {(campo.clave === 'fed_a_cargo' || valor === '' || campo.clave === 'plan_piso_tecnologico') && <option value="">{campo.clave === 'fed_a_cargo' ? 'Sin FED asignado' : 'Sin dato'}</option>}
+    {valor && !opciones.includes(valor) && <option value={valor}>{valor}</option>}
+    {opciones.map(o => <option key={o} value={o}>{o}</option>)}
+  </select>
+  const listId = campo.sugerencias ? `lista-${campo.clave}` : undefined
   return <>
-    <Input value={valor} onChange={e => onChange(e.target.value)} inputMode={campo.tipo === 'entero' ? 'numeric' : undefined} maxLength={campo.tipo === 'entero' ? 8 : campo.max} list={listId} className="h-11 md:h-9" />
-    {listId && <datalist id={listId}>{datos.opciones[sugerencias].map(o => <option key={o} value={o} />)}</datalist>}
+    <Input value={valor} onChange={e => onChange(e.target.value)} inputMode={campo.tipo === 'entero' || campo.tipo === 'cifras' ? 'numeric' : undefined} maxLength={campo.tipo === 'entero' ? 8 : campo.max} list={listId} className="h-11 md:h-9" />
+    {listId && <datalist id={listId}>{opciones.map(o => <option key={o} value={o} />)}</datalist>}
   </>
 }
 
 const formDe = (d: EdicionEscuela): Record<string, string> => Object.fromEntries(CAMPOS_ESCUELA.map(c => [c.clave, d.valores[c.clave] == null ? '' : String(d.valores[c.clave])]))
-function Datos({ datos, onGuardado }: { datos: EdicionEscuela, onGuardado: () => Promise<EdicionEscuela | null> }) {
+function Datos({ datos, grupos, onGuardado }: { datos: EdicionEscuela, grupos: typeof GRUPOS, onGuardado: () => Promise<EdicionEscuela | null> }) {
+  const claves = grupos.flatMap(g => g.claves)
+  const campos = CAMPOS_ESCUELA.filter(c => claves.includes(c.clave))
   const [inicial, setInicial] = useState(() => formDe(datos))
   const [form, setForm] = useState<Record<string, string>>(inicial)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   const [hecho, setHecho] = useState('')
-  const cambios = CAMPOS_ESCUELA.filter(c => form[c.clave] !== inicial[c.clave])
+  const cambios = campos.filter(c => form[c.clave] !== inicial[c.clave])
   async function guardar() {
     setGuardando(true); setError(''); setHecho('')
     try {
@@ -84,7 +90,7 @@ function Datos({ datos, onGuardado }: { datos: EdicionEscuela, onGuardado: () =>
     } catch (e) { setError(errMsg(e)) } finally { setGuardando(false) }
   }
   return <div className="flex flex-col gap-5">
-    {GRUPOS.filter(g => !g.avanzado || datos.nivel === 'todo').map(g => <fieldset key={g.titulo} className="flex flex-col gap-3 rounded-tile border border-dte-linea p-3">
+    {grupos.filter(g => !g.avanzado || datos.nivel === 'todo').map(g => <fieldset key={g.titulo} className="flex flex-col gap-3 rounded-tile border border-dte-linea p-3">
       <legend className="px-1 text-xs font-bold uppercase tracking-wider text-dte-gris">{g.titulo}</legend>
       <div className="grid gap-3 sm:grid-cols-2">
         {g.claves.map(k => CAMPOS_ESCUELA.find(c => c.clave === k)!).map(c => <Field key={c.clave} label={c.label} className={c.tipo === 'largo' || c.clave === 'direccion' || c.clave === 'nombre' ? 'sm:col-span-2' : ''}>

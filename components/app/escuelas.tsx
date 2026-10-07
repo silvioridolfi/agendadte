@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input'
 import { type Accion, type AgendaItem, type Estado, type Fed, type School } from '@/lib/agenda'
 import { FAMILIAS, type Familia } from '@/lib/ayuda/estilo'
+import { CAMPOS_ESCUELA, CLAVES_CONECTIVIDAD } from '@/lib/escuelas-edicion'
 import { resumenHistorial, separarHistorial, type FichaEscuela, type FilaHistorial } from '@/lib/escuela'
 import { hoyAR } from '@/lib/hora'
 import { titleCase } from '@/lib/format'
@@ -20,7 +21,7 @@ const fechaCorta = (f: string) => cap(fmt(parse(f), { weekday: 'short', day: 'nu
 type Tono = { familia: Familia, Icono: LucideIcon }
 const TONO = {
   ubicacion: { familia: 'celeste', Icono: MapPin }, institucion: { familia: 'violeta', Icono: Building2 }, alumnado: { familia: 'amarillo', Icono: Users },
-  proximas: { familia: 'celeste', Icono: CalendarClock }, clubes: { familia: 'violeta', Icono: Trophy }, historial: { familia: 'azul', Icono: History },
+  proximas: { familia: 'celeste', Icono: CalendarClock }, conectividad: { familia: 'celeste', Icono: Wifi }, clubes: { familia: 'violeta', Icono: Trophy }, historial: { familia: 'azul', Icono: History },
 } satisfies Record<string, Tono>
 const sinComillas = (t: string | null) => (t ? titleCase(t.replace(/["“”]/g, '').trim()) : null)
 
@@ -28,11 +29,11 @@ function Dato({ label, children }: { label: string, children: React.ReactNode })
   return children ? <div className="min-w-0"><dt className="text-xs font-semibold text-dte-gris">{label}</dt><dd className="text-sm font-medium">{children}</dd></div> : null
 }
 
-function Tarjeta({ tono, titulo, children }: { tono: Tono, titulo: string, children: React.ReactNode }) {
+function Tarjeta({ tono, titulo, children, columnas }: { tono: Tono, titulo: string, children: React.ReactNode, columnas?: boolean }) {
   const f = FAMILIAS[tono.familia]
   return <section className={`min-w-0 rounded-card border-l-4 p-3.5 ${f.fondo} ${f.borde}`}>
     <h3 className={`mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider ${f.texto}`}><tono.Icono className="size-4" aria-hidden />{titulo}</h3>
-    <dl className="flex flex-col gap-2">{children}</dl>
+    <dl className={columnas ? 'grid gap-x-4 gap-y-2 sm:grid-cols-2' : 'flex flex-col gap-2'}>{children}</dl>
   </section>
 }
 
@@ -64,7 +65,8 @@ function Filas({ filas, feds, onOpen, inicial }: { filas: FilaHistorial[], feds:
 }
 
 export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen, onEditado }: { ficha: FichaEscuela, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void, onEditado: () => void }) {
-  const { escuela: e, historial, clubes } = ficha
+  const { escuela: e, historial, clubes, conectividad } = ficha
+  const filasConectividad = CAMPOS_ESCUELA.filter(c => CLAVES_CONECTIVIDAD.includes(c.clave) && conectividad[c.clave])
   const { proximas, anteriores } = separarHistorial(historial, hoyAR())
   const r = resumenHistorial(historial)
   const fedDe = (id: string) => feds.find(x => x.id === id)?.nombre_completo ?? ''
@@ -98,6 +100,9 @@ export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen,
         <Dato label="Matrícula">{e.matricula != null && <>{num.format(e.matricula)}{e.varones != null && e.mujeres != null && <span className="font-normal text-dte-gris"> · {num.format(e.varones)} varones, {num.format(e.mujeres)} mujeres</span>}</>}</Dato>
         <Dato label="Secciones">{e.secciones != null && num.format(e.secciones)}</Dato>
       </Tarjeta>}
+      <div className="sm:col-span-2"><Tarjeta tono={TONO.conectividad} titulo="Conectividad" columnas>
+        {filasConectividad.length ? filasConectividad.map(c => <Dato key={c.clave} label={c.label}>{conectividad[c.clave]}</Dato>) : <p className="text-sm text-dte-gris">Sin datos de conectividad cargados.</p>}
+      </Tarjeta></div>
     </div>
     {proximas.length > 0 && <Seccion tono={TONO.proximas} titulo="Próximas acciones" cantidad={proximas.length}><Filas filas={proximas} feds={feds} onOpen={onOpen} inicial={5} /></Seccion>}
     {clubes.length > 0 && <Seccion tono={TONO.clubes} titulo="Clubes y prácticas" cantidad={clubes.length}>

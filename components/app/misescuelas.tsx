@@ -11,7 +11,6 @@ import { FAMILIAS } from '@/lib/ayuda/estilo'
 import { FILTROS_ESCUELAS_VACIOS, filtrarEscuelas, nombreContacto, ordenarEscuelas, resumenEscuelas, type ColumnaEscuelas, type FiltrosEscuelas, type ResumenEscuela } from '@/lib/mis-escuelas'
 import { ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL } from '@/lib/reclamos-registro'
 import type { FichaEscuela } from '@/lib/escuela'
-import { ENLACE_LABEL, enlacesDe, tienePiso } from '@/lib/reclamos'
 import { titleCase } from '@/lib/format'
 import { siglaNombre } from '@/lib/siglas'
 import { BotonVolver, ErrorBox, Skeleton, errMsg, eyebrow, fmt, getExtrasEscuela, getFichaEscuela, getMisEscuelas, parse, selectClass, storage } from '@/components/app/comun'
@@ -196,17 +195,8 @@ function Bloque({ titulo, icono: Icono, familia, children }: { titulo: string, i
 }
 
 function Extras({ x, feds }: { x: Awaited<ReturnType<typeof getExtrasEscuela>>, feds: Fed[] }) {
-  const c = x.conectividad
-  const enlaces = enlacesDe(c.plan_enlace, c.subplan_enlace)
-  const filas: [string, string | null][] = [
-    ['Enlace', enlaces.length ? enlaces.map(en => ENLACE_LABEL[en]).join(' + ') : c.plan_enlace], ['Piso tecnológico', tienePiso(c) ? [c.plan_piso_tecnologico, c.tipo_piso_instalado].filter(Boolean).join(' · ') : 'Sin piso'],
-    ['Proveedor PNCE', c.proveedor_pnce], ['Proveedor PBA', c.proveedor_pba], ['ANI', c.ani], ['Recurso primario', c.recurso_primario], ['Access ID', c.access_id],
-  ]
   const nombreFed = (id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Ex integrante'
   return <>
-    <Bloque titulo="Conectividad" icono={Wifi} familia="celeste">
-      <dl className="grid gap-2 rounded-tile border border-dte-linea p-3 sm:grid-cols-2">{filas.filter(([, v]) => v).map(([l, v]) => <div key={l} className="min-w-0"><dt className="text-xs font-semibold text-dte-gris">{l}</dt><dd className="break-words text-sm font-medium">{v}</dd></div>)}</dl>
-    </Bloque>
     <Bloque titulo={`Reclamos (${x.reclamos.length})`} icono={TriangleAlert} familia="amarillo">
       {x.reclamos.length ? <ul className="divide-y divide-dte-linea overflow-hidden rounded-tile border border-dte-linea">{x.reclamos.map(r => <li key={r.id} className="flex flex-col gap-1 px-3 py-2.5">
         <span className="flex flex-wrap items-center gap-1.5"><span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${ESTADO_RECLAMO_CLASE[r.estado]}`}>{ESTADO_RECLAMO_LABEL[r.estado]}</span><span className="text-xs text-dte-gris">{fechaCorta(r.enviado_at.slice(0, 10))} · {nombreFed(r.fed_id)}</span></span>
