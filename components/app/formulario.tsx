@@ -15,7 +15,7 @@ import { Destinatarios, PropuestaClub, PropuestaTaller } from '@/components/app/
 import { etiquetaAccion, nombreAccion, iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, esAusencia, ACCIONES_CED, SOLO_CED, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
 import type { Ocupacion, Organismo } from '@/app/actions'
 import { titleCase } from '@/lib/format'
-import { buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, cambiarEstadoVarias, disponibilidad, guardarVisita, editarVisita, ActionChip, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
+import { lineaPredio, buscarOrganismos, crearClubPorIniciar, actionStyle, statusStyle, az, azOtroAlFinal, selectClass, iso, parse, fmt, hhmm, schoolName, shortSchoolName, schoolPlace, ddjjFor, searchSchools, getClubes, getFedItems, getFeriados, misTiposFrecuentes, storage, saveItem, cambiarEstadoVarias, disponibilidad, guardarVisita, editarVisita, ActionChip, errMsg, ErrorBox, ItemPreset, addDays, cap, DIAS_HABILES } from '@/components/app/comun'
 import { encolarOffline, encolarVisitaOffline } from '@/components/app/offline'
 import { alternarTipo, esSumable, datosDeAccion, datosVacios, inputDeTipo, type DatosTipo } from '@/lib/visita'
 import { hoyAR } from '@/lib/hora'
@@ -82,7 +82,8 @@ export function SchoolPicker({ value, onChange, onOrganismo, enLinea }: { value:
           {x.tipo === 'org' ? <><span className="flex items-center gap-1.5 font-semibold leading-snug"><Landmark className="size-3.5 shrink-0 text-dte-violeta" aria-hidden />{x.o.nombre.split(' | ').map(titleCase).join(' · ')}</span>
             <span className="block text-xs text-dte-gris">Código {x.o.codigo}{x.o.localidad ? ` · ${titleCase(x.o.localidad)}` : ''}</span></>
           : <><span className="block font-semibold leading-snug">{schoolName(x.s)}</span>
-            <span className="block text-xs text-dte-gris">CUE {x.s.cue ?? '—'}{schoolPlace(x.s) ? ` · ${schoolPlace(x.s)}` : ''}</span></>}
+            <span className="block text-xs text-dte-gris">CUE {x.s.cue ?? '—'}{schoolPlace(x.s) ? ` · ${schoolPlace(x.s)}` : ''}</span>
+            {lineaPredio(x.s) && <span className="block break-words text-xs font-medium text-club-violeta">{lineaPredio(x.s)}</span>}</>}
         </button>)}
     </div>}
   </div>

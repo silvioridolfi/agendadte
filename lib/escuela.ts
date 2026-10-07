@@ -1,12 +1,15 @@
 // Ficha de una escuela (buscador): datos del establecimiento, historial de acciones y clubes o prácticas.
 import type { AgendaItem } from '@/lib/agenda'
 import type { JefaturaResumen } from '@/lib/organismos'
+import type { Hermana } from '@/lib/predio'
 
 export type DatosEscuela = {
   id: string, cue: number | null, nombre: string | null, alias: string | null, distrito: string | null, ciudad: string | null, direccion: string | null,
   nivel: string | null, modalidad: string | null, ambito: string | null, turnos: string | null,
   matricula: number | null, varones: number | null, mujeres: number | null, secciones: number | null, fed_a_cargo: string | null,
   lat: number | null, lon: number | null,
+  // Número de predio y las otras escuelas que lo comparten.
+  predio: number | null, comparte: Hermana[],
   // Texto para "Cómo llegar" (la dirección o el punto cargado); sin dato, null.
   mapa: string | null,
 }

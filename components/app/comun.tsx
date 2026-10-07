@@ -76,6 +76,9 @@ export function weekTitle(from: Date, to: Date) {
 export const schoolName = (s: School | null) => (s?.nombre ? titleCase(s.nombre) : 'Sin escuela asignada')
 // Siglas y nombre mínimo para calendarios y tarjetas angostas (la lógica está en lib/siglas.ts).
 export const shortSchoolName = (s: School | null) => nombreCorto(schoolName(s))
+// Escuelas que comparten edificio: nombre corto con su CUE, y la línea para los resultados de búsqueda.
+export const nombreHermana = (h: { id: string, cue: number | null, nombre: string | null }) => `${shortSchoolName({ id: h.id, cue: h.cue, nombre: h.nombre, distrito: null, ciudad: null })} (CUE ${h.cue ?? '—'})`
+export const lineaPredio = (s: Pick<School, 'predio' | 'comparte'>) => (s.predio && s.comparte?.length ? `Predio ${s.predio} · comparte con ${s.comparte.map(nombreHermana).join(', ')}` : '')
 export const siglaEscuela = (s: School | null) => siglaNombre(schoolName(s))
 // Segunda línea de las tarjetas: CUE y localidad.
 export const cueLugar = (s: School | null) => (s ? [s.cue ? `CUE ${s.cue}` : null, schoolPlace(s)].filter(Boolean).join(' · ') : '')

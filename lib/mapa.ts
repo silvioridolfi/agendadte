@@ -10,7 +10,7 @@ export const ubicacionEnRegion = (lat: number, lon: number) => lat >= REGION.lat
 
 export type PuntoMapa = {
   id: string, tipo: 'escuela' | 'jefatura', nombre: string, lat: number, lon: number,
-  cue: number | null, distrito: string | null, direccion: string | null, fed: string | null, nivel: string | null,
+  cue: number | null, distrito: string | null, direccion: string | null, fed: string | null, nivel: string | null, predio: number | null,
 }
 export type Vista = { lat: number, lon: number, z: number }
 
@@ -105,5 +105,5 @@ export function filtrarPuntos(puntos: PuntoMapa[], f: FiltrosMapa, coincideFed: 
 }
 
 // Lo que trae la pantalla del mapa: los puntos con ubicación y las escuelas que todavía no la tienen.
-export type SinUbicacion = { id: string, cue: number | null, nombre: string, distrito: string | null, fed: string | null }
+export type SinUbicacion = { id: string, cue: number | null, nombre: string, distrito: string | null, fed: string | null, predio: number | null }
 export type PuntosMapa = { puntos: PuntoMapa[], sinUbicacion: SinUbicacion[] }

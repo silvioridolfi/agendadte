@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { FILTROS_MAPA_VACIOS, SIN_FED_MAPA, REGION, agrupar, aPantalla, conZoom, deMundoPx, desplazar, encuadrar, filtrarPuntos, mundoPx, teselasVisibles, ubicacionEnRegion, type PuntoMapa } from '@/lib/mapa'
 import { esDelFed } from '@/lib/cronogramas'
 
-const p = (id: string, nombre: string, lat: number, lon: number, extra: Partial<PuntoMapa> = {}): PuntoMapa => ({ id, tipo: 'escuela', nombre, lat, lon, cue: 60000000, distrito: 'LA PLATA', direccion: null, fed: null, nivel: null, ...extra })
+const p = (id: string, nombre: string, lat: number, lon: number, extra: Partial<PuntoMapa> = {}): PuntoMapa => ({ id, tipo: 'escuela', nombre, lat, lon, cue: 60000000, distrito: 'LA PLATA', direccion: null, fed: null, nivel: null, predio: null, ...extra })
 
 describe('proyección', () => {
   it('ida y vuelta entre latitud/longitud y píxeles', () => {

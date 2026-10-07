@@ -2,11 +2,14 @@
 import { SIN_FED, esDelFed, sinFed } from '@/lib/cronogramas'
 import { nombreCorto } from '@/lib/siglas'
 import { titleCase } from '@/lib/format'
+import { hermanasDe, predioValido, type Hermana } from '@/lib/predio'
 
 export type ContactoEscuela = { nombre: string | null, apellido: string | null, cargo: string | null, telefono: string | null, correo: string | null, correo_laboral: string | null, es_principal: boolean }
 export type ResumenEscuela = {
   id: string, cue: number | null, nombre: string | null, distrito: string | null, ciudad: string | null, nivel: string | null, modalidad: string | null, fed_a_cargo: string | null,
   direccion: string | null,
+  // Número de predio y las otras escuelas que lo comparten.
+  predio: number | null, comparte: Hermana[],
   // Contacto principal (o el primero que haya) y cuántos más hay.
   contacto: ContactoEscuela | null, contactosExtra: number,
   // Cronogramas de Nivel Central que no terminaron y el que empieza primero.
@@ -65,8 +68,8 @@ export const resumenEscuelas = (lista: ResumenEscuela[]) => ({
 
 // Arma el resumen de cada escuela con lo que ya se trajo de la base (cronogramas, reclamos abiertos y acciones), mirando desde `hoy`.
 export function armarResumen(
-  escuelas: Pick<ResumenEscuela, 'id' | 'cue' | 'nombre' | 'distrito' | 'ciudad' | 'nivel' | 'modalidad' | 'fed_a_cargo' | 'direccion'>[],
-  datos: { contactos?: (ContactoEscuela & { cue: number | null })[], cronogramas: { school_id: string | null, fecha_inicio: string, fecha_fin: string, tipo: string | null }[], reclamos: { school_id: string | null }[], acciones: { school_id: string | null, fecha: string, estado: string }[] },
+  escuelas: (Pick<ResumenEscuela, 'id' | 'cue' | 'nombre' | 'distrito' | 'ciudad' | 'nivel' | 'modalidad' | 'fed_a_cargo' | 'direccion'> & { predio?: number | null })[],
+  datos: { grupos?: Map<number, Hermana[]>, contactos?: (ContactoEscuela & { cue: number | null })[], cronogramas: { school_id: string | null, fecha_inicio: string, fecha_fin: string, tipo: string | null }[], reclamos: { school_id: string | null }[], acciones: { school_id: string | null, fecha: string, estado: string }[] },
   hoy: string,
 ): ResumenEscuela[] {
   const por = <T extends { school_id: string | null }>(l: T[]) => { const m = new Map<string, T[]>(); for (const x of l) if (x.school_id) m.set(x.school_id, [...(m.get(x.school_id) ?? []), x]); return m }
@@ -78,7 +81,7 @@ export function armarResumen(
     const as = ac.get(e.id) ?? []
     const { contacto, extra } = elegirContacto(e.cue == null ? [] : (porCue.get(e.cue) ?? []))
     return {
-      ...e, contacto, contactosExtra: extra, proximosCronogramas: cs.map(c => ({ fecha_inicio: c.fecha_inicio, fecha_fin: c.fecha_fin, tipo: c.tipo })), cronogramas: cs.length, proximoCronograma: cs[0] ? { fecha_inicio: cs[0].fecha_inicio, fecha_fin: cs[0].fecha_fin, tipo: cs[0].tipo } : null,
+      ...e, predio: predioValido(e.predio), comparte: hermanasDe(datos.grupos ?? new Map(), e.id, e.predio), contacto, contactosExtra: extra, proximosCronogramas: cs.map(c => ({ fecha_inicio: c.fecha_inicio, fecha_fin: c.fecha_fin, tipo: c.tipo })), cronogramas: cs.length, proximoCronograma: cs[0] ? { fecha_inicio: cs[0].fecha_inicio, fecha_fin: cs[0].fecha_fin, tipo: cs[0].tipo } : null,
       reclamosAbiertos: (re.get(e.id) ?? []).length,
       ultimaVisita: as.filter(a => a.estado === 'realizada' && a.fecha <= hoy).reduce<string | null>((m, a) => (!m || a.fecha > m ? a.fecha : m), null),
       proximaAccion: as.filter(a => a.estado === 'planificada' && a.fecha >= hoy).reduce<string | null>((m, a) => (!m || a.fecha < m ? a.fecha : m), null),

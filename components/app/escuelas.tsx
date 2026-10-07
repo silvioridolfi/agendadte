@@ -14,7 +14,7 @@ import { titleCase } from '@/lib/format'
 import { BotonEditar } from '@/components/app/editarescuela'
 import { FichaJefatura } from '@/components/app/jefatura'
 import { MapaChico } from '@/components/app/mapabase'
-import { ActionChip, Skeleton, StatusBadge, ErrorBox, cap, errMsg, fmt, parse, schoolName, schoolPlace, searchSchools, getFichaEscuela, az } from '@/components/app/comun'
+import { ActionChip, Skeleton, StatusBadge, ErrorBox, cap, errMsg, fmt, parse, schoolName, schoolPlace, searchSchools, getFichaEscuela, az, lineaPredio, nombreHermana } from '@/components/app/comun'
 
 const num = new Intl.NumberFormat('es-AR')
 const fechaCorta = (f: string) => cap(fmt(parse(f), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).replace(/\./g, ''))
@@ -66,7 +66,7 @@ function Filas({ filas, feds, onOpen, inicial }: { filas: FilaHistorial[], feds:
   </>
 }
 
-export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen, onEditado }: { ficha: FichaEscuela, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void, onEditado: () => void }) {
+export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen, onEditado, onEscuela }: { onEscuela?: (id: string) => void, ficha: FichaEscuela, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void, onEditado: () => void }) {
   const { escuela: e, historial, clubes, conectividad, jefatura } = ficha
   const [verJefatura, setVerJefatura] = useState(false)
   const filasConectividad = CAMPOS_ESCUELA.filter(c => CLAVES_CONECTIVIDAD.includes(c.clave) && conectividad[c.clave])
@@ -102,6 +102,11 @@ export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen,
         <Dato label="Turnos">{sinComillas(e.turnos)}</Dato>
         <Dato label="FED a cargo">{e.fed_a_cargo}</Dato>
         {jefatura && <Dato label="Jefatura distrital"><button type="button" onClick={() => setVerJefatura(true)} className="text-left font-semibold text-dte-petroleo underline underline-offset-2">{titleCase(jefatura.nombre.replace(/^JEFATURA DISTRITAL \| /i, ''))}</button></Dato>}
+        <Dato label="Predio">{e.predio}</Dato>
+        {e.comparte.length > 0 && <Dato label={e.comparte.length === 1 ? 'Comparte el predio con' : 'Comparten el predio'}>
+          <ul className="flex flex-col gap-0.5">{e.comparte.map(h => <li key={h.id}>{onEscuela
+            ? <button type="button" onClick={() => onEscuela(h.id)} className="text-left font-semibold text-dte-petroleo underline underline-offset-2">{nombreHermana(h)}</button>
+            : <span>{nombreHermana(h)}</span>}</li>)}</ul></Dato>}
       </Tarjeta>
       {(e.matricula != null || e.secciones != null) && <Tarjeta tono={TONO.alumnado} titulo="Alumnado">
         <Dato label="Matrícula">{e.matricula != null && <>{num.format(e.matricula)}{e.varones != null && e.mujeres != null && <span className="font-normal text-dte-gris"> · {num.format(e.varones)} varones, {num.format(e.mujeres)} mujeres</span>}</>}</Dato>
@@ -160,7 +165,7 @@ export function BuscadorEscuelas({ open, onClose, feds, puedeAgendar, onAgendar,
         <Button type="button" variant="ghost" size="sm" onClick={volver} className="-mt-1 self-start"><ArrowLeft data-icon="inline-start" />Volver a la búsqueda</Button>
         {error ? <ErrorBox message={error} onRetry={() => abrir(elegida)} />
           : !ficha ? <div className="flex flex-col gap-3"><Skeleton className="h-12" /><Skeleton className="h-24" /><Skeleton className="h-40" /></div>
-          : <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { cerrar(); onAgendar(s) }} onReclamo={s => { cerrar(); onReclamo(s) }} onOpen={i => { cerrar(); onOpen(i) }} onEditado={() => { getFichaEscuela(elegida.id).then(setFicha).catch(() => {}) }} />}
+          : <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { cerrar(); onAgendar(s) }} onReclamo={s => { cerrar(); onReclamo(s) }} onOpen={i => { cerrar(); onOpen(i) }} onEditado={() => { getFichaEscuela(elegida.id).then(setFicha).catch(() => {}) }} onEscuela={id => abrir({ id, cue: null, nombre: null, distrito: null, ciudad: null })} />}
       </> : <>
         <div className="relative"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" aria-hidden /><Input autoFocus value={query} onChange={e => escribir(e.target.value)} placeholder="Nombre, sigla o CUE (ej.: EP 4, ees 31)" aria-label="Buscar escuela" className="h-11 pl-9" />{buscando && <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-dte-gris" aria-hidden />}</div>
         {error && <ErrorBox message={error} />}
@@ -168,7 +173,7 @@ export function BuscadorEscuelas({ open, onClose, feds, puedeAgendar, onAgendar,
         {results.length > 0 && <ul className="divide-y divide-dte-linea rounded-tile border border-dte-linea">{results.map(s => <li key={s.id}>
           <button type="button" onClick={() => abrir(s)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-dte-tinte">
             <MapPin className="size-4 shrink-0 text-dte-gris-claro" aria-hidden />
-            <span className="min-w-0"><span className="block truncate text-sm font-semibold">{schoolName(s)}</span><span className="block truncate text-xs text-dte-gris">CUE {s.cue ?? '—'}{schoolPlace(s) ? ` · ${schoolPlace(s)}` : ''}</span></span>
+            <span className="min-w-0"><span className="block truncate text-sm font-semibold">{schoolName(s)}</span><span className="block truncate text-xs text-dte-gris">CUE {s.cue ?? '—'}{schoolPlace(s) ? ` · ${schoolPlace(s)}` : ''}</span>{lineaPredio(s) && <span className="block break-words text-xs font-medium text-club-violeta">{lineaPredio(s)}</span>}</span>
           </button></li>)}</ul>}
       </>}
     </DialogContent>
