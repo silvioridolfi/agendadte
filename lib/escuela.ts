@@ -1,10 +1,12 @@
 // Ficha de una escuela (buscador): datos del establecimiento, historial de acciones y clubes o prácticas.
 import type { AgendaItem } from '@/lib/agenda'
+import type { JefaturaResumen } from '@/lib/organismos'
 
 export type DatosEscuela = {
   id: string, cue: number | null, nombre: string | null, alias: string | null, distrito: string | null, ciudad: string | null, direccion: string | null,
   nivel: string | null, modalidad: string | null, ambito: string | null, turnos: string | null,
   matricula: number | null, varones: number | null, mujeres: number | null, secciones: number | null, fed_a_cargo: string | null,
+  lat: number | null, lon: number | null,
   // Texto para "Cómo llegar" (la dirección o el punto cargado); sin dato, null.
   mapa: string | null,
 }
@@ -13,7 +15,7 @@ export type FilaHistorial = { id: string, fed_id: string, fecha: string, hora_in
 export type ClubDeEscuela = { id: string, tipo: string, grupo: string | null, propuesta: string | null, fed_id: string, fecha_inicio: string | null, fecha_cierre: string | null, cohorte: string | null, realizados: number, esOrigen: boolean }
 // `puedeEditar`: quien mira es admin, CED o el FED a cargo de la escuela.
 // `conectividad`: los datos de enlace y piso tecnológico, por clave (ver CAMPOS_ESCUELA); la ven todos.
-export type FichaEscuela = { escuela: DatosEscuela, conectividad: Record<string, string | null>, historial: FilaHistorial[], clubes: ClubDeEscuela[], puedeEditar: boolean }
+export type FichaEscuela = { escuela: DatosEscuela, jefatura: JefaturaResumen | null, conectividad: Record<string, string | null>, historial: FilaHistorial[], clubes: ClubDeEscuela[], puedeEditar: boolean }
 
 // Lo que viene: planificadas de hoy en adelante, de la más próxima a la más lejana. Lo anterior: de la más nueva a la más vieja.
 export function separarHistorial(filas: FilaHistorial[], hoy: string) {

@@ -12,6 +12,8 @@ import { resumenHistorial, separarHistorial, type FichaEscuela, type FilaHistori
 import { hoyAR } from '@/lib/hora'
 import { titleCase } from '@/lib/format'
 import { BotonEditar } from '@/components/app/editarescuela'
+import { FichaJefatura } from '@/components/app/jefatura'
+import { MapaChico } from '@/components/app/mapabase'
 import { ActionChip, Skeleton, StatusBadge, ErrorBox, cap, errMsg, fmt, parse, schoolName, schoolPlace, searchSchools, getFichaEscuela, az } from '@/components/app/comun'
 
 const num = new Intl.NumberFormat('es-AR')
@@ -65,13 +67,15 @@ function Filas({ filas, feds, onOpen, inicial }: { filas: FilaHistorial[], feds:
 }
 
 export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen, onEditado }: { ficha: FichaEscuela, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void, onEditado: () => void }) {
-  const { escuela: e, historial, clubes, conectividad } = ficha
+  const { escuela: e, historial, clubes, conectividad, jefatura } = ficha
+  const [verJefatura, setVerJefatura] = useState(false)
   const filasConectividad = CAMPOS_ESCUELA.filter(c => CLAVES_CONECTIVIDAD.includes(c.clave) && conectividad[c.clave])
   const { proximas, anteriores } = separarHistorial(historial, hoyAR())
   const r = resumenHistorial(historial)
   const fedDe = (id: string) => feds.find(x => x.id === id)?.nombre_completo ?? ''
   const stats: [string | number, string, Familia][] = [[r.realizadas, 'acciones realizadas', 'azul'], [r.feds, r.feds === 1 ? 'FED las hizo' : 'FED distintos', 'violeta'], [r.ultima ? fmt(parse(r.ultima), { day: 'numeric', month: 'short' }).replace(/\./g, '') : '—', 'última visita', 'celeste']]
   return <div className="flex flex-col gap-5">
+    {verJefatura && jefatura && <FichaJefatura id={jefatura.id} onClose={() => setVerJefatura(false)} />}
     <header className="rounded-card bg-dte-degradado p-4 text-white">
       <div className="flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/15"><SchoolIcon className="size-5" aria-hidden /></span>
@@ -90,11 +94,13 @@ export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen,
       <Tarjeta tono={TONO.ubicacion} titulo="Ubicación">
         <Dato label="Dirección">{e.direccion && <>{titleCase(e.direccion)}{e.mapa && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.mapa)}`} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 font-semibold text-dte-petroleo underline underline-offset-2"><Navigation className="size-3.5" aria-hidden />Cómo llegar</a>}</>}</Dato>
         <Dato label="Ámbito">{e.ambito}</Dato>
+        {e.lat != null && e.lon != null && <div className="mt-1"><MapaChico lat={e.lat} lon={e.lon} nombre={schoolName(e)} /></div>}
       </Tarjeta>
       <Tarjeta tono={TONO.institucion} titulo="Institución">
         <Dato label="Nivel y modalidad">{[e.nivel, e.modalidad].filter(Boolean).join(' · ')}</Dato>
         <Dato label="Turnos">{sinComillas(e.turnos)}</Dato>
         <Dato label="FED a cargo">{e.fed_a_cargo}</Dato>
+        {jefatura && <Dato label="Jefatura distrital"><button type="button" onClick={() => setVerJefatura(true)} className="text-left font-semibold text-dte-petroleo underline underline-offset-2">{titleCase(jefatura.nombre.replace(/^JEFATURA DISTRITAL \| /i, ''))}</button></Dato>}
       </Tarjeta>
       {(e.matricula != null || e.secciones != null) && <Tarjeta tono={TONO.alumnado} titulo="Alumnado">
         <Dato label="Matrícula">{e.matricula != null && <>{num.format(e.matricula)}{e.varones != null && e.mujeres != null && <span className="font-normal text-dte-gris"> · {num.format(e.varones)} varones, {num.format(e.mujeres)} mujeres</span>}</>}</Dato>

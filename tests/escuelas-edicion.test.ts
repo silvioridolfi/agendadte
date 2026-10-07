@@ -104,3 +104,17 @@ describe('conectividad', () => {
     expect(fechaDeIso('2021-03-05')).toBe('5/03/2021')
   })
 })
+
+describe('ubicación en el mapa', () => {
+  const base = { lat: -34.9, lon: -57.9 }
+  it('el FED a cargo la corrige', () => {
+    const c = cambiosDeEscuela(base, { lat: '-34,92145', lon: '-57.95' }, 'basico')
+    expect(c.map(x => [x.clave, x.nuevo])).toEqual([['lat', '-34.92145'], ['lon', '-57.95']])
+  })
+  it('rechaza lo que cae fuera de la región o está a medias', () => {
+    expect(() => cambiosDeEscuela(base, { lat: '34.9' }, 'basico')).toThrow(/fuera de la región/)
+    expect(() => cambiosDeEscuela(base, { lat: 'abc' }, 'basico')).toThrow(/número/)
+    expect(() => cambiosDeEscuela(base, { lat: '' }, 'basico')).toThrow(/juntas/)
+    expect(cambiosDeEscuela(base, { lat: '', lon: '' }, 'basico').map(x => x.nuevo)).toEqual([null, null])
+  })
+})
