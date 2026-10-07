@@ -29,6 +29,10 @@ describe('armarResumen', () => {
     expect(resumen[0].proximoCronograma).toMatchObject({ fecha_inicio: '2026-10-08', tipo: 'LAC' })
     expect(resumen[1].cronogramas).toBe(0); expect(resumen[1].proximoCronograma).toBeNull()
   })
+  it('lista los cronogramas que no terminaron, del primero al último', () => {
+    expect(resumen[0].proximosCronogramas).toEqual([{ fecha_inicio: '2026-10-08', fecha_fin: '2026-10-09', tipo: 'LAC' }, { fecha_inicio: '2026-10-12', fecha_fin: '2026-10-16', tipo: 'LAC_M' }])
+    expect(resumen[1].proximosCronogramas).toEqual([])
+  })
   it('cuenta los reclamos abiertos', () => { expect(resumen.map(r => r.reclamosAbiertos)).toEqual([0, 2, 1, 0]) })
   it('última visita realizada y próxima acción planificada', () => {
     expect(resumen[0].ultimaVisita).toBe('2026-10-01'); expect(resumen[0].proximaAccion).toBe('2026-10-10')

@@ -2,6 +2,7 @@
 import { escuelaDelClub } from '@/lib/encuentro'
 import { ESTADO_RECLAMO_LABEL, type Reclamo } from '@/lib/reclamos-registro'
 import { nombreContacto, type ResumenEscuela } from '@/lib/mis-escuelas'
+import { etiquetaTipo, ventanaDe } from '@/lib/cronogramas'
 import { CATEGORIA, CATEGORIA_LABEL, CATEGORIAS, clubEstado, cuentaHecha, esAusencia, iniciado, ordenGrupo, ultimaActividad, type AgendaItem, type Club, type Encuentro, type Fed } from '@/lib/agenda'
 import { titleCase } from '@/lib/format'
 import { graficosInforme, type Grafico } from '@/lib/graficos'
@@ -291,14 +292,15 @@ export async function exportarEscuelas(escuelas: ResumenEscuela[]) {
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Agenda Territorial DTE'; wb.created = new Date()
   const ws = wb.addWorksheet('Escuelas', { views: [{ state: 'frozen', ySplit: 1 }] })
-  const cols = [['Escuela', 46], ['CUE', 11], ['Dirección', 32], ['Localidad', 20], ['Distrito', 16], ['Contacto', 28], ['Cargo', 18], ['Teléfono', 16], ['Correo', 32], ['Otros contactos', 15]] as const
+  const cols = [['Escuela', 46], ['CUE', 11], ['Dirección', 32], ['Localidad', 20], ['Distrito', 16], ['Contacto', 28], ['Cargo', 18], ['Teléfono', 16], ['Correo', 32], ['Otros contactos', 15], ['Próximos cronogramas', 40]] as const
   cols.forEach(([h, w], i) => { ws.getRow(1).getCell(i + 1).value = h; ws.getColumn(i + 1).width = w })
   ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
   ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PETROLEO } }
   escuelas.forEach((e, n) => {
     const c = e.contacto
     const row = ws.addRow([e.nombre ? titleCase(e.nombre) : '', e.cue ?? '', e.direccion ? titleCase(e.direccion) : '', e.ciudad ? titleCase(e.ciudad) : '', e.distrito ? titleCase(e.distrito) : '',
-      nombreContacto(c), c?.cargo ?? '', c?.telefono ?? '', c?.correo_laboral || c?.correo || '', e.contactosExtra || ''])
+      nombreContacto(c), c?.cargo ?? '', c?.telefono ?? '', c?.correo_laboral || c?.correo || '', e.contactosExtra || '',
+      e.proximosCronogramas.map(p => `${ventanaDe(p)} · ${etiquetaTipo(p.tipo)}`).join('\n')])
     row.alignment = { vertical: 'top', wrapText: true }
     if (n % 2) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } }
   })

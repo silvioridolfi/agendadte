@@ -11,6 +11,8 @@ export type ResumenEscuela = {
   contacto: ContactoEscuela | null, contactosExtra: number,
   // Cronogramas de Nivel Central que no terminaron y el que empieza primero.
   cronogramas: number, proximoCronograma: { fecha_inicio: string, fecha_fin: string, tipo: string | null } | null,
+  // Todos los que no terminaron, del que empieza primero al último (para el Excel).
+  proximosCronogramas: { fecha_inicio: string, fecha_fin: string, tipo: string | null }[],
   reclamosAbiertos: number, ultimaVisita: string | null, proximaAccion: string | null,
 }
 export type FiltrosEscuelas = { busqueda: string, distrito: string, nivel: string, fed: string, conCronograma: boolean, conReclamo: boolean }
@@ -76,7 +78,7 @@ export function armarResumen(
     const as = ac.get(e.id) ?? []
     const { contacto, extra } = elegirContacto(e.cue == null ? [] : (porCue.get(e.cue) ?? []))
     return {
-      ...e, contacto, contactosExtra: extra, cronogramas: cs.length, proximoCronograma: cs[0] ? { fecha_inicio: cs[0].fecha_inicio, fecha_fin: cs[0].fecha_fin, tipo: cs[0].tipo } : null,
+      ...e, contacto, contactosExtra: extra, proximosCronogramas: cs.map(c => ({ fecha_inicio: c.fecha_inicio, fecha_fin: c.fecha_fin, tipo: c.tipo })), cronogramas: cs.length, proximoCronograma: cs[0] ? { fecha_inicio: cs[0].fecha_inicio, fecha_fin: cs[0].fecha_fin, tipo: cs[0].tipo } : null,
       reclamosAbiertos: (re.get(e.id) ?? []).length,
       ultimaVisita: as.filter(a => a.estado === 'realizada' && a.fecha <= hoy).reduce<string | null>((m, a) => (!m || a.fecha > m ? a.fecha : m), null),
       proximaAccion: as.filter(a => a.estado === 'planificada' && a.fecha >= hoy).reduce<string | null>((m, a) => (!m || a.fecha < m ? a.fecha : m), null),

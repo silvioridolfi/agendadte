@@ -87,7 +87,7 @@ El **buscador** está arriba y es lo primero que ves. Escribí el nombre, la sig
 ## Lista o tarjetas
 Con **Lista** ves una fila por escuela con la escuela, el **CUE**, la **dirección**, la **localidad**, el **distrito** y el **contacto** (nombre y cargo, teléfono y correo para llamar o escribir, y cuántos contactos más hay). En la computadora es una tabla y tocando el título de cada columna se **ordena**; en el celular cada escuela es una fila compacta. **Tarjetas** muestra el resumen de cada una (próximo cronograma, reclamos abiertos, próxima acción y última visita). La vista que elegís queda guardada en tu navegador.
 ## Excel
-**Excel** descarga la lista tal como la estás viendo (con tu búsqueda, tus filtros y el orden), con las columnas Escuela, CUE, Dirección, Localidad, Distrito, Contacto, Cargo, Teléfono, Correo y Otros contactos: sirve para comparar con tu registro propio y ponerlo al día.
+**Excel** descarga la lista tal como la estás viendo (con tu búsqueda, tus filtros y el orden), con las columnas Escuela, CUE, Dirección, Localidad, Distrito, Contacto, Cargo, Teléfono, Correo, Otros contactos y **Próximos cronogramas** (uno por renglón, con la ventana de fechas y el tipo): sirve para comparar con tu registro propio y ponerlo al día.
 ## La ficha completa
 Al tocar una escuela se abre la ficha del buscador (datos, próximas acciones, clubes y prácticas, historial) con cuatro secciones más:
 - **Conectividad:** enlace, piso tecnológico, proveedores, ANI y recurso primario.
