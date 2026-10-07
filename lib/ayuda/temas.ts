@@ -67,7 +67,7 @@ El botón **Guardar** se habilita al modificar algún dato; **Descartar** revier
 - **Ícono de cámara:** la acción tiene fotos en Drive: las que quedaron asignadas a ella por horario o, si no tiene, fotos del día que no pertenecen a ninguna otra acción.
 Los feriados, recesos y aniversarios distritales se marcan en el calendario; los eventos DTE, con una marca violeta.` },
   { id: 'buscador', titulo: 'Buscador de escuelas', para: ['fed', 'ced'], md: () => `
-La **lupa** de la barra de arriba abre el buscador de escuelas. Escribí el nombre, la sigla o el CUE (por ejemplo "EP 4" o "ees 31") y elegí la escuela.
+La **lupa** de la barra de arriba abre el buscador de escuelas. Reemplaza al buscador anterior (v0-buscadordte1), que se retiró: sus datos, el mapa y la edición están ahora en la agenda. Escribí el nombre, la sigla o el CUE (por ejemplo "EP 4" o "ees 31") y elegí la escuela.
 ## Qué devuelve
 Con una sigla y un número trae solo ese tipo de escuela y ese número: "ees 1" no mezcla las técnicas ni las agrarias N° 1, y "eest 1" trae solo las técnicas. Sumá el distrito para afinar ("ep 4 berisso"). Las extensiones y anexos de la escuela pedida aparecen al final. Entienden siglas como EP, EES, EEST, EESA, JI, EEE, CFP, CENS, CEC, CEF, ISFD e ISFT; sin sigla se busca por palabras del nombre, la localidad o el distrito.
 Cuando una escuela **comparte predio** con otras (por ejemplo un jardín, una primaria y una secundaria en el mismo edificio), el resultado lo indica debajo del CUE (**Predio N · comparte con…**, con el nombre y el CUE de las demás) para elegir la correcta. Lo mismo vale en el buscador de escuela al agendar o armar un reclamo.
