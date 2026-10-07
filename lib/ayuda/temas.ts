@@ -30,6 +30,8 @@ Por eso es importante registrar cada acción y mantener su estado actualizado.` 
 1. Ingresá con el correo institucional (abc.gob.ar) y la contraseña temporal que te asignaron.
 2. La agenda te pide una contraseña nueva: al menos 10 caracteres, con letras y números, sin incluir el usuario del correo.
 3. Una vez cambiada, accedés a tu agenda.
+## Cambiar la contraseña
+Cuando quieras, desde el menú de las iniciales, **Cambiar contraseña**: te pide la contraseña **actual** (para confirmar que sos vos), la nueva y la nueva otra vez, con las mismas reglas de arriba y distinta de la actual. Con una contraseña temporal no se pide la actual: el cambio es obligatorio y se acaba de ingresar con ella.
 ## Instalarla en el celular
 - **Android (Chrome):** menú de tres puntos › Agregar a pantalla de inicio o Instalar aplicación.
 - **iPhone (Safari):** botón Compartir › Agregar a inicio.

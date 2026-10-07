@@ -1421,10 +1421,17 @@ export const ingresar = async (email: string, password: string) => run(async ():
   return { fed: u.fed, email: u.email, esAdmin: u.esAdmin, debeCambiar: u.debeCambiar }
 })
 export const salir = async () => run(async () => { await borrarSesion() })
-export const cambiarPassword = async (nueva: string) => run(async () => {
+// Desde el menú hay que confirmar la contraseña actual. Con una temporal (primer ingreso o reseteo) el cambio es obligatorio y no se la vuelve a pedir: se acaba de ingresar con ella.
+export const cambiarPassword = async (nueva: string, actual = '') => run(async () => {
   const yo = await requerirUsuario({ permitirTemporal: true })
   const err = validarPassword(nueva, yo.email)
   if (err) throw new Error(err)
+  if (!yo.debeCambiar) {
+    if (!actual) throw new Error('Escribí tu contraseña actual.')
+    if (actual === nueva) throw new Error('La nueva contraseña tiene que ser distinta de la actual.')
+    const { data, error } = await supabaseServer().auth.signInWithPassword({ email: yo.email, password: actual })
+    if (error || !data.session) throw new Error(error?.status === 429 ? 'Demasiados intentos. Esperá unos minutos y probá de nuevo.' : 'La contraseña actual no es correcta.')
+  }
   const db = supabaseServer()
   const { error } = await db.auth.admin.updateUserById(yo.userId, { password: nueva })
   if (error) throw new Error(error.message.includes('same') ? 'La nueva contraseña tiene que ser distinta de la anterior.' : error.message)
