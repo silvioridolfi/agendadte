@@ -90,12 +90,13 @@ export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen,
     <ul className="grid grid-cols-3 gap-2 text-center">
       {stats.map(([v, l, fam]) => <li key={l} className={`rounded-tile px-2 py-2.5 ${FAMILIAS[fam].fondo}`}><p className={`text-xl font-bold tabular-nums leading-tight ${FAMILIAS[fam].texto}`}>{v}</p><p className="text-xs text-dte-gris">{l}</p></li>)}
     </ul>
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid items-start gap-3 sm:grid-cols-2">
       <Tarjeta tono={TONO.ubicacion} titulo="Ubicación">
         <Dato label="Dirección">{e.direccion && <>{titleCase(e.direccion)}{e.mapa && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.mapa)}`} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 font-semibold text-dte-petroleo underline underline-offset-2"><Navigation className="size-3.5" aria-hidden />Cómo llegar</a>}</>}</Dato>
         <Dato label="Ámbito">{e.ambito}</Dato>
         {e.lat != null && e.lon != null && <div className="mt-1"><MapaChico lat={e.lat} lon={e.lon} nombre={schoolName(e)} /></div>}
       </Tarjeta>
+      <div className="flex min-w-0 flex-col gap-3">
       <Tarjeta tono={TONO.institucion} titulo="Institución">
         <Dato label="Nivel y modalidad">{[e.nivel, e.modalidad].filter(Boolean).join(' · ')}</Dato>
         <Dato label="Turnos">{sinComillas(e.turnos)}</Dato>
@@ -106,6 +107,7 @@ export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen,
         <Dato label="Matrícula">{e.matricula != null && <>{num.format(e.matricula)}{e.varones != null && e.mujeres != null && <span className="font-normal text-dte-gris"> · {num.format(e.varones)} varones, {num.format(e.mujeres)} mujeres</span>}</>}</Dato>
         <Dato label="Secciones">{e.secciones != null && num.format(e.secciones)}</Dato>
       </Tarjeta>}
+      </div>
       <div className="sm:col-span-2"><Tarjeta tono={TONO.conectividad} titulo="Conectividad" columnas>
         {filasConectividad.length ? filasConectividad.map(c => <Dato key={c.clave} label={c.label}>{conectividad[c.clave]}</Dato>) : <p className="text-sm text-dte-gris">Sin datos de conectividad cargados.</p>}
       </Tarjeta></div>
