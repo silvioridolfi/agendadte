@@ -1,5 +1,6 @@
 // Reglas para editar los datos de una escuela: quién puede, qué campos, cómo se validan y qué cambios quedan en el historial.
 import { esDelFed } from '@/lib/cronogramas'
+import { ubicacionEnRegion } from '@/lib/mapa'
 
 export type NivelEdicion = 'todo' | 'basico'
 export type QuienEdita = { esAdmin: boolean, rol: string, nombre: string }
@@ -11,7 +12,7 @@ export function nivelEdicion(yo: QuienEdita, fedACargo: string | null | undefine
 }
 
 export type CampoEscuela = {
-  clave: string, label: string, tipo: 'texto' | 'entero' | 'largo' | 'lista' | 'fecha' | 'cifras', max: number,
+  clave: string, label: string, tipo: 'texto' | 'entero' | 'largo' | 'lista' | 'fecha' | 'cifras' | 'decimal', max: number,
   // Sólo la administración y el CED lo cambian.
   avanzado?: boolean,
   // Texto libre con sugerencias: las que ya figuran cargadas en otras escuelas.
@@ -19,6 +20,8 @@ export type CampoEscuela = {
 }
 export const CAMPOS_ESCUELA: CampoEscuela[] = [
   { clave: 'direccion', label: 'Dirección', tipo: 'texto', max: 200 },
+  { clave: 'lat', label: 'Latitud', tipo: 'decimal', max: 12 },
+  { clave: 'lon', label: 'Longitud', tipo: 'decimal', max: 12 },
   { clave: 'alias', label: 'Alias', tipo: 'texto', max: 200 },
   { clave: 'nivel', label: 'Nivel', tipo: 'texto', max: 100, sugerencias: true },
   { clave: 'modalidad', label: 'Modalidad', tipo: 'texto', max: 100, sugerencias: true },
@@ -92,6 +95,15 @@ export function fechaValida(texto: string): string | null {
 export const fechaAIso = (texto: string | null | undefined) => { const m = (texto ?? '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : '' }
 export const fechaDeIso = (iso: string) => { const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${Number(m[3])}/${m[2]}/${m[1]}` : '' }
 
+// Número con punto o coma decimal, redondeado a 8 decimales (alcanza para ubicar un edificio). Vacío: null.
+export function decimalValido(crudo: unknown, label: string): number | null {
+  const t = typeof crudo === 'number' ? String(crudo) : typeof crudo === 'string' ? crudo.trim().replace(',', '.') : ''
+  if (crudo !== null && crudo !== undefined && typeof crudo !== 'string' && typeof crudo !== 'number') throw new Error(`${label} no es válido`)
+  if (!t) return null
+  if (!/^-?\d{1,3}(\.\d+)?$/.test(t)) throw new Error(`${label} tiene que ser un número con decimales (por ejemplo -34.92145)`)
+  return Math.round(Number(t) * 1e8) / 1e8
+}
+
 // Valida lo que llegó contra la escuela actual y devuelve sólo lo que cambió (con el valor anterior, para el historial).
 // `nuevo` trae únicamente los campos que se quieren tocar. Lanza un error con el motivo si algo no es válido.
 export type Cambio = { clave: string, label: string, anterior: string | null, nuevo: string | null, valor: string | number | null }
@@ -111,6 +123,8 @@ export function cambiosDeEscuela(actual: ValoresEscuela, nuevo: Record<string, u
         if (n > campo.max) throw new Error(`${campo.label} no puede superar ${campo.max}`)
         valor = n
       }
+    } else if (campo.tipo === 'decimal') {
+      valor = decimalValido(crudo, campo.label)
     } else if (campo.tipo === 'fecha') {
       const t = typeof crudo === 'string' ? crudo.trim() : ''
       if (crudo !== null && crudo !== undefined && typeof crudo !== 'string') throw new Error(`${campo.label} no es válido`)
@@ -135,6 +149,11 @@ export function cambiosDeEscuela(actual: ValoresEscuela, nuevo: Record<string, u
     }
     final[clave] = valor
     tocados.push(clave)
+  }
+  if ('lat' in nuevo || 'lon' in nuevo) {
+    const { lat, lon } = final
+    if ((lat == null) !== (lon == null)) throw new Error('Cargá la latitud y la longitud juntas (o dejá las dos vacías)')
+    if (typeof lat === 'number' && typeof lon === 'number' && !ubicacionEnRegion(lat, lon)) throw new Error('La ubicación cae fuera de la región: revisá la latitud y la longitud (en Buenos Aires son negativas, por ejemplo -34.92 y -57.95)')
   }
   const { matricula, varones, mujeres } = final
   if (typeof matricula === 'number' && typeof varones === 'number' && typeof mujeres === 'number' && varones + mujeres > matricula) throw new Error('Varones más mujeres no pueden superar la matrícula')

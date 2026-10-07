@@ -98,13 +98,25 @@ Al tocar una escuela se abre la ficha del buscador (datos, conectividad, próxim
 Desde la ficha también podés **agendar** una acción o **armar un reclamo** con la escuela ya elegida.
 ## Editar los datos de una escuela
 Si la escuela es tuya (o sos del CED o de la administración), la ficha tiene el botón **Editar datos**, tanto en el buscador como en Mis escuelas. Se abre con tres solapas:
-- **Datos:** ${CAMPOS_ESCUELA.filter(c => !c.avanzado).map(c => c.label.toLowerCase()).join(', ')}. Varones y mujeres no pueden sumar más que la matrícula. Solo se guardan los datos que cambiaste. ${CAMPOS_ESCUELA.filter(c => c.avanzado).map(c => c.label.toLowerCase()).join(', ')} los cambian solo el CED y la administración.
+- **Datos:** ${CAMPOS_ESCUELA.filter(c => !c.avanzado).map(c => c.label.toLowerCase()).join(', ')}. Varones y mujeres no pueden sumar más que la matrícula. Latitud y longitud ubican la escuela en el mapa (ver **Mapa de la región**). Solo se guardan los datos que cambiaste. ${CAMPOS_ESCUELA.filter(c => c.avanzado).map(c => c.label.toLowerCase()).join(', ')} los cambian solo el CED y la administración.
 - **Conectividad** (solo CED y administración): enlace, PNCE, PBA, piso tecnológico y ANI. El plan de enlace, el subplan y el plan de piso se eligen de una lista (de ahí sale el enlace que se usa al armar un reclamo); las fechas se eligen con el calendario y el ancho de banda lleva solo números.
 - **Contactos:** agregar, editar, eliminar y marcar el **principal** (el que se muestra primero en las listas). El correo laboral tiene que terminar en ${DOMINIO_LABORAL}.
 - **Historial:** quién cambió cada dato, cuándo, y qué había antes, por si hay que volver atrás.
 Los cambios se guardan al instante y no se avisa a nadie. Las escuelas sin FED asignado las edita solo el CED o la administración; las de otro FED las ves pero no las editás.
 ## Quién ve qué
 Cada FED ve sus escuelas y, de ellas, todo el detalle. El CED y la administración ven todas las escuelas, con un filtro por FED a cargo (las que no tienen figuran como **${SIN_FED}**); la administración puede quedarse solo con las suyas. De una escuela de otro FED, el buscador (la lupa) muestra los datos y el historial, pero no los reclamos, los cronogramas ni los contactos. La conectividad de cualquier escuela la ven todos.` },
+  { id: 'mapa', titulo: 'Mapa de la región', para: ['fed', 'ced'], md: () => `
+Muestra en un mapa las escuelas y las jefaturas de Región 1. Se abre desde el menú de las iniciales (**Mapa**) o con **Ver en el mapa** en Mis escuelas; en el celular, **Volver** (arriba) te lleva a la pantalla de la que venías.
+## Qué ves
+Cada escuela es un punto (las tuyas, en magenta) y cada jefatura, un rombo violeta. Los círculos con un número son lugares muy cercanos agrupados: tocalos para acercar y se separan. Se arrastra con el dedo o el mouse y se acerca con el pellizco, la rueda, el doble toque o los botones **+** y **−**.
+## Buscar y filtrar
+El buscador de arriba encuentra una escuela por nombre, sigla, CUE o dirección y el mapa se queda solo con esas. Debajo podés filtrar por distrito y por FED a cargo (el FED entra viendo **Mis escuelas**; para ver las demás elegí **Todas las escuelas** o el nombre de otro FED, o **${SIN_FED}**) y mostrar u ocultar escuelas y jefaturas. **Quitar filtros** vuelve a como entraste.
+## Un lugar elegido
+Al tocar un punto aparece su tarjeta con el nombre, el CUE, la dirección y el FED a cargo, con **Ver ficha** (la ficha completa de la escuela o de la jefatura) y **Cómo llegar**, que abre el mapa del teléfono.
+## Escuelas sin ubicación
+Las escuelas que todavía no tienen ubicación en el mapa se listan debajo (**Sin ubicación en el mapa**). Abrí su ficha y, desde **Editar datos**, cargá la latitud y la longitud: el FED a cargo, el CED y la administración pueden. Podés pegar el par que da Google Maps (por ejemplo -34.92145, -57.95500) en la casilla de latitud y se completan las dos. Si el punto cae fuera de la región, la agenda no lo guarda.
+## Jefaturas
+La ficha de una jefatura muestra su domicilio, el contacto, el teléfono y el correo (para llamar o escribir) y su ubicación. La del distrito de cada escuela aparece también en la ficha de la escuela, en **Institución**. Las jefaturas las edita solo el CED o la administración.` },
   { id: 'reclamos', titulo: 'Reclamos de conectividad', para: ['fed', 'ced'], md: () => `
 Arma el asunto y el cuerpo del mail de un reclamo de conectividad, con la lista de lo que hay que adjuntar, según la guía de la DTE. Se abre desde el menú de las iniciales (**Reclamo de conectividad**), desde la ficha de una escuela y desde una acción de **Conectividad** (con la escuela ya elegida).
 ## Cómo se arma

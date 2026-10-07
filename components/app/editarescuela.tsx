@@ -14,7 +14,7 @@ import { ErrorBox, Skeleton, borrarContacto, contactoPrincipal, errMsg, fmt, get
 
 type Vista = 'datos' | 'conectividad' | 'contactos' | 'historial'
 const GRUPOS: { titulo: string, claves: string[], avanzado?: boolean }[] = [
-  { titulo: 'Ubicación', claves: ['direccion'] },
+  { titulo: 'Ubicación', claves: ['direccion', 'lat', 'lon'] },
   { titulo: 'Institución', claves: ['alias', 'nivel', 'modalidad', 'turnos'] },
   { titulo: 'Alumnado', claves: ['matricula', 'varones', 'mujeres', 'secciones'] },
   { titulo: 'Notas', claves: ['observaciones'] },
@@ -65,11 +65,16 @@ function Control({ campo, valor, onChange, datos }: { campo: CampoEscuela, valor
   </select>
   const listId = campo.sugerencias ? `lista-${campo.clave}` : undefined
   return <>
-    <Input value={valor} onChange={e => onChange(e.target.value)} inputMode={campo.tipo === 'entero' || campo.tipo === 'cifras' ? 'numeric' : undefined} maxLength={campo.tipo === 'entero' ? 8 : campo.max} list={listId} className="h-11 md:h-9" />
+    <Input value={valor} onChange={e => onChange(e.target.value)} inputMode={campo.tipo === 'entero' || campo.tipo === 'cifras' ? 'numeric' : campo.tipo === 'decimal' ? 'decimal' : undefined} maxLength={campo.tipo === 'entero' ? 8 : campo.max} list={listId} className="h-11 md:h-9" />
     {listId && <datalist id={listId}>{opciones.map(o => <option key={o} value={o} />)}</datalist>}
   </>
 }
 
+// Pegar "lat, lon" en la casilla de latitud (como lo da Google Maps) completa las dos.
+function pegarUbicacion(f: Record<string, string>, clave: string, v: string) {
+  const par = clave === 'lat' ? v.match(/^\s*(-?\d+\.\d+)\s*[, ]\s*(-?\d+\.\d+)\s*$/) : null
+  return par ? { ...f, lat: par[1], lon: par[2] } : { ...f, [clave]: v }
+}
 const formDe = (d: EdicionEscuela): Record<string, string> => Object.fromEntries(CAMPOS_ESCUELA.map(c => [c.clave, d.valores[c.clave] == null ? '' : String(d.valores[c.clave])]))
 function Datos({ datos, grupos, onGuardado }: { datos: EdicionEscuela, grupos: typeof GRUPOS, onGuardado: () => Promise<EdicionEscuela | null> }) {
   const claves = grupos.flatMap(g => g.claves)
@@ -92,9 +97,10 @@ function Datos({ datos, grupos, onGuardado }: { datos: EdicionEscuela, grupos: t
   return <div className="flex flex-col gap-5">
     {grupos.filter(g => !g.avanzado || datos.nivel === 'todo').map(g => <fieldset key={g.titulo} className="flex flex-col gap-3 rounded-tile border border-dte-linea p-3">
       <legend className="px-1 text-xs font-bold uppercase tracking-wider text-dte-gris">{g.titulo}</legend>
+      {g.titulo === 'Ubicación' && <p className="text-xs text-dte-gris">Latitud y longitud ubican la escuela en el mapa. Podés pegar el par que te da Google Maps (por ejemplo -34.92145, -57.95500) en la casilla de latitud.</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         {g.claves.map(k => CAMPOS_ESCUELA.find(c => c.clave === k)!).map(c => <Field key={c.clave} label={c.label} className={c.tipo === 'largo' || c.clave === 'direccion' || c.clave === 'nombre' ? 'sm:col-span-2' : ''}>
-          <Control campo={c} valor={form[c.clave]} onChange={v => { setForm(f => ({ ...f, [c.clave]: v })); setHecho('') }} datos={datos} />
+          <Control campo={c} valor={form[c.clave]} onChange={v => { setForm(f => pegarUbicacion(f, c.clave, v)); setHecho('') }} datos={datos} />
         </Field>)}
       </div>
     </fieldset>)}

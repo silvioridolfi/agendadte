@@ -19,6 +19,8 @@ import { AVISOS_CRONOGRAMA, DIAS_ATRAS, ESTADOS_SEGUIMIENTO, MAX_NOTA, PIDE_MOTI
 import { sincronizarCronogramas, type ResultadoSync } from '@/lib/cronogramas-sync'
 import { armarResumen, contarAccesos, type Accesos, type ContactoEscuela, type ResumenEscuela } from '@/lib/mis-escuelas'
 import { estadoAlCrear } from '@/lib/estado'
+import { COLS_ORGANISMO, cambiosDeOrganismo, type Jefatura, type JefaturaResumen, type ValoresOrganismo } from '@/lib/organismos'
+import type { PuntoMapa, PuntosMapa } from '@/lib/mapa'
 import { CLAVES_CONECTIVIDAD, COLS_EDITABLES, ORIGEN_OPCIONES, cambiosDeEscuela, historialDeContacto, nivelEdicion, resumenContacto, seccionDe, validarContacto, type ContactoEditable, type ContactoInput, type EdicionEscuela, type NivelEdicion, type OpcionesEscuela, type ValoresEscuela } from '@/lib/escuelas-edicion'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -67,7 +69,8 @@ async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuel
   const conectividad = Object.fromEntries(CLAVES_CONECTIVIDAD.map(k => [k, completo[k] == null || String(completo[k]).trim() === '' ? null : String(completo[k]).trim()]))
   const resto = Object.fromEntries(Object.entries(completo).filter(([k]) => !CLAVES_CONECTIVIDAD.includes(k))) as typeof completo
   const texto = resto.direccion ? `${resto.direccion}${resto.ciudad ? `, ${resto.ciudad}` : ''}, Buenos Aires, Argentina` : null
-  const escuela = { ...resto, mapa: lat != null && lon != null ? `${lat},${lon}` : texto } as unknown as DatosEscuela
+  const escuela = { ...resto, lat, lon, mapa: lat != null && lon != null ? `${lat},${lon}` : texto } as unknown as DatosEscuela
+  const jefatura = await jefaturaDe(db, escuela.distrito)
   const todo = yo.fed.rol === 'coordinacion'
   const historial: FilaHistorial[] = ((its.data ?? []) as unknown as AgendaItem[]).filter(i => !esAusencia(i.accion)).map(i => {
     const propia = i.fed_id === yo.fed.id || (i.participantes ?? []).some(p => p.fed_id === yo.fed.id)
@@ -76,7 +79,14 @@ async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuel
   const clubes: ClubDeEscuela[] = ((cls.data ?? []) as unknown as (Omit<ClubDeEscuela, 'realizados' | 'esOrigen'> & { school_id: string | null, encuentros: { item: { estado: string } | { estado: string }[] | null }[] })[]).map(({ encuentros, school_id, ...c }) => ({
     ...c, esOrigen: school_id !== id, realizados: encuentros.filter(x => [x.item].flat().some(it => it?.estado === 'realizada')).length,
   }))
-  return { escuela, conectividad, historial, clubes, puedeEditar: nivelEdicion({ esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }, escuela.fed_a_cargo) !== null }
+  return { escuela, jefatura, conectividad, historial, clubes, puedeEditar: nivelEdicion({ esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }, escuela.fed_a_cargo) !== null }
+}
+
+// Jefatura distrital del distrito de la escuela (si hay).
+async function jefaturaDe(db: ReturnType<typeof supabaseServer>, distrito: string | null): Promise<JefaturaResumen | null> {
+  if (!distrito) return null
+  const { data } = await db.from('organismos_descentralizados').select('id, nombre, telefono, email').eq('subtipo_organizacion', 'Jefatura Distrital').eq('distrito', distrito).limit(1).maybeSingle()
+  return data ? { id: data.id as string, nombre: data.nombre as string, telefono: (data.telefono as string | null) ?? null, email: (data.email as string | null) ?? null } : null
 }
 
 // Lo que la base sabe de la conectividad de una escuela (enlace, piso y proveedores): para armar reclamos de conectividad.
@@ -387,6 +397,44 @@ async function principalContactoImpl(yo: Usuario, id: string, contactoId: string
   const poner = await db.from('contactos').update({ es_principal: true }).eq('id', contactoId)
   if (poner.error) throw new Error(poner.error.message)
   await anotarCambios(db, id, yo.fed.id, [{ seccion: 'Contacto', campo: 'Contacto principal', valor_anterior: null, valor_nuevo: resumenContacto(c) }])
+}
+// ── Mapa y jefaturas ──
+// Todas las escuelas con ubicación (más las jefaturas) para el mapa; las que todavía no la tienen van aparte. Lo ven todos los FED y el CED.
+async function getPuntosMapaImpl(): Promise<PuntosMapa> {
+  const db = supabaseServer()
+  const [escuelas, orgs] = await Promise.all([
+    fetchAll<{ id: string, cue: number | null, nombre: string | null, distrito: string | null, ciudad: string | null, direccion: string | null, lat: number | null, lon: number | null, fed_a_cargo: string | null, nivel: string | null }>((a, b) => db.from('establecimientos').select('id, cue, nombre, distrito, ciudad, direccion, lat, lon, fed_a_cargo, nivel').order('id').range(a, b)),
+    db.from('organismos_descentralizados').select('id, nombre, distrito, domicilio, localidad, latitud, longitud').order('nombre'),
+  ])
+  if (orgs.error) throw new Error(orgs.error.message)
+  const puntos: PuntoMapa[] = [], sinUbicacion: PuntosMapa['sinUbicacion'] = []
+  for (const e of escuelas) {
+    if (e.lat != null && e.lon != null) puntos.push({ id: e.id, tipo: 'escuela', nombre: e.nombre ?? `CUE ${e.cue ?? ''}`, lat: Number(e.lat), lon: Number(e.lon), cue: e.cue, distrito: e.distrito, direccion: [e.direccion, e.ciudad].filter(Boolean).join(', ') || null, fed: e.fed_a_cargo, nivel: e.nivel })
+    else sinUbicacion.push({ id: e.id, cue: e.cue, nombre: e.nombre ?? `CUE ${e.cue ?? ''}`, distrito: e.distrito, fed: e.fed_a_cargo })
+  }
+  for (const o of orgs.data ?? []) if (o.latitud != null && o.longitud != null) puntos.push({ id: o.id as string, tipo: 'jefatura', nombre: o.nombre as string, lat: Number(o.latitud), lon: Number(o.longitud), cue: null, distrito: o.distrito as string | null, direccion: [o.domicilio, o.localidad].filter(Boolean).join(', ') || null, fed: null, nivel: null })
+  return { puntos, sinUbicacion }
+}
+async function getJefaturaImpl(yo: Usuario, id: string): Promise<Jefatura> {
+  if (!UUID.test(id)) throw new Error('Jefatura inválida')
+  const { data, error } = await supabaseServer().from('organismos_descentralizados').select(`id, codigo, nombre, subtipo_organizacion, distrito, ${COLS_ORGANISMO}`).eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error('No se encontró la jefatura')
+  const d = data as unknown as Record<string, string | number | null>
+  const valores: ValoresOrganismo = Object.fromEntries(COLS_ORGANISMO.split(', ').map(k => [k, d[k] ?? null]))
+  return { id, codigo: d.codigo as string, nombre: d.nombre as string, subtipo: d.subtipo_organizacion as string | null, distrito: d.distrito as string | null, valores, puedeEditar: yo.esAdmin || yo.fed.rol === 'coordinacion' }
+}
+// Sólo el CED y la administración. Queda anotado en la auditoría; no se avisa a nadie.
+async function guardarJefaturaImpl(yo: Usuario, id: string, cambios: Record<string, unknown>): Promise<number> {
+  if (!yo.esAdmin && yo.fed.rol !== 'coordinacion') throw new Error('Sólo el CED o la administración pueden editar una jefatura')
+  const actual = await getJefaturaImpl(yo, id)
+  const lista = cambiosDeOrganismo(actual.valores, cambios)
+  if (!lista.length) return 0
+  const db = supabaseServer()
+  const { error } = await db.from('organismos_descentralizados').update({ ...Object.fromEntries(lista.map(c => [c.clave, c.valor])), updated_at: new Date().toISOString() }).eq('id', id)
+  if (error) throw new Error(error.message)
+  await db.from('auditoria').insert({ tabla: 'organismos_descentralizados', registro_id: id, operacion: 'update', autor_id: yo.fed.id, datos: { cambios: lista.map(c => ({ campo: c.label, antes: c.anterior, despues: c.nuevo })) } })
+  return lista.length
 }
 // Anota cómo salió un cronograma (el último que se anota es el vigente). Si no se realizó o se reprogramó, hace falta el motivo y se avisa al CED.
 async function marcarCronogramaImpl(yo: Usuario, id: string, estado: EstadoSeguimiento, nota: string): Promise<Seguimiento> {
@@ -1025,6 +1073,9 @@ export const getReclamos = async () => conUsuario(() => getReclamosImpl())
 export const getAccesos = async () => conUsuario(yo => getAccesosImpl(yo))
 export const getMisEscuelas = async () => conUsuario(yo => getMisEscuelasImpl(yo))
 export const getExtrasEscuela = async (id: string) => conUsuario(yo => getExtrasEscuelaImpl(yo, id))
+export const getPuntosMapa = async () => conUsuario(() => getPuntosMapaImpl())
+export const getJefatura = async (id: string) => conUsuario(yo => getJefaturaImpl(yo, id))
+export const guardarJefatura = async (id: string, cambios: Record<string, unknown>) => conUsuario(yo => guardarJefaturaImpl(yo, id, cambios))
 export const getEdicionEscuela = async (id: string) => conUsuario(yo => getEdicionEscuelaImpl(yo, id))
 export const guardarEscuela = async (id: string, cambios: Record<string, unknown>) => conUsuario(yo => guardarEscuelaImpl(yo, id, cambios))
 export const guardarContacto = async (id: string, contactoId: string | null, contacto: ContactoInput) => conUsuario(yo => guardarContactoImpl(yo, id, contactoId, contacto))

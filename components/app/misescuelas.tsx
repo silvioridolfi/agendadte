@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarClock, ChevronRight, Contact, FileSpreadsheet, Loader2, Mail, Phone, School as SchoolIcon, Search, TriangleAlert, Wifi, X } from 'lucide-react'
+import { ArrowLeft, Map as MapIcono, CalendarClock, ChevronRight, Contact, FileSpreadsheet, Loader2, Mail, Phone, School as SchoolIcon, Search, TriangleAlert, Wifi, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -25,7 +25,7 @@ const unicos = (l: (string | null | undefined)[]) => [...new Set(l.filter((x): x
 const VISTA_KEY = 'agenda-territorial:vista-escuelas'
 const COLUMNAS: [ColumnaEscuelas, string][] = [['nombre', 'Escuela'], ['cue', 'CUE'], ['direccion', 'Dirección'], ['ciudad', 'Localidad'], ['distrito', 'Distrito']]
 
-export function MisEscuelas({ profile, feds, esAdmin, puedeAgendar, onAgendar, onReclamo, onOpen, volver }: { volver?: { destino: string, ir: () => void }, profile: Fed, feds: Fed[], esAdmin: boolean, puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
+export function MisEscuelas({ profile, feds, esAdmin, puedeAgendar, onAgendar, onReclamo, onOpen, volver, onMapa }: { onMapa: () => void, volver?: { destino: string, ir: () => void }, profile: Fed, feds: Fed[], esAdmin: boolean, puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
   const [lista, setLista] = useState<ResumenEscuela[] | null>(null)
   const [error, setError] = useState('')
   const [filtros, setFiltros] = useState<FiltrosEscuelas>(FILTROS_ESCUELAS_VACIOS)
@@ -82,6 +82,7 @@ export function MisEscuelas({ profile, feds, esAdmin, puedeAgendar, onAgendar, o
           <p className="text-xs text-dte-gris" aria-live="polite"><b className="text-dte-tinta tabular-nums">{filtradas.length}</b> de {resumen.total} {resumen.total === 1 ? 'escuela' : 'escuelas'} · {resumen.conCronograma} con cronograma · {resumen.conReclamo} con reclamo abierto</p>
           <div className="flex gap-1.5">
             {(['lista', 'tarjetas'] as const).map(v => <button key={v} type="button" aria-pressed={vista === v} onClick={() => elegirVista(v)} className={`min-h-9 rounded-full border px-3.5 text-sm font-semibold transition ${vista === v ? 'border-dte-petroleo bg-dte-petroleo text-white' : 'border-dte-linea bg-white hover:bg-dte-tinte'}`}>{v === 'lista' ? 'Lista' : 'Tarjetas'}</button>)}
+            <Button type="button" variant="outline" size="sm" onClick={onMapa} className="min-h-9"><MapIcono data-icon="inline-start" />Ver en el mapa</Button>
             <Button type="button" variant="outline" size="sm" disabled={exportando || !filtradas.length} onClick={exportar} className="min-h-9">{exportando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}Excel</Button>
           </div>
         </div>
@@ -102,7 +103,7 @@ export function MisEscuelas({ profile, feds, esAdmin, puedeAgendar, onAgendar, o
         </> : <div className="mt-3 flex flex-col items-center gap-2 rounded-card border border-dashed border-dte-linea px-4 py-10 text-center text-sm text-dte-gris"><SchoolIcon className="size-6" aria-hidden />{base.length ? 'No hay escuelas con esa búsqueda o esos filtros.' : 'Todavía no tenés escuelas a cargo en la base.'}</div>}
       </>}
 
-    {abierta && <FichaCompleta key={abierta.id} onCambio={cargar} e={abierta} feds={feds} puedeAgendar={puedeAgendar} onClose={() => setAbierta(null)} onAgendar={onAgendar} onReclamo={onReclamo} onOpen={onOpen} />}
+    {abierta && <FichaCompleta key={abierta.id} onCambio={cargar} id={abierta.id} feds={feds} puedeAgendar={puedeAgendar} onClose={() => setAbierta(null)} onAgendar={onAgendar} onReclamo={onReclamo} onOpen={onOpen} />}
   </main>
 }
 
@@ -164,26 +165,27 @@ function Tarjeta({ e, veTodos, onAbrir }: { e: ResumenEscuela, veTodos: boolean,
 }
 
 // Ficha de la escuela (la misma del buscador) con conectividad, reclamos, cronogramas y contactos.
-function FichaCompleta({ e, feds, puedeAgendar, onClose, onAgendar, onReclamo, onOpen, onCambio }: { onCambio: () => void, e: ResumenEscuela, feds: Fed[], puedeAgendar: boolean, onClose: () => void, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
+export function FichaCompleta({ volverA = 'al listado', id, feds, puedeAgendar, onClose, onAgendar, onReclamo, onOpen, onCambio }: { volverA?: string, onCambio: () => void, id: string, feds: Fed[], puedeAgendar: boolean, onClose: () => void, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
   const [ficha, setFicha] = useState<FichaEscuela | null>(null)
   const [extras, setExtras] = useState<Awaited<ReturnType<typeof getExtrasEscuela>> | null>(null)
   const [error, setError] = useState('')
   const [intento, setIntento] = useState(0)
   useEffect(() => {
     let vigente = true
-    Promise.all([getFichaEscuela(e.id), getExtrasEscuela(e.id)]).then(([f, x]) => { if (vigente) { setFicha(f); setExtras(x) } }).catch(err => { if (vigente) setError(errMsg(err)) })
+    // Reclamos, cronogramas y contactos sólo llegan para quien puede editar la escuela (el FED a cargo, el CED y la administración).
+    getFichaEscuela(id).then(async f => { const x = f.puedeEditar ? await getExtrasEscuela(id) : null; if (vigente) { setFicha(f); setExtras(x) } }).catch(err => { if (vigente) setError(errMsg(err)) })
     return () => { vigente = false }
-  }, [e.id, intento])
+  }, [id, intento])
   return <Dialog open onOpenChange={o => !o && onClose()}>
     <DialogContent className="max-h-[90dvh] overflow-y-auto bg-white max-sm:top-[calc(env(safe-area-inset-top,0px)+0.5rem)]! max-sm:bottom-auto! max-sm:max-h-[calc(100dvh-1rem)]! max-sm:rounded-b-2xl! max-sm:pb-4! sm:max-w-xl">
       <DialogTitle className="flex items-center gap-2"><SchoolIcon className="size-5 text-dte-petroleo" aria-hidden />Ficha de la escuela</DialogTitle>
       <DialogDescription className="sr-only">Datos, historial, conectividad, reclamos, cronogramas y contactos de la escuela.</DialogDescription>
-      <Button type="button" variant="ghost" size="sm" onClick={onClose} className="-mt-1 self-start"><ArrowLeft data-icon="inline-start" />Volver al listado</Button>
+      <Button type="button" variant="ghost" size="sm" onClick={onClose} className="-mt-1 self-start"><ArrowLeft data-icon="inline-start" />Volver {volverA}</Button>
       {error ? <ErrorBox message={error} onRetry={() => { setError(''); setIntento(n => n + 1) }} />
-        : !ficha || !extras ? <div className="flex flex-col gap-3"><Skeleton className="h-12" /><Skeleton className="h-24" /><Skeleton className="h-40" /></div>
+        : !ficha ? <div className="flex flex-col gap-3"><Skeleton className="h-12" /><Skeleton className="h-24" /><Skeleton className="h-40" /></div>
         : <div className="flex flex-col gap-5">
           <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { onClose(); onAgendar(s) }} onReclamo={s => { onClose(); onReclamo(s) }} onOpen={i => { onClose(); onOpen(i) }} onEditado={() => { onCambio(); setIntento(n => n + 1) }} />
-          <Extras x={extras} feds={feds} />
+          {extras && <Extras x={extras} feds={feds} />}
         </div>}
     </DialogContent>
   </Dialog>
