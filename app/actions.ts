@@ -14,7 +14,7 @@ import { hoyAR } from '@/lib/hora'
 import { avisaPorFecha } from '@/lib/avisos'
 import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
 import { tipoDe, type EscuelaConectividad } from '@/lib/reclamos'
-import { ESTADOS_RECLAMO, avisoDeAlta, avisoDeCambio, conexionDe, puedeResolverReclamo, sumarNota, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
+import { ESTADOS_RECLAMO, avisoDeAlta, avisoDeCambio, conexionDe, estadoTrasActualizar, puedeResolverReclamo, sumarNota, type EstadoReclamo, type Reclamo } from '@/lib/reclamos-registro'
 import { AVISOS_CRONOGRAMA, DIAS_ATRAS, ESTADOS_SEGUIMIENTO, MAX_NOTA, PIDE_MOTIVO, avisoDe, avisoEstadoCed, avisoJefaturaFed, esDelFed, haceDias, puedeAvisarJefatura, puedeMarcar, type AvisoCronograma, type Cronograma, type EstadoSeguimiento, type Seguimiento, type TipoSeguimiento } from '@/lib/cronogramas'
 import { sincronizarCronogramas, type ResultadoSync } from '@/lib/cronogramas-sync'
 import { armarResumen, contarAccesos, type Accesos, type ContactoEscuela, type ResumenEscuela } from '@/lib/mis-escuelas'
@@ -192,10 +192,9 @@ async function actualizarReclamoImpl(yo: Usuario, id: string, cambios: { estado?
   const nro = cambios.nro_incidencia === undefined ? antes.nro_incidencia : opt(cambios.nro_incidencia)
   const notas = cambios.notas === undefined ? antes.notas : opt(cambios.notas)
   if ((nro ?? '').length > 200 || (notas ?? '').length > 1000) throw new Error('El texto es demasiado largo')
-  let estado = cambios.estado ?? (antes.estado as EstadoReclamo)
-  if (!ESTADOS_RECLAMO.includes(estado)) throw new Error('Estado inválido')
+  if (cambios.estado !== undefined && !ESTADOS_RECLAMO.includes(cambios.estado)) throw new Error('Estado inválido')
   // Llegó un número de Nivel Central: el reclamo pasa a "en proceso" (salvo que se lo marque resuelto o anulado en el mismo cambio).
-  if (cambios.estado === undefined && estado === 'enviado' && nro && !antes.nro_incidencia) estado = 'en_proceso'
+  const estado = estadoTrasActualizar({ estado: antes.estado as string, nro_incidencia: antes.nro_incidencia as string | null }, cambios, nro) as EstadoReclamo
   const row = { estado, nro_incidencia: nro, notas, resuelto_at: estado === 'resuelto' ? new Date().toISOString() : null, actualizado_por: yo.fed.id, updated_at: new Date().toISOString() }
   const up = await db.from('reclamos_conectividad').update(row).eq('id', id)
   if (up.error) throw new Error(up.error.message)

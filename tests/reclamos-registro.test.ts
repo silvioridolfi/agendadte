@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { avisoDeAlta, avisoDeCambio, conexionDe, filtrarReclamos, origenDeNumero, resumenReclamos, esAbierto, puedeResolverReclamo, sumarNota, type Reclamo } from '@/lib/reclamos-registro'
+import { avisoDeAlta, avisoDeCambio, conexionDe, estadoTrasActualizar, filtrarReclamos, origenDeNumero, resumenReclamos, esAbierto, puedeResolverReclamo, sumarNota, type Reclamo } from '@/lib/reclamos-registro'
 
 const e = (plan_enlace: string, subplan_enlace: string, plan_piso_tecnologico: string | null) => ({ plan_enlace, subplan_enlace, plan_piso_tecnologico })
 
@@ -87,5 +87,25 @@ describe('marcar resuelto desde un FED', () => {
     expect(sumarNota('Respuesta de Nivel Central', 'La escuela confirmó')).toBe('Respuesta de Nivel Central\nLa escuela confirmó')
     expect(sumarNota('Respuesta', '  ')).toBe('Respuesta')
     expect(sumarNota(null, null)).toBeNull()
+  })
+})
+
+describe('estadoTrasActualizar', () => {
+  const enviado = { estado: 'enviado', nro_incidencia: null }
+  it('con el número nuevo, un reclamo enviado pasa a en proceso (aunque la pantalla mande el mismo estado)', () => {
+    expect(estadoTrasActualizar(enviado, {}, 'NI-000234838')).toBe('en_proceso')
+    expect(estadoTrasActualizar(enviado, { estado: 'enviado' }, 'NI-000234838')).toBe('en_proceso')
+  })
+  it('sin número, o si ya tenía uno, no cambia', () => {
+    expect(estadoTrasActualizar(enviado, { estado: 'enviado' }, '  ')).toBe('enviado')
+    expect(estadoTrasActualizar({ estado: 'enviado', nro_incidencia: 'NI-1' }, { estado: 'enviado' }, 'NI-2')).toBe('enviado')
+  })
+  it('si se lo marca a mano como resuelto o anulado, se respeta', () => {
+    expect(estadoTrasActualizar(enviado, { estado: 'resuelto' }, 'NI-1')).toBe('resuelto')
+    expect(estadoTrasActualizar(enviado, { estado: 'anulado' }, 'NI-1')).toBe('anulado')
+  })
+  it('los que ya están en proceso o resueltos no cambian', () => {
+    expect(estadoTrasActualizar({ estado: 'en_proceso', nro_incidencia: null }, { estado: 'en_proceso' }, 'NI-1')).toBe('en_proceso')
+    expect(estadoTrasActualizar({ estado: 'resuelto', nro_incidencia: null }, { estado: 'resuelto' }, 'NI-1')).toBe('resuelto')
   })
 })

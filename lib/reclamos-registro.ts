@@ -14,6 +14,14 @@ export const ESTADO_RECLAMO_CLASE: Record<EstadoReclamo, string> = {
 }
 export const esAbierto = (e: string) => e === 'enviado' || e === 'en_proceso'
 
+// Estado que queda al actualizar un reclamo: si llegó el número de Nivel Central y el reclamo seguía como enviado, pasa a "en proceso".
+// Vale también cuando la pantalla manda el mismo estado que ya tenía (no lo cambió a mano); si se lo cambia a otro (resuelto, anulado), se respeta.
+export function estadoTrasActualizar(antes: { estado: string, nro_incidencia: string | null }, cambios: { estado?: string }, nroNuevo: string | null): string {
+  const estado = cambios.estado ?? antes.estado
+  const sinTocar = cambios.estado === undefined || cambios.estado === antes.estado
+  return sinTocar && estado === 'enviado' && !!nroNuevo?.trim() && !antes.nro_incidencia?.trim() ? 'en_proceso' : estado
+}
+
 // Un FED puede marcar como resuelto un reclamo abierto de una escuela a su cargo (o que registró él): muchas veces la escuela le avisa a él y no al CED.
 // Sólo "Resuelto" y sin avisos: el CED sigue siendo quien anota números y el resto de los estados.
 export const puedeResolverReclamo = (quien: { id: string, nombre: string }, r: Pick<Reclamo, 'estado' | 'fed_id' | 'school'>) =>
