@@ -10,6 +10,7 @@ import { FAMILIAS, type Familia } from '@/lib/ayuda/estilo'
 import { resumenHistorial, separarHistorial, type FichaEscuela, type FilaHistorial } from '@/lib/escuela'
 import { hoyAR } from '@/lib/hora'
 import { titleCase } from '@/lib/format'
+import { BotonEditar } from '@/components/app/editarescuela'
 import { ActionChip, Skeleton, StatusBadge, ErrorBox, cap, errMsg, fmt, parse, schoolName, schoolPlace, searchSchools, getFichaEscuela, az } from '@/components/app/comun'
 
 const num = new Intl.NumberFormat('es-AR')
@@ -62,7 +63,7 @@ function Filas({ filas, feds, onOpen, inicial }: { filas: FilaHistorial[], feds:
   </>
 }
 
-export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen }: { ficha: FichaEscuela, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
+export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen, onEditado }: { ficha: FichaEscuela, feds: Fed[], puedeAgendar: boolean, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void, onEditado: () => void }) {
   const { escuela: e, historial, clubes } = ficha
   const { proximas, anteriores } = separarHistorial(historial, hoyAR())
   const r = resumenHistorial(historial)
@@ -77,6 +78,7 @@ export function Ficha({ ficha, feds, puedeAgendar, onAgendar, onReclamo, onOpen 
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         {puedeAgendar && <Button type="button" onClick={() => onAgendar({ id: e.id, cue: e.cue, nombre: e.nombre, distrito: e.distrito, ciudad: e.ciudad })} className="w-full bg-white text-dte-petroleo hover:bg-white/90 sm:w-auto"><CalendarPlus data-icon="inline-start" />Agendar acá</Button>}
         <Button type="button" variant="outline" onClick={() => onReclamo({ id: e.id, cue: e.cue, nombre: e.nombre, distrito: e.distrito, ciudad: e.ciudad })} className="w-full border-white/60 bg-transparent text-white hover:bg-white/15 hover:text-white sm:w-auto"><Wifi data-icon="inline-start" />Reclamo de conectividad</Button>
+        {ficha.puedeEditar && <BotonEditar id={e.id} nombre={schoolName(e)} onCambio={onEditado} />}
       </div>
     </header>
     <ul className="grid grid-cols-3 gap-2 text-center">
@@ -145,7 +147,7 @@ export function BuscadorEscuelas({ open, onClose, feds, puedeAgendar, onAgendar,
         <Button type="button" variant="ghost" size="sm" onClick={volver} className="-mt-1 self-start"><ArrowLeft data-icon="inline-start" />Volver a la búsqueda</Button>
         {error ? <ErrorBox message={error} onRetry={() => abrir(elegida)} />
           : !ficha ? <div className="flex flex-col gap-3"><Skeleton className="h-12" /><Skeleton className="h-24" /><Skeleton className="h-40" /></div>
-          : <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { cerrar(); onAgendar(s) }} onReclamo={s => { cerrar(); onReclamo(s) }} onOpen={i => { cerrar(); onOpen(i) }} />}
+          : <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { cerrar(); onAgendar(s) }} onReclamo={s => { cerrar(); onReclamo(s) }} onOpen={i => { cerrar(); onOpen(i) }} onEditado={() => { getFichaEscuela(elegida.id).then(setFicha).catch(() => {}) }} />}
       </> : <>
         <div className="relative"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" aria-hidden /><Input autoFocus value={query} onChange={e => escribir(e.target.value)} placeholder="Nombre, sigla o CUE (ej.: EP 4, ees 31)" aria-label="Buscar escuela" className="h-11 pl-9" />{buscando && <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-dte-gris" aria-hidden />}</div>
         {error && <ErrorBox message={error} />}

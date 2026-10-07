@@ -6,6 +6,7 @@ import { UMBRAL_DIAS_HABILES } from '@/lib/actividad'
 import { DESTINATARIOS_BASE, PROPUESTAS_DE_CLUB } from '@/lib/encuentro'
 import { TOLERANCIA } from '@/lib/horas'
 import { DIA_HABIL_AVISO, DIA_HABIL_RECORDATORIO, DIA_HABIL_VENCIMIENTO } from '@/lib/pve-reglas'
+import { CAMPOS_ESCUELA, DOMINIO_LABORAL } from '@/lib/escuelas-edicion'
 import { DIAS_ATRAS, HORAS_CONTACTO_PBA, SIN_FED, VALIDEZ_DIAS, etiquetaTipo } from '@/lib/cronogramas'
 
 export type Rol = 'fed' | 'ced'
@@ -68,7 +69,7 @@ La **lupa** de la barra de arriba abre el buscador de escuelas. Escribí el nomb
 ## Qué devuelve
 Con una sigla y un número trae solo ese tipo de escuela y ese número: "ees 1" no mezcla las técnicas ni las agrarias N° 1, y "eest 1" trae solo las técnicas. Sumá el distrito para afinar ("ep 4 berisso"). Las extensiones y anexos de la escuela pedida aparecen al final. Entienden siglas como EP, EES, EEST, EESA, JI, EEE, CFP, CENS, CEC, CEF, ISFD e ISFT; sin sigla se busca por palabras del nombre, la localidad o el distrito.
 ## Qué muestra la ficha
-- **Datos:** CUE, distrito, dirección con **Cómo llegar**, FED a cargo, nivel, modalidad, turnos, matrícula y secciones.
+- **Datos:** CUE, distrito, dirección con **Cómo llegar**, FED a cargo, nivel, modalidad, turnos, matrícula y secciones. Si la escuela es tuya, **Editar datos** te deja corregirlos (ver Mis escuelas).
 - **Resumen:** acciones realizadas, cuántos FED distintos las hicieron y la fecha de la última visita.
 - **Próximas acciones** planificadas en esa escuela.
 - **Clubes y prácticas** que funcionan ahí, con su avance.
@@ -95,6 +96,12 @@ Al tocar una escuela se abre la ficha del buscador (datos, próximas acciones, c
 - **Cronogramas de conectividad** de la escuela, con el estado que anotó el equipo.
 - **Contactos** del directivo, con teléfono y correo para llamar o escribir.
 Desde la ficha también podés **agendar** una acción o **armar un reclamo** con la escuela ya elegida.
+## Editar los datos de una escuela
+Si la escuela es tuya (o sos del CED o de la administración), la ficha tiene el botón **Editar datos**, tanto en el buscador como en Mis escuelas. Se abre con tres solapas:
+- **Datos:** ${CAMPOS_ESCUELA.filter(c => !c.avanzado).map(c => c.label.toLowerCase()).join(', ')}. Varones y mujeres no pueden sumar más que la matrícula. Solo se guardan los datos que cambiaste. ${CAMPOS_ESCUELA.filter(c => c.avanzado).map(c => c.label.toLowerCase()).join(', ')} los cambian solo el CED y la administración.
+- **Contactos:** agregar, editar, eliminar y marcar el **principal** (el que se muestra primero en las listas). El correo laboral tiene que terminar en ${DOMINIO_LABORAL}.
+- **Historial:** quién cambió cada dato, cuándo, y qué había antes, por si hay que volver atrás.
+Los cambios se guardan al instante y no se avisa a nadie. Las escuelas sin FED asignado las edita solo el CED o la administración; las de otro FED las ves pero no las editás.
 ## Quién ve qué
 Cada FED ve sus escuelas y, de ellas, todo el detalle. El CED y la administración ven todas las escuelas, con un filtro por FED a cargo (las que no tienen figuran como **${SIN_FED}**); la administración puede quedarse solo con las suyas. De una escuela de otro FED, el buscador (la lupa) muestra los datos y el historial, pero no la conectividad, los reclamos, los cronogramas ni los contactos.` },
   { id: 'reclamos', titulo: 'Reclamos de conectividad', para: ['fed', 'ced'], md: () => `
