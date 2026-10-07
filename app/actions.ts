@@ -19,7 +19,7 @@ import { AVISOS_CRONOGRAMA, DIAS_ATRAS, ESTADOS_SEGUIMIENTO, MAX_NOTA, PIDE_MOTI
 import { sincronizarCronogramas, type ResultadoSync } from '@/lib/cronogramas-sync'
 import { armarResumen, contarAccesos, type Accesos, type ContactoEscuela, type ResumenEscuela } from '@/lib/mis-escuelas'
 import { estadoAlCrear } from '@/lib/estado'
-import { COLS_EDITABLES, cambiosDeEscuela, historialDeContacto, nivelEdicion, resumenContacto, seccionDe, validarContacto, type ContactoEditable, type ContactoInput, type EdicionEscuela, type NivelEdicion, type OpcionesEscuela, type ValoresEscuela } from '@/lib/escuelas-edicion'
+import { CLAVES_CONECTIVIDAD, COLS_EDITABLES, ORIGEN_OPCIONES, cambiosDeEscuela, historialDeContacto, nivelEdicion, resumenContacto, seccionDe, validarContacto, type ContactoEditable, type ContactoInput, type EdicionEscuela, type NivelEdicion, type OpcionesEscuela, type ValoresEscuela } from '@/lib/escuelas-edicion'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
@@ -48,7 +48,7 @@ async function searchSchoolsImpl(query: string): Promise<School[]> {
 }
 
 // Ficha de una escuela. Todos ven el historial de la escuela; el detalle de cada acción sólo llega para quien participó o es de coordinación.
-const COLS_ESCUELA = 'id, cue, nombre, alias, distrito, ciudad, direccion, lat, lon, nivel, modalidad, ambito, turnos, matricula, varones, mujeres, secciones, fed_a_cargo'
+const COLS_ESCUELA = `id, cue, nombre, alias, distrito, ciudad, direccion, lat, lon, nivel, modalidad, ambito, turnos, matricula, varones, mujeres, secciones, fed_a_cargo, ${CLAVES_CONECTIVIDAD.join(', ')}`
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuela> {
   if (!UUID.test(id)) throw new Error('Escuela inválida')
@@ -62,7 +62,10 @@ async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuel
   if (its.error) throw new Error(its.error.message)
   if (cls.error) throw new Error(cls.error.message)
   if (!e.data) throw new Error('No se encontró la escuela')
-  const { lat, lon, ...resto } = e.data as Record<string, unknown> & { lat: number | null, lon: number | null, direccion: string | null, ciudad: string | null }
+  const { lat, lon, ...completo } = e.data as unknown as Record<string, unknown> & { lat: number | null, lon: number | null, direccion: string | null, ciudad: string | null }
+  // La conectividad se muestra aparte y la ven todos; el resto son los datos de la escuela.
+  const conectividad = Object.fromEntries(CLAVES_CONECTIVIDAD.map(k => [k, completo[k] == null || String(completo[k]).trim() === '' ? null : String(completo[k]).trim()]))
+  const resto = Object.fromEntries(Object.entries(completo).filter(([k]) => !CLAVES_CONECTIVIDAD.includes(k))) as typeof completo
   const texto = resto.direccion ? `${resto.direccion}${resto.ciudad ? `, ${resto.ciudad}` : ''}, Buenos Aires, Argentina` : null
   const escuela = { ...resto, mapa: lat != null && lon != null ? `${lat},${lon}` : texto } as unknown as DatosEscuela
   const todo = yo.fed.rol === 'coordinacion'
@@ -73,7 +76,7 @@ async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuel
   const clubes: ClubDeEscuela[] = ((cls.data ?? []) as unknown as (Omit<ClubDeEscuela, 'realizados' | 'esOrigen'> & { school_id: string | null, encuentros: { item: { estado: string } | { estado: string }[] | null }[] })[]).map(({ encuentros, school_id, ...c }) => ({
     ...c, esOrigen: school_id !== id, realizados: encuentros.filter(x => [x.item].flat().some(it => it?.estado === 'realizada')).length,
   }))
-  return { escuela, historial, clubes, puedeEditar: nivelEdicion({ esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }, escuela.fed_a_cargo) !== null }
+  return { escuela, conectividad, historial, clubes, puedeEditar: nivelEdicion({ esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }, escuela.fed_a_cargo) !== null }
 }
 
 // Lo que la base sabe de la conectividad de una escuela (enlace, piso y proveedores): para armar reclamos de conectividad.
@@ -266,7 +269,7 @@ async function getAccesosImpl(yo: Usuario): Promise<Accesos> {
   return contarAccesos({ escuelaIds: new Set(escuelas.map(e => e.id)), todas, miId: yo.fed.id, reclamosAbiertos, cronogramasProximos })
 }
 // Lo que se suma a la ficha de una escuela a cargo: conectividad, reclamos, cronogramas y contactos. Sólo para el FED a cargo, la coordinación y la administración.
-export type ExtrasEscuela = { conectividad: EscuelaConectividad, reclamos: Reclamo[], cronogramas: Cronograma[], contactos: ContactoEscuela[] }
+export type ExtrasEscuela = { reclamos: Reclamo[], cronogramas: Cronograma[], contactos: ContactoEscuela[] }
 async function getExtrasEscuelaImpl(yo: Usuario, id: string): Promise<ExtrasEscuela> {
   if (!UUID.test(id)) throw new Error('Escuela inválida')
   const db = supabaseServer()
@@ -274,8 +277,7 @@ async function getExtrasEscuelaImpl(yo: Usuario, id: string): Promise<ExtrasEscu
   if (error) throw new Error(error.message)
   if (!e) throw new Error('No se encontró la escuela')
   if (!yo.esAdmin && yo.fed.rol !== 'coordinacion' && !esDelFed(e.fed_a_cargo as string | null, yo.fed.nombre_completo)) throw new Error('Estos datos los ve el FED a cargo de la escuela')
-  const [conectividad, rec, cro, con] = await Promise.all([
-    getConectividadEscuelaImpl(id),
+  const [rec, cro, con] = await Promise.all([
     db.from('reclamos_conectividad').select(COLS_RECLAMO).eq('school_id', id).order('enviado_at', { ascending: false }).limit(20),
     db.from('cronogramas').select(COLS_CRONOGRAMA).eq('school_id', id).eq('en_planilla', true).gte('fecha_fin', haceDias(hoyAR(), DIAS_ATRAS)).order('fecha_inicio'),
     e.cue == null ? Promise.resolve({ data: [], error: null }) : db.from('contactos').select('nombre, apellido, cargo, telefono, correo, correo_laboral, es_principal').eq('cue', e.cue).order('es_principal', { ascending: false }),
@@ -283,7 +285,7 @@ async function getExtrasEscuelaImpl(yo: Usuario, id: string): Promise<ExtrasEscu
   if (rec.error) throw new Error(rec.error.message)
   if (cro.error) throw new Error(cro.error.message)
   if (con.error) throw new Error(con.error.message)
-  return { conectividad, reclamos: (rec.data ?? []) as unknown as Reclamo[], cronogramas: await conHistorial((cro.data ?? []) as unknown as Omit<Cronograma, 'historial'>[]), contactos: (con.data ?? []) as ContactoEscuela[] }
+  return { reclamos: (rec.data ?? []) as unknown as Reclamo[], cronogramas: await conHistorial((cro.data ?? []) as unknown as Omit<Cronograma, 'historial'>[]), contactos: (con.data ?? []) as ContactoEscuela[] }
 }
 // ── Edición de los datos de una escuela ──
 // El FED a cargo edita los datos del día a día y los contactos; el CED y la administración, todo. Cada cambio queda en historial_cambios con su autor. No se avisa a nadie.
@@ -301,12 +303,14 @@ async function escuelaEditable(yo: Usuario, id: string) {
 }
 const unicosOrdenados = (l: (string | null | undefined)[]) => [...new Set(l.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'es'))
 async function opcionesEscuela(db: ReturnType<typeof supabaseServer>): Promise<OpcionesEscuela> {
+  const columnas = [...new Set(Object.values(ORIGEN_OPCIONES).flat())]
   const [filas, feds] = await Promise.all([
-    fetchAll<Record<string, string | null>>((a, b) => db.from('establecimientos').select('distrito, tipo_establecimiento, ambito, nivel, modalidad, turnos, id').order('id').range(a, b)),
+    fetchAll<Record<string, string | null>>((a, b) => db.from('establecimientos').select(`id, ${columnas.join(', ')}`).order('id').range(a, b)),
     db.from('feds').select('nombre_completo').eq('rol', 'fed'),
   ])
-  const de = (k: string) => unicosOrdenados(filas.map(f => f[k]))
-  return { distrito: de('distrito'), tipo_establecimiento: de('tipo_establecimiento'), ambito: de('ambito'), nivel: de('nivel'), modalidad: de('modalidad'), turnos: de('turnos'), fed_a_cargo: unicosOrdenados((feds.data ?? []).map(f => f.nombre_completo as string)) }
+  const opciones: OpcionesEscuela = Object.fromEntries(Object.entries(ORIGEN_OPCIONES).map(([clave, cols]) => [clave, unicosOrdenados(filas.flatMap(f => cols.map(c => f[c]?.trim())))]))
+  opciones.fed_a_cargo = unicosOrdenados((feds.data ?? []).map(f => f.nombre_completo as string))
+  return opciones
 }
 async function anotarCambios(db: ReturnType<typeof supabaseServer>, escuelaId: string, autorId: string, filas: { seccion: string, campo: string, valor_anterior: string | null, valor_nuevo: string | null }[]) {
   if (!filas.length) return

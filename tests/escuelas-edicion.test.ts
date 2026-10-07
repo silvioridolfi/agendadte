@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cambiosDeEscuela, historialDeContacto, limpiarAlias, nivelEdicion, validarContacto } from '@/lib/escuelas-edicion'
+import { cambiosDeEscuela, fechaAIso, fechaDeIso, fechaValida, historialDeContacto, limpiarAlias, nivelEdicion, seccionDe, validarContacto } from '@/lib/escuelas-edicion'
 
 const fed = { esAdmin: false, rol: 'fed', nombre: 'Macarena Duarte Buschiazzo' }
 const actual = { direccion: 'Calle 1', alias: null, nivel: 'Primario', matricula: 100, varones: 40, mujeres: 60, secciones: 5, nombre: 'EP N° 1', distrito: 'LA PLATA', observaciones: null }
@@ -69,5 +69,38 @@ describe('historialDeContacto', () => {
     const antes = { nombre: 'Ana', apellido: 'Paz', telefono: '1', correo: null }
     const f = historialDeContacto(antes, { nombre: 'Ana', apellido: 'Paz', cargo: null, telefono: '2', correo: 'a@b.com', correo_laboral: null })
     expect(f.map(x => [x.campo, x.valor_anterior, x.valor_nuevo])).toEqual([['Teléfono (Ana Paz)', '1', '2'], ['Correo (Ana Paz)', null, 'a@b.com']])
+  })
+})
+
+describe('conectividad', () => {
+  const con = { plan_enlace: 'PNCE', subplan_enlace: 'PNCE', mb: '10', fecha_inicio_conectividad: '1/01/2021', proveedor_asignado_pba: 'Orbith S.A', estado_instalacion_pba: 'FINALIZADO' }
+  const listas = { plan_enlace: ['PNCE', 'PBA', 'Sin enlace'] }
+  it('el FED a cargo no la toca', () => {
+    expect(() => cambiosDeEscuela(con, { mb: '20' }, 'basico')).toThrow(/CED o la administración/)
+  })
+  it('el CED cambia el dato y queda en la sección Conectividad', () => {
+    const c = cambiosDeEscuela(con, { mb: '20', estado_instalacion_pba: 'PENDIENTE PBA' }, 'todo')
+    expect(c.map(x => [x.clave, x.anterior, x.nuevo])).toEqual([['mb', '10', '20'], ['estado_instalacion_pba', 'FINALIZADO', 'PENDIENTE PBA']])
+    expect(seccionDe('mb')).toBe('Conectividad')
+    expect(seccionDe('matricula')).toBe('Académico')
+  })
+  it('el plan es una lista cerrada', () => {
+    expect(() => cambiosDeEscuela(con, { plan_enlace: 'XYZ' }, 'todo', listas)).toThrow(/lista/)
+    expect(cambiosDeEscuela(con, { plan_enlace: 'PBA' }, 'todo', listas)).toHaveLength(1)
+  })
+  it('valida el ancho de banda, las fechas y los proveedores', () => {
+    expect(() => cambiosDeEscuela(con, { mb: '10 Mb' }, 'todo')).toThrow(/número/)
+    expect(() => cambiosDeEscuela(con, { mb: '123456' }, 'todo')).toThrow(/5 cifras/)
+    expect(() => cambiosDeEscuela(con, { fecha_inicio_conectividad: '31/02/2024' }, 'todo')).toThrow(/fecha/)
+    expect(() => cambiosDeEscuela(con, { proveedor_asignado_pba: '221-156053435' }, 'todo')).toThrow(/empresa/)
+    expect(cambiosDeEscuela(con, { fecha_inicio_conectividad: '5/3/2024' }, 'todo')[0].nuevo).toBe('5/03/2024')
+    expect(cambiosDeEscuela(con, { fecha_inicio_conectividad: '' }, 'todo')[0].nuevo).toBeNull()
+  })
+  it('convierte las fechas entre el formato de la base y el del selector', () => {
+    expect(fechaValida('12/12/2019')).toBe('12/12/2019')
+    expect(fechaValida('1/1/1999')).toBeNull()
+    expect(fechaAIso('1/01/2021')).toBe('2021-01-01')
+    expect(fechaAIso('basura')).toBe('')
+    expect(fechaDeIso('2021-03-05')).toBe('5/03/2021')
   })
 })

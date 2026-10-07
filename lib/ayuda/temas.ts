@@ -70,6 +70,7 @@ La **lupa** de la barra de arriba abre el buscador de escuelas. Escribí el nomb
 Con una sigla y un número trae solo ese tipo de escuela y ese número: "ees 1" no mezcla las técnicas ni las agrarias N° 1, y "eest 1" trae solo las técnicas. Sumá el distrito para afinar ("ep 4 berisso"). Las extensiones y anexos de la escuela pedida aparecen al final. Entienden siglas como EP, EES, EEST, EESA, JI, EEE, CFP, CENS, CEC, CEF, ISFD e ISFT; sin sigla se busca por palabras del nombre, la localidad o el distrito.
 ## Qué muestra la ficha
 - **Datos:** CUE, distrito, dirección con **Cómo llegar**, FED a cargo, nivel, modalidad, turnos, matrícula y secciones. Si la escuela es tuya, **Editar datos** te deja corregirlos (ver Mis escuelas).
+- **Conectividad:** plan y subplan de enlace, ancho de banda, proveedores, estado de la instalación PBA, piso tecnológico (plan, tipo, proveedor y fecha), ANI, recurso primario y Access ID. Solo aparece lo que está cargado.
 - **Resumen:** acciones realizadas, cuántos FED distintos las hicieron y la fecha de la última visita.
 - **Próximas acciones** planificadas en esa escuela.
 - **Clubes y prácticas** que funcionan ahí, con su avance.
@@ -90,8 +91,7 @@ Con **Lista** ves una fila por escuela con la escuela, el **CUE**, la **direcci�
 ## Excel
 **Excel** descarga la lista tal como la estás viendo (con tu búsqueda, tus filtros y el orden), con las columnas Escuela, CUE, Dirección, Localidad, Distrito, Contacto, Cargo, Teléfono, Correo, Otros contactos y **Próximos cronogramas** (uno por renglón, con la ventana de fechas y el tipo): sirve para comparar con tu registro propio y ponerlo al día.
 ## La ficha completa
-Al tocar una escuela se abre la ficha del buscador (datos, próximas acciones, clubes y prácticas, historial) con cuatro secciones más:
-- **Conectividad:** enlace, piso tecnológico, proveedores, ANI y recurso primario.
+Al tocar una escuela se abre la ficha del buscador (datos, conectividad, próximas acciones, clubes y prácticas, historial) con tres secciones más:
 - **Reclamos** de esa escuela, con su estado y número.
 - **Cronogramas de conectividad** de la escuela, con el estado que anotó el equipo.
 - **Contactos** del directivo, con teléfono y correo para llamar o escribir.
@@ -99,11 +99,12 @@ Desde la ficha también podés **agendar** una acción o **armar un reclamo** co
 ## Editar los datos de una escuela
 Si la escuela es tuya (o sos del CED o de la administración), la ficha tiene el botón **Editar datos**, tanto en el buscador como en Mis escuelas. Se abre con tres solapas:
 - **Datos:** ${CAMPOS_ESCUELA.filter(c => !c.avanzado).map(c => c.label.toLowerCase()).join(', ')}. Varones y mujeres no pueden sumar más que la matrícula. Solo se guardan los datos que cambiaste. ${CAMPOS_ESCUELA.filter(c => c.avanzado).map(c => c.label.toLowerCase()).join(', ')} los cambian solo el CED y la administración.
+- **Conectividad** (solo CED y administración): enlace, PNCE, PBA, piso tecnológico y ANI. El plan de enlace, el subplan y el plan de piso se eligen de una lista (de ahí sale el enlace que se usa al armar un reclamo); las fechas se eligen con el calendario y el ancho de banda lleva solo números.
 - **Contactos:** agregar, editar, eliminar y marcar el **principal** (el que se muestra primero en las listas). El correo laboral tiene que terminar en ${DOMINIO_LABORAL}.
 - **Historial:** quién cambió cada dato, cuándo, y qué había antes, por si hay que volver atrás.
 Los cambios se guardan al instante y no se avisa a nadie. Las escuelas sin FED asignado las edita solo el CED o la administración; las de otro FED las ves pero no las editás.
 ## Quién ve qué
-Cada FED ve sus escuelas y, de ellas, todo el detalle. El CED y la administración ven todas las escuelas, con un filtro por FED a cargo (las que no tienen figuran como **${SIN_FED}**); la administración puede quedarse solo con las suyas. De una escuela de otro FED, el buscador (la lupa) muestra los datos y el historial, pero no la conectividad, los reclamos, los cronogramas ni los contactos.` },
+Cada FED ve sus escuelas y, de ellas, todo el detalle. El CED y la administración ven todas las escuelas, con un filtro por FED a cargo (las que no tienen figuran como **${SIN_FED}**); la administración puede quedarse solo con las suyas. De una escuela de otro FED, el buscador (la lupa) muestra los datos y el historial, pero no los reclamos, los cronogramas ni los contactos. La conectividad de cualquier escuela la ven todos.` },
   { id: 'reclamos', titulo: 'Reclamos de conectividad', para: ['fed', 'ced'], md: () => `
 Arma el asunto y el cuerpo del mail de un reclamo de conectividad, con la lista de lo que hay que adjuntar, según la guía de la DTE. Se abre desde el menú de las iniciales (**Reclamo de conectividad**), desde la ficha de una escuela y desde una acción de **Conectividad** (con la escuela ya elegida).
 ## Cómo se arma

@@ -11,16 +11,18 @@ export function nivelEdicion(yo: QuienEdita, fedACargo: string | null | undefine
 }
 
 export type CampoEscuela = {
-  clave: string, label: string, tipo: 'texto' | 'entero' | 'largo' | 'lista', max: number,
+  clave: string, label: string, tipo: 'texto' | 'entero' | 'largo' | 'lista' | 'fecha' | 'cifras', max: number,
   // Sólo la administración y el CED lo cambian.
   avanzado?: boolean,
+  // Texto libre con sugerencias: las que ya figuran cargadas en otras escuelas.
+  sugerencias?: boolean,
 }
 export const CAMPOS_ESCUELA: CampoEscuela[] = [
   { clave: 'direccion', label: 'Dirección', tipo: 'texto', max: 200 },
   { clave: 'alias', label: 'Alias', tipo: 'texto', max: 200 },
-  { clave: 'nivel', label: 'Nivel', tipo: 'texto', max: 100 },
-  { clave: 'modalidad', label: 'Modalidad', tipo: 'texto', max: 100 },
-  { clave: 'turnos', label: 'Turnos', tipo: 'texto', max: 100 },
+  { clave: 'nivel', label: 'Nivel', tipo: 'texto', max: 100, sugerencias: true },
+  { clave: 'modalidad', label: 'Modalidad', tipo: 'texto', max: 100, sugerencias: true },
+  { clave: 'turnos', label: 'Turnos', tipo: 'texto', max: 100, sugerencias: true },
   { clave: 'matricula', label: 'Matrícula', tipo: 'entero', max: 99999 },
   { clave: 'varones', label: 'Varones', tipo: 'entero', max: 99999 },
   { clave: 'mujeres', label: 'Mujeres', tipo: 'entero', max: 99999 },
@@ -33,7 +35,33 @@ export const CAMPOS_ESCUELA: CampoEscuela[] = [
   { clave: 'fed_a_cargo', label: 'FED a cargo', tipo: 'lista', max: 100, avanzado: true },
   { clave: 'tipo_establecimiento', label: 'Tipo de establecimiento', tipo: 'lista', max: 100, avanzado: true },
   { clave: 'ambito', label: 'Ámbito', tipo: 'lista', max: 100, avanzado: true },
+  // Conectividad: sólo el CED y la administración. El plan y el subplan deciden qué enlace tiene la escuela al armar un reclamo, por eso son listas cerradas.
+  { clave: 'plan_enlace', label: 'Plan de enlace', tipo: 'lista', max: 100, avanzado: true },
+  { clave: 'subplan_enlace', label: 'Subplan de enlace', tipo: 'lista', max: 100, avanzado: true },
+  { clave: 'fecha_inicio_conectividad', label: 'Inicio de la conectividad', tipo: 'fecha', max: 10, avanzado: true },
+  { clave: 'mb', label: 'Ancho de banda (Mb)', tipo: 'cifras', max: 5, avanzado: true },
+  { clave: 'listado_conexion_internet', label: 'Listado de conexión', tipo: 'texto', max: 200, avanzado: true, sugerencias: true },
+  { clave: 'proveedor_internet_pnce', label: 'Proveedor PNCE', tipo: 'texto', max: 100, avanzado: true, sugerencias: true },
+  { clave: 'fecha_instalacion_pnce', label: 'Instalación PNCE', tipo: 'fecha', max: 10, avanzado: true },
+  { clave: 'estado_instalacion_pba', label: 'Estado de instalación PBA', tipo: 'texto', max: 100, avanzado: true, sugerencias: true },
+  { clave: 'proveedor_asignado_pba', label: 'Proveedor PBA', tipo: 'texto', max: 100, avanzado: true, sugerencias: true },
+  { clave: 'plan_piso_tecnologico', label: 'Plan de piso tecnológico', tipo: 'lista', max: 100, avanzado: true },
+  { clave: 'tipo_piso_instalado', label: 'Tipo de piso instalado', tipo: 'texto', max: 100, avanzado: true, sugerencias: true },
+  { clave: 'proveedor_piso_tecnologico_cue', label: 'Proveedor del piso', tipo: 'texto', max: 100, avanzado: true, sugerencias: true },
+  { clave: 'fecha_terminado_piso_tecnologico_cue', label: 'Piso terminado', tipo: 'fecha', max: 10, avanzado: true },
+  { clave: 'reclamos_grupo_1_ani', label: 'ANI', tipo: 'texto', max: 50, avanzado: true },
+  { clave: 'recurso_primario', label: 'Recurso primario', tipo: 'texto', max: 100, avanzado: true },
+  { clave: 'access_id', label: 'Access ID', tipo: 'texto', max: 100, avanzado: true },
 ]
+export const CLAVES_CONECTIVIDAD = ['plan_enlace', 'subplan_enlace', 'fecha_inicio_conectividad', 'mb', 'listado_conexion_internet', 'proveedor_internet_pnce', 'fecha_instalacion_pnce', 'estado_instalacion_pba', 'proveedor_asignado_pba', 'plan_piso_tecnologico', 'tipo_piso_instalado', 'proveedor_piso_tecnologico_cue', 'fecha_terminado_piso_tecnologico_cue', 'reclamos_grupo_1_ani', 'recurso_primario', 'access_id']
+// Qué columnas alimentan las opciones de cada dato (los proveedores se sugieren entre sí).
+const PROVEEDORES = ['proveedor_internet_pnce', 'proveedor_asignado_pba', 'proveedor_piso_tecnologico_cue']
+export const ORIGEN_OPCIONES: Record<string, string[]> = {
+  distrito: ['distrito'], tipo_establecimiento: ['tipo_establecimiento'], ambito: ['ambito'], nivel: ['nivel'], modalidad: ['modalidad'], turnos: ['turnos'],
+  plan_enlace: ['plan_enlace'], subplan_enlace: ['subplan_enlace'], plan_piso_tecnologico: ['plan_piso_tecnologico'], listado_conexion_internet: ['listado_conexion_internet'],
+  estado_instalacion_pba: ['estado_instalacion_pba'], tipo_piso_instalado: ['tipo_piso_instalado'],
+  proveedor_internet_pnce: PROVEEDORES, proveedor_asignado_pba: PROVEEDORES, proveedor_piso_tecnologico_cue: PROVEEDORES,
+}
 export const COLS_EDITABLES = CAMPOS_ESCUELA.map(c => c.clave).join(', ')
 export type ValoresEscuela = Record<string, string | number | null>
 const campoDe = (clave: string) => CAMPOS_ESCUELA.find(c => c.clave === clave)
@@ -50,7 +78,19 @@ export function limpiarAlias(texto: string): string {
   }).join(', ')
 }
 
-export type Opciones = Partial<Record<'distrito' | 'fed_a_cargo' | 'tipo_establecimiento' | 'ambito', string[]>>
+export type Opciones = Record<string, string[]>
+
+// Fechas: la base las guarda como texto "d/mm/aaaa" (día sin cero a la izquierda). El selector del navegador usa aaaa-mm-dd.
+export function fechaValida(texto: string): string | null {
+  const m = texto.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (!m) return null
+  const d = Number(m[1]), mes = Number(m[2]), a = Number(m[3])
+  const f = new Date(Date.UTC(a, mes - 1, d))
+  if (a < 2000 || a > 2100 || f.getUTCFullYear() !== a || f.getUTCMonth() !== mes - 1 || f.getUTCDate() !== d) return null
+  return `${d}/${String(mes).padStart(2, '0')}/${a}`
+}
+export const fechaAIso = (texto: string | null | undefined) => { const m = (texto ?? '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : '' }
+export const fechaDeIso = (iso: string) => { const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${Number(m[3])}/${m[2]}/${m[1]}` : '' }
 
 // Valida lo que llegó contra la escuela actual y devuelve sólo lo que cambió (con el valor anterior, para el historial).
 // `nuevo` trae únicamente los campos que se quieren tocar. Lanza un error con el motivo si algo no es válido.
@@ -71,6 +111,15 @@ export function cambiosDeEscuela(actual: ValoresEscuela, nuevo: Record<string, u
         if (n > campo.max) throw new Error(`${campo.label} no puede superar ${campo.max}`)
         valor = n
       }
+    } else if (campo.tipo === 'fecha') {
+      const t = typeof crudo === 'string' ? crudo.trim() : ''
+      if (crudo !== null && crudo !== undefined && typeof crudo !== 'string') throw new Error(`${campo.label} no es válido`)
+      valor = t ? fechaValida(t) : null
+      if (t && !valor) throw new Error(`${campo.label}: la fecha no es válida (día/mes/año)`)
+    } else if (campo.tipo === 'cifras') {
+      const t = typeof crudo === 'string' || typeof crudo === 'number' ? String(crudo).trim() : ''
+      if (t && !/^\d{1,5}$/.test(t)) throw new Error(`${campo.label} tiene que ser un número de hasta 5 cifras`)
+      valor = t ? String(Number(t)) : null
     } else {
       if (crudo !== null && crudo !== undefined && typeof crudo !== 'string') throw new Error(`${campo.label} no es válido`)
       const t = ((crudo as string | null) ?? '').trim()
@@ -78,6 +127,7 @@ export function cambiosDeEscuela(actual: ValoresEscuela, nuevo: Record<string, u
       if (texto.length > campo.max) throw new Error(`${campo.label} no puede superar los ${campo.max} caracteres`)
       valor = campo.clave === 'alias' ? limpiarAlias(texto) || null : texto || null
       if (campo.clave === 'nombre' && !valor) throw new Error('El nombre no puede quedar vacío')
+      if (campo.clave.startsWith('proveedor') && valor && /^[\d\s\-+()]+$/.test(valor as string)) throw new Error(`${campo.label} tiene que ser el nombre de la empresa, no un número`)
       if (campo.tipo === 'lista' && valor) {
         const permitidas = opciones[campo.clave as keyof Opciones]
         if (permitidas && !permitidas.includes(valor as string)) throw new Error(`${campo.label}: elegí una opción de la lista`)
@@ -129,9 +179,9 @@ export function historialDeContacto(antes: Partial<ContactoValido>, despues: Con
 // Lo que trae la pantalla de edición de una escuela.
 export type ContactoEditable = ContactoValido & { id: string, es_principal: boolean }
 export type CambioEscuela = { id: string, seccion: string, campo: string, valor_anterior: string | null, valor_nuevo: string | null, created_at: string, autor: string | null }
-export type OpcionesEscuela = Record<'distrito' | 'fed_a_cargo' | 'tipo_establecimiento' | 'ambito' | 'nivel' | 'modalidad' | 'turnos', string[]>
+export type OpcionesEscuela = Opciones
 export type EdicionEscuela = { id: string, cue: number | null, nombre: string | null, nivel: NivelEdicion, valores: ValoresEscuela, contactos: ContactoEditable[], historial: CambioEscuela[], opciones: OpcionesEscuela }
 
 // Sección del historial a la que pertenece cada dato (las mismas que usaba el buscador).
 const ACADEMICO = ['nivel', 'modalidad', 'turnos', 'matricula', 'varones', 'mujeres', 'secciones']
-export const seccionDe = (clave: string) => (clave === 'observaciones' ? 'Observaciones' : ACADEMICO.includes(clave) ? 'Académico' : 'General')
+export const seccionDe = (clave: string) => (clave === 'observaciones' ? 'Observaciones' : ACADEMICO.includes(clave) ? 'Académico' : CLAVES_CONECTIVIDAD.includes(clave) ? 'Conectividad' : 'General')
