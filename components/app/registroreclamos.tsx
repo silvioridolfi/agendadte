@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Check, ClipboardList, Eye, FileSpreadsheet, Loader2, Pencil, Search } from 'lucide-react'
+import { CalendarClock, Check, ClipboardList, Eye, FileSpreadsheet, Loader2, Pencil, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { type Fed } from '@/lib/agenda'
 import { ESTADOS_RECLAMO, ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL, ESTADO_RECLAMO_PLURAL, filtrarReclamos, origenDeNumero, puedeResolverReclamo, resumenReclamos, sumarNota, type EstadoReclamo, type FiltrosReclamo, type Reclamo } from '@/lib/reclamos-registro'
 import { titleCase } from '@/lib/format'
-import { esDelFed } from '@/lib/cronogramas'
-import { BotonVolver, ErrorBox, Skeleton, actualizarReclamo, eyebrow, errMsg, getReclamos, resolverReclamo, selectClass } from '@/components/app/comun'
+import { esDelFed, etiquetaTipo, ventanaDe } from '@/lib/cronogramas'
+import type { CruceReclamo } from '@/lib/cruce'
+import { BotonVolver, ErrorBox, Skeleton, actualizarReclamo, eyebrow, errMsg, getCruceReclamos, getReclamos, resolverReclamo, selectClass } from '@/components/app/comun'
 import { Field } from '@/components/app/formulario'
 
 const ZONA = 'America/Argentina/Buenos_Aires'
@@ -21,17 +22,20 @@ export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial, volv
   const [lista, setLista] = useState<Reclamo[] | null>(null)
   const [error, setError] = useState('')
   const [filtros, setFiltros] = useState<FiltrosReclamo>({ estado: 'abiertos', fedId: '', conexion: '', busqueda: '' })
+  // Cronogramas de la misma escuela (próximos, o el último posterior al reclamo), por reclamo abierto.
+  const [cruce, setCruce] = useState<Record<string, CruceReclamo>>({})
+  const [conCrono, setConCrono] = useState<'' | 'proximo' | 'posterior'>('')
   const [soloMios, setSoloMios] = useState((profile.rol === 'fed' && !esAdmin) || !!soloMiosInicial)
   const [editando, setEditando] = useState<Reclamo | null>(null)
   const [resolviendo, setResolviendo] = useState<Reclamo | null>(null)
   const puedeEditar = profile.rol === 'coordinacion'
   const [exportando, setExportando] = useState(false)
   const [errorExcel, setErrorExcel] = useState('')
-  const cargar = useCallback(() => { getReclamos().then(setLista).catch(e => setError(errMsg(e))) }, [])
+  const cargar = useCallback(() => { getReclamos().then(setLista).catch(e => setError(errMsg(e))); getCruceReclamos().then(setCruce).catch(() => {}) }, [])
   useEffect(() => { cargar() }, [cargar])
   const nombreFed = useCallback((id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Ex integrante', [feds])
   const propios = useMemo(() => (lista ?? []).filter(r => !soloMios || r.fed_id === profile.id || esDelFed(r.school?.fed_a_cargo, profile.nombre_completo)), [lista, soloMios, profile.id, profile.nombre_completo])
-  const visibles = useMemo(() => filtrarReclamos(propios, filtros, nombreFed), [propios, filtros, nombreFed])
+  const visibles = useMemo(() => filtrarReclamos(propios, filtros, nombreFed).filter(r => !conCrono || (conCrono === 'proximo' ? !!cruce[r.id]?.proximos.length : !!cruce[r.id]?.pasado)), [propios, filtros, nombreFed, conCrono, cruce])
   const resumen = resumenReclamos(propios)
   const conexiones = useMemo(() => [...new Set((lista ?? []).map(r => r.conexion).filter((x): x is string => !!x))].sort(), [lista])
   const set = <K extends keyof FiltrosReclamo>(k: K, v: FiltrosReclamo[K]) => setFiltros(f => ({ ...f, [k]: v }))
@@ -57,12 +61,13 @@ export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial, volv
           <select aria-label="Estado" className={`${selectClass} md:w-40`} value={filtros.estado} onChange={e => set('estado', e.target.value as FiltrosReclamo['estado'])}><option value="abiertos">Abiertos</option><option value="todos">Todos</option>{ESTADOS_RECLAMO.map(e => <option key={e} value={e}>{ESTADO_RECLAMO_LABEL[e]}</option>)}</select>
           <select aria-label="FED" className={`${selectClass} md:w-44`} value={filtros.fedId} onChange={e => set('fedId', e.target.value)}><option value="">Todo el equipo</option>{feds.map(f => <option key={f.id} value={f.id}>{f.nombre_completo}</option>)}</select>
           <select aria-label="Tipo de conexión" className={`${selectClass} md:w-52`} value={filtros.conexion} onChange={e => set('conexion', e.target.value)}><option value="">Toda conexión</option>{conexiones.map(c => <option key={c} value={c}>{c}</option>)}</select>
+          <select aria-label="Cronogramas" className={`${selectClass} md:w-60`} value={conCrono} onChange={e => setConCrono(e.target.value as typeof conCrono)}><option value="">Con o sin cronograma</option><option value="proximo">Con cronograma próximo</option><option value="posterior">Cronograma posterior (¿se resolvió?)</option></select>
           <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-0"><input type="checkbox" checked={soloMios} onChange={e => setSoloMios(e.target.checked)} className="size-4" />Solo los míos y de mis escuelas</label>
         </div>
 
         <p className="mt-3 text-xs text-dte-gris" aria-live="polite">{visibles.length} {visibles.length === 1 ? 'reclamo' : 'reclamos'}</p>
         {visibles.length ? <ul className="mt-2 flex flex-col gap-2">{visibles.map(r => {
-          const origen = origenDeNumero(r.nro_incidencia)
+          const origen = origenDeNumero(r.nro_incidencia), x = cruce[r.id], prox = x?.proximos[0], pasado = x?.pasado
           return <li key={r.id} className="rounded-card border border-dte-linea bg-white p-3.5 shadow-e1">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${ESTADO_RECLAMO_CLASE[r.estado]}`}>{ESTADO_RECLAMO_LABEL[r.estado]}</span>
@@ -72,6 +77,8 @@ export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial, volv
             <p className="mt-2 break-words font-mono text-[0.8125rem] font-medium">{r.asunto}</p>
             <p className="mt-1 text-sm font-semibold">{r.school?.nombre ? titleCase(r.school.nombre) : `CUE ${r.cue ?? '—'}`}{r.school?.distrito && <span className="font-normal text-dte-gris"> · {titleCase(r.school.distrito)}</span>}</p>
             <p className="mt-0.5 text-xs text-dte-gris">{[nombreFed(r.fed_id), `enviado el ${fechaCorta(r.enviado_at)}`, r.conexion].filter(Boolean).join(' · ')}</p>
+            {prox ? <p className="mt-2 flex items-start gap-2 rounded-control border border-dte-petroleo/30 bg-dte-tinte px-3 py-2 text-sm"><CalendarClock className="mt-0.5 size-4 shrink-0 text-dte-petroleo" aria-hidden /><span className="min-w-0 break-words"><b>Cronograma próximo en la escuela:</b> {etiquetaTipo(prox.tipo)} · {ventanaDe(prox)}{prox.proveedor ? ` · ${prox.proveedor}` : ''}{x.proximos.length > 1 ? ` (+${x.proximos.length - 1})` : ''}</span></p> : null}
+            {pasado ? <p className="mt-2 flex items-start gap-2 rounded-control border border-aviso-borde bg-aviso-fondo px-3 py-2 text-sm text-aviso-fuerte"><CalendarClock className="mt-0.5 size-4 shrink-0" aria-hidden /><span className="min-w-0 break-words"><b>Hubo un cronograma posterior al reclamo:</b> {etiquetaTipo(pasado.tipo)} · {ventanaDe(pasado)}{pasado.estado === 'realizado' ? ' (anotado como realizado)' : ''}. ¿Se resolvió? Si ya funciona, marcalo como resuelto.</span></p> : null}
             {(r.nro_incidencia || r.notas) && <div className="mt-2 rounded-control bg-dte-fondo px-3 py-2 text-sm">
               {r.nro_incidencia && <p><span className="text-xs font-semibold text-dte-gris">{origen ? `Número (${origen}): ` : 'Número: '}</span><b className="break-words tabular-nums">{r.nro_incidencia}</b></p>}
               {r.notas && <p className="mt-0.5 break-words text-dte-tinta">{r.notas}</p>}

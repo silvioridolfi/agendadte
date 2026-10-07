@@ -22,6 +22,7 @@ import { estadoAlCrear } from '@/lib/estado'
 import { COLS_ORGANISMO, cambiosDeOrganismo, type Jefatura, type JefaturaResumen, type ValoresOrganismo } from '@/lib/organismos'
 import type { PuntoMapa, PuntosMapa } from '@/lib/mapa'
 import { gruposPorPredio, hermanasDe } from '@/lib/predio'
+import { cruceDe, type CronoCorto, type CruceReclamo, type EstadoCrono } from '@/lib/cruce'
 import { CLAVES_CONECTIVIDAD, COLS_EDITABLES, ORIGEN_OPCIONES, cambiosDeEscuela, historialDeContacto, nivelEdicion, resumenContacto, seccionDe, validarContacto, type ContactoEditable, type ContactoInput, type EdicionEscuela, type NivelEdicion, type OpcionesEscuela, type ValoresEscuela } from '@/lib/escuelas-edicion'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -228,12 +229,23 @@ async function conComparte(filas: Cronograma[]): Promise<Cronograma[]> {
   }
   return filas.map(c => ({ ...c, comparte: (c.school?.predio ? porPredio.get(c.school.predio) ?? [] : []).filter(o => o.id !== c.school?.id).map(o => ({ cue: o.cue, nombre: o.nombre })) }))
 }
+// A cada cronograma, los reclamos de conectividad abiertos de su escuela.
+async function conReclamos(filas: Cronograma[]): Promise<Cronograma[]> {
+  const ids = [...new Set(filas.map(c => c.school?.id).filter((x): x is string => !!x))]
+  const porEscuela = new Map<string, NonNullable<Cronograma['reclamos']>>()
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data, error } = await supabaseServer().from('reclamos_conectividad').select('id, school_id, tipo_label, estado, nro_incidencia, enviado_at').in('school_id', ids.slice(i, i + 100)).in('estado', ['enviado', 'en_proceso']).order('enviado_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    for (const r of data ?? []) porEscuela.set(r.school_id as string, [...(porEscuela.get(r.school_id as string) ?? []), { id: r.id as string, tipo_label: r.tipo_label as string, estado: r.estado as string, nro_incidencia: r.nro_incidencia as string | null, enviado_at: r.enviado_at as string }])
+  }
+  return filas.map(c => ({ ...c, reclamos: c.school ? porEscuela.get(c.school.id) ?? [] : [] }))
+}
 async function getCronogramasImpl(yo: Usuario): Promise<{ lista: Cronograma[], ultima: UltimaSync }> {
   const db = supabaseServer()
   const todos = yo.esAdmin || yo.fed.rol === 'coordinacion'
   const filas = (await fetchAll<Omit<Cronograma, 'historial'>>((a, b) => db.from('cronogramas').select(COLS_CRONOGRAMA).eq('en_planilla', true).gte('fecha_fin', haceDias(hoyAR(), DIAS_ATRAS))
     .order('fecha_inicio').order('cue').order('id').range(a, b))).filter(c => todos || esDelFed(c.school?.fed_a_cargo, yo.fed.nombre_completo))
-  const lista = await conComparte(await conHistorial(filas))
+  const lista = await conReclamos(await conComparte(await conHistorial(filas)))
   const { data } = await db.from('cron_ejecuciones').select('fin, resultado').in('tarea', ['cronogramas', 'cronogramas-manual']).not('fin', 'is', null).order('inicio', { ascending: false }).limit(1).maybeSingle()
   return { lista, ultima: todos ? ((data as UltimaSync) ?? null) : null }
 }
@@ -459,6 +471,34 @@ async function guardarJefaturaImpl(yo: Usuario, id: string, cambios: Record<stri
   if (error) throw new Error(error.message)
   await db.from('auditoria').insert({ tabla: 'organismos_descentralizados', registro_id: id, operacion: 'update', autor_id: yo.fed.id, datos: { cambios: lista.map(c => ({ campo: c.label, antes: c.anterior, despues: c.nuevo })) } })
   return lista.length
+}
+// Para cada reclamo abierto, los cronogramas de conectividad de su escuela (próximos, o el último posterior al reclamo). Sólo de las escuelas que el usuario ve en Cronogramas.
+async function getCruceReclamosImpl(yo: Usuario): Promise<Record<string, CruceReclamo>> {
+  const db = supabaseServer(), hoy = hoyAR()
+  const todos = yo.esAdmin || yo.fed.rol === 'coordinacion'
+  const { data, error } = await db.from('reclamos_conectividad').select('id, school_id, estado, enviado_at, school:establecimientos(fed_a_cargo)').in('estado', ['enviado', 'en_proceso']).not('school_id', 'is', null)
+  if (error) throw new Error(error.message)
+  const rec = ((data ?? []) as unknown as { id: string, school_id: string, estado: string, enviado_at: string, school: { fed_a_cargo: string | null } | { fed_a_cargo: string | null }[] | null }[])
+    .filter(r => todos || esDelFed([r.school].flat()[0]?.fed_a_cargo, yo.fed.nombre_completo))
+  const escuelas = [...new Set(rec.map(r => r.school_id))]
+  const cronos: (CronoCorto & { school_id: string })[] = []
+  for (let i = 0; i < escuelas.length; i += 100) {
+    const { data: cs, error: e2 } = await db.from('cronogramas').select('id, school_id, tipo, fecha_inicio, fecha_fin, proveedor').eq('en_planilla', true).in('school_id', escuelas.slice(i, i + 100))
+    if (e2) throw new Error(e2.message)
+    for (const c of cs ?? []) cronos.push({ id: c.id as string, school_id: c.school_id as string, tipo: c.tipo as string | null, fecha_inicio: String(c.fecha_inicio), fecha_fin: String(c.fecha_fin), proveedor: c.proveedor as string | null, estado: null })
+  }
+  // Cómo salió cada uno (el último resultado anotado).
+  const estados = new Map<string, EstadoCrono>()
+  for (let i = 0; i < cronos.length; i += 100) {
+    const { data: sg, error: e3 } = await db.from('cronogramas_seguimiento').select('cronograma_id, estado, created_at').in('cronograma_id', cronos.slice(i, i + 100).map(c => c.id)).in('estado', ['realizado', 'no_realizado', 'reprogramado']).order('created_at', { ascending: false })
+    if (e3) throw new Error(e3.message)
+    for (const s of sg ?? []) if (!estados.has(s.cronograma_id as string)) estados.set(s.cronograma_id as string, s.estado as EstadoCrono)
+  }
+  const porEscuela = new Map<string, CronoCorto[]>()
+  for (const c of cronos) porEscuela.set(c.school_id, [...(porEscuela.get(c.school_id) ?? []), { id: c.id, tipo: c.tipo, fecha_inicio: c.fecha_inicio, fecha_fin: c.fecha_fin, proveedor: c.proveedor, estado: estados.get(c.id) ?? null }])
+  const out: Record<string, CruceReclamo> = {}
+  for (const r of rec) { const x = cruceDe(r, porEscuela.get(r.school_id) ?? [], hoy); if (x.proximos.length || x.pasado) out[r.id] = x }
+  return out
 }
 // Anota cómo salió un cronograma (el último que se anota es el vigente). Si no se realizó o se reprogramó, hace falta el motivo y se avisa al CED.
 async function marcarCronogramaImpl(yo: Usuario, id: string, estado: EstadoSeguimiento, nota: string): Promise<Seguimiento> {
@@ -1097,6 +1137,7 @@ export const getReclamos = async () => conUsuario(() => getReclamosImpl())
 export const getAccesos = async () => conUsuario(yo => getAccesosImpl(yo))
 export const getMisEscuelas = async () => conUsuario(yo => getMisEscuelasImpl(yo))
 export const getExtrasEscuela = async (id: string) => conUsuario(yo => getExtrasEscuelaImpl(yo, id))
+export const getCruceReclamos = async () => conUsuario(yo => getCruceReclamosImpl(yo))
 export const getPuntosMapa = async () => conUsuario(() => getPuntosMapaImpl())
 export const getJefatura = async (id: string) => conUsuario(yo => getJefaturaImpl(yo, id))
 export const guardarJefatura = async (id: string, cambios: Record<string, unknown>) => conUsuario(yo => guardarJefaturaImpl(yo, id, cambios))

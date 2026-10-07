@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Check, ChevronDown, Copy, Eye, Info, Loader2, Mail, MapPin, Phone, RefreshCw, Search, Send } from 'lucide-react'
+import { CalendarClock, Check, ChevronDown, Copy, Eye, Info, Loader2, Mail, MapPin, Phone, RefreshCw, Search, Send, Wifi } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -86,6 +86,7 @@ export function Cronogramas({ profile, feds, esAdmin, cuenta, volver }: { profil
           <select aria-label="Avisos" className={`${selectClass} md:w-48`} value={filtros.aviso} onChange={e => set('aviso', e.target.value as FiltrosCronogramas['aviso'])}><option value="">Todo aviso</option><option value="sin_escuela">Escuela sin avisar</option>{avisaJefatura && <option value="sin_jefatura">Jefatura sin avisar</option>}</select>
           <select aria-label="Tipo" className={`${selectClass} md:w-52`} value={filtros.tipo} onChange={e => set('tipo', e.target.value)}><option value="">Todo tipo</option>{tipos.map(t => <option key={t} value={t}>{etiquetaTipo(t)}</option>)}</select>
           <select aria-label="Proveedor" className={`${selectClass} md:w-40`} value={filtros.proveedor} onChange={e => set('proveedor', e.target.value)}><option value="">Todo proveedor</option>{proveedores.map(p => <option key={p} value={p}>{p}</option>)}</select>
+          <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-0"><input type="checkbox" checked={filtros.conReclamo} onChange={e => set('conReclamo', e.target.checked)} className="size-4" />Con reclamo abierto</label>
           {veTodos && <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-0"><input type="checkbox" checked={soloMios} onChange={e => setSoloMios(e.target.checked)} className="size-4" />Solo los míos</label>}
         </div>
 
@@ -115,6 +116,7 @@ function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, avisaJefatura, esCed, 
           {programaDe(c.semana) && <span className="inline-flex items-center rounded-full border border-dte-linea px-2 py-0.5 text-xs font-semibold">{programaDe(c.semana)}</span>}
           {esReprogramacion(c.semana) && <span className="inline-flex items-center rounded-full border border-aviso-borde bg-aviso-fondo px-2 py-0.5 text-xs font-semibold text-aviso-fuerte">Reprogramación</span>}
           {estado && <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${ESTADO_CLASE[estado]}`}>{ESTADO_SEGUIMIENTO_LABEL[estado]}</span>}
+          {c.reclamos?.length ? <span className="inline-flex items-center gap-1 rounded-full border border-aviso-borde bg-aviso-fondo px-2 py-0.5 text-xs font-semibold text-aviso-fuerte"><Wifi className="size-3" aria-hidden />{c.reclamos.length} {c.reclamos.length === 1 ? 'reclamo abierto' : 'reclamos abiertos'}</span> : null}
           {avisoDe(c, 'jefatura_avisada') && <span className="inline-flex items-center gap-1 rounded-full border border-dte-linea bg-dte-fondo px-2 py-0.5 text-xs font-semibold text-dte-gris"><Check className="size-3" aria-hidden />Jefatura avisada</span>}
           {avisoDe(c, 'escuela_avisada') && <span className="inline-flex items-center gap-1 rounded-full border border-dte-linea bg-dte-fondo px-2 py-0.5 text-xs font-semibold text-dte-gris"><Check className="size-3" aria-hidden />Escuela avisada</span>}
           {c.estado_planilla && <span className="inline-flex items-center rounded-full border border-dte-linea bg-dte-fondo px-2 py-0.5 text-xs text-dte-gris">Planilla: {c.estado_planilla}</span>}
@@ -126,6 +128,10 @@ function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, avisaJefatura, esCed, 
     </button>
     {abierta && <div className="flex flex-col gap-2 border-t border-dte-linea px-3.5 pb-3.5 pt-3 text-sm">
       <p className="break-words font-semibold">{nombre}</p>
+      {c.reclamos?.length ? <div className="rounded-control border border-aviso-borde bg-aviso-fondo px-3 py-2 text-aviso-fuerte">
+        <p className="flex items-center gap-1.5 text-xs font-semibold"><Wifi className="size-3.5" aria-hidden />{c.reclamos.length === 1 ? 'Reclamo de conectividad abierto en la escuela' : `${c.reclamos.length} reclamos de conectividad abiertos en la escuela`}</p>
+        <ul className="mt-1 flex flex-col gap-0.5">{c.reclamos.map(r => <li key={r.id} className="break-words">{r.tipo_label} · {r.estado === 'en_proceso' ? 'en proceso' : 'enviado'} el {fechaCortaAR(r.enviado_at.slice(0, 10))}{r.nro_incidencia ? ` · N° ${r.nro_incidencia}` : ''}</li>)}</ul>
+      </div> : null}
       {instaladores.length > 0 && <div className="rounded-control bg-dte-fondo px-3 py-2">
         <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold text-dte-gris">Instaladores</span><Button type="button" variant="outline" size="sm" onClick={copiar}>{copiado ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado ? 'Copiado' : 'Copiar'}</Button></div>
         <ul className="mt-1 flex flex-col gap-0.5">{instaladores.map((l, i) => <li key={i} className="break-words">{esEnlace(l) ? <a href={l.trim()} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline">{l.trim()}</a> : l}</li>)}</ul>

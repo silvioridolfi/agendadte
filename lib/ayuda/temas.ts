@@ -153,6 +153,11 @@ Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la
 | En proceso | Ya tiene número de ticket o de incidencia. |
 | Resuelto | Se solucionó. |
 | Anulado | Se registró por error o se dejó sin efecto. |
+## Cronogramas de la misma escuela
+En cada reclamo abierto, la agenda cruza la escuela con sus cronogramas de conectividad (ver **Cronogramas de conectividad**):
+- **Cronograma próximo en la escuela:** si hay uno que todavía no terminó, se muestra con el tipo, las fechas y la empresa (y cuántos más hay). Puede ser lo que atienda el reclamo.
+- **Hubo un cronograma posterior al reclamo:** si ya pasó uno que empezó después de enviado el reclamo, la agenda te pregunta si se resolvió, para que lo marques como **Resuelto** si ya funciona. No se cierra solo: el cronograma no dice a qué reclamo atendió.
+El filtro **Cronogramas** deja solo los reclamos con cronograma próximo o con uno posterior. Solo se cruzan los cronogramas de tus escuelas (el CED ve todos) y los que no se hicieron o se reprogramaron no cuentan.
 ## Quién ve y quién edita
 Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado, FED, tipo de conexión y búsqueda por CUE, escuela, número o nombre. Solo el CED los actualiza (números, estados y notas); la administración los ve en modo lectura. Una excepción: el **FED a cargo de la escuela** (o quien registró el reclamo) puede tocar **Marcar resuelto** en un reclamo abierto, con una nota opcional, porque muchas veces la escuela le avisa a él y no al CED. No cambia otros datos ni envía ningún aviso; en la tarjeta queda "lo marcó" con su nombre. Por defecto el filtro **Solo los míos y de mis escuelas** deja a la vista los reclamos que podés cerrar. El botón **Excel** descarga la lista tal como la estás viendo, con las mismas columnas de la planilla del CED.
 [i] Al armar un reclamo de una escuela que ya tiene uno abierto, la agenda te avisa para que sigas esa cadena en lugar de abrir otra.` },
@@ -161,6 +166,8 @@ Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado,
 Son los cronogramas de conectividad (reparaciones e instalaciones de piso tecnológico y de enlace, certificaciones…), tanto de Educar como de PBA, que ya vienen establecidos por otro organismo, con su fecha y su empresa. La agenda no los programa ni puede cambiarles la fecha: los lee de la pestaña **Cronogramas** del consolidado de conectividad para que el equipo los tenga a mano, avise a las escuelas y anote cómo salieron. Se abre desde el menú de las iniciales (**Cronogramas**) o desde el acceso del Tablero; en el celular, **Volver** (arriba) te lleva a la pantalla de la que venías.
 ## Qué ves
 Una tarjeta por cronograma y escuela: la ventana de fechas, el tipo, el proveedor, el N° del cronograma o de la incidencia, el FED a cargo de la escuela y el estado que figura en la planilla (sólo de referencia). Al tocarla se ven los instaladores (nombre y DNI o CUIL, o el enlace que figura en la planilla), la descripción y las observaciones de territorio. Cada FED ve los cronogramas de **sus escuelas**; el CED y la administración ven todos.
+## Reclamos de la escuela
+Si la escuela tiene reclamos de conectividad abiertos, la tarjeta lo indica y, al abrirla, los lista con el tipo, el estado y el número. El filtro **Con reclamo abierto** deja solo esos cronogramas.
 ## Cómo salió
 Dentro de la tarjeta, **Cómo salió** permite anotar **Realizado**, **No se realizó** o **Reprogramado**. Lo anota el FED a cargo de la escuela o el CED. Para No se realizó y Reprogramado hay que escribir el motivo, y el CED recibe una notificación. El último estado anotado es el que cuenta (queda el historial) y no se modifica la planilla.
 ## Avisar a la escuela y a la jefatura
