@@ -88,6 +88,7 @@ async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuel
   const grupos = await gruposDePredio(db)
   const escuela = { ...resto, lat, lon, predio: predioValidoServidor(resto.predio), comparte: hermanasDe(grupos, id, resto.predio as number | null), mapa: lat != null && lon != null ? `${lat},${lon}` : texto } as unknown as DatosEscuela
   const jefatura = await jefaturaDe(db, escuela.distrito)
+  const contactos = await contactosDe(db, escuela.cue)
   const todo = yo.fed.rol === 'coordinacion'
   const historial: FilaHistorial[] = ((its.data ?? []) as unknown as AgendaItem[]).filter(i => !esAusencia(i.accion)).map(i => {
     const propia = i.fed_id === yo.fed.id || (i.participantes ?? []).some(p => p.fed_id === yo.fed.id)
@@ -96,7 +97,15 @@ async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuel
   const clubes: ClubDeEscuela[] = ((cls.data ?? []) as unknown as (Omit<ClubDeEscuela, 'realizados' | 'esOrigen'> & { school_id: string | null, encuentros: { item: { estado: string } | { estado: string }[] | null }[] })[]).map(({ encuentros, school_id, ...c }) => ({
     ...c, esOrigen: school_id !== id, realizados: encuentros.filter(x => [x.item].flat().some(it => it?.estado === 'realizada')).length,
   }))
-  return { escuela, jefatura, conectividad, historial, clubes, puedeEditar: nivelEdicion({ esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }, escuela.fed_a_cargo) !== null }
+  return { escuela, jefatura, contactos, conectividad, historial, clubes, puedeEditar: nivelEdicion({ esAdmin: yo.esAdmin, rol: yo.fed.rol, nombre: yo.fed.nombre_completo }, escuela.fed_a_cargo) !== null }
+}
+
+// Contactos de la escuela con algún dato, el principal primero. Los ven todos.
+async function contactosDe(db: ReturnType<typeof supabaseServer>, cue: number | null): Promise<ContactoEscuela[]> {
+  if (cue == null) return []
+  const { data, error } = await db.from('contactos').select('nombre, apellido, cargo, telefono, correo, correo_laboral, es_principal').eq('cue', cue).order('es_principal', { ascending: false }).order('apellido')
+  if (error) throw new Error(error.message)
+  return ((data ?? []) as ContactoEscuela[]).filter(c => [c.nombre, c.apellido, c.telefono, c.correo, c.correo_laboral].some(v => v && v.trim()))
 }
 
 // Jefatura distrital del distrito de la escuela (si hay).
@@ -295,24 +304,22 @@ async function getAccesosImpl(yo: Usuario): Promise<Accesos> {
   ])
   return contarAccesos({ escuelaIds: new Set(escuelas.map(e => e.id)), todas, miId: yo.fed.id, reclamosAbiertos, cronogramasProximos })
 }
-// Lo que se suma a la ficha de una escuela a cargo: conectividad, reclamos, cronogramas y contactos. Sólo para el FED a cargo, la coordinación y la administración.
-export type ExtrasEscuela = { reclamos: Reclamo[], cronogramas: Cronograma[], contactos: ContactoEscuela[] }
+// Lo que se suma a la ficha de una escuela a cargo: reclamos y cronogramas. Sólo para el FED a cargo, la coordinación y la administración.
+export type ExtrasEscuela = { reclamos: Reclamo[], cronogramas: Cronograma[] }
 async function getExtrasEscuelaImpl(yo: Usuario, id: string): Promise<ExtrasEscuela> {
   if (!UUID.test(id)) throw new Error('Escuela inválida')
   const db = supabaseServer()
-  const { data: e, error } = await db.from('establecimientos').select('cue, fed_a_cargo').eq('id', id).maybeSingle()
+  const { data: e, error } = await db.from('establecimientos').select('fed_a_cargo').eq('id', id).maybeSingle()
   if (error) throw new Error(error.message)
   if (!e) throw new Error('No se encontró la escuela')
   if (!yo.esAdmin && yo.fed.rol !== 'coordinacion' && !esDelFed(e.fed_a_cargo as string | null, yo.fed.nombre_completo)) throw new Error('Estos datos los ve el FED a cargo de la escuela')
-  const [rec, cro, con] = await Promise.all([
+  const [rec, cro] = await Promise.all([
     db.from('reclamos_conectividad').select(COLS_RECLAMO).eq('school_id', id).order('enviado_at', { ascending: false }).limit(20),
     db.from('cronogramas').select(COLS_CRONOGRAMA).eq('school_id', id).eq('en_planilla', true).gte('fecha_fin', haceDias(hoyAR(), DIAS_ATRAS)).order('fecha_inicio'),
-    e.cue == null ? Promise.resolve({ data: [], error: null }) : db.from('contactos').select('nombre, apellido, cargo, telefono, correo, correo_laboral, es_principal').eq('cue', e.cue).order('es_principal', { ascending: false }),
   ])
   if (rec.error) throw new Error(rec.error.message)
   if (cro.error) throw new Error(cro.error.message)
-  if (con.error) throw new Error(con.error.message)
-  return { reclamos: (rec.data ?? []) as unknown as Reclamo[], cronogramas: await conHistorial((cro.data ?? []) as unknown as Omit<Cronograma, 'historial'>[]), contactos: (con.data ?? []) as ContactoEscuela[] }
+  return { reclamos: (rec.data ?? []) as unknown as Reclamo[], cronogramas: await conHistorial((cro.data ?? []) as unknown as Omit<Cronograma, 'historial'>[]) }
 }
 // ── Edición de los datos de una escuela ──
 // El FED a cargo edita los datos del día a día y los contactos; el CED y la administración, todo. Cada cambio queda en historial_cambios con su autor. No se avisa a nadie.

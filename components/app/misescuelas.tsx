@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Building2, Map as MapIcono, CalendarClock, ChevronRight, Contact, FileSpreadsheet, Loader2, Mail, Phone, School as SchoolIcon, Search, TriangleAlert, Wifi, X } from 'lucide-react'
+import { ArrowLeft, Building2, Map as MapIcono, CalendarClock, ChevronRight, FileSpreadsheet, Loader2, Mail, Phone, School as SchoolIcon, Search, TriangleAlert, Wifi, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -220,12 +220,6 @@ function Extras({ x, feds }: { x: Awaited<ReturnType<typeof getExtrasEscuela>>, 
         <span className="text-sm font-semibold">{ventanaDe(cr)} · {etiquetaTipo(cr.tipo)}</span>
         <span className="text-xs text-dte-gris">{[cr.proveedor, cr.nro && `N° ${cr.nro}`, est ? ESTADO_SEGUIMIENTO_LABEL[est] : 'Sin marcar'].filter(Boolean).join(' · ')}</span>
       </li> })}</ul> : <p className="rounded-tile border border-dashed border-dte-linea px-3 py-3 text-center text-sm text-dte-gris">Sin cronogramas en los últimos días.</p>}
-    </Bloque>
-    <Bloque titulo={`Contactos (${x.contactos.length})`} icono={Contact} familia="azul">
-      {x.contactos.length ? <ul className="divide-y divide-dte-linea overflow-hidden rounded-tile border border-dte-linea">{x.contactos.map((k, i) => { const mail = k.correo_laboral || k.correo; return <li key={i} className="flex flex-col gap-1 px-3 py-2.5">
-        <span className="text-sm font-semibold">{[k.nombre, k.apellido].filter(Boolean).join(' ') || 'Sin nombre'}{k.cargo && <span className="font-normal text-dte-gris"> · {k.cargo}</span>}{k.es_principal && <span className="ml-1.5 text-xs font-normal text-dte-gris">(principal)</span>}</span>
-        <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">{k.telefono && <a href={`tel:${k.telefono}`} className="inline-flex min-h-8 items-center gap-1 font-semibold text-dte-petroleo underline underline-offset-2"><Phone className="size-3.5" aria-hidden />{k.telefono}</a>}{mail && <a href={`mailto:${mail}`} className="inline-flex min-h-8 items-center gap-1 break-all font-semibold text-dte-petroleo underline underline-offset-2"><Mail className="size-3.5" aria-hidden />{mail}</a>}</span>
-      </li> })}</ul> : <p className="rounded-tile border border-dashed border-dte-linea px-3 py-3 text-center text-sm text-dte-gris">Sin contactos cargados.</p>}
     </Bloque>
   </>
 }

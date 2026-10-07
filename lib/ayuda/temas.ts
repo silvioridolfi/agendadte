@@ -74,6 +74,7 @@ Cuando una escuela **comparte predio** con otras (por ejemplo un jardín, una pr
 ## Qué muestra la ficha
 - **Datos:** CUE, distrito, dirección con **Cómo llegar**, FED a cargo, nivel, modalidad, turnos, matrícula y secciones. Si la escuela es tuya, **Editar datos** te deja corregirlos (ver Mis escuelas).
 - **Predio:** el número y las demás escuelas que lo comparten, con el nombre y el CUE; tocando una se abre su ficha. El número de predio lo cambia solo el CED o la administración.
+- **Contactos:** los de la escuela con algún dato (el principal primero), con teléfono y correo para llamar o escribir. Sin datos cargados aparece el aviso. Los ve cualquiera; los edita solo el FED a cargo, el CED o la administración.
 - **Conectividad:** plan y subplan de enlace, ancho de banda, proveedores, estado de la instalación PBA, piso tecnológico (plan, tipo, proveedor y fecha), ANI, recurso primario y Access ID. Solo aparece lo que está cargado.
 - **Resumen:** acciones realizadas, cuántos FED distintos las hicieron y la fecha de la última visita.
 - **Próximas acciones** planificadas en esa escuela.
@@ -97,10 +98,9 @@ Con **Lista** ves una fila por escuela con la escuela, el **CUE**, la **direcci�
 ## Excel
 **Excel** descarga la lista tal como la estás viendo (con tu búsqueda, tus filtros y el orden), con las columnas Escuela, CUE, Dirección, Localidad, Distrito, Contacto, Cargo, Teléfono, Correo, Otros contactos, **Próximos cronogramas** (uno por renglón, con la ventana de fechas y el tipo), **Predio** y **Comparte predio con** (las demás escuelas del edificio, con su CUE): sirve para comparar con tu registro propio y ponerlo al día.
 ## La ficha completa
-Al tocar una escuela se abre la ficha del buscador (datos, conectividad, próximas acciones, clubes y prácticas, historial) con tres secciones más:
+Al tocar una escuela se abre la ficha del buscador (datos, conectividad, contactos, próximas acciones, clubes y prácticas, historial) con dos secciones más:
 - **Reclamos** de esa escuela, con su estado y número.
 - **Cronogramas de conectividad** de la escuela, con el estado que anotó el equipo.
-- **Contactos** del directivo, con teléfono y correo para llamar o escribir.
 Desde la ficha también podés **agendar** una acción o **armar un reclamo** con la escuela ya elegida.
 ## Editar los datos de una escuela
 Si la escuela es tuya (o sos del CED o de la administración), la ficha tiene el botón **Editar datos**, tanto en el buscador como en Mis escuelas. Se abre con tres solapas:
@@ -110,7 +110,7 @@ Si la escuela es tuya (o sos del CED o de la administración), la ficha tiene el
 - **Historial:** quién cambió cada dato, cuándo, y qué había antes, por si hay que volver atrás.
 Los cambios se guardan al instante y no se avisa a nadie. Las escuelas sin FED asignado las edita solo el CED o la administración; las de otro FED las ves pero no las editás.
 ## Quién ve qué
-Cada FED ve sus escuelas y, de ellas, todo el detalle. El CED y la administración ven todas las escuelas, con un filtro por FED a cargo (las que no tienen figuran como **${SIN_FED}**); la administración puede quedarse solo con las suyas. De una escuela de otro FED, el buscador (la lupa) muestra los datos y el historial, pero no los reclamos, los cronogramas ni los contactos. La conectividad de cualquier escuela la ven todos.` },
+Cada FED ve sus escuelas y, de ellas, todo el detalle. El CED y la administración ven todas las escuelas, con un filtro por FED a cargo (las que no tienen figuran como **${SIN_FED}**); la administración puede quedarse solo con las suyas. De una escuela de otro FED, el buscador (la lupa) muestra los datos y el historial, pero no los reclamos ni los cronogramas. La conectividad y los contactos de cualquier escuela los ven todos.` },
   { id: 'mapa', titulo: 'Mapa de la región', para: ['fed', 'ced'], md: () => `
 Muestra en un mapa las escuelas y las jefaturas de Región 1. Se abre desde el menú de las iniciales (**Mapa**) o con **Ver en el mapa** en Mis escuelas; en el celular, **Volver** (arriba) te lleva a la pantalla de la que venías.
 ## Qué ves

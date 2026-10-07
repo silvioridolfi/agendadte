@@ -2,6 +2,7 @@
 import type { AgendaItem } from '@/lib/agenda'
 import type { JefaturaResumen } from '@/lib/organismos'
 import type { Hermana } from '@/lib/predio'
+import type { ContactoEscuela } from '@/lib/mis-escuelas'
 
 export type DatosEscuela = {
   id: string, cue: number | null, nombre: string | null, alias: string | null, distrito: string | null, ciudad: string | null, direccion: string | null,
@@ -18,7 +19,8 @@ export type FilaHistorial = { id: string, fed_id: string, fecha: string, hora_in
 export type ClubDeEscuela = { id: string, tipo: string, grupo: string | null, propuesta: string | null, fed_id: string, fecha_inicio: string | null, fecha_cierre: string | null, cohorte: string | null, realizados: number, esOrigen: boolean }
 // `puedeEditar`: quien mira es admin, CED o el FED a cargo de la escuela.
 // `conectividad`: los datos de enlace y piso tecnológico, por clave (ver CAMPOS_ESCUELA); la ven todos.
-export type FichaEscuela = { escuela: DatosEscuela, jefatura: JefaturaResumen | null, conectividad: Record<string, string | null>, historial: FilaHistorial[], clubes: ClubDeEscuela[], puedeEditar: boolean }
+// `contactos`: los de la escuela con algún dato (principal primero); los ven todos.
+export type FichaEscuela = { escuela: DatosEscuela, jefatura: JefaturaResumen | null, contactos: ContactoEscuela[], conectividad: Record<string, string | null>, historial: FilaHistorial[], clubes: ClubDeEscuela[], puedeEditar: boolean }
 
 // Lo que viene: planificadas de hoy en adelante, de la más próxima a la más lejana. Lo anterior: de la más nueva a la más vieja.
 export function separarHistorial(filas: FilaHistorial[], hoy: string) {
