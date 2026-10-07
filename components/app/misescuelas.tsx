@@ -1,15 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Building2, Map as MapIcono, CalendarClock, ChevronRight, FileSpreadsheet, Loader2, Mail, Phone, School as SchoolIcon, Search, TriangleAlert, Wifi, X } from 'lucide-react'
+import { ArrowLeft, Building2, Map as MapIcono, CalendarClock, ChevronRight, FileSpreadsheet, Loader2, Mail, Phone, School as SchoolIcon, Search, Wifi, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { type AgendaItem, type Fed, type School } from '@/lib/agenda'
-import { ESTADO_SEGUIMIENTO_LABEL, SIN_FED, estadoDe, etiquetaTipo, ventanaDe } from '@/lib/cronogramas'
-import { FAMILIAS } from '@/lib/ayuda/estilo'
+import { SIN_FED, etiquetaTipo, ventanaDe } from '@/lib/cronogramas'
 import { FILTROS_ESCUELAS_VACIOS, filtrarEscuelas, nombreContacto, ordenarEscuelas, resumenEscuelas, type ColumnaEscuelas, type FiltrosEscuelas, type ResumenEscuela } from '@/lib/mis-escuelas'
-import { ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL } from '@/lib/reclamos-registro'
 import type { FichaEscuela } from '@/lib/escuela'
 import { titleCase } from '@/lib/format'
 import { siglaNombre } from '@/lib/siglas'
@@ -187,39 +185,13 @@ export function FichaCompleta({ volverA = 'al listado', id, feds, puedeAgendar, 
     return () => { vigente = false }
   }, [actual, intento])
   return <Dialog open onOpenChange={o => !o && onClose()}>
-    <DialogContent className="max-h-[90dvh] overflow-y-auto bg-white max-sm:top-[calc(env(safe-area-inset-top,0px)+0.5rem)]! max-sm:bottom-auto! max-sm:max-h-[calc(100dvh-1rem)]! max-sm:rounded-b-2xl! max-sm:pb-4! sm:max-w-xl">
+    <DialogContent className="max-h-[90dvh] overflow-y-auto bg-white max-sm:top-[calc(env(safe-area-inset-top,0px)+0.5rem)]! max-sm:bottom-auto! max-sm:max-h-[calc(100dvh-1rem)]! max-sm:rounded-b-2xl! max-sm:pb-4! sm:max-w-5xl">
       <DialogTitle className="flex items-center gap-2"><SchoolIcon className="size-5 text-dte-petroleo" aria-hidden />Ficha de la escuela</DialogTitle>
       <DialogDescription className="sr-only">Datos, historial, conectividad, reclamos, cronogramas y contactos de la escuela.</DialogDescription>
       <Button type="button" variant="ghost" size="sm" onClick={onClose} className="-mt-1 self-start"><ArrowLeft data-icon="inline-start" />Volver {volverA}</Button>
       {error ? <ErrorBox message={error} onRetry={() => { setError(''); setIntento(n => n + 1) }} />
         : !ficha ? <div className="flex flex-col gap-3"><Skeleton className="h-12" /><Skeleton className="h-24" /><Skeleton className="h-40" /></div>
-        : <div className="flex flex-col gap-5">
-          <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { onClose(); onAgendar(s) }} onReclamo={s => { onClose(); onReclamo(s) }} onOpen={i => { onClose(); onOpen(i) }} onEditado={() => { onCambio(); setIntento(n => n + 1) }} onEscuela={nid => { setFicha(null); setExtras(null); setActual(nid) }} />
-          {extras && <Extras x={extras} feds={feds} />}
-        </div>}
+        : <Ficha extras={extras} ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { onClose(); onAgendar(s) }} onReclamo={s => { onClose(); onReclamo(s) }} onOpen={i => { onClose(); onOpen(i) }} onEditado={() => { onCambio(); setIntento(n => n + 1) }} onEscuela={nid => { setFicha(null); setExtras(null); setActual(nid) }} />}
     </DialogContent>
   </Dialog>
-}
-
-function Bloque({ titulo, icono: Icono, familia, children }: { titulo: string, icono: typeof Wifi, familia: keyof typeof FAMILIAS, children: React.ReactNode }) {
-  const f = FAMILIAS[familia]
-  return <section><h3 className="mb-2 flex items-center gap-2 text-sm font-bold"><span className={`flex size-6 items-center justify-center rounded-md ${f.fondo} ${f.texto}`}><Icono className="size-3.5" aria-hidden /></span>{titulo}</h3>{children}</section>
-}
-
-function Extras({ x, feds }: { x: Awaited<ReturnType<typeof getExtrasEscuela>>, feds: Fed[] }) {
-  const nombreFed = (id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Ex integrante'
-  return <>
-    <Bloque titulo={`Reclamos (${x.reclamos.length})`} icono={TriangleAlert} familia="amarillo">
-      {x.reclamos.length ? <ul className="divide-y divide-dte-linea overflow-hidden rounded-tile border border-dte-linea">{x.reclamos.map(r => <li key={r.id} className="flex flex-col gap-1 px-3 py-2.5">
-        <span className="flex flex-wrap items-center gap-1.5"><span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${ESTADO_RECLAMO_CLASE[r.estado]}`}>{ESTADO_RECLAMO_LABEL[r.estado]}</span><span className="text-xs text-dte-gris">{fechaCorta(r.enviado_at.slice(0, 10))} · {nombreFed(r.fed_id)}</span></span>
-        <span className="break-words text-sm">{r.tipo_label}{r.nro_incidencia && <span className="text-dte-gris"> · N° {r.nro_incidencia}</span>}</span>
-      </li>)}</ul> : <p className="rounded-tile border border-dashed border-dte-linea px-3 py-3 text-center text-sm text-dte-gris">Sin reclamos registrados.</p>}
-    </Bloque>
-    <Bloque titulo={`Cronogramas (${x.cronogramas.length})`} icono={CalendarClock} familia="violeta">
-      {x.cronogramas.length ? <ul className="divide-y divide-dte-linea overflow-hidden rounded-tile border border-dte-linea">{x.cronogramas.map(cr => { const est = estadoDe(cr); return <li key={cr.id} className="flex flex-col gap-0.5 px-3 py-2.5">
-        <span className="text-sm font-semibold">{ventanaDe(cr)} · {etiquetaTipo(cr.tipo)}</span>
-        <span className="text-xs text-dte-gris">{[cr.proveedor, cr.nro && `N° ${cr.nro}`, est ? ESTADO_SEGUIMIENTO_LABEL[est] : 'Sin marcar'].filter(Boolean).join(' · ')}</span>
-      </li> })}</ul> : <p className="rounded-tile border border-dashed border-dte-linea px-3 py-3 text-center text-sm text-dte-gris">Sin cronogramas en los últimos días.</p>}
-    </Bloque>
-  </>
 }

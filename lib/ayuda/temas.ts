@@ -73,17 +73,15 @@ La **lupa** de la barra de arriba abre el buscador de escuelas. Reemplaza al bus
 ## Qué devuelve
 Con una sigla y un número trae solo ese tipo de escuela y ese número: "ees 1" no mezcla las técnicas ni las agrarias N° 1, y "eest 1" trae solo las técnicas. Sumá el distrito para afinar ("ep 4 berisso"). Las extensiones y anexos de la escuela pedida aparecen al final. Entienden siglas como EP, EES, EEST, EESA, JI, EEE, CFP, CENS, CEC, CEF, ISFD e ISFT; sin sigla se busca por palabras del nombre, la localidad o el distrito.
 Cuando una escuela **comparte predio** con otras (por ejemplo un jardín, una primaria y una secundaria en el mismo edificio), el resultado lo indica debajo del CUE (**Predio N · comparte con…**, con el nombre y el CUE de las demás) para elegir la correcta. Si la escuela tiene un cronograma de conectividad que no terminó, el resultado lo indica también (**Cronograma próximo: Mantenimiento de piso · 14/10 al 21/10**). Lo mismo vale en el buscador de escuela al agendar o armar un reclamo.
-## Qué muestra la ficha
-- **Datos:** CUE, distrito, dirección con **Cómo llegar**, FED a cargo, nivel, modalidad, turnos, matrícula y secciones. Si la escuela es tuya, **Editar datos** te deja corregirlos (ver Mis escuelas).
-- **Predio:** el número y las demás escuelas que lo comparten, con el nombre y el CUE; tocando una se abre su ficha. El número de predio lo cambia solo el CED o la administración.
-- **Próximos cronogramas de conectividad:** los que todavía no terminaron (fechas, tipo y empresa), de cualquier escuela; si no tiene, lo dice. El detalle (cómo salió, avisos) está en **Cronogramas**.
-- **Contactos:** los de la escuela con algún dato (el principal primero), con teléfono y correo para llamar o escribir. Sin datos cargados aparece el aviso. Los ve cualquiera; los edita solo el FED a cargo, el CED o la administración.
-- **Conectividad:** plan y subplan de enlace, ancho de banda, proveedores, estado de la instalación PBA, piso tecnológico (plan, tipo, proveedor y fecha), ANI, recurso primario y Access ID. Solo aparece lo que está cargado.
-- **Resumen:** acciones realizadas, cuántos FED distintos las hicieron y la fecha de la última visita.
-- **Próximas acciones** planificadas en esa escuela.
-- **Clubes y prácticas** que funcionan ahí, con su avance.
-- **Historial:** acciones anteriores, de la más nueva a la más vieja, con quién las hizo.
-Los datos de la escuela se agrupan en tarjetas de color (ubicación, institución y alumnado) y las listas largas muestran las primeras acciones y el botón **Ver más**.
+## Cómo es la ficha
+En la computadora se abre **ancha**, con dos columnas; en el celular, en una sola, en el mismo orden.
+- **Cabecera:** el nombre, el CUE, la localidad, el FED a cargo y el predio, con los botones **Agendar acá**, **Reclamo de conectividad** y, si la escuela es tuya, **Editar datos** (ver Mis escuelas). Debajo, cuántas acciones se hicieron, cuántos FED las hicieron y la última visita.
+- **Franja amarilla:** aparece solo si hay algo para mirar: reclamos abiertos (si la escuela es tuya) y el **cronograma de conectividad próximo**.
+- **Contactos:** los de la escuela con algún dato (el principal primero), con botones para llamar o escribir; si hay correo institucional (de la escuela) y laboral (del directivo), se ven los dos. Los ve cualquiera; los edita solo el FED a cargo, el CED o la administración.
+- **Ubicación:** la dirección con **Cómo llegar**, el ámbito y un mapa.
+- **La escuela:** nivel, modalidad, turnos, matrícula, secciones, la jefatura distrital y las escuelas que **comparten predio** (con su nombre y CUE; tocando una se abre su ficha). El número de predio lo cambia solo el CED o la administración.
+- **Conectividad:** plan y subplan de enlace, ancho de banda, proveedores, estado de la instalación PBA, piso tecnológico, ANI, recurso primario y Access ID. Solo aparece lo que está cargado.
+Abajo hay bloques **desplegables**, cerrados y con su cantidad al lado: **Reclamos de conectividad** (solo si la escuela es tuya), **Cronogramas de conectividad**, **Próximas acciones**, **Clubes y prácticas** e **Historial de visitas**. Se abren con un toque cuando los necesitás y la agenda recuerda cuáles dejaste abiertos en ese dispositivo. Las listas largas muestran las primeras acciones y el botón **Ver más**.
 ## Qué ves de las acciones de otros
 De las acciones de otros integrantes ves la fecha, el tipo, el estado y quién la hizo. El detalle (descripción, participantes, fotos) lo ves solo en las tuyas, en las que te etiquetaron y, si sos CED, en todas.
 ## Agendar desde la ficha
@@ -101,9 +99,7 @@ Con **Lista** ves una fila por escuela con la escuela, el **CUE**, la **direcci�
 ## Excel
 **Excel** descarga la lista tal como la estás viendo (con tu búsqueda, tus filtros y el orden), con las columnas Escuela, CUE, Dirección, Localidad, Distrito, Contacto, Cargo, Teléfono, Correo, Otros contactos, **Próximos cronogramas** (uno por renglón, con la ventana de fechas y el tipo), **Predio** y **Comparte predio con** (las demás escuelas del edificio, con su CUE): sirve para comparar con tu registro propio y ponerlo al día.
 ## La ficha completa
-Al tocar una escuela se abre la ficha del buscador (datos, conectividad, contactos, próximas acciones, clubes y prácticas, historial) con dos secciones más:
-- **Reclamos** de esa escuela, con su estado y número.
-- **Cronogramas de conectividad** de la escuela, con el estado que anotó el equipo.
+Al tocar una escuela se abre su ficha (ver **Buscador de escuelas**). Si la escuela es tuya, los bloques desplegables suman los **Reclamos** de esa escuela (con su estado y número) y, en **Cronogramas de conectividad**, el estado que anotó el equipo.
 Desde la ficha también podés **agendar** una acción o **armar un reclamo** con la escuela ya elegida.
 ## Editar los datos de una escuela
 Si la escuela es tuya (o sos del CED o de la administración), la ficha tiene el botón **Editar datos**, tanto en el buscador como en Mis escuelas. Se abre con tres solapas:
