@@ -93,7 +93,8 @@ export type Encuentro = {
 // Club: `club_id` de uno existente, o `nuevo_club` para iniciarlo con esta fecha. `es_cierre` finaliza el club.
 export type EncuentroInput = Pick<Encuentro, 'propuesta' | 'encuentro_n' | 'modalidad' | 'destinatarios' | 'inscriptos' | 'asistentes'> & Partial<Pick<Encuentro, 'tipo_jornada' | 'descripcion' | 'club_id' | 'es_cierre'>> & { id?: string, nuevo_club?: boolean, grupo?: string | null, escuela_origen_id?: string | null, cohorte?: string | null, encuentros_previstos?: number | null }
 // Fila de public.establecimientos (misma fuente que el buscador DTE).
-export type School = { id: string; cue: number | null; nombre: string | null; distrito: string | null; ciudad: string | null }
+// `predio` y `comparte` sólo llegan de la búsqueda: las otras escuelas del mismo predio.
+export type School = { id: string; cue: number | null; nombre: string | null; distrito: string | null; ciudad: string | null; predio?: number | null; comparte?: { id: string, cue: number | null, nombre: string | null }[] }
 export type AgendaItem = {
   // Visita con varias acciones: todas comparten visita_id. `visita` (sólo en pantalla): las acciones de la visita, incluida ésta.
   visita_id?: string | null

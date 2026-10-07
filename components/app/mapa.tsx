@@ -8,7 +8,8 @@ import { type AgendaItem, type Fed, type School } from '@/lib/agenda'
 import { esDelFed } from '@/lib/cronogramas'
 import { FILTROS_MAPA_VACIOS, SIN_FED_MAPA, filtrarPuntos, sinTildes, type FiltrosMapa, type PuntoMapa, type PuntosMapa } from '@/lib/mapa'
 import { titleCase } from '@/lib/format'
-import { BotonVolver, ErrorBox, Skeleton, errMsg, eyebrow, getPuntosMapa, selectClass } from '@/components/app/comun'
+import { gruposPorPredio, hermanasDe } from '@/lib/predio'
+import { BotonVolver, ErrorBox, Skeleton, errMsg, eyebrow, getPuntosMapa, nombreHermana, selectClass } from '@/components/app/comun'
 import { FichaCompleta } from '@/components/app/misescuelas'
 import { FichaJefatura } from '@/components/app/jefatura'
 import { MapaBase } from '@/components/app/mapabase'
@@ -41,6 +42,9 @@ export function SeccionMapa({ profile, feds, esAdmin, puedeAgendar, onAgendar, o
       return palabras.every(w => texto.includes(w))
     })
   }, [datos, filtros])
+  // Escuelas que comparten edificio con la elegida (con o sin ubicación en el mapa).
+  const grupos = useMemo(() => gruposPorPredio([...(datos?.puntos ?? []).filter(p => p.tipo === 'escuela'), ...(datos?.sinUbicacion ?? [])].map(p => ({ id: p.id, cue: p.cue, nombre: p.nombre, predio: p.predio }))), [datos])
+  const hermanas = elegido?.tipo === 'escuela' ? hermanasDe(grupos, elegido.id, elegido.predio) : []
   const nEsc = visibles.filter(p => p.tipo === 'escuela').length, nJef = visibles.length - nEsc
   const firma = JSON.stringify([filtros.distrito, filtros.fed, filtros.escuelas, filtros.jefaturas, filtros.q])
   const hayFiltros = !!(filtros.distrito || filtros.q || filtros.fed !== (soloFed ? profile.nombre_completo : '') || !filtros.escuelas || !filtros.jefaturas)
@@ -90,6 +94,8 @@ export function SeccionMapa({ profile, feds, esAdmin, puedeAgendar, onAgendar, o
             <button type="button" onClick={() => setElegido(null)} aria-label="Cerrar" className="-mr-1 -mt-1 flex size-10 shrink-0 items-center justify-center rounded-full text-dte-gris hover:bg-dte-fondo"><X className="size-5" aria-hidden /></button></div>
           {elegido.direccion && <p className="mt-1 break-words text-sm">{titleCase(elegido.direccion)}</p>}
           {elegido.tipo === 'escuela' && <p className="mt-0.5 text-sm text-dte-gris">FED a cargo: {elegido.fed ?? 'sin asignar'}</p>}
+          {hermanas.length > 0 && <div className="mt-1.5 text-sm"><p className="text-dte-gris">{hermanas.length === 1 ? 'Comparte el predio' : 'Comparten el predio'} {elegido.predio} con:</p>
+            <ul className="flex flex-col">{hermanas.map(h => <li key={h.id}><button type="button" onClick={() => setFicha({ tipo: 'escuela', id: h.id })} className="min-h-9 text-left font-semibold text-dte-petroleo underline underline-offset-2">{nombreHermana(h)}</button></li>)}</ul></div>}
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Button type="button" onClick={() => setFicha({ tipo: elegido.tipo, id: elegido.id })} className="w-full bg-dte-petroleo hover:bg-dte-petroleo-oscuro sm:w-auto">Ver ficha</Button>
             <Button type="button" variant="outline" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${elegido.lat},${elegido.lon}`, '_blank', 'noopener,noreferrer')} className="w-full sm:w-auto"><Navigation data-icon="inline-start" />Cómo llegar</Button>

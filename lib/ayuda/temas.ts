@@ -70,8 +70,10 @@ Los feriados, recesos y aniversarios distritales se marcan en el calendario; los
 La **lupa** de la barra de arriba abre el buscador de escuelas. Escribí el nombre, la sigla o el CUE (por ejemplo "EP 4" o "ees 31") y elegí la escuela.
 ## Qué devuelve
 Con una sigla y un número trae solo ese tipo de escuela y ese número: "ees 1" no mezcla las técnicas ni las agrarias N° 1, y "eest 1" trae solo las técnicas. Sumá el distrito para afinar ("ep 4 berisso"). Las extensiones y anexos de la escuela pedida aparecen al final. Entienden siglas como EP, EES, EEST, EESA, JI, EEE, CFP, CENS, CEC, CEF, ISFD e ISFT; sin sigla se busca por palabras del nombre, la localidad o el distrito.
+Cuando una escuela **comparte predio** con otras (por ejemplo un jardín, una primaria y una secundaria en el mismo edificio), el resultado lo indica debajo del CUE (**Predio N · comparte con…**, con el nombre y el CUE de las demás) para elegir la correcta. Lo mismo vale en el buscador de escuela al agendar o armar un reclamo.
 ## Qué muestra la ficha
 - **Datos:** CUE, distrito, dirección con **Cómo llegar**, FED a cargo, nivel, modalidad, turnos, matrícula y secciones. Si la escuela es tuya, **Editar datos** te deja corregirlos (ver Mis escuelas).
+- **Predio:** el número y las demás escuelas que lo comparten, con el nombre y el CUE; tocando una se abre su ficha. El número de predio lo cambia solo el CED o la administración.
 - **Conectividad:** plan y subplan de enlace, ancho de banda, proveedores, estado de la instalación PBA, piso tecnológico (plan, tipo, proveedor y fecha), ANI, recurso primario y Access ID. Solo aparece lo que está cargado.
 - **Resumen:** acciones realizadas, cuántos FED distintos las hicieron y la fecha de la última visita.
 - **Próximas acciones** planificadas en esa escuela.
@@ -88,10 +90,12 @@ Es el listado de las escuelas que tenés a cargo, con lo que pasa en cada una. S
 En las tarjetas, una por escuela, con su sigla, CUE, localidad y distrito, y de un vistazo: el **próximo cronograma**, los **reclamos de conectividad abiertos**, la **próxima acción** planificada y la **última visita**. Arriba se cuentan las escuelas, las que tienen cronograma y las que tienen un reclamo abierto.
 ## Buscar y filtrar
 El **buscador** está arriba y es lo primero que ves. Escribí el nombre, la sigla, el CUE, la dirección o el nombre de un contacto (por ejemplo "EP 4", "ees 31" o "calle 12") y la lista se acorta mientras escribís; la **✕** del costado borra la búsqueda. Debajo podés filtrar por distrito y nivel, y quedarte con las que tienen cronograma o reclamo abierto (**Quitar filtros** los limpia, sin borrar lo que escribiste).
+## Predio compartido
+Las escuelas que comparten edificio con otras llevan la etiqueta **Comparte predio con N** (al apoyar el mouse o mantener apretado se ven sus nombres y CUE); en la ficha se listan y se abren con un toque.
 ## Lista o tarjetas
 Con **Lista** ves una fila por escuela con la escuela, el **CUE**, la **dirección**, la **localidad**, el **distrito** y el **contacto** (nombre y cargo, teléfono y correo para llamar o escribir, y cuántos contactos más hay). En la computadora es una tabla y tocando el título de cada columna se **ordena**; en el celular cada escuela es una fila compacta. **Tarjetas** muestra el resumen de cada una (próximo cronograma, reclamos abiertos, próxima acción y última visita). La vista que elegís queda guardada en tu navegador.
 ## Excel
-**Excel** descarga la lista tal como la estás viendo (con tu búsqueda, tus filtros y el orden), con las columnas Escuela, CUE, Dirección, Localidad, Distrito, Contacto, Cargo, Teléfono, Correo, Otros contactos y **Próximos cronogramas** (uno por renglón, con la ventana de fechas y el tipo): sirve para comparar con tu registro propio y ponerlo al día.
+**Excel** descarga la lista tal como la estás viendo (con tu búsqueda, tus filtros y el orden), con las columnas Escuela, CUE, Dirección, Localidad, Distrito, Contacto, Cargo, Teléfono, Correo, Otros contactos, **Próximos cronogramas** (uno por renglón, con la ventana de fechas y el tipo), **Predio** y **Comparte predio con** (las demás escuelas del edificio, con su CUE): sirve para comparar con tu registro propio y ponerlo al día.
 ## La ficha completa
 Al tocar una escuela se abre la ficha del buscador (datos, conectividad, próximas acciones, clubes y prácticas, historial) con tres secciones más:
 - **Reclamos** de esa escuela, con su estado y número.
@@ -114,7 +118,7 @@ Cada escuela es un punto (las tuyas, en magenta) y cada jefatura, un rombo viole
 ## Buscar y filtrar
 El buscador de arriba encuentra una escuela por nombre, sigla, CUE o dirección y el mapa se queda solo con esas. Debajo podés filtrar por distrito y por FED a cargo (el FED entra viendo **Mis escuelas**; para ver las demás elegí **Todas las escuelas** o el nombre de otro FED, o **${SIN_FED}**) y mostrar u ocultar escuelas y jefaturas. **Quitar filtros** vuelve a como entraste.
 ## Un lugar elegido
-Al tocar un punto aparece su tarjeta con el nombre, el CUE, la dirección y el FED a cargo, con **Ver ficha** (la ficha completa de la escuela o de la jefatura) y **Cómo llegar**, que abre el mapa del teléfono.
+Al tocar un punto aparece su tarjeta con el nombre, el CUE, la dirección, el FED a cargo y las escuelas que comparten su predio (tocá una para abrir su ficha), con **Ver ficha** (la ficha completa de la escuela o de la jefatura) y **Cómo llegar**, que abre el mapa del teléfono.
 ## Escuelas sin ubicación
 Las escuelas que todavía no tienen ubicación en el mapa se listan debajo (**Sin ubicación en el mapa**). Abrí su ficha y, desde **Editar datos**, cargá la latitud y la longitud: el FED a cargo, el CED y la administración pueden. Podés pegar el par que da Google Maps (por ejemplo -34.92145, -57.95500) en la casilla de latitud y se completan las dos. Si el punto cae fuera de la región, la agenda no lo guarda.
 ## Jefaturas

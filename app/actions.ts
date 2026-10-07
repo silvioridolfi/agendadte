@@ -21,6 +21,7 @@ import { armarResumen, contarAccesos, type Accesos, type ContactoEscuela, type R
 import { estadoAlCrear } from '@/lib/estado'
 import { COLS_ORGANISMO, cambiosDeOrganismo, type Jefatura, type JefaturaResumen, type ValoresOrganismo } from '@/lib/organismos'
 import type { PuntoMapa, PuntosMapa } from '@/lib/mapa'
+import { gruposPorPredio, hermanasDe } from '@/lib/predio'
 import { CLAVES_CONECTIVIDAD, COLS_EDITABLES, ORIGEN_OPCIONES, cambiosDeEscuela, historialDeContacto, nivelEdicion, resumenContacto, seccionDe, validarContacto, type ContactoEditable, type ContactoInput, type EdicionEscuela, type NivelEdicion, type OpcionesEscuela, type ValoresEscuela } from '@/lib/escuelas-edicion'
 import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad, type AvisoPrevio } from '@/lib/actividad'
 
@@ -40,17 +41,32 @@ async function getFedsImpl(): Promise<Fed[]> {
   return data ?? []
 }
 
+// Todas las escuelas con predio, agrupadas por número: para mostrar con quién comparten edificio.
+const predioValidoServidor = (p: unknown) => (typeof p === 'number' && p > 0 ? p : null)
+async function gruposDePredio(db: ReturnType<typeof supabaseServer>) {
+  return gruposPorPredio(await fetchAll<{ id: string, cue: number | null, nombre: string | null, predio: number | null }>((a, b) => db.from('establecimientos').select('id, cue, nombre, predio').not('predio', 'is', null).order('id').range(a, b)))
+}
+
 async function searchSchoolsImpl(query: string): Promise<School[]> {
   const q = query.trim()
   if (q.length < 2) return []
   // Sin tildes, todas las palabras (nombre/ciudad) o prefijo de CUE: ver search_establecimientos en supabase/migrations.
-  const { data, error } = await supabaseServer().rpc('search_establecimientos', { q, max_results: 15 })
+  const db = supabaseServer()
+  const { data, error } = await db.rpc('search_establecimientos', { q, max_results: 15 })
   if (error) throw new Error(error.message)
-  return data ?? []
+  const escuelas = (data ?? []) as School[]
+  if (!escuelas.length) return []
+  // Cada resultado indica si comparte predio con otras escuelas.
+  const [predios, grupos] = await Promise.all([
+    db.from('establecimientos').select('id, predio').in('id', escuelas.map(e => e.id)),
+    gruposDePredio(db),
+  ])
+  const predioDe = new Map((predios.data ?? []).map(r => [r.id as string, r.predio as number | null]))
+  return escuelas.map(e => ({ ...e, predio: predioDe.get(e.id) ?? null, comparte: hermanasDe(grupos, e.id, predioDe.get(e.id)) }))
 }
 
 // Ficha de una escuela. Todos ven el historial de la escuela; el detalle de cada acción sólo llega para quien participó o es de coordinación.
-const COLS_ESCUELA = `id, cue, nombre, alias, distrito, ciudad, direccion, lat, lon, nivel, modalidad, ambito, turnos, matricula, varones, mujeres, secciones, fed_a_cargo, ${CLAVES_CONECTIVIDAD.join(', ')}`
+const COLS_ESCUELA = `id, cue, nombre, alias, distrito, ciudad, direccion, lat, lon, predio, nivel, modalidad, ambito, turnos, matricula, varones, mujeres, secciones, fed_a_cargo, ${CLAVES_CONECTIVIDAD.join(', ')}`
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuela> {
   if (!UUID.test(id)) throw new Error('Escuela inválida')
@@ -69,7 +85,8 @@ async function getFichaEscuelaImpl(yo: Usuario, id: string): Promise<FichaEscuel
   const conectividad = Object.fromEntries(CLAVES_CONECTIVIDAD.map(k => [k, completo[k] == null || String(completo[k]).trim() === '' ? null : String(completo[k]).trim()]))
   const resto = Object.fromEntries(Object.entries(completo).filter(([k]) => !CLAVES_CONECTIVIDAD.includes(k))) as typeof completo
   const texto = resto.direccion ? `${resto.direccion}${resto.ciudad ? `, ${resto.ciudad}` : ''}, Buenos Aires, Argentina` : null
-  const escuela = { ...resto, lat, lon, mapa: lat != null && lon != null ? `${lat},${lon}` : texto } as unknown as DatosEscuela
+  const grupos = await gruposDePredio(db)
+  const escuela = { ...resto, lat, lon, predio: predioValidoServidor(resto.predio), comparte: hermanasDe(grupos, id, resto.predio as number | null), mapa: lat != null && lon != null ? `${lat},${lon}` : texto } as unknown as DatosEscuela
   const jefatura = await jefaturaDe(db, escuela.distrito)
   const todo = yo.fed.rol === 'coordinacion'
   const historial: FilaHistorial[] = ((its.data ?? []) as unknown as AgendaItem[]).filter(i => !esAusencia(i.accion)).map(i => {
@@ -255,7 +272,7 @@ async function getContactosCronogramaImpl(yo: Usuario, id: string): Promise<Cont
 async function getMisEscuelasImpl(yo: Usuario): Promise<ResumenEscuela[]> {
   const db = supabaseServer(), hoy = hoyAR()
   const todos = yo.esAdmin || yo.fed.rol === 'coordinacion'
-  const filas = (await fetchAll<Pick<ResumenEscuela, 'id' | 'cue' | 'nombre' | 'distrito' | 'ciudad' | 'nivel' | 'modalidad' | 'fed_a_cargo' | 'direccion'>>((a, b) => db.from('establecimientos').select('id, cue, nombre, distrito, ciudad, nivel, modalidad, fed_a_cargo, direccion').order('nombre').order('id').range(a, b)))
+  const filas = (await fetchAll<Pick<ResumenEscuela, 'id' | 'cue' | 'nombre' | 'distrito' | 'ciudad' | 'nivel' | 'modalidad' | 'fed_a_cargo' | 'direccion'> & { predio: number | null }>((a, b) => db.from('establecimientos').select('id, cue, nombre, distrito, ciudad, nivel, modalidad, fed_a_cargo, direccion, predio').order('nombre').order('id').range(a, b)))
     .filter(e => todos || esDelFed(e.fed_a_cargo, yo.fed.nombre_completo))
   const cues = new Set(filas.map(e => e.cue).filter((c): c is number => c != null))
   const [contactos, cronogramas, reclamos, acciones] = await Promise.all([
@@ -264,7 +281,7 @@ async function getMisEscuelasImpl(yo: Usuario): Promise<ResumenEscuela[]> {
     fetchAll<{ school_id: string | null }>((a, b) => db.from('reclamos_conectividad').select('school_id').in('estado', ['enviado', 'en_proceso']).order('id').range(a, b)),
     fetchAll<{ school_id: string | null, fecha: string, estado: string }>((a, b) => db.from('agenda_items').select('school_id, fecha, estado').not('school_id', 'is', null).in('estado', ['realizada', 'planificada']).order('id').range(a, b)),
   ])
-  return armarResumen(filas, { contactos, cronogramas, reclamos, acciones }, hoy)
+  return armarResumen(filas, { grupos: await gruposDePredio(db), contactos, cronogramas, reclamos, acciones }, hoy)
 }
 // Números de los accesos rápidos del Tablero: las escuelas del FED (el CED, todas) con sus reclamos abiertos y cronogramas próximos.
 async function getAccesosImpl(yo: Usuario): Promise<Accesos> {
@@ -403,16 +420,16 @@ async function principalContactoImpl(yo: Usuario, id: string, contactoId: string
 async function getPuntosMapaImpl(): Promise<PuntosMapa> {
   const db = supabaseServer()
   const [escuelas, orgs] = await Promise.all([
-    fetchAll<{ id: string, cue: number | null, nombre: string | null, distrito: string | null, ciudad: string | null, direccion: string | null, lat: number | null, lon: number | null, fed_a_cargo: string | null, nivel: string | null }>((a, b) => db.from('establecimientos').select('id, cue, nombre, distrito, ciudad, direccion, lat, lon, fed_a_cargo, nivel').order('id').range(a, b)),
+    fetchAll<{ id: string, cue: number | null, nombre: string | null, distrito: string | null, ciudad: string | null, direccion: string | null, lat: number | null, lon: number | null, fed_a_cargo: string | null, nivel: string | null, predio: number | null }>((a, b) => db.from('establecimientos').select('id, cue, nombre, distrito, ciudad, direccion, lat, lon, fed_a_cargo, nivel, predio').order('id').range(a, b)),
     db.from('organismos_descentralizados').select('id, nombre, distrito, domicilio, localidad, latitud, longitud').order('nombre'),
   ])
   if (orgs.error) throw new Error(orgs.error.message)
   const puntos: PuntoMapa[] = [], sinUbicacion: PuntosMapa['sinUbicacion'] = []
   for (const e of escuelas) {
-    if (e.lat != null && e.lon != null) puntos.push({ id: e.id, tipo: 'escuela', nombre: e.nombre ?? `CUE ${e.cue ?? ''}`, lat: Number(e.lat), lon: Number(e.lon), cue: e.cue, distrito: e.distrito, direccion: [e.direccion, e.ciudad].filter(Boolean).join(', ') || null, fed: e.fed_a_cargo, nivel: e.nivel })
-    else sinUbicacion.push({ id: e.id, cue: e.cue, nombre: e.nombre ?? `CUE ${e.cue ?? ''}`, distrito: e.distrito, fed: e.fed_a_cargo })
+    if (e.lat != null && e.lon != null) puntos.push({ id: e.id, tipo: 'escuela', nombre: e.nombre ?? `CUE ${e.cue ?? ''}`, lat: Number(e.lat), lon: Number(e.lon), cue: e.cue, distrito: e.distrito, direccion: [e.direccion, e.ciudad].filter(Boolean).join(', ') || null, fed: e.fed_a_cargo, nivel: e.nivel, predio: predioValidoServidor(e.predio) })
+    else sinUbicacion.push({ id: e.id, cue: e.cue, nombre: e.nombre ?? `CUE ${e.cue ?? ''}`, distrito: e.distrito, fed: e.fed_a_cargo, predio: predioValidoServidor(e.predio) })
   }
-  for (const o of orgs.data ?? []) if (o.latitud != null && o.longitud != null) puntos.push({ id: o.id as string, tipo: 'jefatura', nombre: o.nombre as string, lat: Number(o.latitud), lon: Number(o.longitud), cue: null, distrito: o.distrito as string | null, direccion: [o.domicilio, o.localidad].filter(Boolean).join(', ') || null, fed: null, nivel: null })
+  for (const o of orgs.data ?? []) if (o.latitud != null && o.longitud != null) puntos.push({ id: o.id as string, tipo: 'jefatura', nombre: o.nombre as string, lat: Number(o.latitud), lon: Number(o.longitud), cue: null, distrito: o.distrito as string | null, direccion: [o.domicilio, o.localidad].filter(Boolean).join(', ') || null, fed: null, nivel: null, predio: null })
   return { puntos, sinUbicacion }
 }
 async function getJefaturaImpl(yo: Usuario, id: string): Promise<Jefatura> {

@@ -96,3 +96,15 @@ describe('contactos y lista', () => {
     expect(ordenarEscuelas(resumen, 'nombre').map(e => e.id)).toEqual(['a', 'c', 'b', 'd'])
   })
 })
+
+describe('predio compartido en Mis escuelas', () => {
+  it('cada escuela lista las otras que comparten su predio', () => {
+    const base = { ciudad: null, distrito: null, nivel: null, modalidad: null, fed_a_cargo: null, direccion: null }
+    const escuelas = [{ id: 'a', cue: 1, nombre: 'JI N° 9', predio: 606349, ...base }, { id: 'b', cue: 2, nombre: 'EP N° 4', predio: 606349, ...base }, { id: 'c', cue: 3, nombre: 'EES N° 31', predio: null, ...base }]
+    const grupos = new Map([[606349, escuelas.slice(0, 2).map(e => ({ id: e.id, cue: e.cue, nombre: e.nombre }))]])
+    const r = armarResumen(escuelas, { grupos, cronogramas: [], reclamos: [], acciones: [] }, '2026-10-07')
+    expect(r[0].comparte.map(h => h.cue)).toEqual([2])
+    expect(r[1].comparte.map(h => h.cue)).toEqual([1])
+    expect(r[2].comparte).toEqual([]); expect(r[2].predio).toBeNull(); expect(r[0].predio).toBe(606349)
+  })
+})

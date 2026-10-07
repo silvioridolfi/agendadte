@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Map as MapIcono, CalendarClock, ChevronRight, Contact, FileSpreadsheet, Loader2, Mail, Phone, School as SchoolIcon, Search, TriangleAlert, Wifi, X } from 'lucide-react'
+import { ArrowLeft, Building2, Map as MapIcono, CalendarClock, ChevronRight, Contact, FileSpreadsheet, Loader2, Mail, Phone, School as SchoolIcon, Search, TriangleAlert, Wifi, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -13,7 +13,7 @@ import { ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL } from '@/lib/reclamos-regis
 import type { FichaEscuela } from '@/lib/escuela'
 import { titleCase } from '@/lib/format'
 import { siglaNombre } from '@/lib/siglas'
-import { BotonVolver, ErrorBox, Skeleton, errMsg, eyebrow, fmt, getExtrasEscuela, getFichaEscuela, getMisEscuelas, parse, selectClass, storage } from '@/components/app/comun'
+import { BotonVolver, ErrorBox, Skeleton, errMsg, eyebrow, fmt, getExtrasEscuela, getFichaEscuela, getMisEscuelas, nombreHermana, parse, selectClass, storage } from '@/components/app/comun'
 import { Ficha } from '@/components/app/escuelas'
 
 const POR_PAGINA = 60
@@ -123,10 +123,16 @@ function ContactoCelda({ e }: { e: ResumenEscuela }) {
 
 const nombreEscuela = (e: ResumenEscuela) => (e.nombre ? titleCase(e.nombre) : `CUE ${e.cue}`)
 
+// Etiqueta de las escuelas que comparten edificio; el detalle (nombres y CUE) va en el título.
+function PredioTag({ e }: { e: ResumenEscuela }) {
+  if (!e.comparte.length) return null
+  return <span title={`Predio ${e.predio}: ${e.comparte.map(nombreHermana).join(', ')}`} className="inline-flex items-center gap-1 rounded-full border border-club-lila/40 bg-club-violeta-fondo px-2 py-0.5 text-xs font-semibold text-club-violeta"><Building2 className="size-3" aria-hidden />Comparte predio con {e.comparte.length}</span>
+}
+
 function FilaLista({ e, onAbrir }: { e: ResumenEscuela, onAbrir: () => void }) {
   const nombre = nombreEscuela(e)
   return <tr onClick={onAbrir} className="cursor-pointer border-t border-dte-linea align-top transition hover:bg-dte-tinte">
-    <td className="px-3 py-2"><button type="button" onClick={onAbrir} className="text-left"><b className="block">{e.nombre ? siglaNombre(nombre) : nombre}</b>{e.nombre && nombre !== siglaNombre(nombre) && <span className="block text-xs text-dte-gris">{nombre}</span>}</button></td>
+    <td className="px-3 py-2"><button type="button" onClick={onAbrir} className="text-left"><b className="block">{e.nombre ? siglaNombre(nombre) : nombre}</b>{e.nombre && nombre !== siglaNombre(nombre) && <span className="block text-xs text-dte-gris">{nombre}</span>}</button>{e.comparte.length > 0 && <span className="mt-1 block"><PredioTag e={e} /></span>}</td>
     <td className="px-3 py-2 tabular-nums">{e.cue ?? '—'}</td>
     <td className="px-3 py-2">{e.direccion ? titleCase(e.direccion) : <span className="text-dte-gris">—</span>}</td>
     <td className="px-3 py-2">{e.ciudad ? titleCase(e.ciudad) : '—'}</td>
@@ -141,6 +147,7 @@ function FilaCompacta({ e, onAbrir }: { e: ResumenEscuela, onAbrir: () => void }
   return <li onClick={onAbrir} className="cursor-pointer rounded-card border border-dte-linea bg-white p-3 shadow-e1 transition hover:shadow-e2">
     <p className="break-words text-sm font-semibold">{e.nombre ? siglaNombre(nombre) : nombre}<span className="font-normal text-dte-gris"> · CUE {e.cue ?? '—'}</span></p>
     {lugar && <p className="mt-0.5 break-words text-xs text-dte-gris">{lugar}</p>}
+    {e.comparte.length > 0 && <p className="mt-1"><PredioTag e={e} /></p>}
     <p className="mt-1.5 rounded-control bg-dte-fondo px-2 py-1.5 text-xs"><ContactoCelda e={e} /></p>
   </li>
 }
@@ -154,6 +161,7 @@ function Tarjeta({ e, veTodos, onAbrir }: { e: ResumenEscuela, veTodos: boolean,
       <span className="block break-words text-sm font-semibold">{e.nombre ? siglaNombre(nombre) : nombre}<span className="font-normal text-dte-gris"> · CUE {e.cue ?? '—'}</span></span>
       <span className="mt-0.5 block break-words text-xs text-dte-gris">{[e.nombre && nombre !== siglaNombre(nombre) ? nombre : null, lugar].filter(Boolean).join(' · ')}</span>
       <span className="mt-2 flex flex-wrap gap-1.5">
+        <PredioTag e={e} />
         {c && <span className="inline-flex items-center gap-1 rounded-full border border-dte-petroleo/30 bg-dte-tinte px-2 py-0.5 text-xs font-semibold text-dte-petroleo-oscuro"><CalendarClock className="size-3" aria-hidden />{etiquetaTipo(c.tipo)} {ventanaDe(c)}{e.cronogramas > 1 ? ` (+${e.cronogramas - 1})` : ''}</span>}
         {e.reclamosAbiertos > 0 && <span className="inline-flex items-center gap-1 rounded-full border border-aviso-borde bg-aviso-fondo px-2 py-0.5 text-xs font-semibold text-aviso-fuerte"><Wifi className="size-3" aria-hidden />{e.reclamosAbiertos} {e.reclamosAbiertos === 1 ? 'reclamo abierto' : 'reclamos abiertos'}</span>}
         {e.proximaAccion && <span className="inline-flex items-center rounded-full border border-dte-linea px-2 py-0.5 text-xs font-semibold">Próxima acción {fechaCorta(e.proximaAccion)}</span>}
@@ -166,6 +174,8 @@ function Tarjeta({ e, veTodos, onAbrir }: { e: ResumenEscuela, veTodos: boolean,
 
 // Ficha de la escuela (la misma del buscador) con conectividad, reclamos, cronogramas y contactos.
 export function FichaCompleta({ volverA = 'al listado', id, feds, puedeAgendar, onClose, onAgendar, onReclamo, onOpen, onCambio }: { volverA?: string, onCambio: () => void, id: string, feds: Fed[], puedeAgendar: boolean, onClose: () => void, onAgendar: (s: School) => void, onReclamo: (s: School) => void, onOpen: (i: AgendaItem) => void }) {
+  // La ficha puede pasar a otra escuela del mismo predio sin cerrar el cuadro.
+  const [actual, setActual] = useState(id)
   const [ficha, setFicha] = useState<FichaEscuela | null>(null)
   const [extras, setExtras] = useState<Awaited<ReturnType<typeof getExtrasEscuela>> | null>(null)
   const [error, setError] = useState('')
@@ -173,9 +183,9 @@ export function FichaCompleta({ volverA = 'al listado', id, feds, puedeAgendar, 
   useEffect(() => {
     let vigente = true
     // Reclamos, cronogramas y contactos sólo llegan para quien puede editar la escuela (el FED a cargo, el CED y la administración).
-    getFichaEscuela(id).then(async f => { const x = f.puedeEditar ? await getExtrasEscuela(id) : null; if (vigente) { setFicha(f); setExtras(x) } }).catch(err => { if (vigente) setError(errMsg(err)) })
+    getFichaEscuela(actual).then(async f => { const x = f.puedeEditar ? await getExtrasEscuela(actual) : null; if (vigente) { setFicha(f); setExtras(x) } }).catch(err => { if (vigente) setError(errMsg(err)) })
     return () => { vigente = false }
-  }, [id, intento])
+  }, [actual, intento])
   return <Dialog open onOpenChange={o => !o && onClose()}>
     <DialogContent className="max-h-[90dvh] overflow-y-auto bg-white max-sm:top-[calc(env(safe-area-inset-top,0px)+0.5rem)]! max-sm:bottom-auto! max-sm:max-h-[calc(100dvh-1rem)]! max-sm:rounded-b-2xl! max-sm:pb-4! sm:max-w-xl">
       <DialogTitle className="flex items-center gap-2"><SchoolIcon className="size-5 text-dte-petroleo" aria-hidden />Ficha de la escuela</DialogTitle>
@@ -184,7 +194,7 @@ export function FichaCompleta({ volverA = 'al listado', id, feds, puedeAgendar, 
       {error ? <ErrorBox message={error} onRetry={() => { setError(''); setIntento(n => n + 1) }} />
         : !ficha ? <div className="flex flex-col gap-3"><Skeleton className="h-12" /><Skeleton className="h-24" /><Skeleton className="h-40" /></div>
         : <div className="flex flex-col gap-5">
-          <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { onClose(); onAgendar(s) }} onReclamo={s => { onClose(); onReclamo(s) }} onOpen={i => { onClose(); onOpen(i) }} onEditado={() => { onCambio(); setIntento(n => n + 1) }} />
+          <Ficha ficha={ficha} feds={feds} puedeAgendar={puedeAgendar} onAgendar={s => { onClose(); onAgendar(s) }} onReclamo={s => { onClose(); onReclamo(s) }} onOpen={i => { onClose(); onOpen(i) }} onEditado={() => { onCambio(); setIntento(n => n + 1) }} onEscuela={nid => { setFicha(null); setExtras(null); setActual(nid) }} />
           {extras && <Extras x={extras} feds={feds} />}
         </div>}
     </DialogContent>
