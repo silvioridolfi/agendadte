@@ -178,14 +178,14 @@ export function validarContacto(c: ContactoInput): ContactoValido {
   const tel = (c.telefono ?? '').trim()
   if (tel && (!/^[0-9 +()\-./]+$/.test(tel) || tel.replace(/\D/g, '').length < 6 || tel.replace(/\D/g, '').length > 15)) throw new Error('El teléfono tiene que tener entre 6 y 15 números')
   const correo = (c.correo ?? '').trim().toLowerCase(), laboral = (c.correo_laboral ?? '').trim().toLowerCase()
-  if (correo && (!CORREO.test(correo) || correo.length > 120)) throw new Error('El correo no es válido')
+  if (correo && (!CORREO.test(correo) || correo.length > 120)) throw new Error('El correo institucional no es válido')
   if (laboral && (!CORREO.test(laboral) || !laboral.endsWith(DOMINIO_LABORAL))) throw new Error(`El correo laboral tiene que terminar en ${DOMINIO_LABORAL}`)
   const r = { nombre, apellido, cargo, telefono: tel || null, correo: correo || null, correo_laboral: laboral || null }
   if (!r.nombre && !r.apellido && !r.telefono && !r.correo && !r.correo_laboral) throw new Error('Cargá al menos un nombre, un teléfono o un correo')
   return r
 }
 
-export const CAMPOS_CONTACTO: [keyof ContactoValido, string][] = [['nombre', 'Nombre'], ['apellido', 'Apellido'], ['cargo', 'Cargo'], ['telefono', 'Teléfono'], ['correo', 'Correo'], ['correo_laboral', 'Correo laboral']]
+export const CAMPOS_CONTACTO: [keyof ContactoValido, string][] = [['nombre', 'Nombre'], ['apellido', 'Apellido'], ['cargo', 'Cargo'], ['telefono', 'Teléfono'], ['correo', 'Correo institucional'], ['correo_laboral', 'Correo laboral']]
 export const resumenContacto = (c: Partial<ContactoValido>) => [[c.nombre, c.apellido].filter(Boolean).join(' ') || 'Sin nombre', c.cargo, c.telefono, c.correo_laboral || c.correo].filter(Boolean).join(' · ')
 
 // Qué se anota en el historial al cambiar un contacto: una fila por dato modificado.

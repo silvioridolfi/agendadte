@@ -121,7 +121,7 @@ function Contactos({ datos, onCambio }: { datos: EdicionEscuela, onCambio: () =>
   return <div className="flex flex-col gap-3">
     {datos.contactos.length ? <ul className="divide-y divide-dte-linea overflow-hidden rounded-tile border border-dte-linea">{datos.contactos.map(c => <li key={c.id} className="flex flex-col gap-2 px-3 py-2.5">
       <span className="min-w-0 break-words text-sm"><span className="font-semibold">{[c.nombre, c.apellido].filter(Boolean).join(' ') || 'Sin nombre'}</span>{c.cargo && <span className="text-dte-gris"> · {c.cargo}</span>}{c.es_principal && <span className="ml-1.5 text-xs text-dte-gris">(principal)</span>}
-        <span className="block text-xs text-dte-gris">{[c.telefono, c.correo_laboral, c.correo].filter(Boolean).join(' · ') || 'Sin teléfono ni correo'}</span></span>
+        <span className="block text-xs text-dte-gris">{[c.telefono, c.correo && `${c.correo} (escuela)`, c.correo_laboral && `${c.correo_laboral} (directivo)`].filter(Boolean).join(' · ') || 'Sin teléfono ni correo'}</span></span>
       <span className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" size="sm" onClick={() => setEditando(c)} disabled={trabajando}><Pencil data-icon="inline-start" />Editar</Button>
         {!c.es_principal && <Button type="button" variant="outline" size="sm" onClick={() => accion(() => contactoPrincipal(datos.id, c.id))} disabled={trabajando}><Star data-icon="inline-start" />Hacer principal</Button>}
@@ -150,8 +150,8 @@ function FormContacto({ escuelaId, contacto, onCancelar, onGuardado }: { escuela
       <Field label="Apellido"><Input value={f.apellido ?? ''} onChange={set('apellido')} maxLength={100} autoComplete="off" className="h-11 md:h-9" /></Field>
       <Field label="Cargo" className="sm:col-span-2"><Input value={f.cargo ?? ''} onChange={set('cargo')} maxLength={100} placeholder="Ej.: Director/a" autoComplete="off" className="h-11 md:h-9" /></Field>
       <Field label="Teléfono"><Input value={f.telefono ?? ''} onChange={set('telefono')} inputMode="tel" maxLength={30} autoComplete="off" className="h-11 md:h-9" /></Field>
-      <Field label="Correo"><Input value={f.correo ?? ''} onChange={set('correo')} type="email" maxLength={120} autoComplete="off" className="h-11 md:h-9" /></Field>
-      <Field label="Correo laboral" hint={`(termina en ${DOMINIO_LABORAL})`} className="sm:col-span-2"><Input value={f.correo_laboral ?? ''} onChange={set('correo_laboral')} type="email" maxLength={120} autoComplete="off" className="h-11 md:h-9" /></Field>
+      <Field label="Correo institucional" hint="(el de la escuela)" className="sm:col-span-2"><Input value={f.correo ?? ''} onChange={set('correo')} type="email" maxLength={120} autoComplete="off" className="h-11 md:h-9" /></Field>
+      <Field label="Correo laboral" hint={`(el del directivo; termina en ${DOMINIO_LABORAL})`} className="sm:col-span-2"><Input value={f.correo_laboral ?? ''} onChange={set('correo_laboral')} type="email" maxLength={120} autoComplete="off" className="h-11 md:h-9" /></Field>
     </div>
     {error && <ErrorBox message={error} />}
     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={onCancelar} disabled={guardando}>Cancelar</Button><Button type="submit" disabled={guardando} className="bg-dte-petroleo hover:bg-dte-petroleo-oscuro">{guardando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Guardar</Button></div>

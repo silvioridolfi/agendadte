@@ -68,7 +68,7 @@ describe('historialDeContacto', () => {
   it('anota una fila por dato cambiado, con el nombre de la persona', () => {
     const antes = { nombre: 'Ana', apellido: 'Paz', telefono: '1', correo: null }
     const f = historialDeContacto(antes, { nombre: 'Ana', apellido: 'Paz', cargo: null, telefono: '2', correo: 'a@b.com', correo_laboral: null })
-    expect(f.map(x => [x.campo, x.valor_anterior, x.valor_nuevo])).toEqual([['Teléfono (Ana Paz)', '1', '2'], ['Correo (Ana Paz)', null, 'a@b.com']])
+    expect(f.map(x => [x.campo, x.valor_anterior, x.valor_nuevo])).toEqual([['Teléfono (Ana Paz)', '1', '2'], ['Correo institucional (Ana Paz)', null, 'a@b.com']])
   })
 })
 
