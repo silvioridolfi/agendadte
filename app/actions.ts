@@ -11,6 +11,7 @@ import { ordenarFotos } from '@/lib/fotos'
 import { PRIMER_MES, carpetaDelMes, inicioMes, hoyAR as hoyPve, mesesEntregables, nombreMes, noLaborables, revisarPve, vencimientoPve } from '@/lib/pve'
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 import { hoyAR } from '@/lib/hora'
+import { fedsDeFotosPermitidos, puedeVerAccion, puedeVerAgendaDe, veTodoElEquipo } from '@/lib/permisos'
 import { destinatariosDe, estadoComunicado, llegaA, ordenarPendientes, puedeEliminarComunicado, validarComunicado, type Comunicado, type EntradaComunicado, type EstadoComunicado, type NivelComunicado } from '@/lib/comunicados'
 import { avisaPorFecha } from '@/lib/avisos'
 import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
@@ -1139,9 +1140,22 @@ async function moverFinDeSemanaImpl(ids: string[], fedId: string, destino: 'vier
   return movidas
 }
 
+// Quién pide: el perfil de la sesión, para las reglas de lo que se puede ver (lib/permisos.ts).
+const quienEs = (yo: Usuario) => ({ id: yo.fed.id, rol: yo.fed.rol as string, esAdmin: yo.esAdmin })
+// Datos de una acción para decidir si la puede ver quien pide: quién la creó y quiénes están etiquetados.
+async function datosDeAccion(itemId: string): Promise<{ fed_id: string, participantes: string[] } | null> {
+  const db = supabaseServer()
+  const [{ data: item }, { data: part }] = await Promise.all([db.from('agenda_items').select('fed_id').eq('id', itemId).maybeSingle(), db.from('agenda_participantes').select('fed_id').eq('item_id', itemId)])
+  return item ? { fed_id: item.fed_id as string, participantes: (part ?? []).map(p => p.fed_id as string) } : null
+}
+
 // Todas las acciones exigen sesión. El perfil que actúa sale de la sesión, nunca de los parámetros del navegador.
 const conUsuario = <T,>(fn: (yo: Usuario) => Promise<T>) => run(async () => fn(await requerirUsuario()))
-export const getFeds = async () => conUsuario(() => getFedsImpl())
+// Un FED ve el nombre, el rol y los distritos de sus compañeros, pero no sus horarios (DD.JJ.) ni su carpeta de fotos: eso lo ven la coordinación y la administración.
+export const getFeds = async () => conUsuario(async yo => {
+  const l = await getFedsImpl()
+  return veTodoElEquipo(quienEs(yo)) ? l : l.map(f => (f.id === yo.fed.id ? f : { ...f, ddjj: [], carpeta_fotos_url: null }))
+})
 export const searchSchools = async (query: string) => conUsuario(() => searchSchoolsImpl(query))
 export const getFichaEscuela = async (id: string) => conUsuario(yo => getFichaEscuelaImpl(yo, id))
 export const getConectividadEscuela = async (id: string) => conUsuario(() => getConectividadEscuelaImpl(id))
@@ -1195,10 +1209,17 @@ export const ubicacionDe = async (schoolId: string | null, lugar: string | null)
   const o = codigo ? (await organismos()).find(x => x.codigo === codigo) : null
   return o ? { direccion: o.domicilio, localidad: o.localidad, lat: o.lat, lon: o.lon } : null
 })
-export const getFedItems = async (fedId: string, from: string, to: string) => conUsuario(() => getFedItemsImpl(fedId, from, to))
-export const getAllItems = async (from: string, to: string) => conUsuario(() => getAllItemsImpl(from, to))
+export const getFedItems = async (fedId: string, from: string, to: string) => conUsuario(yo => {
+  if (!puedeVerAgendaDe(quienEs(yo), fedId)) throw new Error('Solo podés ver tu propia agenda')
+  return getFedItemsImpl(fedId, from, to)
+})
+// El equipo completo es de la coordinación y la administración; un FED recibe solo lo suyo (sus acciones y las que comparte).
+export const getAllItems = async (from: string, to: string) => conUsuario(yo => (veTodoElEquipo(quienEs(yo)) ? getAllItemsImpl(from, to) : getFedItemsImpl(yo.fed.id, from, to)))
 export const disponibilidad = async (fecha: string, ids: string[], excluir?: string) => conUsuario(yo => disponibilidadImpl(yo, fecha, ids, excluir))
-export const getEncuentros = async (from: string, to: string) => conUsuario(() => getEncuentrosImpl(from, to))
+export const getEncuentros = async (from: string, to: string) => conUsuario(async yo => {
+  const todos = await getEncuentrosImpl(from, to)
+  return veTodoElEquipo(quienEs(yo)) ? todos : todos.filter(e => e.fed_id === yo.fed.id)
+})
 export const saveItem = async (input: AgendaItemInput, id?: string, alcance: 'uno' | 'siguientes' = 'uno') => conUsuario(yo => saveItemImpl({ ...input, fed_id: yo.fed.id }, id, alcance))
 // Visita con varias acciones: una acción por tipo, con la misma escuela, fecha, horario y acompañantes.
 // Cada compañero recibe un solo aviso (el de la primera acción, con el resumen de la visita).
@@ -1340,7 +1361,7 @@ export const registrarParticipacion = async (eventoId: string, fechas: string[])
   await audit('agenda_items', null, 'alta', yo.fed.id, { evento: eventoId, fechas: nuevas })
   return nuevas.length
 })
-export const getClubes = async (fedId?: string) => conUsuario(() => getClubesImpl(fedId))
+export const getClubes = async (fedId?: string) => conUsuario(yo => getClubesImpl(veTodoElEquipo(quienEs(yo)) ? fedId : yo.fed.id))
 export const setClubCierre = async (id: string, fecha: string | null) => conUsuario(async yo => {
   const { data } = await supabaseServer().from('clubes').select('fed_id').eq('id', id).maybeSingle()
   if (!data || (data.fed_id !== yo.fed.id && !yo.esAdmin)) throw new Error('Sólo quien lleva el club puede finalizarlo o reactivarlo')
@@ -1349,7 +1370,11 @@ export const setClubCierre = async (id: string, fecha: string | null) => conUsua
 export const getNotificaciones = async (_fedId: string) => conUsuario(async yo => { await avisarInactividad(yo).catch(() => {}); return getNotificacionesImpl(yo.fed.id) })
 export const marcarLeidas = async (_fedId: string, ids?: string[]) => conUsuario(yo => marcarLeidasImpl(yo.fed.id, ids))
 export const responder = async (itemId: string, _fedId: string, respuesta: 'acepta' | 'rechaza') => conUsuario(yo => responderImpl(itemId, yo.fed.id, respuesta))
-export const getHistorial = async (itemId: string) => conUsuario(() => getHistorialImpl(itemId))
+export const getHistorial = async (itemId: string) => conUsuario(async yo => {
+  const accion = await datosDeAccion(itemId)
+  if (!veTodoElEquipo(quienEs(yo)) && !(accion && puedeVerAccion(quienEs(yo), accion))) throw new Error('No podés ver el historial de esta acción')
+  return getHistorialImpl(itemId)
+})
 export const crearClubPorIniciar = async (c: ClubPorIniciarInput) => conUsuario(yo => crearClubPorIniciarImpl({ ...c, fed_id: yo.fed.id }))
 export const updateMiPerfil = async (_fedId: string, datos: Pick<Fed, 'distritos_a_cargo' | 'carga_horaria' | 'ddjj'>) => conUsuario(yo => updateMiPerfilImpl(yo.fed.id, datos))
 export const addFeriado = async (_autorId: string, f: Omit<Feriado, 'id'>) => conUsuario(yo => addFeriadoImpl(yo.fed.id, f))
@@ -1445,8 +1470,9 @@ export const devolverPve = async (fedId: string, mes: string, motivo: string) =>
 })
 // Fotos de una acción: la subcarpeta de la acción si ya tiene fotos asignadas por hora; si no, la carpeta del día, sólo si quedaron fotos sin asignar a ninguna acción.
 // Una por cada FED (responsable y participantes) que tenga fotos ordenadas.
-export const fotosDelDia = async (fedIds: string[], fecha: string, itemId?: string) => conUsuario(async () => {
-  const ids = fedIds.slice(0, 20), db = supabaseServer()
+export const fotosDelDia = async (fedIds: string[], fecha: string, itemId?: string) => conUsuario(async yo => {
+  const accion = itemId && !veTodoElEquipo(quienEs(yo)) ? await datosDeAccion(itemId) : null
+  const ids = fedsDeFotosPermitidos(quienEs(yo), fedIds, accion).slice(0, 20), db = supabaseServer()
   const [{ data: dias }, { data: acc }] = await Promise.all([
     db.from('fotos_dias').select('fed_id, folder_id').in('fed_id', ids).eq('fecha', fecha),
     itemId ? db.from('fotos_acciones').select('fed_id, folder_id').in('fed_id', ids).eq('item_id', itemId) : Promise.resolve({ data: [] as { fed_id: string, folder_id: string }[] }),
@@ -1463,10 +1489,14 @@ export const fotosDelDia = async (fedIds: string[], fecha: string, itemId?: stri
 // Cantidad de fotos ordenadas: por acción (asignadas por hora) y por FED y día ("fedId|fecha"). Para los contadores del calendario y el tablero.
 // `sueltas`: fotos del día que no quedaron asignadas a ninguna acción.
 export type ConteoFotos = { items: Record<string, number>, dias: Record<string, number>, sueltas: Record<string, number> }
-export const conteoFotos = async () => conUsuario(async (): Promise<ConteoFotos> => {
+export const conteoFotos = async () => conUsuario(async (yo): Promise<ConteoFotos> => {
   const db = supabaseServer(), out: ConteoFotos = { items: {}, dias: {}, sueltas: {} }
+  // Un FED cuenta solo las fotos propias; la coordinación y la administración, las de todo el equipo.
+  const solo = veTodoElEquipo(quienEs(yo)) ? null : yo.fed.id
   for (let desde = 0; ; desde += 1000) {
-    const { data, error } = await db.from('fotos_procesadas').select('fed_id, fecha, item_id').not('fecha', 'is', null).order('file_id').range(desde, desde + 999)
+    let q = db.from('fotos_procesadas').select('fed_id, fecha, item_id').not('fecha', 'is', null)
+    if (solo) q = q.eq('fed_id', solo)
+    const { data, error } = await q.order('file_id').range(desde, desde + 999)
     if (error) throw new Error(error.message)
     for (const r of data ?? []) {
       const k = `${r.fed_id}|${r.fecha}`
