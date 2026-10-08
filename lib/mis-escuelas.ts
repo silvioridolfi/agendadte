@@ -1,6 +1,6 @@
 // Mis escuelas: listado de las escuelas a cargo de cada FED, con un resumen por escuela (puro).
 import { SIN_FED, esDelFed, sinFed } from '@/lib/cronogramas'
-import { nombreCorto } from '@/lib/siglas'
+import { coincideEscuela } from '@/lib/buscador'
 import { titleCase } from '@/lib/format'
 import { hermanasDe, predioValido, type Hermana } from '@/lib/predio'
 
@@ -25,17 +25,13 @@ const norm = (s: string | null | undefined) => (s ?? '').normalize('NFD').replac
 
 // Se busca por CUE, nombre completo, sigla ("EP 4", "ees 31"), distrito o localidad; todas las palabras tienen que estar.
 export function filtrarEscuelas(lista: ResumenEscuela[], f: FiltrosEscuelas): ResumenEscuela[] {
-  const palabras = norm(f.busqueda).split(' ').filter(Boolean)
   return lista.filter(e => {
     if (f.distrito && norm(e.distrito) !== norm(f.distrito)) return false
     if (f.nivel && e.nivel !== f.nivel) return false
     if (f.fed && !(f.fed === SIN_FED ? sinFed(e.fed_a_cargo) : esDelFed(e.fed_a_cargo, f.fed))) return false
     if (f.conCronograma && !e.cronogramas) return false
     if (f.conReclamo && !e.reclamosAbiertos) return false
-    if (!palabras.length) return true
-    const nombre = e.nombre ? titleCase(e.nombre) : ''
-    const texto = norm(`${e.cue ?? ''} ${nombre} ${nombre ? nombreCorto(nombre) : ''} ${e.distrito ?? ''} ${e.ciudad ?? ''} ${e.direccion ?? ''} ${nombreContacto(e.contacto)} ${e.contacto?.correo ?? ''} ${e.contacto?.correo_laboral ?? ''}`)
-    return palabras.every(p => texto.includes(p))
+    return coincideEscuela(f.busqueda, { nombre: e.nombre ? titleCase(e.nombre) : '', ciudad: e.ciudad, distrito: e.distrito, cue: e.cue }, `${e.direccion ?? ''} ${nombreContacto(e.contacto)} ${e.contacto?.correo ?? ''} ${e.contacto?.correo_laboral ?? ''}`)
   }).sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? '', 'es', { numeric: true, sensitivity: 'base' }) || (a.cue ?? 0) - (b.cue ?? 0))
 }
 

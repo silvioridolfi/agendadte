@@ -1,5 +1,6 @@
 'use client'
 
+import { coincideEscuela } from '@/lib/buscador'
 import { Segmented } from '@/components/ui/segmented'
 import { exportarPlanilla } from '@/lib/exportar'
 import { MiEquipoView } from '@/components/app/equipo'
@@ -12,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { ClubesView } from '@/components/clubes'
 import { MetricsView } from '@/components/metrics'
 import { titleCase } from '@/lib/format'
-import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed, type Club, clubEstado } from '@/lib/agenda'
+import { ACCIONES, ESTADOS, type AgendaItem, type Encuentro, type Estado, type Fed, type Club, type School, clubEstado } from '@/lib/agenda'
 import { FotosChip } from '@/components/app/fotosconteo'
 import { InformeBloque, personaDe } from '@/components/app/informes'
 import { Contador } from '@/components/contador'
@@ -102,17 +103,18 @@ export function CoordinatorView({ feds, todos, reloadKey, onSelect, onNuevaReuni
   }
   const fedName = useCallback((id: string) => todos.find(f => f.id === id)?.nombre_completo ?? 'FED desconocido', [todos])
   const distritos = useMemo(() => [...new Set([...feds.flatMap(f => f.distritos_a_cargo), ...(items ?? []).map(i => i.school?.distrito).filter((d): d is string => !!d)])].sort((a, b) => a.localeCompare(b, 'es')), [feds, items])
-  const q = search.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+  const q = search.trim()
+  const buscaEn = useCallback((s: School | null | undefined, extra: string) => coincideEscuela(q, { nombre: esSedeDte(s) ? 'Dirección de Tecnología Educativa' : s?.nombre, ciudad: s?.ciudad, distrito: s?.distrito, cue: s?.cue }, extra), [q])
   // Todos los filtros menos el de estado: así los contadores muestran cuántas hay de cada estado.
   const base = useMemo(() => (items ?? []).filter(i =>
     (!distrito || i.school?.distrito === distrito) && (!fedId || i.fed_id === fedId) && (!accion || i.accion === accion) &&
-    (!q || `${fedName(i.fed_id)} ${i.school?.nombre ?? ''} ${i.school?.ciudad ?? ''} ${i.school?.cue ?? ''} ${esSedeDte(i.school) ? 'dte' : ''} ${i.accion} ${i.sub_accion ?? ''} ${i.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [items, distrito, fedId, accion, q, fedName])
+    (!q || buscaEn(i.school, `${fedName(i.fed_id)} ${i.accion} ${i.sub_accion ?? ''} ${i.lugar ?? ''}`))), [items, distrito, fedId, accion, q, fedName, buscaEn])
   const filtered = useMemo(() => base.filter(i => !estado || i.estado === estado), [base, estado])
   const encBase = useMemo(() => (encs ?? []).filter(e =>
     (!distrito || e.school?.distrito === distrito) && (!fedId || e.fed_id === fedId) && (!accion || e.tipo === accion) &&
-    (!q || `${fedName(e.fed_id)} ${e.school?.nombre ?? ''} ${e.school?.ciudad ?? ''} ${e.school?.cue ?? ''} ${esSedeDte(e.school) ? 'dte' : ''} ${e.propuesta ?? ''} ${e.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [encs, distrito, fedId, accion, q, fedName])
+    (!q || buscaEn(e.school, `${fedName(e.fed_id)} ${e.propuesta ?? ''} ${e.lugar ?? ''}`))), [encs, distrito, fedId, accion, q, fedName, buscaEn])
   const clubBase = useMemo(() => (clubes ?? []).filter(c => (!distrito || escuelaDelClub(c)?.distrito === distrito) && (!fedId || c.fed_id === fedId) &&
-    (!q || `${fedName(c.fed_id)} ${escuelaDelClub(c)?.nombre ?? ''} ${escuelaDelClub(c)?.ciudad ?? ''} ${escuelaDelClub(c)?.cue ?? ''} ${esSedeDte(c.school) ? 'dte' : ''} ${c.escuela_origen?.nombre ?? ''} ${c.escuela_origen?.cue ?? ''} ${c.grupo ?? ''} ${c.lugar ?? ''}`.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(q))), [clubes, distrito, fedId, q, fedName])
+    (!q || buscaEn(escuelaDelClub(c), `${fedName(c.fed_id)} ${c.escuela_origen?.nombre ?? ''} ${c.escuela_origen?.cue ?? ''} ${c.grupo ?? ''} ${c.lugar ?? ''}`))), [clubes, distrito, fedId, q, fedName, buscaEn])
   const counts = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, base.filter(i => i.estado === e).length])) as Record<Estado, number>, [base])
   // FEDs en orden alfabético; dentro de cada uno, las acciones de la más nueva a la más antigua (fecha, hora y carga).
   // Primero lo de hoy hacia atrás (lo más reciente arriba); lo planificado a futuro va al final, de lo más próximo a lo más lejano.
