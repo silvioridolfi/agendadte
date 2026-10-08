@@ -11,7 +11,7 @@ import { ordenarFotos } from '@/lib/fotos'
 import { PRIMER_MES, carpetaDelMes, inicioMes, hoyAR as hoyPve, mesesEntregables, nombreMes, noLaborables, revisarPve, vencimientoPve } from '@/lib/pve'
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 import { hoyAR } from '@/lib/hora'
-import { destinatariosDe, estadoComunicado, llegaA, ordenarPendientes, validarComunicado, type Comunicado, type EntradaComunicado, type EstadoComunicado, type NivelComunicado } from '@/lib/comunicados'
+import { destinatariosDe, estadoComunicado, llegaA, ordenarPendientes, puedeEliminarComunicado, validarComunicado, type Comunicado, type EntradaComunicado, type EstadoComunicado, type NivelComunicado } from '@/lib/comunicados'
 import { avisaPorFecha } from '@/lib/avisos'
 import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
 import { tipoDe, type EscuelaConectividad } from '@/lib/reclamos'
@@ -1643,6 +1643,19 @@ export const editarComunicado = async (id: string, e: EntradaComunicado) => conU
   const cambioElMensaje = previo.titulo !== v.titulo || previo.texto !== v.texto || previo.nivel !== v.nivel
   if (cambioElMensaje) await db.from('comunicado_lecturas').delete().eq('comunicado_id', id)
   await audit('comunicados', id, 'modificacion', yo.fed.id, { titulo: v.titulo, nivel: v.nivel, destinatarios: v.fedIds ?? 'todos', pide_leer_de_nuevo: cambioElMensaje })
+})
+
+// Borra el comunicado y sus lecturas (cascada). Solo si ya no está vigente: antes hay que retirarlo.
+export const eliminarComunicado = async (id: string) => conUsuario(async yo => {
+  if (!puedeGestionarComunicados(yo)) throw new Error('Sólo el CED o la administración pueden eliminar comunicados')
+  const db = supabaseServer()
+  const { data } = await db.from('comunicados').select(COLS_COMUNICADO).eq('id', id).maybeSingle()
+  const c = data as Comunicado | null
+  if (!c) throw new Error('No se encontró el comunicado')
+  if (!puedeEliminarComunicado(estadoComunicado(c, hoyAR()))) throw new Error('Primero hay que retirarlo')
+  const { error } = await db.from('comunicados').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+  await audit('comunicados', id, 'baja', yo.fed.id, { eliminado: true, titulo: c.titulo })
 })
 
 export const retirarComunicado = async (id: string) => conUsuario(async yo => {

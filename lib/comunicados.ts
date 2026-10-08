@@ -29,6 +29,9 @@ export function validarComunicado(e: EntradaComunicado, hoy: string): string | n
 export type EstadoComunicado = 'vigente' | 'vencido' | 'retirado'
 export const estadoComunicado = (c: Pick<Comunicado, 'retirado' | 'vence_el'>, hoy: string): EstadoComunicado => (c.retirado ? 'retirado' : c.vence_el && c.vence_el < hoy ? 'vencido' : 'vigente')
 
+// Solo se elimina lo que ya no se muestra: un comunicado vigente primero se retira.
+export const puedeEliminarComunicado = (estado: EstadoComunicado) => estado !== 'vigente'
+
 // Los FED a los que les llega: los elegidos, o todos los FED (la coordinación no recibe).
 export function destinatariosDe<T extends { id: string, rol: string }>(c: Pick<Comunicado, 'fed_ids'>, feds: T[]): T[] {
   return c.fed_ids ? feds.filter(f => c.fed_ids!.includes(f.id)) : feds.filter(f => f.rol === 'fed')

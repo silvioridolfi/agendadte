@@ -8,10 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import type { Fed } from '@/lib/agenda'
-import { MAX_TEXTO_COMUNICADO, MAX_TITULO_COMUNICADO, NIVEL_COMUNICADO_LABEL, NIVELES_COMUNICADO, resumenLecturas, tramosConEnlaces, validarComunicado, type EntradaComunicado, type NivelComunicado } from '@/lib/comunicados'
+import { MAX_TEXTO_COMUNICADO, puedeEliminarComunicado, MAX_TITULO_COMUNICADO, NIVEL_COMUNICADO_LABEL, NIVELES_COMUNICADO, resumenLecturas, tramosConEnlaces, validarComunicado, type EntradaComunicado, type NivelComunicado } from '@/lib/comunicados'
 import { hoyAR } from '@/lib/hora'
 import { Field } from '@/components/app/formulario'
-import { BotonVolver, ErrorBox, Skeleton, crearComunicado, editarComunicado, errMsg, eyebrow, getComunicadosGestion, getComunicadosPendientes, marcarComunicadoLeido, retirarComunicado } from '@/components/app/comun'
+import { BotonVolver, ErrorBox, Skeleton, crearComunicado, editarComunicado, eliminarComunicado, errMsg, eyebrow, getComunicadosGestion, getComunicadosPendientes, marcarComunicadoLeido, retirarComunicado } from '@/components/app/comun'
 import type * as api from '@/app/actions'
 
 const fechaHoraAR = (iso: string) => new Date(iso).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
@@ -83,11 +83,15 @@ export function Comunicados({ feds, volver }: { feds: Fed[], volver?: { destino:
   const [editando, setEditando] = useState<api.ComunicadoGestion | 'nuevo' | null>(null)
   const [abierto, setAbierto] = useState<string | null>(null)
   const [aRetirar, setARetirar] = useState<api.ComunicadoGestion | null>(null)
+  const [aEliminar, setAEliminar] = useState<api.ComunicadoGestion | null>(null)
   const [mensaje, setMensaje] = useState('')
   const cargar = useCallback(() => { getComunicadosGestion().then(setLista).catch(e => setError(errMsg(e))) }, [])
   useEffect(() => { cargar() }, [cargar])
   async function retirar(c: api.ComunicadoGestion) {
     try { await retirarComunicado(c.id); setMensaje('Se retiró el comunicado'); cargar() } catch (e) { setError(errMsg(e)) }
+  }
+  async function eliminar(c: api.ComunicadoGestion) {
+    try { await eliminarComunicado(c.id); setMensaje('Se eliminó el comunicado'); cargar() } catch (e) { setError(errMsg(e)) }
   }
   return <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-32 pt-6 lg:px-10">
     {volver && <BotonVolver onClick={volver.ir} destino={volver.destino} />}
@@ -116,14 +120,16 @@ export function Comunicados({ feds, volver }: { feds: Fed[], volver?: { destino:
               <span className="font-medium">{d.nombre}</span>
               {d.leidoAt ? <span className="inline-flex items-center gap-1 text-exito"><Check className="size-3.5" aria-hidden />Leído el {fechaHoraAR(d.leidoAt)}</span> : <span className="text-dte-gris">Sin leer</span>}
             </li>)}</ul>}
-            {c.estado !== 'retirado' && <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => { setMensaje(''); setEditando(c) }}><Pencil data-icon="inline-start" />Editar</Button>
+            <div className="flex flex-wrap gap-2">
+              {c.estado !== 'retirado' && <Button type="button" variant="outline" size="sm" onClick={() => { setMensaje(''); setEditando(c) }}><Pencil data-icon="inline-start" />Editar</Button>}
               {vigente && <Button type="button" variant="outline" size="sm" onClick={() => setARetirar(c)} className="text-peligro"><Trash2 data-icon="inline-start" />Retirar</Button>}
-            </div>}
+              {puedeEliminarComunicado(c.estado) && <Button type="button" variant="outline" size="sm" onClick={() => setAEliminar(c)} className="text-peligro"><Trash2 data-icon="inline-start" />Eliminar</Button>}
+            </div>
           </div>
         </li>
       })}</ul>}
     {editando && <FormComunicado feds={feds} actual={editando === 'nuevo' ? null : editando} onClose={() => setEditando(null)} onGuardado={m => { setEditando(null); setMensaje(m); cargar() }} />}
+    <Confirmar abierto={!!aEliminar} peligro titulo="¿Eliminar este comunicado?" descripcion="Se borra del todo, junto con el registro de quién lo leyó. No se puede deshacer." accion="Eliminar" onCerrar={() => setAEliminar(null)} onConfirmar={() => { if (aEliminar) eliminar(aEliminar) }} />
     <Confirmar abierto={!!aRetirar} peligro titulo="¿Retirar este comunicado?" descripcion="Deja de mostrarse como banner a los FED. Queda en la lista con las lecturas que tenía." accion="Retirar" onCerrar={() => setARetirar(null)} onConfirmar={() => { if (aRetirar) retirar(aRetirar) }} />
   </main>
 }
