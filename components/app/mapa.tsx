@@ -5,8 +5,9 @@ import { ChevronDown, MapPinOff, Navigation, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { type AgendaItem, type Fed, type School } from '@/lib/agenda'
+import { coincideEscuela } from '@/lib/buscador'
 import { esDelFed } from '@/lib/cronogramas'
-import { FILTROS_MAPA_VACIOS, SIN_FED_MAPA, filtrarPuntos, sinTildes, type FiltrosMapa, type PuntoMapa, type PuntosMapa } from '@/lib/mapa'
+import { FILTROS_MAPA_VACIOS, SIN_FED_MAPA, filtrarPuntos, type FiltrosMapa, type PuntoMapa, type PuntosMapa } from '@/lib/mapa'
 import { titleCase } from '@/lib/format'
 import { gruposPorPredio, hermanasDe } from '@/lib/predio'
 import { BotonVolver, ErrorBox, Skeleton, errMsg, eyebrow, getPuntosMapa, nombreHermana, selectClass } from '@/components/app/comun'
@@ -33,13 +34,11 @@ export function SeccionMapa({ profile, feds, esAdmin, puedeAgendar, onAgendar, o
   const propios = useMemo(() => new Set((datos?.puntos ?? []).filter(p => p.tipo === 'escuela' && esDelFed(p.fed, profile.nombre_completo)).map(p => p.id)), [datos, profile.nombre_completo])
   // Las escuelas sin ubicación, con los mismos filtros de distrito, FED y búsqueda.
   const sinUbicacion = useMemo(() => {
-    const palabras = sinTildes(filtros.q).split(/\s+/).filter(Boolean)
     return (datos?.sinUbicacion ?? []).filter(e => {
       if (!filtros.escuelas) return false
       if (filtros.distrito && e.distrito !== filtros.distrito) return false
       if (filtros.fed === SIN_FED_MAPA ? !!e.fed : filtros.fed && !esDelFed(e.fed, filtros.fed)) return false
-      const texto = sinTildes(`${e.nombre} ${e.cue ?? ''}`)
-      return palabras.every(w => texto.includes(w))
+      return coincideEscuela(filtros.q, { nombre: e.nombre, distrito: e.distrito, cue: e.cue })
     })
   }, [datos, filtros])
   // Escuelas que comparten edificio con la elegida (con o sin ubicación en el mapa).

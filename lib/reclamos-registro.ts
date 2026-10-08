@@ -1,6 +1,7 @@
 // Registro de reclamos de conectividad: estados, tipo de conexión, tipo de número y filtros del panel (puro).
 import { enlacesDe, tienePiso } from '@/lib/reclamos'
 import { esDelFed } from '@/lib/cronogramas'
+import { coincideEscuela } from '@/lib/buscador'
 
 export const ESTADOS_RECLAMO = ['enviado', 'en_proceso', 'resuelto', 'anulado'] as const
 export type EstadoReclamo = typeof ESTADOS_RECLAMO[number]
@@ -64,7 +65,7 @@ export function filtrarReclamos(lista: Reclamo[], f: FiltrosReclamo, nombreFed: 
   return lista.filter(r =>
     (f.estado === 'todos' ? true : f.estado === 'abiertos' ? esAbierto(r.estado) : r.estado === f.estado)
     && (!f.fedId || r.fed_id === f.fedId) && (!f.conexion || r.conexion === f.conexion)
-    && (!q || sinTildes(`${r.asunto} ${r.cue ?? ''} ${r.school?.nombre ?? ''} ${r.school?.distrito ?? ''} ${r.nro_incidencia ?? ''} ${r.notas ?? ''} ${nombreFed(r.fed_id)}`).includes(q)))
+    && (!q || coincideEscuela(f.busqueda, { nombre: r.school?.nombre, distrito: r.school?.distrito, cue: r.cue }, `${r.asunto} ${r.nro_incidencia ?? ''} ${r.notas ?? ''} ${nombreFed(r.fed_id)}`)))
 }
 
 export const resumenReclamos = (lista: Reclamo[]) => ({

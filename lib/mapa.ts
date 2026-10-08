@@ -1,4 +1,5 @@
 // Mapa de Región 1 sin librerías: proyección Web Mercator, mosaicos de OpenStreetMap, encuadre, agrupamiento de pines y filtros.
+import { coincideEscuela } from '@/lib/buscador'
 export const TAM_TESELA = 256
 export const ZOOM_MIN = 8
 export const ZOOM_MAX = 18
@@ -94,15 +95,12 @@ export const sinTildes = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '
 // `fed`: '' = todos, SIN_FED_MAPA = escuelas sin FED, o el nombre del FED (con la misma coincidencia por prefijo del resto de la agenda: se pasa `esDelFed`).
 export const SIN_FED_MAPA = '__sin__'
 export function filtrarPuntos(puntos: PuntoMapa[], f: FiltrosMapa, coincideFed: (fedACargo: string | null, nombre: string) => boolean): PuntoMapa[] {
-  const palabras = sinTildes(f.q).split(/\s+/).filter(Boolean)
   return puntos.filter(p => {
     if (p.tipo === 'escuela' ? !f.escuelas : !f.jefaturas) return false
     if (f.distrito && p.distrito !== f.distrito) return false
     // Las jefaturas no tienen FED: con un filtro por FED quedan afuera.
     if (f.fed === SIN_FED_MAPA) { if (p.tipo !== 'escuela' || p.fed) return false } else if (f.fed && (p.tipo !== 'escuela' || !coincideFed(p.fed, f.fed))) return false
-    if (!palabras.length) return true
-    const texto = sinTildes(`${p.nombre} ${p.cue ?? ''} ${p.direccion ?? ''}`)
-    return palabras.every(w => texto.includes(w))
+    return coincideEscuela(f.q, { nombre: p.nombre, distrito: p.distrito, cue: p.cue }, p.direccion ?? '')
   })
 }
 

@@ -2,6 +2,7 @@
 import { siglaNombre } from '@/lib/siglas'
 import { titleCase } from '@/lib/format'
 import { saludoDe } from '@/lib/reclamos'
+import { coincideEscuela } from '@/lib/buscador'
 
 // Planilla y pestaña de donde se leen (la cuenta técnica de la agenda tiene permiso de lector).
 export const ID_CONSOLIDADO = '188st2Nu9AGTh9VbQzw3hPOnZQVQWED-jeOMaeJ-QOfQ'
@@ -207,7 +208,8 @@ export function filtrarCronogramas(lista: Cronograma[], f: FiltrosCronogramas, h
     if (f.conReclamo && !c.reclamos?.length) return false
     if (f.tipo && c.tipo !== f.tipo) return false
     if (f.proveedor && c.proveedor !== f.proveedor) return false
-    if (q && !norm(`${c.cue} ${c.school?.nombre ?? c.nombre_planilla ?? ''} ${c.nro ?? ''} ${c.proveedor ?? ''} ${etiquetaTipo(c.tipo)} ${(c.comparte ?? []).map(o => `${o.cue ?? ''} ${o.nombre ?? ''}`).join(' ')}`).includes(q)) return false
+    if (q && !coincideEscuela(f.busqueda, { nombre: c.school?.nombre ?? c.nombre_planilla, distrito: c.school?.distrito, ciudad: c.school?.ciudad, cue: c.cue }, `${c.nro ?? ''} ${c.proveedor ?? ''} ${etiquetaTipo(c.tipo)}`)
+      && !(c.comparte ?? []).some(o => coincideEscuela(f.busqueda, { nombre: o.nombre, cue: o.cue }))) return false
     return true
   }).sort((a, b) => (f.pestana === 'pasados' ? b.fecha_inicio.localeCompare(a.fecha_inicio) : a.fecha_inicio.localeCompare(b.fecha_inicio)) || a.cue - b.cue)
 }
