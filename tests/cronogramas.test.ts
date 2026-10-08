@@ -142,8 +142,8 @@ describe('avisos a la jefatura y a la escuela', () => {
     const m = mensajeEscuela({ ...c, semana: 'Semana 5 - Educar' }, new Date('2026-10-06T13:00:00Z'), 'celeste María')
     expect(m.asunto).toBe('Cronograma de conectividad: EES N° 31, 12/10 al 16/10')
     expect(m.cuerpo).toContain('Hola Celeste, buen día. Desde la Dirección de Tecnología Educativa informamos que, según el cronograma de EDUCAR, entre los días 12/10/2026 y 16/10/2026, personal de la empresa PBA realizará tareas de mantenimiento del piso tecnológico en EES N° 31 (CUE 61000001).')
-    expect(m.cuerpo).toContain('El personal técnico asignado será:\n- Juan Pérez (DNI 30111222)\n- Ana Gómez (CUIL 27-30111222-4)')
-    expect(m.cuerpo).toContain('pueda facilitar el acceso al personal técnico.\n\nSaludos!')
+    expect(m.cuerpo).toContain('La intervención estará a cargo de:\n- Juan Pérez (DNI 30111222)\n- Ana Gómez (CUIL 27-30111222-4)')
+    expect(m.cuerpo).toContain('facilitar su ingreso y acceso a los espacios correspondientes.\n\n¡Saludos!')
     expect(m.cuerpo).not.toContain('rack')
     expect(m.cuerpo).not.toMatch(/Soy |Escuela:|Tarea:/)
   })
@@ -151,7 +151,7 @@ describe('avisos a la jefatura y a la escuela', () => {
     const m = mensajeEscuela({ ...c, fecha_fin: '2026-10-12', proveedor: null, instaladores: 'DT01 Cañete.Zenteno' }, new Date('2026-10-06T23:00:00Z'))
     expect(m.cuerpo).toContain('Buenas noches. Desde la Dirección')
     expect(m.cuerpo).toContain('según el cronograma establecido, el día 12/10/2026, personal técnico realizará')
-    expect(m.cuerpo).toContain('El personal técnico asignado es: Cañete Zenteno.')
+    expect(m.cuerpo).toContain('La intervención estará a cargo de Cañete Zenteno.')
   })
   it('una instalación de enlace pide el rack y de PBA lo dice', () => {
     const m = mensajeEscuela({ ...c, tipo: 'Instalación Enlace/Certificación', semana: 'PBA' }, new Date())
@@ -161,8 +161,8 @@ describe('avisos a la jefatura y a la escuela', () => {
   })
   it('un enlace en lugar de nombres', () => {
     const m = mensajeEscuela({ ...c, instaladores: 'https://drive.google.com/abc' }, new Date())
-    expect(m.cuerpo).toContain('Datos del personal técnico: https://drive.google.com/abc')
-    expect(m.cuerpo).not.toContain('personal técnico asignado')
+    expect(m.cuerpo).toContain('Datos de quienes estarán a cargo: https://drive.google.com/abc')
+    expect(m.cuerpo).not.toContain('estará a cargo de')
   })
   it('sin escuela cargada usa el CUE', () => {
     expect(mensajeEscuela({ ...c, school: null }, new Date()).cuerpo).toContain('en la escuela CUE 61000001.')

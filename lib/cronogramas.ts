@@ -332,10 +332,10 @@ export function mensajeEscuela(c: Pick<Cronograma, 'cue' | 'fecha_inicio' | 'fec
   const quien = c.proveedor ? `personal de la empresa ${c.proveedor}` : 'personal técnico'
   const cuerpo = [
     `${apertura} Desde la Dirección de Tecnología Educativa informamos que, según el cronograma ${programa ? `de ${programa === 'Educar' ? 'EDUCAR' : programa}` : 'establecido'}, ${cuandoTxt(c)}, ${quien} realizará ${tareaDe(c.tipo)} en ${lugar}.`,
-    responsables.length === 1 ? `El personal técnico asignado es: ${responsables[0]}.` : responsables.length > 1 ? `El personal técnico asignado será:\n${responsables.map(r => `- ${r}`).join('\n')}` : null,
-    enlaces.length ? `Datos del personal técnico: ${enlaces.join(' ')}` : null,
-    `Se informa para que la institución esté al tanto y pueda facilitar el acceso al personal técnico.${pideRack(c.tipo) ? ' Se solicita tener disponible y accesible el rack para poder llevar adelante la instalación.' : ''}`,
-    'Saludos!',
+    responsables.length === 1 ? `La intervención estará a cargo de ${responsables[0]}.` : responsables.length > 1 ? `La intervención estará a cargo de:\n${responsables.map(r => `- ${r}`).join('\n')}` : null,
+    enlaces.length ? `Datos de quienes estarán a cargo: ${enlaces.join(' ')}` : null,
+    `Se informa a la institución a fin de que pueda estar al tanto y facilitar su ingreso y acceso a los espacios correspondientes.${pideRack(c.tipo) ? ' Se solicita tener disponible y accesible el rack para poder llevar adelante la instalación.' : ''}`,
+    '¡Saludos!',
   ].filter((x): x is string => !!x).join('\n\n')
   return { asunto: `Cronograma de conectividad: ${escuela}, ${ventanaDe(c)}`, cuerpo }
 }
