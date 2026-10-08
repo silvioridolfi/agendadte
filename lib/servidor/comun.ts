@@ -1,4 +1,5 @@
 import 'server-only'
+import { esEnero, mensajeEnero } from '@/lib/receso'
 import type { Usuario } from '@/lib/sesion'
 import { supabaseServer } from '@/lib/supabase-server'
 
@@ -19,3 +20,29 @@ export async function datosDeAccion(itemId: string): Promise<{ fed_id: string, p
 }
 
 export const errMsgServer = (e: unknown) => (e instanceof Error ? e.message : String(e))
+
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// PostgREST devuelve como máximo 1000 filas por consulta: se pide por páginas (la vista anual supera ese límite).
+export const PAGE = 1000
+export async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown[] | null, error: { message: string } | null }>): Promise<T[]> {
+  const out: T[] = []
+  for (let i = 0; ; i += PAGE) {
+    const { data, error } = await page(i, i + PAGE - 1)
+    if (error) throw new Error(error.message)
+    out.push(...((data ?? []) as T[]))
+    if (!data || data.length < PAGE) return out
+  }
+}
+export const opt = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null)
+export const fechaCorta = (f: string) => { const [y, m, d] = f.split('-'); return `${d}/${m}/${y}` }
+// Sólo se trabaja de lunes a viernes en días hábiles: sin fines de semana, feriados nacionales, turísticos ni recesos.
+export async function exigirDiasHabiles(fechas: string[]) {
+  const finde = fechas.find(f => [0, 6].includes(new Date(`${f}T12:00:00Z`).getUTCDay()))
+  if (finde) throw new Error(`El ${fechaCorta(finde)} es fin de semana: sólo se pueden cargar acciones de lunes a viernes.`)
+  const ene = fechas.find(esEnero)
+  if (ene) throw new Error(mensajeEnero(fechaCorta(ene)))
+  if (!fechas.length) return
+  const { data } = await supabaseServer().from('feriados').select('fecha, nombre, tipo').in('fecha', fechas).neq('tipo', 'distrital').limit(1)
+  const f = data?.[0]
+  if (f) throw new Error(`El ${fechaCorta(f.fecha as string)} es ${f.tipo === 'receso' ? 'receso escolar' : 'feriado'} (${f.nombre}): sólo se pueden cargar acciones en días hábiles.`)
+}
