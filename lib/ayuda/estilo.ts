@@ -27,6 +27,7 @@ export const ESTILO_TEMA: Record<string, { familia: Familia, icono: Icono }> = {
   reclamos: { familia: 'violeta', icono: 'conectividad' },
   'registro-reclamos': { familia: 'violeta', icono: 'conectividad' },
   cronogramas: { familia: 'violeta', icono: 'conectividad' },
+  comunicados: { familia: 'rosa', icono: 'campana' },
   registro: { familia: 'rosa', icono: 'nuevo' },
   estado: { familia: 'rosa', icono: 'estado' },
   licencias: { familia: 'rosa', icono: 'licencia' },
