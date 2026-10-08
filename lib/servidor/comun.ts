@@ -46,3 +46,6 @@ export async function exigirDiasHabiles(fechas: string[]) {
   const f = data?.[0]
   if (f) throw new Error(`El ${fechaCorta(f.fecha as string)} es ${f.tipo === 'receso' ? 'receso escolar' : 'feriado'} (${f.nombre}): sólo se pueden cargar acciones en días hábiles.`)
 }
+
+export const SCHOOL_COLS = 'id, cue, nombre, distrito, ciudad'
+export const ITEM_COLS = `*, school:establecimientos(${SCHOOL_COLS}), encuentros:agenda_encuentros(*), participantes:agenda_participantes(fed_id, respuesta), club:clubes(grupo)`
