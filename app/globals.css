@@ -105,6 +105,27 @@
   --color-accion-entrega-de-equipamiento: #dbe6f4;
   --color-accion-entrega-de-equipamiento-texto: #244f86;
   --color-accion-entrega-de-equipamiento-punto: #2a6fb0;
+  /* Tipos de cronograma (etiquetas por familia): fondo, borde, texto (contraste AA) y punto. Se usan en components/app/tipocrono.tsx. */
+  --color-tipo-mantenimiento: #dbe9f2;
+  --color-tipo-mantenimiento-borde: #8db3cc;
+  --color-tipo-mantenimiento-texto: #05476e;
+  --color-tipo-mantenimiento-punto: #05476e;
+  --color-tipo-instalacion: #d5f0ea;
+  --color-tipo-instalacion-borde: #86cdbf;
+  --color-tipo-instalacion-texto: #0b6256;
+  --color-tipo-instalacion-punto: #0f8a78;
+  --color-tipo-reparacion: #fde4d4;
+  --color-tipo-reparacion-borde: #f0b18c;
+  --color-tipo-reparacion-texto: #8f3a0a;
+  --color-tipo-reparacion-punto: #e0661b;
+  --color-tipo-enlace: #e2e5fb;
+  --color-tipo-enlace-borde: #a7afe8;
+  --color-tipo-enlace-texto: #34389a;
+  --color-tipo-enlace-punto: #4a52c9;
+  --color-tipo-otros: #e9ecf1;
+  --color-tipo-otros-borde: #b9c0cc;
+  --color-tipo-otros-texto: #3f4857;
+  --color-tipo-otros-punto: #7b8696;
   --color-accion-relevamiento: #f8e0da;
   --color-accion-relevamiento-texto: #8a3326;
   --color-accion-relevamiento-punto: #d9573f;

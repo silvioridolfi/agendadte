@@ -30,4 +30,3 @@ export function cruceDe(r: { estado: string, enviado_at: string }, cronos: Crono
 }
 
 // Reclamos abiertos de una escuela para mostrar en sus cronogramas.
-export type ReclamoCorto = { id: string, tipo_label: string, estado: string, nro_incidencia: string | null, enviado_at: string }

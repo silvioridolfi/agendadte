@@ -11,6 +11,7 @@ import { ordenarFotos } from '@/lib/fotos'
 import { PRIMER_MES, carpetaDelMes, inicioMes, hoyAR as hoyPve, mesesEntregables, nombreMes, noLaborables, revisarPve, vencimientoPve } from '@/lib/pve'
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 import { hoyAR } from '@/lib/hora'
+import { sinTildes } from '@/lib/buscador'
 import { fedsDeFotosPermitidos, puedeVerAccion, puedeVerAgendaDe, veTodoElEquipo } from '@/lib/permisos'
 import { destinatariosDe, estadoComunicado, llegaA, ordenarPendientes, puedeEliminarComunicado, validarComunicado, type Comunicado, type EntradaComunicado, type EstadoComunicado, type NivelComunicado } from '@/lib/comunicados'
 import { avisaPorFecha } from '@/lib/avisos'
@@ -1185,7 +1186,6 @@ export const actualizarReclamo = async (id: string, cambios: { estado?: EstadoRe
 // Jefaturas distritales y regional (organismos descentralizados, con código propio en lugar de CUE).
 // Al elegir una se guarda como lugar "NOMBRE (CÓDIGO)", el mismo formato que venían usando a mano.
 export type Organismo = { id: string, codigo: string, nombre: string, distrito: string | null, localidad: string | null, domicilio: string | null, lat: number | null, lon: number | null }
-const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 async function organismos(): Promise<Organismo[]> {
   const { data, error } = await supabaseServer().from('organismos_descentralizados').select('id, codigo, nombre, distrito, localidad, domicilio, latitud, longitud').order('nombre')
   if (error) throw new Error(error.message)

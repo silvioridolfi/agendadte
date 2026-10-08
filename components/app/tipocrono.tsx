@@ -1,12 +1,12 @@
 import { FAMILIAS_TIPO, etiquetaTipo, familiaTipo, type FamiliaTipo } from '@/lib/cronogramas'
 
-// Colores por familia de tipo de cronograma (las clases van completas para que Tailwind las encuentre).
+// Colores por familia de tipo de cronograma (tokens tipo-* de globals.css; las clases van completas para que Tailwind las encuentre).
 const CLASE: Record<FamiliaTipo, { chip: string, punto: string }> = {
-  mantenimiento: { chip: 'border-[#8db3cc] bg-[#dbe9f2] text-[#05476e]', punto: 'bg-[#05476e]' },
-  instalacion: { chip: 'border-[#86cdbf] bg-[#d5f0ea] text-[#0b6256]', punto: 'bg-[#0f8a78]' },
-  reparacion: { chip: 'border-[#f0b18c] bg-[#fde4d4] text-[#8f3a0a]', punto: 'bg-[#e0661b]' },
-  enlace: { chip: 'border-[#a7afe8] bg-[#e2e5fb] text-[#34389a]', punto: 'bg-[#4a52c9]' },
-  otros: { chip: 'border-[#b9c0cc] bg-[#e9ecf1] text-[#3f4857]', punto: 'bg-[#7b8696]' },
+  mantenimiento: { chip: 'border-tipo-mantenimiento-borde bg-tipo-mantenimiento text-tipo-mantenimiento-texto', punto: 'bg-tipo-mantenimiento-punto' },
+  instalacion: { chip: 'border-tipo-instalacion-borde bg-tipo-instalacion text-tipo-instalacion-texto', punto: 'bg-tipo-instalacion-punto' },
+  reparacion: { chip: 'border-tipo-reparacion-borde bg-tipo-reparacion text-tipo-reparacion-texto', punto: 'bg-tipo-reparacion-punto' },
+  enlace: { chip: 'border-tipo-enlace-borde bg-tipo-enlace text-tipo-enlace-texto', punto: 'bg-tipo-enlace-punto' },
+  otros: { chip: 'border-tipo-otros-borde bg-tipo-otros text-tipo-otros-texto', punto: 'bg-tipo-otros-punto' },
 }
 
 export function EtiquetaTipo({ tipo, extra }: { tipo: string | null | undefined, extra?: string }) {

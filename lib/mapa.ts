@@ -91,7 +91,6 @@ export function desplazar(v: Vista, dx: number, dy: number): Vista {
 // Filtros del mapa.
 export type FiltrosMapa = { distrito: string, fed: string, escuelas: boolean, jefaturas: boolean, q: string }
 export const FILTROS_MAPA_VACIOS: FiltrosMapa = { distrito: '', fed: '', escuelas: true, jefaturas: true, q: '' }
-export const sinTildes = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 // `fed`: '' = todos, SIN_FED_MAPA = escuelas sin FED, o el nombre del FED (con la misma coincidencia por prefijo del resto de la agenda: se pasa `esDelFed`).
 export const SIN_FED_MAPA = '__sin__'
 export function filtrarPuntos(puntos: PuntoMapa[], f: FiltrosMapa, coincideFed: (fedACargo: string | null, nombre: string) => boolean): PuntoMapa[] {
