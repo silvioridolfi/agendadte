@@ -31,6 +31,7 @@ export const actionStyle: Record<Accion, { chip: string, dot: string }> = {
   'OFICINA R1': { chip: 'bg-accion-oficina-r1 text-accion-oficina-r1-texto', dot: 'bg-accion-oficina-r1-punto' },
   'PARO': { chip: 'bg-accion-paro text-accion-paro-texto', dot: 'bg-accion-paro-punto' },
   'ENTREGA DE EQUIPAMIENTO': { chip: 'bg-accion-entrega-de-equipamiento text-accion-entrega-de-equipamiento-texto', dot: 'bg-accion-entrega-de-equipamiento-punto' },
+  'RELEVAMIENTO': { chip: 'bg-accion-relevamiento text-accion-relevamiento-texto', dot: 'bg-accion-relevamiento-punto' },
   'PLANIFICACIÓN': { chip: 'bg-accion-planificacion text-accion-planificacion-texto', dot: 'bg-accion-planificacion-punto' },
   'LICENCIA': { chip: 'bg-accion-licencia text-accion-licencia-texto', dot: 'bg-accion-licencia-punto' },
   'EVENTO DTE': { chip: 'bg-accion-evento-dte text-accion-evento-dte-texto', dot: 'bg-accion-evento-dte-punto' },

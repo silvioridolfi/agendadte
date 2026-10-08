@@ -1,7 +1,7 @@
 import { esEnero } from '@/lib/receso'
 export const ACCIONES = [
   'VISITA TÉCNICA', 'VISITA PEDAGÓGICA', 'REUNIÓN', 'CLUB DE TECNOLOGÍA', 'PRÁCTICAS PROFESIONALIZANTES', 'TALLER/CAPACITACIÓN',
-  'ASISTENCIA REMOTA', 'CONECTIVIDAD', 'ENTREGA DE EQUIPAMIENTO', 'ADMINISTRATIVO', 'PLANIFICACIÓN', 'OFICINA R1',
+  'ASISTENCIA REMOTA', 'CONECTIVIDAD', 'ENTREGA DE EQUIPAMIENTO', 'RELEVAMIENTO', 'ADMINISTRATIVO', 'PLANIFICACIÓN', 'OFICINA R1',
   'LICENCIA', 'PARO', 'EVENTO DTE', 'FORMACIÓN INTERNA',
   'REUNIÓN CON JEFATURA', 'ACOMPAÑAMIENTO A FED', 'GESTIÓN INSTITUCIONAL', 'SEGUIMIENTO DEL EQUIPO',
   'INFORME TÉCNICO', 'REUNIÓN CON INSPECCIÓN', 'REUNIÓN CON NIVEL CENTRAL', 'ARTICULACIÓN MUNICIPAL',
@@ -23,7 +23,7 @@ export const CATEGORIAS = ['tecnica', 'pedagogica', 'institucional'] as const
 export type Categoria = (typeof CATEGORIAS)[number]
 export const CATEGORIA_LABEL: Record<Categoria, string> = { tecnica: 'Técnicas', pedagogica: 'Pedagógicas', institucional: 'Institucionales' }
 export const CATEGORIA: Record<Accion, Categoria> = {
-  'VISITA TÉCNICA': 'tecnica', 'ASISTENCIA REMOTA': 'tecnica', 'CONECTIVIDAD': 'tecnica', 'ENTREGA DE EQUIPAMIENTO': 'tecnica',
+  'VISITA TÉCNICA': 'tecnica', 'ASISTENCIA REMOTA': 'tecnica', 'CONECTIVIDAD': 'tecnica', 'ENTREGA DE EQUIPAMIENTO': 'tecnica', 'RELEVAMIENTO': 'tecnica',
   'VISITA PEDAGÓGICA': 'pedagogica', 'CLUB DE TECNOLOGÍA': 'pedagogica', 'PRÁCTICAS PROFESIONALIZANTES': 'pedagogica', 'TALLER/CAPACITACIÓN': 'pedagogica',
   'REUNIÓN': 'institucional', 'ADMINISTRATIVO': 'institucional', 'OFICINA R1': 'institucional', 'PLANIFICACIÓN': 'institucional', 'PARO': 'institucional', 'LICENCIA': 'institucional', 'EVENTO DTE': 'institucional', 'FORMACIÓN INTERNA': 'institucional',
   'REUNIÓN CON JEFATURA': 'institucional', 'ACOMPAÑAMIENTO A FED': 'institucional', 'GESTIÓN INSTITUCIONAL': 'institucional', 'SEGUIMIENTO DEL EQUIPO': 'institucional',
@@ -44,6 +44,7 @@ export const SUB_ACCIONES: Partial<Record<Accion, string[]>> = {
   'CONECTIVIDAD': ['Checklist', 'Relevamiento de conectividad', 'Gestión y seguimiento de incidencias', 'Ampliación u obra nueva', 'Gestión de reclamos institucionales', 'Plan Nacional de Conectividad Escolar', 'Ampliación de conectividad provincial'],
   'VISITA PEDAGÓGICA': ['Presentación', 'Relevamiento de autoridades', 'Propuestas de intervención', 'Planificación de actividades institucionales', 'Gestión administrativa de clubes', 'Acompañamiento a experiencias (JED)', 'Elaboración de materiales pedagógicos', 'Acompañamiento a proyecto de medios escolares', 'Articulación con EMATP', 'Difusión de Continuemos Estudiando y contenidos digitales'],
   'TALLER/CAPACITACIÓN': ['Ciudadanía digital', 'Introducción a la programación', 'Plataforma ABC', 'Pensamiento computacional', 'Robótica', 'Inteligencia artificial', 'Uso seguro y responsable de la tecnología', 'Medios escolares', 'Entornos virtuales (EVEA)', 'Continuemos Estudiando', 'Herramientas para EMATP'],
+  'RELEVAMIENTO': ['Equipamiento', 'Conectividad', 'Infraestructura eléctrica', 'Relevamiento de ADM', 'Relevamiento Institucional'],
   'ADMINISTRATIVO': ['Atención de consultas', 'Planificación de agenda', 'Elaboración de informes', 'Carga de bases de datos'],
   'ENTREGA DE EQUIPAMIENTO': ['Tablets', 'Netbooks', 'Kits de robótica', 'Pisos tecnológicos', 'Otro equipamiento', 'Conectar Igualdad', 'Conectar Igualdad Bonaerense', 'Puesta en funcionamiento', 'Sensibilización'],
   // Coordinación (según la planificación del CED 2026).

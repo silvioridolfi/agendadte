@@ -159,3 +159,12 @@ describe('fotos por hora y ubicación', () => {
     expect(accionPorFoto([a, sinHora], m('12:30'), cerca(ees31))?.id).toBe('a')
   })
 })
+
+describe('acción Relevamiento', () => {
+  it('es técnica, tiene color y sub-acciones', async () => {
+    const { ACCIONES, CATEGORIA, SUB_ACCIONES } = await import('@/lib/agenda')
+    expect(ACCIONES).toContain('RELEVAMIENTO')
+    expect(CATEGORIA.RELEVAMIENTO).toBe('tecnica')
+    expect(SUB_ACCIONES.RELEVAMIENTO).toEqual(expect.arrayContaining(['Relevamiento de ADM', 'Relevamiento Institucional']))
+  })
+})
