@@ -77,7 +77,6 @@ export async function listarTodo(padre: string): Promise<ArchivoDrive[]> {
   const r = await api<{ files: ArchivoDrive[] }>('files', {}, { q: `'${padre}' in parents`, pageSize: '500', fields: 'files(id,name,mimeType)', includeItemsFromAllDrives: 'true' })
   return r.files
 }
-export const datosArchivo = (id: string) => api<{ id: string, name: string, parents?: string[], trashed?: boolean }>(`files/${id}`, {}, { fields: 'id,name,parents,trashed' })
 // Todo lo que hay dentro de una carpeta (no en la papelera), incluidos accesos directos y su destino.
 export async function listarHijos(padre: string): Promise<ArchivoDrive[]> {
   const out: ArchivoDrive[] = []

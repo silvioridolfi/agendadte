@@ -99,7 +99,6 @@ export const itemCorto = (i: AgendaItem) => (i.school && !esPeatConGrupo(i) ? co
 export const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 export const firstName = (name: string) => name.split(/\s+/)[0]
 export const fedColor = (feds: Fed[], id: string) => avatarColors[Math.max(0, feds.findIndex(f => f.id === id)) % avatarColors.length]
-export const districtsLabel = (f: Fed) => (f.distritos_a_cargo.length ? f.distritos_a_cargo.map(titleCase).join(' · ') : 'Sin distritos asignados')
 
 // Desenvuelve el Result de las server actions: lanza con el mensaje real del servidor.
 // Sesión vencida o cerrada en el servidor: se avisa a la página para volver a la pantalla de ingreso.

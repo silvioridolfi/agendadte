@@ -93,7 +93,7 @@ export function MisEscuelas({ profile, feds, esAdmin, puedeAgendar, onAgendar, o
             : <>
               <div className="mt-3 hidden overflow-x-auto rounded-card border border-dte-linea bg-white shadow-e1 md:block"><table className="w-full min-w-[820px] text-sm">
                 <thead className="bg-dte-fondo"><tr>{COLUMNAS.map(([col, nombre]) => <th key={col} scope="col" aria-sort={orden.col === col ? (orden.asc ? 'ascending' : 'descending') : 'none'} className="px-3 py-2 text-left text-xs font-semibold text-dte-gris">
-                  <button type="button" onClick={() => ordenarPor(col)} className="inline-flex min-h-8 items-center gap-1 hover:text-dte-tinta">{nombre}<span aria-hidden className="text-[0.625rem]">{orden.col === col ? (orden.asc ? '▲' : '▼') : ''}</span></button></th>)}
+                  <button type="button" onClick={() => ordenarPor(col)} className="inline-flex min-h-10 md:min-h-8 items-center gap-1 hover:text-dte-tinta">{nombre}<span aria-hidden className="text-[0.625rem]">{orden.col === col ? (orden.asc ? '▲' : '▼') : ''}</span></button></th>)}
                   <th scope="col" className="px-3 py-2 text-left text-xs font-semibold text-dte-gris">Contacto</th></tr></thead>
                 <tbody>{filtradas.slice(0, visibles).map(e => <FilaLista key={e.id} e={e} onAbrir={() => setAbierta(e)} />)}</tbody></table></div>
               <ul className="mt-3 flex flex-col gap-2 md:hidden">{filtradas.slice(0, visibles).map(e => <FilaCompacta key={e.id} e={e} onAbrir={() => setAbierta(e)} />)}</ul>

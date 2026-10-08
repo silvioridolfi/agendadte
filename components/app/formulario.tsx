@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CAT_COLOR } from '@/components/metrics'
 import { enlaceDe, esReunion, conEnlace, normalizarEnlace } from '@/lib/reunion'
+import { sinTildes } from '@/lib/buscador'
 import { cambiaLaSerie, clubesDelDia, destinatarioEstudiantes, escuelaDelClub, estadoAlCompletar, horariosSePisan, inscriptosDelClub, PROPUESTAS_DE_CLUB, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
 import { Destinatarios, PropuestaClub, PropuestaTaller } from '@/components/app/camposclub'
 import { etiquetaAccion, nombreAccion, iniciado, ordenGrupo, ACCIONES, CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, CON_ENCUENTRO, ESTADOS, SUB_ACCIONES, type Accion, type AgendaItem, type AgendaItemInput, type Estado, type Fed, type Feriado, type School, type Club, type Modalidad, type TipoJornada, MODALIDADES, TIPOS_JORNADA, CLUB_MIN_ENCUENTROS, clubEstado, clubEncuentrosRealizados, NIVELES, SECCIONES, nivelDeEscuela, esTrayecto, TRAYECTO_MARCA, RECORDATORIO_LICENCIA, esAusencia, ACCIONES_CED, SOLO_CED, MODALIDADES_EVENTO, ROLES_FORMACION, type ModalidadEvento, type RolFormacion } from '@/lib/agenda'
@@ -20,7 +21,6 @@ import { encolarOffline, encolarVisitaOffline } from '@/components/app/offline'
 import { alternarTipo, esSumable, datosDeAccion, datosVacios, inputDeTipo, type DatosTipo } from '@/lib/visita'
 import { hoyAR } from '@/lib/hora'
 
-const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
 // =====================================================================
 
@@ -64,7 +64,7 @@ export function SchoolPicker({ value, onChange, onOrganismo, enLinea }: { value:
   return <div className="relative">
     <div className="relative">
     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dte-gris-claro" />
-    <Input role="combobox" aria-expanded={showList} aria-controls="school-results" aria-autocomplete="list" className="h-11 md:h-10 pl-9 font-normal" placeholder="Nombre, localidad o CUE…" value={query}
+    <Input role="combobox" aria-label="Buscar escuela por nombre, localidad o CUE" aria-expanded={showList} aria-controls="school-results" aria-autocomplete="list" className="h-11 md:h-10 pl-9 font-normal" placeholder="Nombre, localidad o CUE…" value={query}
       onChange={e => { buscar(e.target.value); setOpen(true) }} onFocus={e => { setOpen(true); e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' }) }} onBlur={() => setTimeout(() => setOpen(false), 150)}
       onKeyDown={e => {
         if (!showList || !opciones.length) return
@@ -480,7 +480,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       {!aDefinir && <Field label="Encuentro N°" hint={modoT ? '(se asigna solo)' : undefined} className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" placeholder={modoT ? String(club ? proximoEncuentro(club.encuentros, form.fecha, item?.id) : 1) : undefined} value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>}
       {!aDefinir && <Field label="Tipo de jornada" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={form.tipo_jornada} onChange={e => set('tipo_jornada', e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{[...TIPOS_JORNADA].sort(azOtroAlFinal).map(t => <option key={t} value={t}>{t}</option>)}</select></Field>}
       {!aDefinir && <Field label="Formato de participación" className="sm:col-span-2"><select className={`${selectClass} h-11 md:h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>}
-      {!aDefinir && <div className="flex flex-col gap-1.5 sm:col-span-6"><span className="text-sm font-semibold text-dte-tinta">Destinatarios</span><Destinatarios key={`${form.club_id}-${grupoDest}`} value={destinatariosEf} grupo={grupoDest} onChange={v => set('destinatarios', v)} /></div>}
+      {!aDefinir && <div role="group" aria-labelledby="rotulo-destinatarios-1" className="flex flex-col gap-1.5 sm:col-span-6"><span id="rotulo-destinatarios-1" className="text-sm font-semibold text-dte-tinta">Destinatarios</span><Destinatarios key={`${form.club_id}-${grupoDest}`} value={destinatariosEf} grupo={grupoDest} onChange={v => set('destinatarios', v)} /></div>}
       {!aDefinir && modoT && form.estado !== 'realizada' && form.estado !== 'cancelada' && form.fecha <= hoyAR() && <p className="text-xs text-dte-gris sm:col-span-6">Si cargás los participantes reales o la descripción, al guardar la acción se marca como realizada.</p>}
       {!aDefinir && (!modoT || form.estado === 'realizada' || form.fecha <= hoyAR()) && <Field label="Cantidad de inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={inscriptosEf} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>}
       {!aDefinir && (!modoT || form.estado === 'realizada' || form.fecha <= hoyAR()) && <Field label="Participantes reales" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>}
@@ -489,11 +489,11 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
     </fieldset>}
     {conEncuentro && !esClub && <fieldset className="grid gap-4 rounded-tile border border-dte-linea bg-dte-fondo p-3 sm:grid-cols-6">
       <legend className="px-1 text-sm font-semibold">Datos del encuentro <span className="font-normal text-dte-gris">(para las métricas de participación)</span></legend>
-      <div className="flex flex-col gap-1.5 sm:col-span-6"><span className="text-sm font-semibold text-dte-tinta">Propuesta</span>
-        {esTaller ? <PropuestaTaller value={form.propuesta} onChange={v => set('propuesta', v)} /> : <Input placeholder="Ej.: Ciudadanía digital en el aula" value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" />}</div>
+      <div role="group" aria-labelledby="rotulo-propuesta" className="flex flex-col gap-1.5 sm:col-span-6"><span id="rotulo-propuesta" className="text-sm font-semibold text-dte-tinta">Propuesta</span>
+        {esTaller ? <PropuestaTaller value={form.propuesta} onChange={v => set('propuesta', v)} /> : <Input aria-label="Propuesta" placeholder="Ej.: Ciudadanía digital en el aula" value={form.propuesta} onChange={e => set('propuesta', e.target.value)} className="h-10 bg-white" />}</div>
       <Field label="Encuentro N°" className="sm:col-span-2"><Input type="number" min={1} inputMode="numeric" value={form.encuentro_n} onChange={e => set('encuentro_n', e.target.value)} className="h-10 bg-white" /></Field>
       <Field label="Modalidad" className="sm:col-span-4"><select className={`${selectClass} h-11 md:h-10`} value={form.modalidad} onChange={e => set('modalidad', e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>
-      <div className="flex flex-col gap-1.5 sm:col-span-6"><span className="text-sm font-semibold text-dte-tinta">Destinatarios</span>{esTaller ? <Destinatarios value={form.destinatarios} grupo={null} onChange={v => set('destinatarios', v)} /> : <Input placeholder="Ej.: estudiantes de 6° A, docentes" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" />}</div>
+      <div role="group" aria-labelledby="rotulo-destinatarios-2" className="flex flex-col gap-1.5 sm:col-span-6"><span id="rotulo-destinatarios-2" className="text-sm font-semibold text-dte-tinta">Destinatarios</span>{esTaller ? <Destinatarios value={form.destinatarios} grupo={null} onChange={v => set('destinatarios', v)} /> : <Input aria-label="Destinatarios" placeholder="Ej.: estudiantes de 6° A, docentes" value={form.destinatarios} onChange={e => set('destinatarios', e.target.value)} className="h-10 bg-white" />}</div>
       {(!esTaller || form.estado === 'realizada' || form.fecha <= hoyAR()) && <>
         <Field label="Inscriptos" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.inscriptos} onChange={e => set('inscriptos', e.target.value)} className="h-10 bg-white" /></Field>
         <Field label="Asistentes" className="sm:col-span-3"><Input type="number" min={0} inputMode="numeric" value={form.asistentes} onChange={e => set('asistentes', e.target.value)} className="h-10 bg-white" /></Field>

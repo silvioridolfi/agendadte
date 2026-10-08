@@ -147,7 +147,6 @@ export const MAX_NOTA = 500
 export const AVISOS_CRONOGRAMA = ['jefatura_avisada', 'escuela_avisada'] as const
 export type AvisoCronograma = typeof AVISOS_CRONOGRAMA[number]
 export type TipoSeguimiento = EstadoSeguimiento | AvisoCronograma
-export const TIPO_SEGUIMIENTO_LABEL: Record<TipoSeguimiento, string> = { ...ESTADO_SEGUIMIENTO_LABEL, jefatura_avisada: 'Jefatura avisada', escuela_avisada: 'Escuela avisada' }
 export type Seguimiento = { estado: TipoSeguimiento, nota: string | null, fed_id: string | null, created_at: string }
 
 export type Cronograma = {

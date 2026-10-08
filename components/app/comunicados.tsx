@@ -61,7 +61,7 @@ export function CajaBanner({ c, total, leyendo, error, onLeido }: { c: api.Comun
         <div className="min-w-0">
           <p className="break-words text-[0.8125rem] font-bold leading-snug sm:text-sm">{c.titulo}{total > 1 && <span className="font-normal"> · +{total - 1} {total === 2 ? 'comunicado más' : 'comunicados más'}</span>}</p>
           <p className={`whitespace-pre-line break-words text-[0.8125rem] leading-snug sm:text-sm ${abierto ? '' : 'line-clamp-2'}`}><TextoConEnlaces texto={c.texto} /></p>
-          <button type="button" onClick={() => setAbierto(a => !a)} aria-expanded={abierto} className="mt-0.5 inline-flex min-h-8 items-center gap-1 text-xs font-semibold underline underline-offset-2">{abierto ? 'Ver menos' : 'Ver completo'}<ChevronDown className={`size-3.5 transition ${abierto ? 'rotate-180' : ''}`} aria-hidden /></button>
+          <button type="button" onClick={() => setAbierto(a => !a)} aria-expanded={abierto} className="mt-0.5 inline-flex min-h-10 items-center md:min-h-8 gap-1 text-xs font-semibold underline underline-offset-2">{abierto ? 'Ver menos' : 'Ver completo'}<ChevronDown className={`size-3.5 transition ${abierto ? 'rotate-180' : ''}`} aria-hidden /></button>
           {abierto && <p className="text-xs opacity-80">De {c.autor}</p>}
           {error && <p role="alert" className="text-xs font-semibold">{error}</p>}
         </div>

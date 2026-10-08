@@ -35,9 +35,6 @@ export const ACCIONES_CED: Accion[] = ['REUNIÓN', 'REUNIÓN CON JEFATURA', 'REU
 export const SOLO_CED: Accion[] = ['REUNIÓN CON INSPECCIÓN', 'REUNIÓN CON NIVEL CENTRAL', 'ARTICULACIÓN MUNICIPAL', 'ACOMPAÑAMIENTO A FED', 'SEGUIMIENTO DEL EQUIPO', 'GESTIÓN INSTITUCIONAL', 'INFORME TÉCNICO']
 // Acciones que registran encuentros con participantes (N° de encuentro, destinatarios, inscriptos, asistentes).
 export const CON_ENCUENTRO: Accion[] = ['CLUB DE TECNOLOGÍA', 'TALLER/CAPACITACIÓN', 'PRÁCTICAS PROFESIONALIZANTES']
-// Sugerencias de sub-acción tomadas del instructivo de la DTE y del master regional (se puede escribir otra).
-// Propuestas habituales de los encuentros de Clubes de Tecnología (líneas de la DTE).
-export const PROPUESTAS_CLUB = ['Pensamiento computacional', 'Programación', 'Robótica', 'Inteligencia artificial']
 export const SUB_ACCIONES: Partial<Record<Accion, string[]>> = {
   'VISITA TÉCNICA': ['Desbloqueos', 'Actualización de S.O.', 'Cambio de pilas', 'Chequeo de enlaces', 'Pisos tecnológicos', 'Demanda escolar', 'Soporte técnico en territorio', 'Mantenimiento de equipamiento', 'Gestión de accesos y blanqueos', 'Banco de netbooks (con EMATP)', 'Recuperación de sistema (software libre)', 'Recuperación de hardware', 'Actualización de navegadores'],
   'ASISTENCIA REMOTA': ['Desbloqueos', 'Gestión de accesos y blanqueos', 'Soporte técnico', 'Instalación de imágenes'],

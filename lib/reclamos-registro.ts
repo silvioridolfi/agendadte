@@ -1,7 +1,7 @@
 // Registro de reclamos de conectividad: estados, tipo de conexión, tipo de número y filtros del panel (puro).
 import { enlacesDe, tienePiso } from '@/lib/reclamos'
 import { esDelFed } from '@/lib/cronogramas'
-import { coincideEscuela } from '@/lib/buscador'
+import { coincideEscuela, sinTildes } from '@/lib/buscador'
 
 export const ESTADOS_RECLAMO = ['enviado', 'en_proceso', 'resuelto', 'anulado'] as const
 export type EstadoReclamo = typeof ESTADOS_RECLAMO[number]
@@ -59,7 +59,6 @@ export function origenDeNumero(n: string | null): 'Educar' | 'PBA' | null {
 }
 
 export type FiltrosReclamo = { estado: 'abiertos' | 'todos' | EstadoReclamo, fedId: string, conexion: string, busqueda: string }
-const sinTildes = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 export function filtrarReclamos(lista: Reclamo[], f: FiltrosReclamo, nombreFed: (id: string | null) => string): Reclamo[] {
   const q = sinTildes(f.busqueda.trim())
   return lista.filter(r =>
