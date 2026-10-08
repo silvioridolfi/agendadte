@@ -34,14 +34,14 @@ describe('compañeros', () => {
   const feds = [{ id: 'f1', ddjj: [1], carpeta_fotos_url: 'u1' }, { id: 'f2', ddjj: [2], carpeta_fotos_url: 'u2' }]
   it('un FED ve los horarios y la carpeta sólo de sí mismo', async () => {
     estado.responder = () => ({ data: feds })
-    const r = await A.getFeds(yoFed) as typeof feds
+    const r = await A.getFeds(yoFed) as unknown as typeof feds
     expect(r[0].ddjj).toEqual([1])
     expect(r[1].ddjj).toEqual([]); expect(r[1].carpeta_fotos_url).toBeNull()
   })
   it('la coordinación y la administración ven todo', async () => {
     estado.responder = () => ({ data: feds })
-    expect(((await A.getFeds(yoCed)) as typeof feds)[1].ddjj).toEqual([2])
-    expect(((await A.getFeds(yoAdmin)) as typeof feds)[1].carpeta_fotos_url).toBe('u2')
+    expect(((await A.getFeds(yoCed)) as unknown as typeof feds)[1].ddjj).toEqual([2])
+    expect(((await A.getFeds(yoAdmin)) as unknown as typeof feds)[1].carpeta_fotos_url).toBe('u2')
   })
 })
 
