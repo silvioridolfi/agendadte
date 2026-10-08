@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { destinatariosDe, estadoComunicado, llegaA, ordenarPendientes, resumenLecturas, tramosConEnlaces, validarComunicado, type EntradaComunicado } from '@/lib/comunicados'
+import { puedeEliminarComunicado, destinatariosDe, estadoComunicado, llegaA, ordenarPendientes, resumenLecturas, tramosConEnlaces, validarComunicado, type EntradaComunicado } from '@/lib/comunicados'
 
 const ok: EntradaComunicado = { titulo: 'Reunión', texto: 'El jueves a las 10.', nivel: 'informativo', fedIds: null, venceEl: null }
 const HOY = '2026-10-08'
@@ -52,5 +52,13 @@ describe('orden, lecturas y enlaces', () => {
     ])
     expect(tramosConEnlaces('sin enlaces')).toEqual([{ texto: 'sin enlaces' }])
     expect(tramosConEnlaces('javascript:alert(1)')).toEqual([{ texto: 'javascript:alert(1)' }])
+  })
+})
+
+describe('eliminar', () => {
+  it('solo lo que ya no se muestra', () => {
+    expect(puedeEliminarComunicado('vigente')).toBe(false)
+    expect(puedeEliminarComunicado('retirado')).toBe(true)
+    expect(puedeEliminarComunicado('vencido')).toBe(true)
   })
 })

@@ -175,7 +175,7 @@ Son avisos importantes que el CED (o la administración) manda al equipo. Aparec
 Desde el menú de las iniciales, **Comunicados**:
 - **Nuevo comunicado:** título (hasta ${MAX_TITULO_COMUNICADO} caracteres), mensaje (hasta ${MAX_TEXTO_COMUNICADO}, con enlaces si hace falta), nivel, **para quién** (todos los FED o los que elijas) y, si querés, una fecha de vencimiento: pasada esa fecha deja de mostrarse.
 - **Quién lo leyó y cuándo:** cada comunicado indica cuántos lo leyeron (por ejemplo "5 de 7") y, al abrirlo, la lista de FED con la fecha y la hora de lectura o **Sin leer**.
-- **Editar** y **Retirar:** editar el título, el mensaje o el nivel borra las lecturas (se pide leerlo de nuevo); cambiar solo los destinatarios o el vencimiento no. Al retirarlo deja de mostrarse, pero queda en la lista con sus lecturas.
+- **Editar** y **Retirar:** editar el título, el mensaje o el nivel borra las lecturas (se pide leerlo de nuevo); cambiar solo los destinatarios o el vencimiento no. Al retirarlo deja de mostrarse, pero queda en la lista con sus lecturas. Un comunicado retirado o vencido se puede **Eliminar**: se borra del todo, con su registro de lecturas, y no se puede deshacer (uno vigente primero se retira).
 - La coordinación no recibe los comunicados que se mandan a todos los FED.` },
 
   { id: 'cronogramas', titulo: 'Cronogramas de conectividad', para: ['fed', 'ced'], md: () => `
