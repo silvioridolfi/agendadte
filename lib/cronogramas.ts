@@ -281,7 +281,6 @@ export function cuandoEmpieza(hoy: string, habil: string): string {
 
 // ---------- Mensaje a la escuela ----------
 
-const fechaTxt = (c: Pick<Cronograma, 'fecha_inicio' | 'fecha_fin'>) => (c.fecha_fin === c.fecha_inicio ? `el ${corta(c.fecha_inicio)}` : `del ${corta(c.fecha_inicio)} al ${corta(c.fecha_fin)}`)
 const esEnlace = (t: string) => /^https?:\/\//i.test(t.trim())
 
 // Una línea de la columna de instaladores, lista para leer: sin el código inicial ("DT01 Cañete.Zenteno"), con los puntos entre apellidos como espacio,
@@ -298,21 +297,47 @@ export function personaDe(linea: string): string {
   return `${t ? `${t} ` : ''}(${tipo} ${numero})`
 }
 
-// Mensaje informativo para el directivo: qué tarea del cronograma de conectividad se hace en la escuela, cuándo, quién lo hace y con qué empresa (los cronogramas los establece otro
-// organismo: no se piden ni se cambian fechas). El responsable sale de la planilla con nombre y DNI o CUIL, o con el enlace que figura en la planilla.
-export function mensajeEscuela(c: Pick<Cronograma, 'cue' | 'fecha_inicio' | 'fecha_fin' | 'tipo' | 'proveedor' | 'instaladores'> & { school: { nombre: string | null } | null, nombre_planilla?: string | null }, fed: string, ahora: Date): { asunto: string, cuerpo: string } {
+// Mensaje informativo para el directivo, redactado como el que se manda por WhatsApp: qué tarea del cronograma de conectividad se hace en la escuela, cuándo, quién (empresa y personal) y qué se necesita de la escuela
+// (los cronogramas los establece otro organismo: no se piden ni se cambian fechas). El personal sale de la planilla con nombre y DNI o CUIL, o con el enlace que figura en la planilla.
+const completa = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}`
+const cuandoTxt = (c: Pick<Cronograma, 'fecha_inicio' | 'fecha_fin'>) => (c.fecha_fin === c.fecha_inicio ? `el día ${completa(c.fecha_inicio)}` : `entre los días ${completa(c.fecha_inicio)} y ${completa(c.fecha_fin)}`)
+const TAREAS: Record<string, string> = {
+  LAC_M: 'tareas de mantenimiento del piso tecnológico', LAC: 'la instalación del piso tecnológico', LAC_R: 'tareas de reparación del piso tecnológico',
+  'Instalación Enlace/Certificación': 'la instalación del enlace de internet y su certificación', 'Instalación SDWAN': 'la instalación del equipo SD-WAN',
+  Enlace: 'la instalación del enlace de internet', 'Certificación': 'la certificación del enlace de internet', 'Reubicación': 'la reubicación del equipamiento de conectividad', 'Asistencia técnica': 'una asistencia técnica',
+}
+const tareaDe = (t: string | null) => TAREAS[(t ?? '').trim()] ?? `tareas de ${etiquetaTipo(t).toLowerCase()}`
+// Las instalaciones de enlace o de equipo SD-WAN se hacen en el rack de la escuela.
+const pideRack = (t: string | null) => ['Instalación Enlace/Certificación', 'Instalación SDWAN', 'Enlace'].includes((t ?? '').trim())
+// Los tipos que llevan las recomendaciones de Conectividad para la escuela (nuevos enlaces y equipos SD-WAN).
+export const llevaRecomendaciones = (t: string | null | undefined) => ['Instalación Enlace/Certificación', 'Instalación SDWAN', 'Enlace', 'Certificación'].includes((t ?? '').trim())
+export const RECOMENDACIONES_ENLACE = `Algunas aclaraciones de Conectividad para tener en cuenta:
+
+- Si la escuela tiene piso tecnológico, el nuevo enlace se instala dentro del piso, en el WAN 2 del UTM: el filtrado de red se realiza a través de él.
+- Si la escuela no tiene piso tecnológico, el módem del proveedor es el que realiza el filtrado.
+- Los equipos SD-WAN también filtran contenido web: en escuelas con piso tecnológico, el equipo se coloca entre el módem del proveedor y el piso tecnológico.
+- Ya no existen enlaces exclusivamente administrativos: todos los servicios son administrativos/pedagógicos.
+- El responsable institucional es quien firma la conformidad del servicio. Una vez firmada es difícil revertir la instalación, por eso conviene consultar cualquier duda antes de firmar.
+- Ante cualquier inconveniente con el servicio, se envía un correo detallando el problema, con una foto del módem y del equipo SD-WAN, y el nombre y contacto del responsable institucional.`
+
+// `contacto` es el nombre de pila de la persona a la que se le escribe, si se sabe.
+export function mensajeEscuela(c: Pick<Cronograma, 'cue' | 'fecha_inicio' | 'fecha_fin' | 'tipo' | 'proveedor' | 'instaladores' | 'semana'> & { school: { nombre: string | null } | null, nombre_planilla?: string | null }, ahora: Date, contacto?: string | null): { asunto: string, cuerpo: string } {
   const escuela = c.school?.nombre ? siglaNombre(titleCase(c.school.nombre)) : c.nombre_planilla ? titleCase(c.nombre_planilla) : `CUE ${c.cue}`
+  const lugar = escuela.startsWith('CUE ') ? `la escuela ${escuela}` : `${escuela} (CUE ${c.cue})`
   const personal = (c.instaladores ?? '').split('\n').map(x => x.trim()).filter(Boolean)
   const enlaces = personal.filter(esEnlace), responsables = personal.filter(x => !esEnlace(x)).map(personaDe).filter(Boolean)
-  const lineas = [
-    `Escuela: ${escuela}${escuela.startsWith('CUE ') ? '' : ` (CUE ${c.cue})`}`, `Tarea: ${etiquetaTipo(c.tipo)}`, `Fecha: ${fechaTxt(c)}`, c.proveedor ? `Empresa: ${c.proveedor}` : null,
-    responsables.length === 1 ? `Responsable: ${responsables[0]}` : responsables.length > 1 ? `Responsables:\n${responsables.map(r => `- ${r}`).join('\n')}` : null,
-    enlaces.length ? `Datos del responsable: ${enlaces.join(' ')}` : null,
-  ].filter((x): x is string => !!x)
-  return {
-    asunto: `Cronograma de conectividad: ${escuela}, ${ventanaDe(c)}`,
-    cuerpo: `Hola, ${saludoDe(ahora)}.\n\nSoy ${fed}, de la Dirección de Tecnología Educativa (Región 1). Les informo que, según el cronograma de conectividad establecido, en la escuela está prevista la siguiente intervención:\n\n${lineas.join('\n')}\n\nQuedo a disposición por cualquier consulta.\nSaludos cordiales.`,
-  }
+  const programa = programaDe(c.semana)
+  const saludo = saludoDe(ahora), nombre = (contacto ?? '').trim().split(/\s+/)[0]
+  const apertura = nombre ? `Hola ${titleCase(nombre)}, ${saludo}.` : `${saludo[0].toUpperCase()}${saludo.slice(1)}.`
+  const quien = c.proveedor ? `personal de la empresa ${c.proveedor}` : 'personal técnico'
+  const cuerpo = [
+    `${apertura} Desde la Dirección de Tecnología Educativa informamos que, según el cronograma ${programa ? `de ${programa === 'Educar' ? 'EDUCAR' : programa}` : 'establecido'}, ${cuandoTxt(c)}, ${quien} realizará ${tareaDe(c.tipo)} en ${lugar}.`,
+    responsables.length === 1 ? `El personal técnico asignado es: ${responsables[0]}.` : responsables.length > 1 ? `El personal técnico asignado será:\n${responsables.map(r => `- ${r}`).join('\n')}` : null,
+    enlaces.length ? `Datos del personal técnico: ${enlaces.join(' ')}` : null,
+    `Se informa para que la institución esté al tanto y pueda facilitar el acceso al personal técnico.${pideRack(c.tipo) ? ' Se solicita tener disponible y accesible el rack para poder llevar adelante la instalación.' : ''}`,
+    'Saludos!',
+  ].filter((x): x is string => !!x).join('\n\n')
+  return { asunto: `Cronograma de conectividad: ${escuela}, ${ventanaDe(c)}`, cuerpo }
 }
 
 // Aviso al FED a cargo cuando el CED avisó a la jefatura.

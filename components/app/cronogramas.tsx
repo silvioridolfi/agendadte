@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { type Fed } from '@/lib/agenda'
-import { ESTADOS_SEGUIMIENTO, ESTADO_SEGUIMIENTO_LABEL, FILTROS_VACIOS, HORAS_CONTACTO_PBA, VALIDEZ_DIAS, avisoDe, esReprogramacion, esVespertino, fechaCortaAR, limiteContactosPba, programaDe, validoHasta, mensajeEscuela, puedeAvisarJefatura, MAX_NOTA, PIDE_MOTIVO, SIN_FED, esDelFed, estadoDe, etiquetaTipo, filtrarCronogramas, puedeMarcar, resumenCronogramas, ventanaDe, type AvisoCronograma, type Cronograma, type EstadoSeguimiento, type FiltrosCronogramas, type PestanaCronogramas } from '@/lib/cronogramas'
+import { ESTADOS_SEGUIMIENTO, ESTADO_SEGUIMIENTO_LABEL, FILTROS_VACIOS, HORAS_CONTACTO_PBA, VALIDEZ_DIAS, avisoDe, esReprogramacion, esVespertino, fechaCortaAR, limiteContactosPba, programaDe, validoHasta, mensajeEscuela, puedeAvisarJefatura, MAX_NOTA, PIDE_MOTIVO, SIN_FED, esDelFed, estadoDe, etiquetaTipo, llevaRecomendaciones, RECOMENDACIONES_ENLACE, filtrarCronogramas, puedeMarcar, resumenCronogramas, ventanaDe, type AvisoCronograma, type Cronograma, type EstadoSeguimiento, type FiltrosCronogramas, type PestanaCronogramas } from '@/lib/cronogramas'
 import { hoyAR } from '@/lib/hora'
 import { gmailAppUrl, gmailUrl, plataformaDe } from '@/lib/reclamos'
 import type { ContactoEscuela } from '@/lib/mis-escuelas'
@@ -94,13 +94,13 @@ export function Cronogramas({ profile, feds, esAdmin, cuenta, volver }: { profil
         {(resumen.sinCerrar > 0 || resumen.sinAvisarEscuela > 0 || (veTodos && resumen.sinFed > 0)) && <p className="mt-3 text-xs text-dte-gris">{[resumen.sinAvisarEscuela > 0 && <span key="a">Próximos con la escuela sin avisar: <b className="tabular-nums">{resumen.sinAvisarEscuela}</b></span>, resumen.sinCerrar > 0 && <span key="c">Pasados sin marcar: <b className="tabular-nums">{resumen.sinCerrar}</b></span>, veTodos && resumen.sinFed > 0 && <span key="f">Próximos sin FED asignado: <b className="tabular-nums">{resumen.sinFed}</b></span>].filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x]))}</p>}
         <p className="mt-3 text-xs text-dte-gris" aria-live="polite">{visibles.length} {visibles.length === 1 ? 'cronograma' : 'cronogramas'}</p>
         <LeyendaTipos />
-        {visibles.length ? <ul className="mt-3 flex flex-col gap-2">{visibles.map(c => <Tarjeta key={c.id} c={c} hoy={hoy} abierta={abierto === c.id} onAbrir={() => setAbierto(a => (a === c.id ? null : c.id))} puedeMarcar={puedeMarcar(quien, c)} avisaJefatura={avisaJefatura} esCed={veTodos} nombre={profile.nombre_completo} cuenta={cuenta} nombreFed={nombreFed} onAnotado={h => anotado(c.id, h)} />)}</ul>
+        {visibles.length ? <ul className="mt-3 flex flex-col gap-2">{visibles.map(c => <Tarjeta key={c.id} c={c} hoy={hoy} abierta={abierto === c.id} onAbrir={() => setAbierto(a => (a === c.id ? null : c.id))} puedeMarcar={puedeMarcar(quien, c)} avisaJefatura={avisaJefatura} esCed={veTodos} cuenta={cuenta} nombreFed={nombreFed} onAnotado={h => anotado(c.id, h)} />)}</ul>
           : <div className="mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-dte-linea px-4 py-10 text-center text-sm text-dte-gris"><CalendarClock className="size-6" aria-hidden />{propios.length ? 'No hay cronogramas con esos filtros.' : 'Todavía no hay cronogramas cargados.'}</div>}
       </>}
   </main>
 }
 
-function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, avisaJefatura, esCed, nombre: miNombre, cuenta, nombreFed, onAnotado }: { c: Cronograma, hoy: string, abierta: boolean, onAbrir: () => void, puedeMarcar: boolean, avisaJefatura: boolean, esCed: boolean, nombre: string, cuenta: string, nombreFed: (id: string | null) => string, onAnotado: (h: Cronograma['historial'][number]) => void }) {
+function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, avisaJefatura, esCed, cuenta, nombreFed, onAnotado }: { c: Cronograma, hoy: string, abierta: boolean, onAbrir: () => void, puedeMarcar: boolean, avisaJefatura: boolean, esCed: boolean, cuenta: string, nombreFed: (id: string | null) => string, onAnotado: (h: Cronograma['historial'][number]) => void }) {
   const [copiado, setCopiado] = useState(false)
   const nombre = c.school?.nombre ? titleCase(c.school.nombre) : c.nombre_planilla ? titleCase(c.nombre_planilla) : `CUE ${c.cue}`
   const fed = c.school?.fed_a_cargo
@@ -140,7 +140,7 @@ function Tarjeta({ c, hoy, abierta, onAbrir, puedeMarcar, avisaJefatura, esCed, 
         <ul className="mt-1 flex flex-col gap-0.5">{instaladores.map((l, i) => <li key={i} className="break-words">{esEnlace(l) ? <a href={l.trim()} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline">{l.trim()}</a> : l}</li>)}</ul>
       </div>}
       <Referencia c={c} esCed={esCed} />
-      <Avisos c={c} puedeMarcar={puedeMarcar} avisaJefatura={avisaJefatura} nombre={miNombre} cuenta={cuenta} nombreFed={nombreFed} onAnotado={onAnotado} />
+      <Avisos c={c} puedeMarcar={puedeMarcar} avisaJefatura={avisaJefatura} cuenta={cuenta} nombreFed={nombreFed} onAnotado={onAnotado} />
       <Seguimiento c={c} puedeMarcar={puedeMarcar} nombreFed={nombreFed} onAnotado={onAnotado} />
       {c.descripcion && <p><span className="text-xs font-semibold text-dte-gris">Descripción: </span><span className="break-words">{c.descripcion}</span></p>}
       {c.observaciones && <p><span className="text-xs font-semibold text-dte-gris">Observaciones de territorio: </span><span className="break-words">{c.observaciones}</span></p>}
@@ -180,7 +180,7 @@ function Seguimiento({ c, puedeMarcar, nombreFed, onAnotado }: { c: Cronograma, 
 }
 
 // Avisos de la visita: la jefatura (la avisa el CED) y la escuela (la avisa el FED a cargo, con el mensaje armado desde acá).
-function Avisos({ c, puedeMarcar, avisaJefatura, nombre, cuenta, nombreFed, onAnotado }: { c: Cronograma, puedeMarcar: boolean, avisaJefatura: boolean, nombre: string, cuenta: string, nombreFed: (id: string | null) => string, onAnotado: (h: Cronograma['historial'][number]) => void }) {
+function Avisos({ c, puedeMarcar, avisaJefatura, cuenta, nombreFed, onAnotado }: { c: Cronograma, puedeMarcar: boolean, avisaJefatura: boolean, cuenta: string, nombreFed: (id: string | null) => string, onAnotado: (h: Cronograma['historial'][number]) => void }) {
   const [guardando, setGuardando] = useState<AvisoCronograma | null>(null)
   const [error, setError] = useState('')
   const [armando, setArmando] = useState(false)
@@ -201,16 +201,17 @@ function Avisos({ c, puedeMarcar, avisaJefatura, nombre, cuenta, nombreFed, onAn
     </ul>
     {puedeMarcar && esc && <Button type="button" variant="ghost" size="sm" onClick={() => setArmando(true)} className="mt-1.5 text-dte-petroleo"><Send data-icon="inline-start" />Ver el mensaje</Button>}
     {error && <div className="mt-2"><ErrorBox message={error} /></div>}
-    {armando && <MensajeEscuela c={c} nombre={nombre} cuenta={cuenta} avisada={!!esc} onClose={() => setArmando(false)} onAvisada={onAnotado} />}
+    {armando && <MensajeEscuela c={c} cuenta={cuenta} avisada={!!esc} onClose={() => setArmando(false)} onAvisada={onAnotado} />}
   </div>
 }
 
 // Mensaje para el directivo: se copia o se abre en el correo, con los contactos de la escuela a mano. Al final se anota que la escuela quedó avisada.
-function MensajeEscuela({ c, nombre, cuenta, avisada, onClose, onAvisada }: { c: Cronograma, nombre: string, cuenta: string, avisada: boolean, onClose: () => void, onAvisada: (h: Cronograma['historial'][number]) => void }) {
+function MensajeEscuela({ c, cuenta, avisada, onClose, onAvisada }: { c: Cronograma, cuenta: string, avisada: boolean, onClose: () => void, onAvisada: (h: Cronograma['historial'][number]) => void }) {
   const [contactos, setContactos] = useState<ContactoEscuela[] | null>(null)
   const [error, setError] = useState('')
   const [elegido, setElegido] = useState('')
   const [copiado, setCopiado] = useState(false)
+  const [copiadoRec, setCopiadoRec] = useState(false)
   const [marcando, setMarcando] = useState(false)
   const [ahora] = useState(() => new Date())
   useEffect(() => {
@@ -218,9 +219,11 @@ function MensajeEscuela({ c, nombre, cuenta, avisada, onClose, onAvisada }: { c:
     getContactosCronograma(c.id).then(l => { if (vigente) { setContactos(l); setElegido(l.map(k => k.correo_laboral || k.correo).find(Boolean) ?? '') } }).catch(e => { if (vigente) setError(errMsg(e)) })
     return () => { vigente = false }
   }, [c.id])
-  const msg = mensajeEscuela(c, nombre, ahora)
+  const contacto = contactos?.find(k => (k.correo_laboral || k.correo) === elegido)?.nombre ?? null
+  const msg = mensajeEscuela(c, ahora, contacto)
   const borrador = { asunto: msg.asunto, para: elegido || null, cuerpo: msg.cuerpo }
   const copiar = async () => { try { await navigator.clipboard.writeText(msg.cuerpo); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { setCopiado(false) } }
+  const copiarRec = async () => { try { await navigator.clipboard.writeText(RECOMENDACIONES_ENLACE); setCopiadoRec(true); setTimeout(() => setCopiadoRec(false), 2000) } catch { setCopiadoRec(false) } }
   async function yaAvise() {
     setMarcando(true); setError('')
     try { onAvisada(await avisarCronograma(c.id, 'escuela_avisada')); onClose() } catch (e) { setError(errMsg(e)); setMarcando(false) }
@@ -242,6 +245,7 @@ function MensajeEscuela({ c, nombre, cuenta, avisada, onClose, onAvisada }: { c:
       {error && contactos && <ErrorBox message={error} />}
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <a href={gmailUrl(borrador, cuenta)} target="_blank" rel="noopener noreferrer" onClick={e => { const p = plataformaDe(navigator.userAgent); if (p === 'otra') return; e.preventDefault(); window.location.href = gmailAppUrl(borrador, p, cuenta) }} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control bg-dte-petroleo px-4 text-sm font-semibold text-white transition hover:bg-dte-petroleo-oscuro md:min-h-9"><Mail className="size-4" aria-hidden />Abrir en mi correo</a>
+        {llevaRecomendaciones(c.tipo) && <Button type="button" variant="outline" onClick={copiarRec} className="min-h-11 md:min-h-9">{copiadoRec ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiadoRec ? 'Copiadas' : 'Copiar recomendaciones'}</Button>}
         {!avisada && <Button type="button" variant="outline" onClick={yaAvise} disabled={marcando} className="min-h-11 md:min-h-9">{marcando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Ya avisé a la escuela</Button>}
         <Button type="button" variant="ghost" onClick={onClose} className="min-h-11 md:min-h-9">Cerrar</Button>
       </div>
