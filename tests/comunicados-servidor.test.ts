@@ -28,7 +28,7 @@ import type { Usuario } from '@/lib/sesion'
 import type { EntradaComunicado } from '@/lib/comunicados'
 
 const usuario = (id: string, rol: 'fed' | 'coordinacion', esAdmin = false) => ({ fed: { id, nombre_completo: id, rol }, esAdmin, userId: id, email: `${id}@abc.gob.ar`, debeCambiar: false }) as unknown as Usuario
-const fed = usuario('f1', 'fed'), otroFed = usuario('f2', 'fed'), ced = usuario('c1', 'coordinacion'), admin = usuario('a1', 'fed', true)
+const fed = usuario('f1', 'fed'), ced = usuario('c1', 'coordinacion'), admin = usuario('a1', 'fed', true)
 const MAÑANA = '2099-01-01', AYER = '2000-01-01'
 const com = (o: Record<string, unknown>) => ({ id: 'x', titulo: 'T', texto: 'M', nivel: 'informativo', fed_ids: null, autor_id: 'c1', vence_el: null, retirado: false, created_at: '2026-10-08T12:00:00Z', editado_at: null, ...o })
 const entrada: EntradaComunicado = { titulo: 'Reunión', texto: 'El jueves', nivel: 'informativo', fedIds: null, venceEl: null }
