@@ -5,17 +5,17 @@ import { conRealizadosSinRegistro, proximoEncuentro } from '@/lib/encuentro'
 import { esEnero, mensajeEnero, recesoEnero } from '@/lib/receso'
 import { enlaceDe, esReunion } from '@/lib/reunion'
 import { ACCIONES, CON_ENCUENTRO, ESTADOS, esAusencia, type AgendaItem, type AgendaItemInput, type Encuentro, type EncuentroInput, type Fed, type Feriado, type School, type Club, type Notificacion, MODALIDADES, MODALIDADES_EVENTO, ROLES_FORMACION, type EventoDte, TIPOS_JORNADA, CUE_DTE, esTrayecto, serieFechas } from '@/lib/agenda'
-import { borrarSesion, guardarSesion, passwordTemporal, requerirUsuario, usuarioActual, usuarioDeSesion, validarPassword, type Usuario } from '@/lib/sesion'
-import { DriveError, cuentaTecnica, driveConfigurado, idDeCarpeta, urlCarpeta, verificarCarpeta } from '@/lib/drive'
-import { ordenarFotos } from '@/lib/fotos'
-import { PRIMER_MES, carpetaDelMes, inicioMes, hoyAR as hoyPve, mesesEntregables, nombreMes, noLaborables, revisarPve, vencimientoPve } from '@/lib/pve'
+import { requerirUsuario, type Usuario } from '@/lib/sesion'
 import { armarDdjj, cargaDeDdjj, cargosDe, franjasDte, validarDdjj } from '@/lib/ddjj'
 import { hoyAR } from '@/lib/hora'
 import { sinTildes } from '@/lib/buscador'
-import { fedsDeFotosPermitidos, puedeVerAccion, puedeVerAgendaDe, veTodoElEquipo } from '@/lib/permisos'
+import { puedeVerAccion, puedeVerAgendaDe, veTodoElEquipo } from '@/lib/permisos'
 import type { EntradaComunicado } from '@/lib/comunicados'
 import * as comunicados from '@/lib/servidor/comunicados'
-import { audit } from '@/lib/servidor/comun'
+import * as sesion from '@/lib/servidor/sesion'
+import * as usuarios from '@/lib/servidor/usuarios'
+import * as fotos from '@/lib/servidor/fotos-pve'
+import { audit, datosDeAccion, errMsgServer, quienEs } from '@/lib/servidor/comun'
 import { avisaPorFecha } from '@/lib/avisos'
 import type { ClubDeEscuela, DatosEscuela, FichaEscuela, FilaHistorial } from '@/lib/escuela'
 import { tipoDe, type EscuelaConectividad } from '@/lib/reclamos'
@@ -34,7 +34,6 @@ import { avisosPendientes, diasSinActividad, fechaAR, hayAlerta, type Actividad,
 // En producción Next oculta el mensaje de los errores lanzados en server actions (React #441),
 // así que se devuelven como valor y el cliente los vuelve a lanzar con el mensaje real.
 export type Result<T> = { ok: true; data: T } | { ok: false; error: string }
-const errMsgServer = (e: unknown) => (e instanceof Error ? e.message : String(e))
 async function run<T>(fn: () => Promise<T>): Promise<Result<T>> {
   try { return { ok: true, data: await fn() } } catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) } }
 }
@@ -1140,15 +1139,6 @@ async function moverFinDeSemanaImpl(ids: string[], fedId: string, destino: 'vier
   return movidas
 }
 
-// Quién pide: el perfil de la sesión, para las reglas de lo que se puede ver (lib/permisos.ts).
-const quienEs = (yo: Usuario) => ({ id: yo.fed.id, rol: yo.fed.rol as string, esAdmin: yo.esAdmin })
-// Datos de una acción para decidir si la puede ver quien pide: quién la creó y quiénes están etiquetados.
-async function datosDeAccion(itemId: string): Promise<{ fed_id: string, participantes: string[] } | null> {
-  const db = supabaseServer()
-  const [{ data: item }, { data: part }] = await Promise.all([db.from('agenda_items').select('fed_id').eq('id', itemId).maybeSingle(), db.from('agenda_participantes').select('fed_id').eq('item_id', itemId)])
-  return item ? { fed_id: item.fed_id as string, participantes: (part ?? []).map(p => p.fed_id as string) } : null
-}
-
 // Todas las acciones exigen sesión. El perfil que actúa sale de la sesión, nunca de los parámetros del navegador.
 const conUsuario = <T,>(fn: (yo: Usuario) => Promise<T>) => run(async () => fn(await requerirUsuario()))
 // Un FED ve el nombre, el rol y los distritos de sus compañeros, pero no sus horarios (DD.JJ.) ni su carpeta de fotos: eso lo ven la coordinación y la administración.
@@ -1380,211 +1370,32 @@ export const addFeriado = async (_autorId: string, f: Omit<Feriado, 'id'>) => co
 export const deleteFeriado = async (_autorId: string, id: string) => conUsuario(yo => deleteFeriadoImpl(yo.fed.id, id))
 export const confirmarFeriado = async (id: string, confirmado: boolean) => conUsuario(yo => confirmarFeriadoImpl(yo.fed.id, id, confirmado))
 
-// ---- Fotos en Google Drive: carpeta propia de cada FED, ordenada por día por la cuenta técnica.
-export type EstadoFotos = { configurado: boolean, cuentaTecnica: string, url: string | null, nombre: string | null, puedeEditar: boolean, error: string | null }
-export const estadoFotos = async () => conUsuario(async (yo): Promise<EstadoFotos> => {
-  const { data } = await supabaseServer().from('feds').select('carpeta_fotos_id, carpeta_fotos_url').eq('id', yo.fed.id).maybeSingle()
-  const base = { configurado: driveConfigurado(), cuentaTecnica: cuentaTecnica(), url: data?.carpeta_fotos_url ?? null, nombre: null, puedeEditar: false, error: null }
-  if (!data?.carpeta_fotos_id || !base.configurado) return base
-  try { const v = await verificarCarpeta(data.carpeta_fotos_id); return { ...base, nombre: v.nombre, puedeEditar: v.puedeEditar } }
-  catch (e) { return { ...base, error: e instanceof DriveError && (e.status === 404 || e.status === 403) ? 'La cuenta técnica todavía no tiene acceso a la carpeta. Compartila como Editor.' : errMsgServer(e) } }
-})
-export const guardarCarpetaFotos = async (url: string) => conUsuario(async yo => {
-  const limpio = url.trim()
-  if (!limpio) { await supabaseServer().from('feds').update({ carpeta_fotos_id: null, carpeta_fotos_url: null }).eq('id', yo.fed.id); return }
-  if (!/^https:\/\/drive\.google\.com\//.test(limpio)) throw new Error('Pegá el enlace de una carpeta de Google Drive (drive.google.com/…)')
-  const id = idDeCarpeta(limpio)
-  if (!id) throw new Error('No se reconoce el enlace: abrí la carpeta en Drive y copiá la dirección completa')
-  const { error } = await supabaseServer().from('feds').update({ carpeta_fotos_id: id, carpeta_fotos_url: urlCarpeta(id) }).eq('id', yo.fed.id)
-  if (error) throw new Error(error.message)
-  await audit('feds', yo.fed.id, 'modificacion', yo.fed.id, { carpeta_fotos: urlCarpeta(id) })
-})
-export const ordenarMisFotos = async () => conUsuario(async yo => ordenarFotos(yo.fed.id))
+export type { EstadoFotos, PveEvento, PveMes, PveFed, ConteoFotos } from '@/lib/servidor/fotos-pve'
+// Fotos en Google Drive: carpeta propia de cada FED, ordenada por día por la cuenta técnica.
+export const estadoFotos = async () => conUsuario(yo => fotos.estadoFotos(yo))
+export const guardarCarpetaFotos = async (url: string) => conUsuario(yo => fotos.guardarCarpetaFotos(yo, url))
+export const ordenarMisFotos = async () => conUsuario(yo => fotos.ordenarMisFotos(yo))
 
-// ---- PVE (Planillas de Visita a Escuelas): el FED sube un PDF por mes a su carpeta; la coordinación las descarga juntas.
-export type PveEvento = { tipo: 'entregada' | 'devuelta' | 'reentregada' | 'enviada', motivo: string | null, fecha: string }
-// Estado de devolución: `devuelta` (con motivo) mientras no se suba la corregida; `reentregada` cuando ya se subió.
-export type PveMes = { mes: string, nombreMes: string, vence: string, carpetaUrl: string | null, entregada: string | null, nombre: string | null, archivoUrl: string | null, enviada: string | null, devuelta: string | null, motivo: string | null, reentregada: string | null, historial: PveEvento[] }
-const urlArchivo = (id: string) => `https://drive.google.com/file/d/${id}/view`
-export const misPve = async (revisar = false) => conUsuario(async (yo): Promise<{ conectada: boolean, meses: PveMes[], error: string | null }> => {
-  const db = supabaseServer()
-  const { data: fed } = await db.from('feds').select('carpeta_fotos_id').eq('id', yo.fed.id).maybeSingle()
-  if (yo.fed.rol !== 'fed' || !fed?.carpeta_fotos_id) return { conectada: false, meses: [], error: null }
-  let error: string | null = null
-  if (revisar) { try { await revisarPve(yo.fed.id) } catch (e) { error = e instanceof Error ? e.message : 'No se pudo revisar la carpeta' } }
-  const [{ data }, { data: hist }] = await Promise.all([
-    db.from('pve').select('mes, folder_id, file_id, nombre, entregada_at, enviada_at, devuelta_at, motivo_devolucion, reentregada_at').eq('fed_id', yo.fed.id).gte('mes', PRIMER_MES),
-    db.from('pve_historial').select('mes, tipo, motivo, created_at').eq('fed_id', yo.fed.id).gte('mes', PRIMER_MES).order('created_at'),
-  ])
-  const nl = await noLaborables(PRIMER_MES, inicioMes(hoyPve(), 2))
-  // Todos los meses entregables, tengan o no carpeta (la carpeta se crea al tocar "Subir").
-  return { conectada: true, error, meses: mesesEntregables().slice(0, 6).map(mes => { const r = (data ?? []).find(x => x.mes === mes); return { mes, nombreMes: nombreMes(mes), vence: vencimientoPve(mes, nl), carpetaUrl: r ? urlCarpeta(r.folder_id) : null, entregada: r?.file_id ? r.entregada_at : null, nombre: r?.nombre ?? null, archivoUrl: r?.file_id ? urlArchivo(r.file_id) : null, enviada: r?.enviada_at ?? null, devuelta: r?.devuelta_at ?? null, motivo: r?.motivo_devolucion ?? null, reentregada: r?.reentregada_at ?? null, historial: (hist ?? []).filter(h => h.mes === mes).map(h => ({ tipo: h.tipo, motivo: h.motivo, fecha: h.created_at })) } }) }
-})
-// "Subir": crea (si hace falta) la carpeta del mes en el Drive del FED y devuelve su enlace.
-export const abrirCarpetaPve = async (mes: string) => conUsuario(async yo => {
-  if (yo.fed.rol !== 'fed') throw new Error('Sólo los FED entregan PVE')
-  if (!mesesEntregables().includes(mes)) throw new Error('Ese mes no se puede entregar por la agenda')
-  return urlCarpeta(await carpetaDelMes(yo.fed.id, mes))
-})
-async function soloCoordinacion() {
-  const yo = await requerirUsuario()
-  if (yo.fed.rol !== 'coordinacion' && !yo.esAdmin) throw new Error('Sólo la coordinación puede ver las PVE del equipo')
-  return yo
-}
-export type PveFed = { fedId: string, nombre: string, vence: string, conectada: boolean, entregada: string | null, nombreArchivo: string | null, archivoUrl: string | null, enviada: string | null, devuelta: string | null, motivo: string | null, reentregada: string | null, historial: PveEvento[] }
-export const pveEquipo = async (mes: string) => run(async (): Promise<PveFed[]> => {
-  await soloCoordinacion()
-  if (!/^\d{4}-\d{2}-01$/.test(mes) || mes < PRIMER_MES) throw new Error('Mes inválido')
-  const db = supabaseServer()
-  const [{ data: feds }, { data: filas }] = await Promise.all([
-    db.from('feds').select('id, nombre_completo, carpeta_fotos_id').eq('rol', 'fed').order('nombre_completo'),
-    db.from('pve').select('fed_id, file_id, nombre, entregada_at, enviada_at, devuelta_at, motivo_devolucion, reentregada_at').eq('mes', mes),
-  ])
-  const { data: hist } = await db.from('pve_historial').select('fed_id, tipo, motivo, created_at').eq('mes', mes).order('created_at')
-  const vence = vencimientoPve(mes, await noLaborables(inicioMes(mes, 1), inicioMes(mes, 2)))
-  return (feds ?? []).map(f => { const r = (filas ?? []).find(x => x.fed_id === f.id); return { fedId: f.id, nombre: f.nombre_completo, vence, conectada: !!f.carpeta_fotos_id, entregada: r?.file_id ? r.entregada_at : null, nombreArchivo: r?.file_id ? r.nombre : null, archivoUrl: r?.file_id ? urlArchivo(r.file_id) : null, enviada: r?.enviada_at ?? null, devuelta: r?.devuelta_at ?? null, motivo: r?.motivo_devolucion ?? null, reentregada: r?.reentregada_at ?? null, historial: (hist ?? []).filter(h => h.fed_id === f.id).map(h => ({ tipo: h.tipo, motivo: h.motivo, fecha: h.created_at })) } })
-})
-export const marcarPveEnviadas = async (mes: string) => run(async () => {
-  const yo = await soloCoordinacion()
-  // Las devueltas que todavía no se corrigieron quedan afuera.
-  const db = supabaseServer()
-  const { data, error } = await db.from('pve').update({ enviada_at: new Date().toISOString(), enviada_por: yo.fed.id }).eq('mes', mes).not('file_id', 'is', null).is('enviada_at', null).or('devuelta_at.is.null,reentregada_at.not.is.null').select('fed_id')
-  if (error) throw new Error(error.message)
-  if (data?.length) await db.from('pve_historial').insert(data.map(d => ({ fed_id: d.fed_id, mes, tipo: 'enviada', autor_id: yo.fed.id })))
-  await audit('pve', null, 'estado', yo.fed.id, { mes, enviadas: data?.length ?? 0 })
-  return data?.length ?? 0
-})
-// Devolver una PVE al FED para que la corrija (también si ya se había enviado a Nivel Central).
-export const devolverPve = async (fedId: string, mes: string, motivo: string) => run(async () => {
-  const yo = await soloCoordinacion()
-  const texto = motivo.trim().slice(0, 500)
-  if (!texto) throw new Error('Escribí el motivo de la devolución')
-  const db = supabaseServer()
-  const { data, error } = await db.from('pve').update({ devuelta_at: new Date().toISOString(), motivo_devolucion: texto, reentregada_at: null, enviada_at: null, updated_at: new Date().toISOString() }).eq('fed_id', fedId).eq('mes', mes).not('file_id', 'is', null).select('fed_id')
-  if (error) throw new Error(error.message)
-  if (!data?.length) throw new Error('Esa PVE no está entregada')
-  await db.from('pve_historial').insert({ fed_id: fedId, mes, tipo: 'devuelta', motivo: texto, autor_id: yo.fed.id })
-  await db.from('notificaciones').insert({ fed_id: fedId, autor_id: yo.fed.id, tipo: 'pve', detalle: `Devolvió tu PVE de ${nombreMes(mes).toLowerCase()} para corregir: ${texto}` })
-  await audit('pve', null, 'estado', yo.fed.id, { fedId, mes, devuelta: texto })
-})
-// Fotos de una acción: la subcarpeta de la acción si ya tiene fotos asignadas por hora; si no, la carpeta del día, sólo si quedaron fotos sin asignar a ninguna acción.
-// Una por cada FED (responsable y participantes) que tenga fotos ordenadas.
-export const fotosDelDia = async (fedIds: string[], fecha: string, itemId?: string) => conUsuario(async yo => {
-  const accion = itemId && !veTodoElEquipo(quienEs(yo)) ? await datosDeAccion(itemId) : null
-  const ids = fedsDeFotosPermitidos(quienEs(yo), fedIds, accion).slice(0, 20), db = supabaseServer()
-  const [{ data: dias }, { data: acc }] = await Promise.all([
-    db.from('fotos_dias').select('fed_id, folder_id').in('fed_id', ids).eq('fecha', fecha),
-    itemId ? db.from('fotos_acciones').select('fed_id, folder_id').in('fed_id', ids).eq('item_id', itemId) : Promise.resolve({ data: [] as { fed_id: string, folder_id: string }[] }),
-  ])
-  const porAccion = new Map((acc ?? []).map(a => [a.fed_id as string, a.folder_id as string]))
-  const { data: procesadas } = await db.from('fotos_procesadas').select('fed_id, item_id').in('fed_id', ids).eq('fecha', fecha)
-  const cuenta = (id: string, deAccion: boolean) => (procesadas ?? []).filter(p => p.fed_id === id && (deAccion ? p.item_id === itemId : !p.item_id)).length
-  return ids.flatMap(id => {
-    const a = porAccion.get(id), d = (dias ?? []).find(x => x.fed_id === id)?.folder_id as string | undefined
-    return a ? [{ fedId: id, url: urlCarpeta(a), deAccion: true, n: cuenta(id, true) }] : d && cuenta(id, false) ? [{ fedId: id, url: urlCarpeta(d), deAccion: false, n: cuenta(id, false) }] : []
-  })
-})
+// PVE (Planillas de Visita a Escuelas): el FED sube un PDF por mes a su carpeta; la coordinación las descarga juntas.
+export const misPve = async (revisar = false) => conUsuario(yo => fotos.misPve(yo, revisar))
+export const abrirCarpetaPve = async (mes: string) => conUsuario(yo => fotos.abrirCarpetaPve(yo, mes))
+export const pveEquipo = async (mes: string) => run(() => fotos.pveEquipo(mes))
+export const marcarPveEnviadas = async (mes: string) => run(() => fotos.marcarPveEnviadas(mes))
+export const devolverPve = async (fedId: string, mes: string, motivo: string) => run(() => fotos.devolverPve(fedId, mes, motivo))
+export const fotosDelDia = async (fedIds: string[], fecha: string, itemId?: string) => conUsuario(yo => fotos.fotosDelDia(yo, fedIds, fecha, itemId))
+export const conteoFotos = async () => conUsuario(yo => fotos.conteoFotos(yo))
 
-// Cantidad de fotos ordenadas: por acción (asignadas por hora) y por FED y día ("fedId|fecha"). Para los contadores del calendario y el tablero.
-// `sueltas`: fotos del día que no quedaron asignadas a ninguna acción.
-export type ConteoFotos = { items: Record<string, number>, dias: Record<string, number>, sueltas: Record<string, number> }
-export const conteoFotos = async () => conUsuario(async (yo): Promise<ConteoFotos> => {
-  const db = supabaseServer(), out: ConteoFotos = { items: {}, dias: {}, sueltas: {} }
-  // Un FED cuenta solo las fotos propias; la coordinación y la administración, las de todo el equipo.
-  const solo = veTodoElEquipo(quienEs(yo)) ? null : yo.fed.id
-  for (let desde = 0; ; desde += 1000) {
-    let q = db.from('fotos_procesadas').select('fed_id, fecha, item_id').not('fecha', 'is', null)
-    if (solo) q = q.eq('fed_id', solo)
-    const { data, error } = await q.order('file_id').range(desde, desde + 999)
-    if (error) throw new Error(error.message)
-    for (const r of data ?? []) {
-      const k = `${r.fed_id}|${r.fecha}`
-      out.dias[k] = (out.dias[k] ?? 0) + 1
-      if (r.item_id) out.items[r.item_id as string] = (out.items[r.item_id as string] ?? 0) + 1
-      else out.sueltas[k] = (out.sueltas[k] ?? 0) + 1
-    }
-    if (!data || data.length < 1000) return out
-  }
-})
+export type { Sesion } from '@/lib/servidor/sesion'
+// Sesión: ingreso, salida y cambio de contraseña.
+export const miSesion = async () => run(() => sesion.miSesion())
+export const ingresar = async (email: string, password: string) => run(() => sesion.ingresar(email, password))
+export const salir = async () => run(() => sesion.salir())
+export const cambiarPassword = async (nueva: string, actual = '') => run(() => sesion.cambiarPassword(nueva, actual))
 
-// ---- Sesión: ingreso, salida y cambio de contraseña.
-export type Sesion = { fed: Fed, email: string, esAdmin: boolean, debeCambiar: boolean }
-export const miSesion = async () => run(async (): Promise<Sesion | null> => {
-  const u = await usuarioActual()
-  return u ? { fed: u.fed, email: u.email, esAdmin: u.esAdmin, debeCambiar: u.debeCambiar } : null
-})
-export const ingresar = async (email: string, password: string) => run(async (): Promise<Sesion> => {
-  const correo = email.trim().toLowerCase()
-  const invalido = 'Correo o contraseña incorrectos.'
-  if (!correo || !password) throw new Error(invalido)
-  const { data: fed } = await supabaseServer().from('feds').select('id').eq('email', correo).maybeSingle()
-  if (!fed) throw new Error(invalido)
-  // Cliente propio para el ingreso: no reutiliza el de servicio (quedaría con la sesión del usuario).
-  const { data, error } = await supabaseServer().auth.signInWithPassword({ email: correo, password })
-  if (error || !data.session) throw new Error(error?.status === 429 ? 'Demasiados intentos. Esperá unos minutos y probá de nuevo.' : invalido)
-  await guardarSesion(data.session)
-  const u = await usuarioDeSesion(data.session.access_token)
-  if (!u) { await borrarSesion(); throw new Error(invalido) }
-  return { fed: u.fed, email: u.email, esAdmin: u.esAdmin, debeCambiar: u.debeCambiar }
-})
-export const salir = async () => run(async () => { await borrarSesion() })
-// Desde el menú hay que confirmar la contraseña actual. Con una temporal (primer ingreso o reseteo) el cambio es obligatorio y no se la vuelve a pedir: se acaba de ingresar con ella.
-export const cambiarPassword = async (nueva: string, actual = '') => run(async () => {
-  const yo = await requerirUsuario({ permitirTemporal: true })
-  const err = validarPassword(nueva, yo.email)
-  if (err) throw new Error(err)
-  if (!yo.debeCambiar) {
-    if (!actual) throw new Error('Escribí tu contraseña actual.')
-    if (actual === nueva) throw new Error('La nueva contraseña tiene que ser distinta de la actual.')
-    const { data, error } = await supabaseServer().auth.signInWithPassword({ email: yo.email, password: actual })
-    if (error || !data.session) throw new Error(error?.status === 429 ? 'Demasiados intentos. Esperá unos minutos y probá de nuevo.' : 'La contraseña actual no es correcta.')
-  }
-  const db = supabaseServer()
-  const { error } = await db.auth.admin.updateUserById(yo.userId, { password: nueva })
-  if (error) throw new Error(error.message.includes('same') ? 'La nueva contraseña tiene que ser distinta de la anterior.' : error.message)
-  await db.from('feds').update({ debe_cambiar_password: false }).eq('id', yo.fed.id)
-  await audit('feds', yo.fed.id, 'modificacion', yo.fed.id, { cambio_password: true })
-})
-
-// ---- Usuarios (sólo administración): alta de cuentas y reseteo de contraseñas.
-export type UsuarioEquipo = { fedId: string, nombre: string, rol: Fed['rol'], email: string | null, esAdmin: boolean, estado: 'sin_cuenta' | 'pendiente' | 'activo', ultimoIngreso: string | null }
-async function cuentasPorEmail() {
-  const db = supabaseServer(), m = new Map<string, { id: string, last_sign_in_at?: string | null }>()
-  for (let page = 1; page < 20; page++) {
-    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 })
-    if (error) throw new Error(error.message)
-    for (const u of data.users) if (u.email) m.set(u.email.toLowerCase(), { id: u.id, last_sign_in_at: u.last_sign_in_at })
-    if (data.users.length < 200) break
-  }
-  return m
-}
-async function soloAdmin() { const yo = await requerirUsuario(); if (!yo.esAdmin) throw new Error('Sólo administración puede gestionar usuarios'); return yo }
-export const listarUsuarios = async () => run(async (): Promise<UsuarioEquipo[]> => {
-  await soloAdmin()
-  const [{ data, error }, cuentas] = await Promise.all([supabaseServer().from('feds').select('id, nombre_completo, rol, email, es_admin, debe_cambiar_password').order('nombre_completo'), cuentasPorEmail()])
-  if (error) throw new Error(error.message)
-  return (data ?? []).map(f => {
-    const c = f.email ? cuentas.get(f.email.toLowerCase()) : undefined
-    return { fedId: f.id, nombre: f.nombre_completo, rol: f.rol, email: f.email, esAdmin: f.es_admin, estado: !c ? 'sin_cuenta' : f.debe_cambiar_password ? 'pendiente' : 'activo', ultimoIngreso: c?.last_sign_in_at ?? null }
-  })
-})
-// Crea la cuenta (si no existe) o le asigna una contraseña temporal nueva. Devuelve la temporal para entregarla.
-export const generarPasswordTemporal = async (fedId: string) => run(async (): Promise<{ email: string, password: string }> => {
-  const yo = await soloAdmin()
-  const db = supabaseServer()
-  const { data: fed } = await db.from('feds').select('id, nombre_completo, email').eq('id', fedId).maybeSingle()
-  if (!fed?.email) throw new Error('Ese perfil no tiene correo cargado')
-  if (fed.id === yo.fed.id) throw new Error('Tu propia contraseña se cambia desde "Cambiar contraseña"')
-  const password = passwordTemporal()
-  const existente = (await cuentasPorEmail()).get(fed.email.toLowerCase())
-  const res = existente
-    ? await db.auth.admin.updateUserById(existente.id, { password })
-    : await db.auth.admin.createUser({ email: fed.email.toLowerCase(), password, email_confirm: true, user_metadata: { apellido_nombre: fed.nombre_completo } })
-  if (res.error) throw new Error(res.error.message)
-  await db.from('feds').update({ debe_cambiar_password: true }).eq('id', fed.id)
-  await audit('feds', fed.id, 'modificacion', yo.fed.id, { password_temporal: existente ? 'reseteo' : 'alta' })
-  return { email: fed.email, password }
-})
+export type { UsuarioEquipo } from '@/lib/servidor/usuarios'
+// Usuarios (sólo administración): alta de cuentas y reseteo de contraseñas.
+export const listarUsuarios = async () => run(() => usuarios.listarUsuarios())
+export const generarPasswordTemporal = async (fedId: string) => run(() => usuarios.generarPasswordTemporal(fedId))
 
 // ---------- Comunicados del CED a los FED (la lógica está en lib/servidor/comunicados.ts) ----------
 export type { ComunicadoPendiente, ComunicadoGestion } from '@/lib/servidor/comunicados'
