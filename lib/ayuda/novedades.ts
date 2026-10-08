@@ -8,6 +8,7 @@ export type BannerNovedad = { para: Rol[], texto: string, corto: string, tema: s
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[], banner?: BannerNovedad }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-08', titulo: 'Letra secundaria más grande', texto: 'Los textos secundarios de toda la agenda (fechas, estados, FED, avisos, etiquetas) pasaron de 12 a 13 píxeles para que se lean mejor en el celular, sobre todo al aire libre. El resto de los tamaños no cambió.' },
   { fecha: '2026-10-08', titulo: 'Colores más distinguibles en cuatro acciones', texto: 'Cuatro acciones tenían un color casi igual al de otra y se confundían en el calendario y en los gráficos: Planificación (ahora ciruela), Reunión con Nivel Central (azul profundo), Licencia (marrón) y Entrega de equipamiento (turquesa). El resto de los colores no cambió.' },
   { fecha: '2026-10-08', titulo: 'Comunicados: eliminar los retirados', texto: 'En Comunicados, los que ya están retirados o vencidos tienen un botón Eliminar: lo borra del todo junto con su registro de lecturas. Un comunicado vigente primero se retira.' },
   { fecha: '2026-10-07', titulo: 'Comunicados del CED, con constancia de lectura', texto: 'El CED y la administración pueden mandar comunicados a todos los FED o a algunos: se ven como un banner arriba de la agenda (rojo si es importante, celeste si es informativo) hasta que se marca Leído. El CED ve quién lo leyó y cuándo. Se arman desde el menú de las iniciales, en Comunicados.' },
