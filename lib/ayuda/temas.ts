@@ -7,6 +7,7 @@ import { DESTINATARIOS_BASE, PROPUESTAS_DE_CLUB } from '@/lib/encuentro'
 import { TOLERANCIA } from '@/lib/horas'
 import { DIA_HABIL_AVISO, DIA_HABIL_RECORDATORIO, DIA_HABIL_VENCIMIENTO } from '@/lib/pve-reglas'
 import { CAMPOS_ESCUELA, DOMINIO_LABORAL } from '@/lib/escuelas-edicion'
+import { MAX_TEXTO_COMUNICADO, MAX_TITULO_COMUNICADO } from '@/lib/comunicados'
 import { DIAS_ATRAS, HORAS_CONTACTO_PBA, SIN_FED, VALIDEZ_DIAS, etiquetaTipo } from '@/lib/cronogramas'
 
 export type Rol = 'fed' | 'ced'
@@ -162,6 +163,20 @@ El filtro **Cronogramas** deja solo los reclamos con cronograma próximo o con u
 ## Quién ve y quién edita
 Todo el equipo ve los reclamos (por defecto, los tuyos), con filtros por estado, FED, tipo de conexión y búsqueda por CUE, escuela, número o nombre. Solo el CED los actualiza (números, estados y notas); la administración los ve en modo lectura. Una excepción: el **FED a cargo de la escuela** (o quien registró el reclamo) puede tocar **Marcar resuelto** en un reclamo abierto, con una nota opcional, porque muchas veces la escuela le avisa a él y no al CED. No cambia otros datos ni envía ningún aviso; en la tarjeta queda "lo marcó" con su nombre. Por defecto el filtro **Solo los míos y de mis escuelas** deja a la vista los reclamos que podés cerrar. El botón **Excel** descarga la lista tal como la estás viendo, con las mismas columnas de la planilla del CED.
 [i] Al armar un reclamo de una escuela que ya tiene uno abierto, la agenda te avisa para que sigas esa cadena en lugar de abrir otra.` },
+
+  { id: 'comunicados', titulo: 'Comunicados del CED', para: ['fed', 'ced'], md: () => `
+Son avisos importantes que el CED (o la administración) manda al equipo. Aparecen como un **banner arriba de la agenda**, en cualquier pantalla, hasta que los marcás como leídos.
+## Si sos FED
+- El banner es **rojo** si el comunicado es **Importante** y **celeste** si es **Informativo**. Muestra el título y las primeras líneas; con **Ver completo** se lee entero (los enlaces se abren con un toque).
+- No se cierra con una cruz: se cierra con **Leído**, y ahí queda anotado que lo leíste y a qué hora. Si hay más de uno sin leer, ves primero los importantes y el título indica cuántos más hay.
+- Te llegan los dirigidos a **todos los FED** y los que se mandan solo a vos.
+- Si el CED corrige el mensaje, el título o el nivel, el banner vuelve a aparecer para que lo leas de nuevo.
+## Si sos CED o administración
+Desde el menú de las iniciales, **Comunicados**:
+- **Nuevo comunicado:** título (hasta ${MAX_TITULO_COMUNICADO} caracteres), mensaje (hasta ${MAX_TEXTO_COMUNICADO}, con enlaces si hace falta), nivel, **para quién** (todos los FED o los que elijas) y, si querés, una fecha de vencimiento: pasada esa fecha deja de mostrarse.
+- **Quién lo leyó y cuándo:** cada comunicado indica cuántos lo leyeron (por ejemplo "5 de 7") y, al abrirlo, la lista de FED con la fecha y la hora de lectura o **Sin leer**.
+- **Editar** y **Retirar:** editar el título, el mensaje o el nivel borra las lecturas (se pide leerlo de nuevo); cambiar solo los destinatarios o el vencimiento no. Al retirarlo deja de mostrarse, pero queda en la lista con sus lecturas.
+- La coordinación no recibe los comunicados que se mandan a todos los FED.` },
 
   { id: 'cronogramas', titulo: 'Cronogramas de conectividad', para: ['fed', 'ced'], md: () => `
 Son los cronogramas de conectividad (reparaciones e instalaciones de piso tecnológico y de enlace, certificaciones…), tanto de Educar como de PBA, que ya vienen establecidos por otro organismo, con su fecha y su empresa. La agenda no los programa ni puede cambiarles la fecha: los lee de la pestaña **Cronogramas** del consolidado de conectividad para que el equipo los tenga a mano, avise a las escuelas y anote cómo salieron. Se abre desde el menú de las iniciales (**Cronogramas**) o desde el acceso del Tablero; en el celular, **Volver** (arriba) te lleva a la pantalla de la que venías.

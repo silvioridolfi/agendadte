@@ -22,6 +22,7 @@ import { MisEscuelas } from '@/components/app/misescuelas'
 import { SeccionMapa } from '@/components/app/mapa'
 import { AccesosRapidos } from '@/components/app/accesos'
 import { RegistroReclamos } from '@/components/app/registroreclamos'
+import { Comunicados, ComunicadosBanner } from '@/components/app/comunicados'
 import { MenuPerfil, MiPerfilView } from '@/components/app/miperfil'
 import { AyudaView, useNovedadesNuevas } from '@/components/app/ayuda'
 import type { Destacados } from '@/lib/destacados'
@@ -49,7 +50,7 @@ function tituloForm(e: { item: AgendaItem | null, preset?: ItemPreset } | null) 
   return 'Nueva acción'
 }
 
-const SECCIONES = ['agenda', 'board', 'perfil', 'fotos', 'mispve', 'usuarios', 'feriados', 'pve', 'reclamos', 'cronogramas', 'escuelas', 'mapa', 'ayuda'] as const
+const SECCIONES = ['agenda', 'board', 'perfil', 'fotos', 'mispve', 'usuarios', 'feriados', 'pve', 'reclamos', 'cronogramas', 'comunicados', 'escuelas', 'mapa', 'ayuda'] as const
 type Seccion = typeof SECCIONES[number]
 const SECCION_KEY = 'agenda-territorial:seccion'
 
@@ -75,7 +76,7 @@ export default function Page() {
   // De dónde se vino: en el celular las secciones nuevas ofrecen un botón para volver ahí.
   const [anterior, setAnterior] = useState<Seccion | null>(null)
   const irA = (s: Seccion) => { if (s !== section) setAnterior(section); setSection(s); if (s !== 'board') setVista(v => (v?.tipo === 'equipo' ? null : v)) }
-  const NOMBRE_SECCION: Partial<Record<Seccion, string>> = { agenda: 'Mi agenda', board: 'Tablero', perfil: 'Mi perfil', fotos: 'Fotos', mispve: 'mis PVE', usuarios: 'Usuarios', feriados: 'Feriados', pve: 'PVE del equipo', reclamos: 'Reclamos', cronogramas: 'Cronogramas', escuelas: 'Escuelas', mapa: 'Mapa', ayuda: 'Ayuda' }
+  const NOMBRE_SECCION: Partial<Record<Seccion, string>> = { agenda: 'Mi agenda', board: 'Tablero', perfil: 'Mi perfil', fotos: 'Fotos', mispve: 'mis PVE', usuarios: 'Usuarios', feriados: 'Feriados', pve: 'PVE del equipo', reclamos: 'Reclamos', cronogramas: 'Cronogramas', comunicados: 'Comunicados', escuelas: 'Escuelas', mapa: 'Mapa', ayuda: 'Ayuda' }
   const destinoVolver: Seccion = anterior && anterior !== section ? anterior : profile?.rol === 'coordinacion' ? 'board' : 'agenda'
   const volver = { destino: NOMBRE_SECCION[destinoVolver] ?? 'inicio', ir: () => { setVista(null); irA(destinoVolver); window.scrollTo({ top: 0 }) } }
   const irAlInicio = () => { setVista(null); irA(profile?.rol === 'coordinacion' ? 'board' : 'agenda'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
@@ -173,7 +174,7 @@ export default function Page() {
         {enCola > 0 && <span title="Cargadas sin conexión: se envían al volver la señal" className="flex items-center gap-1 rounded-full bg-aviso-fondo-fuerte px-2.5 py-1 text-xs font-semibold text-aviso-fuerte"><CloudUpload className="size-3.5" />{enCola} sin enviar</span>}
         <button type="button" onClick={() => setBuscador(true)} aria-label="Buscar escuela" title="Buscar escuela" className="flex size-11 items-center justify-center rounded-full text-dte-gris transition hover:bg-dte-fondo hover:text-dte-tinta"><Search className="size-5" /></button>
         <NotificacionesBell feds={feds ?? []} onOpen={setSelected} onReclamos={() => { setVista(null); setReclamosDesdeAcceso(false); irA('reclamos') }} onCronogramas={() => { setVista(null); irA('cronogramas') }} />
-        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} hayNovedades={hayNovedades} onReclamo={() => abrirReclamo(null)} onRegistroReclamos={() => { setVista(null); setReclamosDesdeAcceso(false); irA('reclamos') }} onCronogramas={() => { setVista(null); irA('cronogramas') }} onEscuelas={() => { setVista(null); irA('escuelas') }} onMapa={() => { setVista(null); irA('mapa') }} onAyuda={() => { setVista(null); setTemaAyuda(undefined); irA('ayuda') }} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
+        <MenuPerfil profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} hayNovedades={hayNovedades} onReclamo={() => abrirReclamo(null)} onRegistroReclamos={() => { setVista(null); setReclamosDesdeAcceso(false); irA('reclamos') }} onCronogramas={() => { setVista(null); irA('cronogramas') }} onComunicados={() => { setVista(null); irA('comunicados') }} onEscuelas={() => { setVista(null); irA('escuelas') }} onMapa={() => { setVista(null); irA('mapa') }} onAyuda={() => { setVista(null); setTemaAyuda(undefined); irA('ayuda') }} onPerfil={() => { setVista(null); irA('perfil') }} onFotos={() => { setVista(null); irA('fotos') }} onMisPve={() => { setVista(null); irA('mispve') }} onUsuarios={() => { setVista(null); irA('usuarios') }} onFeriados={() => { setVista(null); irA('feriados') }} onPve={() => { setVista(null); irA('pve') }} onEquipo={() => { setVista({ tipo: 'equipo' }); irA('board') }} onPassword={() => setCambiandoPass(true)} onSalir={cerrarSesion} />
         </div>
       </div>
     </header>
@@ -193,6 +194,7 @@ export default function Page() {
           <button type="button" onClick={() => window.location.reload()} className="min-h-9 shrink-0 rounded-full bg-aviso-fuerte px-4 text-sm font-semibold text-white">Actualizar</button>
         </div>
       </div>}
+      <ComunicadosBanner reloadKey={reloadKey} />
       <AvisosBanner feds={feds ?? []} puedeSubirPve={profile.rol === 'fed'} onIrAPve={() => { setVista(null); irA('mispve') }} onReclamos={() => { setVista(null); setReclamosDesdeAcceso(false); irA('reclamos') }} rol={rolAyuda} onNovedad={tema => { setVista(null); setTemaAyuda(tema); irA('ayuda') }} />
     </div>
     {/* Cada pantalla entra con un fundido corto; cambiar de sección o de vista la vuelve a animar. */}
@@ -201,6 +203,7 @@ export default function Page() {
       : section === 'escuelas' ? <MisEscuelas onMapa={() => irA('mapa')} profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} volver={volver} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
       : section === 'mapa' ? <SeccionMapa profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} volver={volver} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
       : section === 'cronogramas' ? <Cronogramas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} cuenta={sesion.email} volver={volver} />
+      : section === 'comunicados' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <Comunicados feds={feds ?? []} volver={volver} />
       : section === 'pve' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <PveEquipoView />
       : section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><div className="flex flex-col gap-4"><EventosPanel onSaved={changed} /><FeriadosView autorId={profile.id} onSaved={changed} /></div></main>
       : section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); irA('agenda') } }} />
