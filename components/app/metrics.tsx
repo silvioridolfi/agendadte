@@ -5,7 +5,7 @@ import { ChevronRight } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { titleCase } from '@/lib/format'
 import { siglaEscuela } from '@/components/app/comun'
-import { Contador, numeroDe } from '@/components/contador'
+import { Contador, numeroDe } from '@/components/app/contador'
 import { esEscuela, esGrupoEspecial, grupoDistrito, ordenGrupos } from '@/lib/sede'
 import { CATEGORIAS, CATEGORIA, CATEGORIA_LABEL, type Accion, type AgendaItem, type Categoria, type Encuentro, type Fed, type School, cuentaHecha, esAusencia } from '@/lib/agenda'
 
