@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DATOS_VACIOS, directivoDe, esJardin, llevaChecklist, pisoPnce, gmailUrl, gmailAppUrl, plataformaDe, saludoDe, RECLAMOS_PARA, RECLAMOS_PARA_CLARO, armarReclamo, asuntoDe, codigoFecha, enlacesDe, faltantes, tipoDe, type DatosReclamo, type EscuelaConectividad } from '@/lib/reclamos'
+import { DATOS_VACIOS, directivoDe, esJardin, llevaChecklist, pisoPnce, puedeSerAmbos, gmailUrl, gmailAppUrl, plataformaDe, saludoDe, RECLAMOS_PARA, RECLAMOS_PARA_CLARO, armarReclamo, asuntoDe, codigoFecha, enlacesDe, faltantes, tipoDe, type DatosReclamo, type EscuelaConectividad } from '@/lib/reclamos'
 
 const esc = (p: Partial<EscuelaConectividad> = {}): EscuelaConectividad => ({ id: 'e', cue: 60897700, nombre: 'ESCUELA DE EDUCACIÓN SECUNDARIA N° 31', distrito: 'LA PLATA', ciudad: 'LA PLATA', direccion: 'BRASIL esq. EVA PERÓN', matricula: 784,
   plan_enlace: 'PBA', subplan_enlace: 'PBA GRUPO 2 A', plan_piso_tecnologico: 'PBA', tipo_piso_instalado: 'Red Local Pequeña - Instalada', tipo: 'PISO TECNOLÓGICO + ENLACE', proveedor_pnce: null, proveedor_pba: 'Orbith S.A', ani: null, recurso_primario: null, access_id: null, nivel: 'Nivel Secundario', contactos: [], ...p })
@@ -168,13 +168,25 @@ describe('jardines, checklist y contactos', () => {
     expect(textos(armarReclamo(esc({ ...pnce, nivel: 'Nivel Primario' }), tipo('piso'), datos({ enlace: 'PNCE' }), ahora, fed))).toEqual(['Checklist USAP completo'])
     expect(textos(armarReclamo(esc({ nivel: 'Nivel Inicial' }), tipo('piso'), datos(), ahora, fed))).toEqual(['Checklist USAP completo'])
   })
-  it('problema del piso con enlace PBA y piso PNCE: foto del módem + checklist; problema del enlace: sólo la foto', () => {
+  it('enlace PBA con piso PNCE: problema del piso, sólo el checklist; del enlace, sólo la foto; de los dos, foto y checklist', () => {
     const pba = esc({ plan_piso_tecnologico: 'PNCE' })
-    expect(textos(armarReclamo(pba, tipo('piso'), datos(), ahora, fed))).toEqual(['Fotos del módem (o de la antena, si el problema es ahí)', 'Checklist USAP completo'])
-    expect(textos(armarReclamo(pba, tipo('utm_switch'), datos(), ahora, fed))).toHaveLength(2)
-    expect(textos(armarReclamo(pba, tipo('sin_conectividad'), datos(), ahora, fed))).toEqual(['Fotos del módem (o de la antena, si el problema es ahí)'])
-    // Enlace PNCE con piso PNCE: sólo el checklist (no hay módem de PBA).
-    expect(textos(armarReclamo(esc({ ...pnce, nivel: 'Nivel Primario' }), tipo('piso'), datos({ enlace: 'PNCE' }), ahora, fed))).toEqual(['Checklist USAP completo'])
+    const foto = 'Fotos del módem (o de la antena, si el problema es ahí)'
+    expect(textos(armarReclamo(pba, tipo('piso'), datos(), ahora, fed))).toEqual(['Checklist USAP completo'])
+    expect(textos(armarReclamo(pba, tipo('utm_switch'), datos(), ahora, fed))).toEqual(['Checklist USAP completo'])
+    expect(textos(armarReclamo(pba, tipo('sin_conectividad'), datos(), ahora, fed))).toEqual([foto])
+    expect(textos(armarReclamo(pba, tipo('piso'), datos({ ambos: true }), ahora, fed))).toEqual([foto, 'Checklist USAP completo'])
+    expect(textos(armarReclamo(pba, tipo('sin_conectividad'), datos({ ambos: true }), ahora, fed))).toEqual([foto, 'Checklist USAP completo'])
+    expect(textos(armarReclamo(pba, tipo('sin_conectividad'), datos({ enlace: 'PBA1', proveedorG1: 'Claro', ambos: true }), ahora, fed))).toEqual([foto, 'Checklist USAP completo'])
+    // Un jardín con ese piso lleva el de predio pequeño.
+    expect(textos(armarReclamo(esc({ plan_piso_tecnologico: 'PNCE', nivel: 'Nivel Inicial' }), tipo('piso'), datos({ ambos: true }), ahora, fed))).toEqual([foto, 'Checklist de Z3 (predio pequeño TAC o GAP) completo'])
+  })
+  it('"ambos" sólo cuenta con enlace PBA y piso PNCE', () => {
+    expect(puedeSerAmbos('piso', { plan_piso_tecnologico: 'PNCE' }, 'PBA2')).toBe(true)
+    expect(puedeSerAmbos('piso', { plan_piso_tecnologico: 'PBA' }, 'PBA2')).toBe(false)
+    expect(puedeSerAmbos('piso', { plan_piso_tecnologico: 'PNCE' }, 'PNCE')).toBe(false)
+    expect(puedeSerAmbos('mudanza', { plan_piso_tecnologico: 'PNCE' }, 'PBA2')).toBe(false)
+    // Con piso de PBA, "ambos" no cambia nada.
+    expect(textos(armarReclamo(esc(), tipo('piso'), datos({ ambos: true }), ahora, fed))).toEqual(['Checklist USAP completo'])
   })
   it('con checklist el mensaje no lleva el contacto; con foto del módem sin checklist, sí', () => {
     const conChecklist = armarReclamo(esc({ ...jardin }), tipo('sin_conectividad'), datos({ enlace: 'PNCE' }), ahora, fed)

@@ -40,6 +40,8 @@ export const tienePiso = (e: Pick<EscuelaConectividad, 'plan_piso_tecnologico'>)
 export const esJardin = (e: Pick<EscuelaConectividad, 'nivel'>) => /^\s*Nivel Inicial\s*$/i.test(e.nivel ?? '')
 // Piso tecnológico de PNCE (Nación) únicamente.
 export const pisoPnce = (e: Pick<EscuelaConectividad, 'plan_piso_tecnologico'>) => /PNCE/i.test(e.plan_piso_tecnologico ?? '') && !/PBA/i.test(e.plan_piso_tecnologico ?? '')
+// Enlace PBA con piso PNCE: es el caso en que hay que decir si el problema es del enlace, del piso o de los dos.
+export const puedeSerAmbos = (tipoId: string, e: Pick<EscuelaConectividad, 'plan_piso_tecnologico'>, enlace: Enlace | null) => ['sin_conectividad', 'piso', 'utm_switch'].includes(tipoId) && esPba(enlace) && pisoPnce(e)
 // Contacto del directivo para precargar: el director o vicedirector (o equivalente) y, si no hay, el marcado como principal.
 const CARGO_DIRECTIVO = /\b(vice)?(direct|rector)|regente/i
 export function directivoDe(contactos: ContactoEscuela[]): ContactoEscuela | null {
@@ -89,8 +91,10 @@ export type DatosReclamo = {
   enlace: Enlace | null, proveedorG1: 'Movistar' | 'Claro' | null, subtipo: string, detalle: string,
   contactoNombre: string, contactoCargo: string, contactoTelefono: string, contactoHorario: string,
   aulas: string, matricula: string, direccion: string, coordenadas: string, serie: string, fechaCronograma: string,
+  // Enlace PBA con piso PNCE: el problema es del enlace y también del piso (se suman la foto del módem y el checklist).
+  ambos: boolean,
 }
-export const DATOS_VACIOS: DatosReclamo = { enlace: null, proveedorG1: null, subtipo: '', detalle: '', contactoNombre: '', contactoCargo: '', contactoTelefono: '', contactoHorario: '', aulas: '', matricula: '', direccion: '', coordenadas: '', serie: '', fechaCronograma: '' }
+export const DATOS_VACIOS: DatosReclamo = { enlace: null, proveedorG1: null, subtipo: '', detalle: '', contactoNombre: '', contactoCargo: '', contactoTelefono: '', contactoHorario: '', aulas: '', matricula: '', direccion: '', coordenadas: '', serie: '', fechaCronograma: '', ambos: false }
 
 // Código de fecha y hora del asunto (hora argentina): DDMMAAAAHHMM, todo junto.
 export function codigoFecha(ahora: Date): string {
@@ -136,11 +140,13 @@ function adjuntosDe(tipo: TipoReclamo, esc: EscuelaConectividad, d: DatosReclamo
   switch (tipo.id) {
     case 'sin_conectividad':
       if (d.enlace === 'PNCE') return [checklist()]
+      // Problema del enlace PBA y también del piso (de PNCE): foto del módem y checklist.
+      if (d.ambos && puedeSerAmbos(tipo.id, esc, d.enlace)) return [modem, checklist()]
       if (d.enlace === 'PBA1') return [modem]
       // PBA Grupo 2 o 2019: el checklist USAP se suma sólo cuando el piso tecnológico también es de PBA (si el piso es de PNCE alcanza con las fotos).
       return /PBA/i.test(esc.plan_piso_tecnologico ?? '') ? [modem, { texto: 'Checklist USAP completo', enlace: DOC_CHECKLIST_USAP }] : [modem]
-    // Problema del piso con enlace PBA y piso PNCE: además del checklist, la foto del módem.
-    case 'utm_switch': case 'piso': return esPba(d.enlace) && pisoPnce(esc) ? [modem, checklist()] : [checklist()]
+    // Problema sólo del piso: el checklist. Si el enlace es PBA, el piso de PNCE y el problema es también del enlace, se suma la foto del módem.
+    case 'utm_switch': case 'piso': return d.ambos && puedeSerAmbos(tipo.id, esc, d.enlace) ? [modem, checklist()] : [checklist()]
     case 'ancho_banda': return [{ texto: 'Captura de pantalla de la medición de velocidad' }, checklist()]
     case 'danos_robo': return [{ texto: 'Denuncia policial con el N° de serie del equipamiento robado' }, { texto: 'Imágenes que constaten el hecho' }]
     case 'instalacion': return [d.subtipo === 'rack_modem' ? { texto: 'Plano marcando el lugar del módem y del rack' } : { texto: 'Imágenes que constaten el hecho' }]

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { type School } from '@/lib/agenda'
-import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, directivoDe, enlacesDe, faltantes, llevaChecklist, nombreContacto, gmailAppUrl, gmailUrl, plataformaDe, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
+import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, directivoDe, enlacesDe, faltantes, llevaChecklist, nombreContacto, puedeSerAmbos, gmailAppUrl, gmailUrl, plataformaDe, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
 import { titleCase } from '@/lib/format'
 import { ESTADO_RECLAMO_LABEL, type Reclamo as ReclamoRegistrado } from '@/lib/reclamos-registro'
 import { ErrorBox, errMsg, getConectividadEscuela, reclamosAbiertosDe, registrarReclamo, selectClass } from '@/components/app/comun'
@@ -60,7 +60,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
   const elegirTipo = (id: string) => {
     setTipoId(id); setReclamo(null); setRegistrado(false); setErrores({})
     const t = tipoDe(id)
-    setD(x => ({ ...x, subtipo: '', matricula: t?.campos.includes('matricula') && !x.matricula && con?.matricula ? String(con.matricula) : x.matricula, enlace: enlaces.length === 1 ? enlaces[0] : x.enlace }))
+    setD(x => ({ ...x, subtipo: '', ambos: false, matricula: t?.campos.includes('matricula') && !x.matricula && con?.matricula ? String(con.matricula) : x.matricula, enlace: enlaces.length === 1 ? enlaces[0] : x.enlace }))
   }
   const enlaceElegido = d.enlace ?? (enlaces.length === 1 ? enlaces[0] : null)
   const datos: DatosReclamo = { ...d, enlace: enlaceElegido }
@@ -136,6 +136,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
           </div>}
           {tipo.campos.includes('direccion') && <Field label="Dirección correcta" required error={errores.direccion}><Input value={d.direccion} onChange={e => set('direccion', e.target.value)} placeholder={con.direccion ? `Figura: ${titleCase(con.direccion)}` : undefined} className="h-11 md:h-10" /></Field>}
           {tipo.campos.includes('coordenadas') && <Field label="Coordenadas geográficas" required error={errores.coordenadas}><Input value={d.coordenadas} onChange={e => set('coordenadas', e.target.value)} placeholder="Ej.: -34.9205, -57.9536" className="h-11 md:h-10" /></Field>}
+          {con && puedeSerAmbos(tipo.id, con, enlaceElegido) && !porTelefonoSeleccionado && <label className="flex items-start gap-2.5 rounded-control border border-dte-linea bg-dte-fondo p-2.5 text-sm"><input type="checkbox" checked={d.ambos} onChange={e => set('ambos', e.target.checked)} className="mt-0.5 size-5 shrink-0" /><span>{tipo.id === 'sin_conectividad' ? <>El problema es del enlace y <b>también del piso tecnológico</b> (suma el checklist).</> : <>El problema es del piso y <b>también del enlace</b> (suma la foto del módem).</>}</span></label>}
           {tipo.campos.includes('serie') && <Field label="N° de serie del equipamiento" hint="(si lo tenés)"><Input value={d.serie} onChange={e => set('serie', e.target.value)} className="h-11 md:h-10" /></Field>}
           {tipo.campos.includes('detalle') && <Field label={tipo.id === 'instaladores' ? 'Explicá la situación' : 'Descripción'} required={tipo.requeridos.includes('detalle')} hint={tipo.requeridos.includes('detalle') ? undefined : '(opcional)'} error={errores.detalle}><Textarea value={d.detalle} onChange={e => set('detalle', e.target.value)} placeholder="Qué pasa, desde cuándo y qué se probó" className="min-h-20" /></Field>}
 

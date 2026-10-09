@@ -136,7 +136,8 @@ Arma el asunto y el cuerpo del mail de un reclamo de conectividad, con la lista 
 | Caso | Qué se adjunta |
 | PBA Grupo 2 o 2019, sin piso | Fotos del módem (o de la antena, si el problema es ahí) y contacto. |
 | PBA Grupo 2 o 2019, con piso de PBA | Lo anterior y el checklist USAP. Con piso de PNCE alcanza con las fotos. |
-| Problema del piso (UTM, switch u otro) con enlace PBA y piso de PNCE | Fotos del módem y el checklist que corresponda. Si el problema es solo del enlace, solo las fotos. |
+| PBA con piso de PNCE, problema solo del piso (UTM, switch u otro) | El checklist que corresponda, sin fotos del módem. |
+| PBA con piso de PNCE, problema del enlace y también del piso | Fotos del módem y el checklist. Se marca con la casilla que aparece en el formulario. Si el problema es solo del enlace, solo las fotos. |
 | PBA Grupo 1 con Claro | Fotos del módem y contacto, por mail a ${RECLAMOS_PARA_CLARO}. |
 | PBA Grupo 1 con Movistar | No es un mail: el establecimiento llama al ${TEL_MOVISTAR} con el ANI y el recurso primario, que la agenda muestra. |
 | PNCE, sin piso | Checklist de Z3 (predio pequeño). También puede llamar el establecimiento al ${TEL_EDUCAR} (Mesa de Ayuda Educar). |
