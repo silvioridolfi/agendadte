@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const data = (filas ?? []).filter(r => !corregidas || (r.reentregada_at && !r.enviada_at))
   const archivos: { nombre: string, datos: Buffer }[] = []
   for (const r of data ?? []) {
-    try { archivos.push({ nombre: r.nombre ?? `${r.file_id}.pdf`, datos: Buffer.from(await descargar(r.file_id as string)) }) } catch { /* archivo borrado: se omite */ }
+    try { archivos.push({ nombre: r.nombre ?? `${r.file_id}.pdf`, datos: Buffer.from(await descargar(r.file_id as string)) }) } catch (e) { console.error('zip PVE: se omite el archivo', r.file_id, e instanceof Error ? e.message : e) /* archivo borrado: se omite */ }
   }
   if (!archivos.length) return new Response('No hay PVE entregadas para ese mes', { status: 404 })
   const nombre = `${REGION} - PVE (${nombreMes(mes)})${corregidas ? ' - CORREGIDAS' : ''}.zip`

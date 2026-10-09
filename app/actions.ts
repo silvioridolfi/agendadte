@@ -16,7 +16,7 @@ import * as esc from '@/lib/servidor/escuelas'
 import * as ag from '@/lib/servidor/agenda'
 import * as usuarios from '@/lib/servidor/usuarios'
 import * as fotos from '@/lib/servidor/fotos-pve'
-import { quienEs } from '@/lib/servidor/comun'
+import { errMsgServer, quienEs } from '@/lib/servidor/comun'
 import { type EstadoReclamo } from '@/lib/reclamos-registro'
 import { type AvisoCronograma, type EstadoSeguimiento } from '@/lib/cronogramas'
 import { type ContactoInput } from '@/lib/escuelas-edicion'
@@ -86,7 +86,7 @@ export const registrarParticipacion = async (eventoId: string, fechas: string[])
 
 export const getClubes = async (fedId?: string) => conUsuario(yo => ag.getClubesImpl(veTodoElEquipo(quienEs(yo)) ? fedId : yo.fed.id))
 export const setClubCierre = async (id: string, fecha: string | null) => conUsuario(yo => ag.setClubCierre(yo, id, fecha))
-export const getNotificaciones = async (_fedId: string) => conUsuario(async yo => { await ag.avisarInactividad(yo).catch(() => {}); return ag.getNotificacionesImpl(yo.fed.id) })
+export const getNotificaciones = async (_fedId: string) => conUsuario(async yo => { await ag.avisarInactividad(yo).catch(e => console.error('avisarInactividad:', errMsgServer(e))); return ag.getNotificacionesImpl(yo.fed.id) })
 export const marcarLeidas = async (_fedId: string, ids?: string[]) => conUsuario(yo => ag.marcarLeidasImpl(yo.fed.id, ids))
 export const responder = async (itemId: string, _fedId: string, respuesta: 'acepta' | 'rechaza') => conUsuario(yo => ag.responderImpl(itemId, yo.fed.id, respuesta))
 export const getHistorial = async (itemId: string) => conUsuario(yo => ag.getHistorial(yo, itemId))
