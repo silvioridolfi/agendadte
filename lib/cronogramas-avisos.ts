@@ -6,8 +6,8 @@ import { hoyAR } from '@/lib/hora'
 
 export type ResultadoAvisos = { nuevos: number, recordados: number, feds: number, ced: number }
 
-type Fila = { id: string, cue: number, fecha_inicio: string, fecha_fin: string, tipo: string | null, school: { nombre: string | null, fed_a_cargo: string | null } | null }
-const COLS = 'id, cue, fecha_inicio, fecha_fin, tipo, school:establecimientos(nombre, fed_a_cargo)'
+type Fila = { id: string, cue: number, fecha_inicio: string, fecha_fin: string, tipo: string | null, school: { nombre: string | null, ciudad: string | null, fed_a_cargo: string | null } | null }
+const COLS = 'id, cue, fecha_inicio, fecha_fin, tipo, school:establecimientos(nombre, ciudad, fed_a_cargo)'
 const trozos = <T,>(l: T[], n = 200) => Array.from({ length: Math.ceil(l.length / n) }, (_, i) => l.slice(i * n, (i + 1) * n))
 
 // Avisos de cronogramas, una vez por cronograma (las marcas avisado_at y recordado_at evitan repetirlos si la tarea corre dos veces):
