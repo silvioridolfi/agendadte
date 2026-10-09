@@ -15,6 +15,7 @@ import * as rc from '@/lib/servidor/reclamos-cronogramas'
 import * as esc from '@/lib/servidor/escuelas'
 import * as ag from '@/lib/servidor/agenda'
 import * as usuarios from '@/lib/servidor/usuarios'
+import * as jornadas from '@/lib/servidor/jornadas'
 import * as fotos from '@/lib/servidor/fotos-pve'
 import { errMsgServer, quienEs } from '@/lib/servidor/comun'
 import { type EstadoReclamo } from '@/lib/reclamos-registro'
@@ -137,3 +138,6 @@ export const crearComunicado = async (e: EntradaComunicado) => conUsuario(yo => 
 export const editarComunicado = async (id: string, e: EntradaComunicado) => conUsuario(yo => comunicados.editar(yo, id, e))
 export const eliminarComunicado = async (id: string) => conUsuario(yo => comunicados.eliminar(yo, id))
 export const retirarComunicado = async (id: string) => conUsuario(yo => comunicados.retirar(yo, id))
+
+// ---------- Reporte de jornadas pedagógicas (formulario de Nivel Central): sólo CED y administración ----------
+export const getJornadas = async () => conUsuario(yo => jornadas.jornadasImpl(yo))

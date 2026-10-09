@@ -1,5 +1,6 @@
 // Exportación a Excel (planilla mensual por FED y consolidado regional). Se genera en el navegador.
 import type { FilaExtracto } from '@/lib/extracto'
+import { camposDeJornada, fechaJornada, type Jornada } from '@/lib/jornadas'
 import { escuelaDelClub } from '@/lib/encuentro'
 import { ESTADO_RECLAMO_LABEL, type Reclamo } from '@/lib/reclamos-registro'
 import { nombreContacto, type ResumenEscuela } from '@/lib/mis-escuelas'
@@ -311,6 +312,29 @@ export async function exportarExtracto(filas: FilaExtracto[], titulo: string, pe
   const buf = await wb.xlsx.writeBuffer()
   const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
   const a = document.createElement('a'); a.href = url; a.download = nombreArchivo(`Cronograma de conectividad ${new Date().toLocaleDateString('en-CA', { timeZone: ZONA })}`); a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+}
+
+// Jornadas pedagógicas con las columnas en el orden del formulario de Nivel Central (más el tipo, los encuentros y los enlaces a las fotos).
+export async function exportarJornadas(jornadas: Jornada[]) {
+  const ExcelJS = (await import('exceljs')).default
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'Agenda Territorial DTE'; wb.created = new Date()
+  const ws = wb.addWorksheet('Jornadas', { views: [{ state: 'frozen', ySplit: 1 }] })
+  const campos = jornadas[0] ? camposDeJornada(jornadas[0]) : []
+  const cols = [...campos.map(c => [c.etiqueta, c.clave === 'observaciones' ? 40 : c.clave === 'lugar' || c.clave === 'propuesta' ? 34 : 22] as const), ['Tipo de acción', 24] as const, ['Estado', 12] as const, ['Fotos (carpetas de Drive)', 60] as const]
+  cols.forEach(([h, w], i) => { ws.getRow(1).getCell(i + 1).value = h; ws.getColumn(i + 1).width = w })
+  ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PETROLEO } }
+  jornadas.forEach((j, n) => {
+    const row = ws.addRow([...camposDeJornada(j).map(c => c.valor), j.tipo, j.finalizada ? 'Finalizada' : 'En curso', j.fotos.map(f => `${fechaJornada(f.fecha).slice(0, 5)}: ${f.url}`).join('\n')])
+    row.alignment = { vertical: 'top', wrapText: true }
+    if (n % 2) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } }
+  })
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols.length } }
+  const buf = await wb.xlsx.writeBuffer()
+  const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
+  const a = document.createElement('a'); a.href = url; a.download = nombreArchivo(`Jornadas pedagogicas ${new Date().toLocaleDateString('en-CA', { timeZone: ZONA })}`); a.click()
   setTimeout(() => URL.revokeObjectURL(url), 5000)
 }
 

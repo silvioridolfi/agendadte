@@ -521,6 +521,23 @@ Desde **Mi equipo**, cada tarjeta incluye el acceso a la carpeta de fotos del in
 - Subir solo fotos con autorización de uso de imagen, en especial si aparecen estudiantes.
 [i] Si un FED no tiene la carpeta configurada, su tarjeta de Mi equipo no muestra el acceso, y tampoco puede entregar la PVE.` },
 
+  { id: 'ced-jornadas', titulo: 'Reporte de jornadas pedagógicas', para: ['ced'], md: () => `
+Arma, con lo que el equipo ya registró, los datos que pide Nivel Central en el formulario **Registro de Acciones Pedagógicas**, para copiarlos y pegarlos. Lo ven la coordinación y la administración. Está en el menú de las iniciales, en **Reporte de jornadas**.
+## Qué incluye
+- Clubes de Tecnología, PEAT, talleres y capacitaciones con **participantes** cargados. Una fila por club o PEAT (con todos sus encuentros) y una por cada taller o capacitación.
+- Quedan afuera las visitas, las charlas con EMATP o directivos, los eventos y las formaciones internas.
+- Por defecto solo las **finalizadas** (los clubes y PEAT, cuando tienen fecha de cierre). Con **Incluir los que siguen en curso** se suman las demás, con la fecha de su último encuentro.
+## Cómo se usa
+1. Elegí el período (por defecto, desde el 1 del mes hasta hoy) y, si querés, FED, distrito o tipo.
+2. Abrí una jornada: los datos aparecen en el orden del formulario. **Copiar** copia uno; **Copiar todos los datos** copia los catorce, uno por renglón.
+3. Los enlaces de **Fotos** abren la carpeta de Drive de cada fecha (necesitás acceso de lectura a las carpetas del equipo).
+4. **Excel** baja la lista completa con las mismas columnas.
+## Cómo se completan los datos
+- **Inscriptos y participantes:** el máximo entre los encuentros.
+- **Destinatarios:** se pasan a las casillas del formulario (Docentes, Estudiantes, Equipo de Conducción…); lo que no encaja va a Otros y se aclara en observaciones.
+- **CUE:** el de la sede y, si es otra, el de la escuela de origen de los estudiantes.
+[i] Si faltan inscriptos o el tipo de jornada, completalos en el encuentro de la agenda antes de copiar.` },
+
   { id: 'ced-pve', titulo: 'PVE del equipo', para: ['ced'], md: () => `
 Circuito completo de la Planilla de Visita a Escuelas, desde la entrega de cada FED hasta el envío a Nivel Central.
 1. **FED:** sube el PDF firmado a la carpeta del mes.
