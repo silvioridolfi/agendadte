@@ -77,7 +77,7 @@ export default function Page() {
   // De dónde se vino: en el celular las secciones nuevas ofrecen un botón para volver ahí.
   const [anterior, setAnterior] = useState<Seccion | null>(null)
   const irA = (s: Seccion) => { if (s !== section) setAnterior(section); setSection(s); if (s !== 'board') setVista(v => (v?.tipo === 'equipo' ? null : v)) }
-  const NOMBRE_SECCION: Partial<Record<Seccion, string>> = { agenda: 'Mi agenda', board: 'Tablero', perfil: 'Mi perfil', fotos: 'Fotos', mispve: 'mis PVE', usuarios: 'Usuarios', feriados: 'Feriados', pve: 'PVE del equipo', reclamos: 'Reclamos', cronogramas: 'Cronogramas', comunicados: 'Comunicados', jornadas: 'Reporte de jornadas', escuelas: 'Escuelas', mapa: 'Mapa', ayuda: 'Ayuda' }
+  const NOMBRE_SECCION: Partial<Record<Seccion, string>> = { agenda: 'Mi agenda', board: 'Tablero', perfil: 'Mi perfil', fotos: 'Fotos', mispve: 'mis PVE', usuarios: 'Usuarios', feriados: 'Feriados', pve: 'PVE del equipo', reclamos: 'Reclamos', cronogramas: 'Cronogramas', comunicados: 'Comunicados', jornadas: sesion?.esAdmin || profile?.rol === 'coordinacion' ? 'Reporte de jornadas' : 'Mis jornadas', escuelas: 'Escuelas', mapa: 'Mapa', ayuda: 'Ayuda' }
   const destinoVolver: Seccion = anterior && anterior !== section ? anterior : profile?.rol === 'coordinacion' ? 'board' : 'agenda'
   const volver = { destino: NOMBRE_SECCION[destinoVolver] ?? 'inicio', ir: () => { setVista(null); irA(destinoVolver); window.scrollTo({ top: 0 }) } }
   const irAlInicio = () => { setVista(null); irA(profile?.rol === 'coordinacion' ? 'board' : 'agenda'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
@@ -207,7 +207,7 @@ export default function Page() {
       : section === 'mapa' ? <SeccionMapa profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} volver={volver} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
       : section === 'cronogramas' ? <Cronogramas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} cuenta={sesion.email} volver={volver} />
       : section === 'comunicados' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <Comunicados feds={feds ?? []} volver={volver} />
-      : section === 'jornadas' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <JornadasReporte feds={feds ?? []} volver={volver} />
+      : section === 'jornadas' ? <JornadasReporte feds={feds ?? []} volver={volver} veTodos={sesion.esAdmin || profile.rol === 'coordinacion'} />
       : section === 'pve' && (sesion.esAdmin || profile.rol === 'coordinacion') ? <PveEquipoView />
       : section === 'feriados' && sesion.esAdmin ? <main className="mx-auto w-full min-w-0 max-w-4xl px-4 pb-24 pt-6 lg:px-10"><div className="flex flex-col gap-4"><EventosPanel onSaved={changed} /><FeriadosView autorId={profile.id} onSaved={changed} /></div></main>
       : section === 'usuarios' && sesion.esAdmin ? <UsuariosView miEmail={sesion.email} onVer={id => { const f = feds?.find(x => x.id === id); if (f) { setVista({ tipo: 'fed', fed: f }); irA('agenda') } }} />

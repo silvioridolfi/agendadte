@@ -1,6 +1,6 @@
 // Exportación a Excel (planilla mensual por FED y consolidado regional). Se genera en el navegador.
 import type { FilaExtracto } from '@/lib/extracto'
-import { camposDeJornada, fechaJornada, type Jornada } from '@/lib/jornadas'
+import { camposDeJornada, type Jornada } from '@/lib/jornadas'
 import { escuelaDelClub } from '@/lib/encuentro'
 import { ESTADO_RECLAMO_LABEL, type Reclamo } from '@/lib/reclamos-registro'
 import { nombreContacto, type ResumenEscuela } from '@/lib/mis-escuelas'
@@ -322,12 +322,12 @@ export async function exportarJornadas(jornadas: Jornada[]) {
   wb.creator = 'Agenda Territorial DTE'; wb.created = new Date()
   const ws = wb.addWorksheet('Jornadas', { views: [{ state: 'frozen', ySplit: 1 }] })
   const campos = jornadas[0] ? camposDeJornada(jornadas[0]) : []
-  const cols = [...campos.map(c => [c.etiqueta, c.clave === 'observaciones' ? 40 : c.clave === 'lugar' || c.clave === 'propuesta' ? 34 : 22] as const), ['Tipo de acción', 24] as const, ['Estado', 12] as const, ['Fotos (carpetas de Drive)', 60] as const]
+  const cols = [...campos.map(c => [c.etiqueta, c.clave === 'observaciones' ? 40 : c.clave === 'lugar' || c.clave === 'propuesta' ? 34 : 22] as const), ['Tipo de acción', 24] as const, ['Estado de carga', 28] as const, ['Fotos (carpeta de Drive)', 60] as const]
   cols.forEach(([h, w], i) => { ws.getRow(1).getCell(i + 1).value = h; ws.getColumn(i + 1).width = w })
   ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
   ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PETROLEO } }
   jornadas.forEach((j, n) => {
-    const row = ws.addRow([...camposDeJornada(j).map(c => c.valor), j.tipo, j.finalizada ? 'Finalizada' : 'En curso', j.fotos.map(f => `${fechaJornada(f.fecha).slice(0, 5)}: ${f.url}`).join('\n')])
+    const row = ws.addRow([...camposDeJornada(j).map(c => c.valor), j.tipo, j.cargada ? (j.cargada.modificada ? 'Cargada, modificada después' : `Cargada por ${j.cargada.por}`) : 'Pendiente', j.foto?.url ?? ''])
     row.alignment = { vertical: 'top', wrapText: true }
     if (n % 2) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } }
   })
