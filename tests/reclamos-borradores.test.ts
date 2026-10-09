@@ -60,6 +60,16 @@ describe('guardar borrador', () => {
     expect((arg(up, 'update')![0] as { cuerpo: string }).cuerpo).toBe('Hola Julio,\n\nTe paso un reclamo.')
     expect(up.ops.filter(o => o.m === 'eq').map(o => o.args)).toContainEqual(['fed_id', 'f1'])
   })
+  it('con reemplaza_id actualiza el borrador propio (nuevo asunto) en lugar de crear otro', async () => {
+    estado.responder = l => (l.tabla === 'establecimientos' ? { data: { id: UID, cue: 61139000, nombre: 'J' } } : l.tabla === 'reclamos_borradores' && l.ops.some(o => o.m === 'update') ? { data: [{ id: 'b1' }] } : {})
+    const nuevo = '06-01-091020260800 - CUE 61139000 - Sin Conectividad'
+    await expect(R.guardarBorradorImpl(yoFed, { ...entrada, asunto: nuevo, reemplaza_id: UID })).resolves.toBe(UID)
+    const up = de('reclamos_borradores', 'update')[0]
+    expect((arg(up, 'update')![0] as { asunto: string }).asunto).toBe(nuevo)
+    expect(up.ops.filter(o => o.m === 'eq').map(o => o.args)).toEqual([['id', UID], ['fed_id', 'f1']])
+    expect(de('reclamos_borradores', 'insert')).toHaveLength(0)
+    await expect(R.guardarBorradorImpl(yoFed, { ...entrada, reemplaza_id: 'x' })).rejects.toThrow('inválido')
+  })
   it('tiene un tope de borradores', async () => {
     estado.responder = l => (l.tabla === 'establecimientos' ? { data: { id: UID, cue: 61139000, nombre: 'J' } } : { data: null, count: 30 })
     await expect(R.guardarBorradorImpl(yoFed, entrada)).rejects.toThrow('borradores')

@@ -263,7 +263,8 @@ export type AdjuntoBorrador = { texto: string, enlace?: string }
 export type Borrador = { id: string, school_id: string | null, cue: number | null, escuela_nombre: string | null, tipo_label: string, asunto: string, para: string | null, cuerpo: string, adjuntos: AdjuntoBorrador[], created_at: string }
 const MAX_BORRADORES = 30
 const COLS_BORRADOR = 'id, school_id, cue, escuela_nombre, tipo_label, asunto, para, cuerpo, adjuntos, created_at'
-export async function guardarBorradorImpl(yo: Usuario, input: { school_id: string, tipo: string, asunto: string, para: string | null, cuerpo: string, adjuntos: AdjuntoBorrador[] }): Promise<string> {
+// `reemplaza_id`: un borrador propio que se actualiza en lugar de crear otro (por ejemplo, cuando se cambió la fecha y hora de envío y con ella el asunto).
+export async function guardarBorradorImpl(yo: Usuario, input: { school_id: string, tipo: string, asunto: string, para: string | null, cuerpo: string, adjuntos: AdjuntoBorrador[], reemplaza_id?: string }): Promise<string> {
   if (!UUID.test(input.school_id)) throw new Error('Establecimiento inválido')
   const tipo = tipoDe(input.tipo)
   if (!tipo) throw new Error('Tipo de reclamo inválido')
@@ -276,6 +277,12 @@ export async function guardarBorradorImpl(yo: Usuario, input: { school_id: strin
   if (error) throw new Error(error.message)
   if (!esc) throw new Error('No se encontró el establecimiento')
   if (!/^06-01-\d{12} - CUE \d{8} - .+/.test(asunto) || !asunto.includes(`CUE ${esc.cue} - `)) throw new Error('El asunto no tiene el formato de la guía')
+  if (input.reemplaza_id) {
+    if (!UUID.test(input.reemplaza_id)) throw new Error('Borrador inválido')
+    const up = await db.from('reclamos_borradores').update({ asunto, para: input.para || null, cuerpo, adjuntos: input.adjuntos }).eq('id', input.reemplaza_id).eq('fed_id', yo.fed.id).select('id')
+    if (up.error) throw new Error(up.error.code === '23505' ? 'Ya tenés un borrador con ese asunto' : up.error.message)
+    if (up.data?.length) return input.reemplaza_id
+  }
   // Un mismo asunto no se guarda dos veces (doble toque): si ya estaba, se actualiza el mensaje (por ejemplo, si se lo adaptó).
   const { data: previo } = await db.from('reclamos_borradores').select('id').eq('fed_id', yo.fed.id).eq('asunto', asunto).maybeSingle()
   if (previo) {
