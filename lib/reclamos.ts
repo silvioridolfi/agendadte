@@ -163,12 +163,6 @@ export const llevaChecklist = (tipo: TipoReclamo, esc: EscuelaConectividad, d: D
 // Nombres de la base (en mayúsculas) en formato de oración, con las preposiciones en minúscula.
 const nombrePropio = (s: string) => titleCase(s).replace(/ (De|Del|La|Las|Los|Y|E|Con|Para)(?= )/g, m => m.toLowerCase())
 const linea = (k: string, v: string | null | undefined) => (v && v.trim() ? `${k}: ${v.trim()}\n` : '')
-// Saludo según la hora argentina: buen día hasta las 12, buenas tardes hasta las 20 y buenas noches después.
-export function saludoDe(ahora: Date): string {
-  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: ZONA, hour: '2-digit', hourCycle: 'h23' }).format(ahora))
-  return h < 12 ? 'buen día' : h < 20 ? 'buenas tardes' : 'buenas noches'
-}
-
 // Arma el reclamo. Lo recibe el CED por el correo regional, y es él quien lo reenvía a la DTE (que lo deriva a PBA o a Educar): por eso el mensaje
 // va dirigido al CED, sin firma ni cargo (el correo oficial ya los lleva). `ced`: nombre de pila del CED, si se conoce. Si faltan datos, usar `faltantes` antes.
 export function armarReclamo(esc: EscuelaConectividad, tipo: TipoReclamo, d: DatosReclamo, ahora: Date, ced: string | null): Reclamo {
@@ -194,7 +188,7 @@ export function armarReclamo(esc: EscuelaConectividad, tipo: TipoReclamo, d: Dat
   const contacto = !adjuntos.some(a => a.enlace === DOC_CHECKLIST_USAP || a.enlace === DOC_CHECKLIST_Z3) && (d.contactoNombre.trim() || d.contactoTelefono.trim())
     ? `\nContacto del establecimiento:\n${linea('Nombre', d.contactoNombre)}${linea('Cargo', d.contactoCargo)}${linea('Teléfono', d.contactoTelefono)}${linea('Horario', d.contactoHorario)}`
     : ''
-  const cuerpo = `Hola${ced ? ` ${ced}` : ''}, ${saludoDe(ahora)}.\n\nTe paso un reclamo de conectividad:\n\n`
+  const cuerpo = `Hola${ced ? ` ${ced}` : ''},\n\nTe paso un reclamo de conectividad:\n\n`
     + linea('Establecimiento', `${esc.nombre ? nombrePropio(esc.nombre) : 'Sin nombre'} (CUE ${esc.cue})`)
     + linea('Localidad', [esc.ciudad, esc.distrito].filter((x, i, a) => x && a.indexOf(x) === i).map(x => nombrePropio(x!)).join(', '))
     + linea('Dirección', esc.direccion ? nombrePropio(esc.direccion) : null)

@@ -1,7 +1,6 @@
 // Cronogramas de conectividad (pestaña "Cronogramas" del consolidado de conectividad): lectura de la planilla, tipos y filtros de la sección (puro).
 import { siglaNombre } from '@/lib/siglas'
 import { titleCase } from '@/lib/format'
-import { saludoDe } from '@/lib/reclamos'
 import { coincideEscuela } from '@/lib/buscador'
 
 // Planilla y pestaña de donde se leen (la cuenta técnica de la agenda tiene permiso de lector).
@@ -322,17 +321,19 @@ export const RECOMENDACIONES_ENLACE = `Algunas aclaraciones de Conectividad para
 - Ante cualquier inconveniente con el servicio, se envía un correo detallando el problema, con una foto del módem y del equipo SD-WAN, y el nombre y contacto del responsable institucional.`
 
 // `contacto` es el nombre de pila de la persona a la que se le escribe, si se sabe.
-export function mensajeEscuela(c: Pick<Cronograma, 'cue' | 'fecha_inicio' | 'fecha_fin' | 'tipo' | 'proveedor' | 'instaladores' | 'semana'> & { school: { nombre: string | null } | null, nombre_planilla?: string | null }, ahora: Date, contacto?: string | null): { asunto: string, cuerpo: string } {
+export function mensajeEscuela(c: Pick<Cronograma, 'cue' | 'fecha_inicio' | 'fecha_fin' | 'tipo' | 'proveedor' | 'instaladores' | 'semana'> & { school: { nombre: string | null } | null, nombre_planilla?: string | null }, contacto?: string | null): { asunto: string, cuerpo: string } {
   const escuela = c.school?.nombre ? siglaNombre(titleCase(c.school.nombre)) : c.nombre_planilla ? titleCase(c.nombre_planilla) : `CUE ${c.cue}`
   const lugar = escuela.startsWith('CUE ') ? `la escuela ${escuela}` : `${escuela} (CUE ${c.cue})`
   const personal = (c.instaladores ?? '').split('\n').map(x => x.trim()).filter(Boolean)
   const enlaces = personal.filter(esEnlace), responsables = personal.filter(x => !esEnlace(x)).map(personaDe).filter(Boolean)
   const programa = programaDe(c.semana)
-  const saludo = saludoDe(ahora), nombre = (contacto ?? '').trim().split(/\s+/)[0]
-  const apertura = nombre ? `Hola ${titleCase(nombre)}, ${saludo}.` : `${saludo[0].toUpperCase()}${saludo.slice(1)}.`
+  const nombre = (contacto ?? '').trim().split(/\s+/)[0]
+  // Saludo simple, sin hora (el mensaje puede salir en cualquier momento del día); cada uno lo adapta en el cuadro de texto.
+  const apertura = nombre ? `Hola ${titleCase(nombre)},` : 'Hola,'
   const quien = c.proveedor ? `personal de la empresa ${c.proveedor}` : 'personal técnico'
   const cuerpo = [
-    `${apertura} Desde la Dirección de Tecnología Educativa informamos que, según el cronograma ${programa ? `de ${programa === 'Educar' ? 'EDUCAR' : programa}` : 'establecido'}, ${cuandoTxt(c)}, ${quien} realizará ${tareaDe(c.tipo)} en ${lugar}.`,
+    apertura,
+    `Desde la Dirección de Tecnología Educativa informamos que, según el cronograma ${programa ? `de ${programa === 'Educar' ? 'EDUCAR' : programa}` : 'establecido'}, ${cuandoTxt(c)}, ${quien} realizará ${tareaDe(c.tipo)} en ${lugar}.`,
     responsables.length === 1 ? `La intervención estará a cargo de ${responsables[0]}.` : responsables.length > 1 ? `La intervención estará a cargo de:\n${responsables.map(r => `- ${r}`).join('\n')}` : null,
     enlaces.length ? `Datos de quienes estarán a cargo: ${enlaces.join(' ')}` : null,
     `Se informa a la institución a fin de que pueda estar al tanto y facilitar su ingreso y acceso a los espacios correspondientes.${pideRack(c.tipo) ? ' Se solicita tener disponible y accesible el rack para poder llevar adelante la instalación.' : ''}`,

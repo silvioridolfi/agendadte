@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DATOS_VACIOS, directivoDe, esJardin, llevaChecklist, pisoPnce, puedeSerAmbos, gmailUrl, gmailAppUrl, plataformaDe, saludoDe, RECLAMOS_PARA, RECLAMOS_PARA_CLARO, armarReclamo, asuntoDe, codigoFecha, enlacesDe, faltantes, tipoDe, type DatosReclamo, type EscuelaConectividad } from '@/lib/reclamos'
+import { DATOS_VACIOS, directivoDe, esJardin, llevaChecklist, pisoPnce, puedeSerAmbos, gmailUrl, gmailAppUrl, plataformaDe, RECLAMOS_PARA, RECLAMOS_PARA_CLARO, armarReclamo, asuntoDe, codigoFecha, enlacesDe, faltantes, tipoDe, type DatosReclamo, type EscuelaConectividad } from '@/lib/reclamos'
 
 const esc = (p: Partial<EscuelaConectividad> = {}): EscuelaConectividad => ({ id: 'e', cue: 60897700, nombre: 'ESCUELA DE EDUCACIÓN SECUNDARIA N° 31', distrito: 'LA PLATA', ciudad: 'LA PLATA', direccion: 'BRASIL esq. EVA PERÓN', matricula: 784,
   plan_enlace: 'PBA', subplan_enlace: 'PBA GRUPO 2 A', plan_piso_tecnologico: 'PBA', tipo_piso_instalado: 'Red Local Pequeña - Instalada', tipo: 'PISO TECNOLÓGICO + ENLACE', proveedor_pnce: null, proveedor_pba: 'Orbith S.A', ani: null, recurso_primario: null, access_id: null, nivel: 'Nivel Secundario', contactos: [], ...p })
@@ -66,21 +66,16 @@ describe('sin conectividad según enlace y piso', () => {
 describe('mensaje al CED', () => {
   const r = armarReclamo(esc(), tipo('sin_conectividad'), datos({ detalle: 'La antena está a punto de caerse' }), ahora, 'Julio')
   it('va dirigido al CED, sin firma ni fórmulas formales', () => {
-    expect(r.cuerpo.startsWith('Hola Julio, buen día.\n\nTe paso un reclamo de conectividad:')).toBe(true)
+    expect(r.cuerpo.startsWith('Hola Julio,\n\nTe paso un reclamo de conectividad:')).toBe(true)
     expect(r.cuerpo.endsWith('\nSaludos')).toBe(true)
     expect(r.cuerpo).not.toMatch(/Quedamos a disposición|Facilitador|Silvio/)
-    expect(armarReclamo(esc(), tipo('piso'), datos(), ahora, null).cuerpo.startsWith('Hola, buen día.')).toBe(true)
+    expect(armarReclamo(esc(), tipo('piso'), datos(), ahora, null).cuerpo.startsWith('Hola,\n\nTe paso')).toBe(true)
   })
   it('el enlace y el piso van en renglones separados', () => {
     expect(r.cuerpo).toContain('Enlace: PBA Grupo 2 A (Orbith S.A)\nPiso tecnológico: PBA (Red Local Pequeña)\n')
   })
-  it('el saludo depende de la hora argentina', () => {
-    expect(saludoDe(new Date('2026-10-02T12:00:00Z'))).toBe('buen día') // 09:00
-    expect(saludoDe(new Date('2026-10-02T16:00:00Z'))).toBe('buenas tardes') // 13:00
-    expect(saludoDe(new Date('2026-10-02T22:30:00Z'))).toBe('buenas tardes') // 19:30
-    expect(saludoDe(new Date('2026-10-02T23:00:00Z'))).toBe('buenas noches') // 20:00
-    expect(saludoDe(new Date('2026-10-03T02:00:00Z'))).toBe('buenas noches') // 23:00
-    expect(saludoDe(new Date('2026-10-03T07:00:00Z'))).toBe('buen día') // 04:00
+  it('el saludo es general: no depende de la hora', () => {
+    for (const h of ['2026-10-02T12:00:00Z', '2026-10-02T23:30:00Z', '2026-10-03T07:00:00Z']) expect(armarReclamo(esc(), tipo('piso'), datos(), new Date(h), 'Julio').cuerpo.startsWith('Hola Julio,\n')).toBe(true)
   })
   it('Gmail se abre con la cuenta institucional', () => {
     expect(gmailUrl(r, 'sridolfi@abc.gob.ar')).toContain('authuser=sridolfi%40abc.gob.ar&view=cm')

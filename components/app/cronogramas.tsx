@@ -213,14 +213,16 @@ function MensajeEscuela({ c, cuenta, avisada, onClose, onAvisada }: { c: Cronogr
   const [copiado, setCopiado] = useState(false)
   const [copiadoRec, setCopiadoRec] = useState(false)
   const [marcando, setMarcando] = useState(false)
-  const [ahora] = useState(() => new Date())
   useEffect(() => {
     let vigente = true
     getContactosCronograma(c.id).then(l => { if (vigente) { setContactos(l); setElegido(l.map(k => k.correo_laboral || k.correo).find(Boolean) ?? '') } }).catch(e => { if (vigente) setError(errMsg(e)) })
     return () => { vigente = false }
   }, [c.id])
   const contacto = contactos?.find(k => (k.correo_laboral || k.correo) === elegido)?.nombre ?? null
-  const msg = mensajeEscuela(c, ahora, contacto)
+  const generado = mensajeEscuela(c, contacto)
+  // El mensaje se puede adaptar: el texto editado vale mientras el generado sea el mismo (si se elige otro contacto, parte del nuevo).
+  const [edicion, setEdicion] = useState<{ base: string, texto: string } | null>(null)
+  const msg = { ...generado, cuerpo: edicion?.base === generado.cuerpo ? edicion.texto : generado.cuerpo }
   const borrador = { asunto: msg.asunto, para: elegido || null, cuerpo: msg.cuerpo }
   const copiar = async () => { try { await navigator.clipboard.writeText(msg.cuerpo); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { setCopiado(false) } }
   const copiarRec = async () => { try { await navigator.clipboard.writeText(RECOMENDACIONES_ENLACE); setCopiadoRec(true); setTimeout(() => setCopiadoRec(false), 2000) } catch { setCopiadoRec(false) } }
@@ -233,7 +235,7 @@ function MensajeEscuela({ c, cuenta, avisada, onClose, onAvisada }: { c: Cronogr
       <DialogTitle>Avisar a la escuela</DialogTitle>
       <DialogDescription>Mensaje informativo para el directivo con la tarea, la fecha y el responsable.</DialogDescription>
       <div className="flex flex-col gap-1"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-dte-gris">Mensaje</span><Button type="button" variant="ghost" size="sm" onClick={copiar}>{copiado ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado ? 'Copiado' : 'Copiar'}</Button></div>
-        <pre className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-control bg-dte-fondo px-3 py-2 font-sans text-sm">{msg.cuerpo}</pre></div>
+        <Textarea aria-label="Mensaje" value={msg.cuerpo} onChange={e => setEdicion({ base: generado.cuerpo, texto: e.target.value })} className="min-h-56 bg-dte-fondo font-sans text-sm" /><p className="text-xs text-dte-gris">Podés adaptar el texto (el saludo, por ejemplo) antes de copiarlo.</p></div>
       <div className="flex flex-col gap-1.5"><span className="text-xs font-semibold text-dte-gris">Contactos de la escuela</span>
         {error ? <ErrorBox message={error} /> : !contactos ? <Skeleton className="h-16" />
           : contactos.length ? <ul className="divide-y divide-dte-linea overflow-hidden rounded-tile border border-dte-linea">{contactos.map((k, i) => { const mail = k.correo_laboral || k.correo; return <li key={i} className="flex flex-col gap-1 px-3 py-2">
