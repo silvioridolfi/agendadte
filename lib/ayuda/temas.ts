@@ -132,6 +132,8 @@ Arma el asunto y el cuerpo del mail de un reclamo de conectividad, con la lista 
 2. **Tipo de reclamo:** los 15 de la guía, con su asunto (Sin Conectividad, Problemas con UTM o Switch, Mudanza, etc.). Cada uno pide solo los datos que corresponden.
 3. **Contacto del directivo:** nombre, cargo, teléfono y horario. La agenda lo precarga desde los contactos de la base (el director o vicedirector) y podés elegir otro de la lista o editarlo. Solo es obligatorio, y solo va en el mensaje, cuando el reclamo es de enlace PBA y se adjunta únicamente la foto del módem. Cuando se adjunta un checklist, el checklist ya pide esos datos y la agenda no los incluye.
 4. **Armar reclamo:** sale el asunto con el formato 06-01-DDMMAAAAHHMM - CUE XXXXXXXX - Asunto (con la fecha y la hora de ese momento), el cuerpo y los adjuntos. El mensaje va dirigido al CED, con el saludo según la hora y los datos del contacto uno por renglón. Podés copiar cada parte o abrir tu correo con todo cargado. Con **Cancelar** descartás el reclamo.
+## Si lo vas a mandar después
+Si dejaste el mail programado o lo vas a mandar en otro momento, no lo registres todavía: con **Guardar en borradores** queda guardado tal cual (con el mismo asunto) y no se avisa al CED. Cuando salga, abrí el **Registro de reclamos**, buscá **Mis borradores** y tocá **Marcar como enviado**: elegís la fecha en que salió (hoy por defecto) y pasa al registro, con el aviso al CED. Desde ahí también podés **Ver mensaje** (para copiarlo) o **Eliminar** el borrador. Los borradores son personales: cada uno ve solo los suyos.
 ## Qué adjuntar según la infraestructura
 | Caso | Qué se adjunta |
 | PBA Grupo 2 o 2019, sin piso | Fotos del módem (o de la antena, si el problema es ahí) y contacto. |

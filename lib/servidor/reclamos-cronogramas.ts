@@ -14,7 +14,7 @@ import { cruceDe, proximosDe, type CronoCorto, type CruceReclamo, type EstadoCro
 // ---- Registro de reclamos de conectividad: el FED registra el que armó y mandó al CED; el CED anota el N° de ticket o incidencia y si se resolvió.
 export const COLS_RECLAMO = '*, school:establecimientos(nombre, distrito, ciudad, fed_a_cargo)'
 
-export async function registrarReclamoImpl(yo: Usuario, input: { school_id: string, tipo: string, asunto: string }): Promise<string> {
+export async function registrarReclamoImpl(yo: Usuario, input: { school_id: string, tipo: string, asunto: string }, enviadoAt?: string): Promise<string> {
   if (!UUID.test(input.school_id)) throw new Error('Escuela inválida')
   const tipo = tipoDe(input.tipo)
   if (!tipo) throw new Error('Tipo de reclamo inválido')
@@ -27,7 +27,7 @@ export async function registrarReclamoImpl(yo: Usuario, input: { school_id: stri
   // Si ya se registró este mismo reclamo (doble toque), no se duplica.
   const { data: previo } = await db.from('reclamos_conectividad').select('id').eq('fed_id', yo.fed.id).eq('asunto', asunto).maybeSingle()
   if (previo) return previo.id as string
-  const row = { fed_id: yo.fed.id, school_id: esc.id, cue: esc.cue, tipo: tipo.id, tipo_label: tipo.asunto, conexion: conexionDe(esc as { plan_enlace: string | null, subplan_enlace: string | null, plan_piso_tecnologico: string | null }), asunto, origen: 'app' as const }
+  const row = { fed_id: yo.fed.id, school_id: esc.id, cue: esc.cue, tipo: tipo.id, tipo_label: tipo.asunto, conexion: conexionDe(esc as { plan_enlace: string | null, subplan_enlace: string | null, plan_piso_tecnologico: string | null }), asunto, origen: 'app' as const, ...(enviadoAt ? { enviado_at: enviadoAt } : {}) }
   const { data, error: e2 } = await db.from('reclamos_conectividad').insert(row).select('id').single()
   if (e2) throw new Error(e2.message)
   await audit('reclamos_conectividad', data.id as string, 'alta', yo.fed.id, row)
@@ -256,4 +256,61 @@ export async function sincronizarCronogramasAhoraImpl(yo: Usuario): Promise<Resu
   const cerrar = async (resultado: Record<string, unknown>) => { if (reg.data?.id) await db.from('cron_ejecuciones').update({ fin: new Date().toISOString(), resultado }).eq('id', reg.data.id) }
   try { const r = await sincronizarCronogramas(); await cerrar({ ...r }); return r }
   catch (e) { await cerrar({ error: errMsgServer(e) }); throw e }
+}
+
+// ---- Borradores: el reclamo armado queda guardado hasta que el FED lo marca como enviado (por ejemplo, si lo dejó programado en Gmail).
+export type AdjuntoBorrador = { texto: string, enlace?: string }
+export type Borrador = { id: string, school_id: string | null, cue: number | null, escuela_nombre: string | null, tipo_label: string, asunto: string, para: string | null, cuerpo: string, adjuntos: AdjuntoBorrador[], created_at: string }
+const MAX_BORRADORES = 30
+const COLS_BORRADOR = 'id, school_id, cue, escuela_nombre, tipo_label, asunto, para, cuerpo, adjuntos, created_at'
+export async function guardarBorradorImpl(yo: Usuario, input: { school_id: string, tipo: string, asunto: string, para: string | null, cuerpo: string, adjuntos: AdjuntoBorrador[] }): Promise<string> {
+  if (!UUID.test(input.school_id)) throw new Error('Establecimiento inválido')
+  const tipo = tipoDe(input.tipo)
+  if (!tipo) throw new Error('Tipo de reclamo inválido')
+  const asunto = input.asunto.trim(), cuerpo = input.cuerpo.trim()
+  if (!cuerpo || cuerpo.length > 8000) throw new Error('El mensaje está vacío o es demasiado largo')
+  if (input.para && input.para.length > 200) throw new Error('El destinatario es demasiado largo')
+  if (!Array.isArray(input.adjuntos) || input.adjuntos.length > 10 || input.adjuntos.some(a => !a || typeof a.texto !== 'string' || a.texto.length > 200 || (a.enlace !== undefined && !/^https:\/\/docs\.google\.com\//.test(a.enlace)))) throw new Error('Los adjuntos no son válidos')
+  const db = supabaseServer()
+  const { data: esc, error } = await db.from('establecimientos').select('id, cue, nombre').eq('id', input.school_id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!esc) throw new Error('No se encontró el establecimiento')
+  if (!/^06-01-\d{12} - CUE \d{8} - .+/.test(asunto) || !asunto.includes(`CUE ${esc.cue} - `)) throw new Error('El asunto no tiene el formato de la guía')
+  // Un mismo asunto no se guarda dos veces (doble toque).
+  const { data: previo } = await db.from('reclamos_borradores').select('id').eq('fed_id', yo.fed.id).eq('asunto', asunto).maybeSingle()
+  if (previo) return previo.id as string
+  const { count } = await db.from('reclamos_borradores').select('id', { count: 'exact', head: true }).eq('fed_id', yo.fed.id)
+  if ((count ?? 0) >= MAX_BORRADORES) throw new Error(`Tenés ${MAX_BORRADORES} borradores: marcá como enviados o eliminá algunos antes de guardar otro`)
+  const row = { fed_id: yo.fed.id, school_id: esc.id, cue: esc.cue, escuela_nombre: esc.nombre, tipo: tipo.id, tipo_label: tipo.asunto, asunto, para: input.para || null, cuerpo, adjuntos: input.adjuntos }
+  const { data, error: e2 } = await db.from('reclamos_borradores').insert(row).select('id').single()
+  if (e2) throw new Error(e2.message)
+  return data.id as string
+}
+// Cada uno ve y toca solo sus borradores.
+export async function getBorradoresImpl(yo: Usuario): Promise<Borrador[]> {
+  const { data, error } = await supabaseServer().from('reclamos_borradores').select(COLS_BORRADOR).eq('fed_id', yo.fed.id).order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data ?? []) as unknown as Borrador[]
+}
+export async function eliminarBorradorImpl(yo: Usuario, id: string): Promise<void> {
+  if (!UUID.test(id)) throw new Error('Borrador inválido')
+  const { data, error } = await supabaseServer().from('reclamos_borradores').delete().eq('id', id).eq('fed_id', yo.fed.id).select('id')
+  if (error) throw new Error(error.message)
+  if (!data?.length) throw new Error('No se encontró el borrador')
+}
+// Lo registra como enviado (con la fecha en que salió, hoy por defecto), avisa al CED como cualquier reclamo nuevo y lo saca de los borradores.
+export async function enviarBorradorImpl(yo: Usuario, id: string, fecha: string | null): Promise<string> {
+  if (!UUID.test(id)) throw new Error('Borrador inválido')
+  const hoy = hoyAR()
+  if (fecha && (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha > hoy)) throw new Error('La fecha de envío no puede ser futura')
+  const db = supabaseServer()
+  const { data: b, error } = await db.from('reclamos_borradores').select('id, school_id, tipo, asunto').eq('id', id).eq('fed_id', yo.fed.id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!b) throw new Error('No se encontró el borrador')
+  if (!b.school_id) throw new Error('El establecimiento ya no existe: eliminá el borrador')
+  const enviadoAt = !fecha || fecha === hoy ? undefined : `${fecha}T12:00:00-03:00`
+  const reclamoId = await registrarReclamoImpl(yo, { school_id: b.school_id as string, tipo: b.tipo as string, asunto: b.asunto as string }, enviadoAt)
+  const del = await db.from('reclamos_borradores').delete().eq('id', id).eq('fed_id', yo.fed.id)
+  if (del.error) throw new Error(del.error.message)
+  return reclamoId
 }
