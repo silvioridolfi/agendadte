@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Briefcase, Building2, Map as MapaIcono, Camera, CalendarOff, CircleHelp, CalendarClock, ClipboardList, ExternalLink, EyeOff, Globe, Wifi, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, Loader2, Plus, Trash2, UserRound, Users, X, Megaphone } from 'lucide-react'
+import { Briefcase, Building2, Map as MapaIcono, Camera, CalendarOff, CircleHelp, CalendarClock, ClipboardList, ExternalLink, EyeOff, Globe, Wifi, FileText, KeyRound, LayoutDashboard, LogOut, Check, ChevronDown, Clock, Copy, GraduationCap, Loader2, Plus, Trash2, UserRound, Users, X, Megaphone } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +17,7 @@ const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 // Menú del avatar: Mi perfil (sólo FED) y cambio de perfil. Se cierra con Escape o tocando afuera.
 const CLAVE_PRESENTACION = 'agenda-territorial:presentacion'
 
-export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyuda, onReclamo, onRegistroReclamos, onCronogramas, onComunicados, onEscuelas, onMapa, onPerfil, onFotos, onMisPve, onUsuarios, onFeriados, onPve, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, hayNovedades?: boolean, onAyuda: () => void, onReclamo: () => void, onRegistroReclamos: () => void, onCronogramas: () => void, onComunicados: () => void, onEscuelas: () => void, onMapa: () => void, onPerfil: () => void, onFotos: () => void, onMisPve: () => void, onUsuarios: () => void, onFeriados: () => void, onPve: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
+export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyuda, onReclamo, onRegistroReclamos, onCronogramas, onComunicados, onJornadas, onEscuelas, onMapa, onPerfil, onFotos, onMisPve, onUsuarios, onFeriados, onPve, onEquipo, onPassword, onSalir }: { profile: Fed, feds: Fed[], esAdmin: boolean, hayNovedades?: boolean, onAyuda: () => void, onReclamo: () => void, onRegistroReclamos: () => void, onCronogramas: () => void, onComunicados: () => void, onJornadas: () => void, onEscuelas: () => void, onMapa: () => void, onPerfil: () => void, onFotos: () => void, onMisPve: () => void, onUsuarios: () => void, onFeriados: () => void, onPve: () => void, onEquipo: () => void, onPassword: () => void, onSalir: () => void }) {
   const [open, setOpen] = useState(false)
   // Modo presentación (sólo administración): oculta las opciones de administración en este navegador.
   // Se vuelve a mostrar entrando con #admin en la dirección.
@@ -60,6 +60,7 @@ export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyu
       <button role="menuitem" onClick={() => { setOpen(false); onCronogramas() }} className={item}><CalendarClock className="size-4 text-dte-petroleo" />Cronogramas</button>
       {(admin || profile.rol === 'coordinacion') && <div role="separator" className="my-1 border-t border-dte-linea" />}
       {(admin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onComunicados() }} className={item}><Megaphone className="size-4 text-dte-petroleo" />Comunicados</button>}
+      {(admin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onJornadas() }} className={item}><GraduationCap className="size-4 text-dte-petroleo" />Reporte de jornadas</button>}
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
       {(admin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onPve() }} className={item}><FileText className="size-4 text-dte-petroleo" />PVE del equipo</button>}
