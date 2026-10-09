@@ -89,6 +89,8 @@ export default function Page() {
   // Reclamo de conectividad: `k` reinicia el formulario cada vez que se abre.
   const [reclamo, setReclamo] = useState<{ escuela: School | null, k: number } | null>(null)
   const abrirReclamo = (escuela: School | null) => setReclamo({ escuela, k: Date.now() })
+  // Cambia al cerrar el armado de un reclamo: el Registro vuelve a traer la lista y los borradores.
+  const [reclamosK, setReclamosK] = useState(0)
   const [reloadKey, setReloadKey] = useState(0)
   const [toast, setToast] = useState('')
   // Lo que acaba de guardarse o marcarse como realizada se destaca un momento en las tarjetas.
@@ -199,7 +201,7 @@ export default function Page() {
     </div>
     {/* Cada pantalla entra con un fundido corto; cambiar de sección o de vista la vuelve a animar. */}
     <div key={`${section}-${vista?.tipo ?? ''}-${vista?.tipo === 'fed' ? vista.fed.id : ''}`} className="anim-entrada">
-    {section === 'reclamos' ? <RegistroReclamos profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} soloMiosInicial={reclamosDesdeAcceso && profile.rol === 'fed'} volver={volver} />
+    {section === 'reclamos' ? <RegistroReclamos profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} soloMiosInicial={reclamosDesdeAcceso && profile.rol === 'fed'} volver={volver} onNuevo={() => abrirReclamo(null)} recargar={reclamosK} />
       : section === 'escuelas' ? <MisEscuelas onMapa={() => irA('mapa')} profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} volver={volver} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
       : section === 'mapa' ? <SeccionMapa profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} volver={volver} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
       : section === 'cronogramas' ? <Cronogramas profile={profile} feds={feds ?? []} esAdmin={sesion.esAdmin} cuenta={sesion.email} volver={volver} />
@@ -230,7 +232,7 @@ export default function Page() {
       onChanged={(msg, updated) => { changed(msg); setSelected(updated) }} />
 
     <BuscadorEscuelas open={buscador} onClose={() => setBuscador(false)} feds={feds ?? []} puedeAgendar={!vista} onAgendar={school => setEditing({ item: null, fecha: iso(toWeekday(fechaHoyAR())), preset: { school } })} onReclamo={abrirReclamo} onOpen={setSelected} />
-    {reclamo && <ReclamoConectividad key={reclamo.k} open onClose={() => setReclamo(null)} cuenta={sesion.email} ced={(feds ?? []).find(f => f.rol === 'coordinacion') ? firstName((feds ?? []).find(f => f.rol === 'coordinacion')!.nombre_completo) : null} escuelaInicial={reclamo.escuela} />}
+    {reclamo && <ReclamoConectividad key={reclamo.k} open onClose={() => { setReclamo(null); setReclamosK(k => k + 1) }} cuenta={sesion.email} ced={(feds ?? []).find(f => f.rol === 'coordinacion') ? firstName((feds ?? []).find(f => f.rol === 'coordinacion')!.nombre_completo) : null} escuelaInicial={reclamo.escuela} />}
     <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
       <DialogContent className="bg-white sm:max-w-2xl">
         <DialogHeader><DialogTitle className="text-lg">{tituloForm(editing)}</DialogTitle><DialogDescription>{editing?.item ? 'Actualizá los datos de la acción.' : editing?.preset?.modo === 'nuevo' ? 'Con fecha, el primer encuentro se agrega a tu agenda; si todavía no la tenés, queda “por iniciar”.' : editing?.preset?.modo === 'encuentro' ? 'Se agrega a tu agenda como acción realizada (o planificada, si la fecha todavía no llegó).' : `Se agrega a la agenda de ${firstName(profile.nombre_completo)}.`}</DialogDescription></DialogHeader>

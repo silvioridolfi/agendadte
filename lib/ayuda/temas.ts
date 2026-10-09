@@ -148,7 +148,7 @@ Los demás tipos piden lo que indica la guía: formulario y plano (mudanza, soli
 [i] El mail va a ${RECLAMOS_PARA}: lo recibe el CED, que lo reenvía a la DTE (ella lo deriva a PBA o a Educar). Un mail por establecimiento y con el CUE de 8 dígitos. El botón abre Gmail con tu cuenta institucional; en el celular lo abre directo en la app de Gmail (con la cuenta que tengas activa ahí) y, si no la tenés instalada, en el navegador. Los archivos los adjuntás vos, la agenda no los envía.
 [!] Si el establecimiento ya tiene un reclamo abierto, no abras una cadena nueva: respondé en la original, sin el "Fwd" antes del código. Si lo enviás en otro momento, cambiá la fecha y la hora de envío para que el asunto lleve la correcta.` },
   { id: 'registro-reclamos', titulo: 'Registro de reclamos de conectividad', para: ['fed', 'ced'], md: () => `
-Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la planilla manual. Se abre desde el menú de las iniciales (**Registro de reclamos**) o desde el acceso del Tablero; en el celular, **Volver** (arriba) te lleva a la pantalla de la que venías.
+Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la planilla manual. Se abre desde el menú de las iniciales (**Registro de reclamos**) o desde el acceso del Tablero; con **Nuevo reclamo** (arriba) armás uno sin salir de acá; en el celular, **Volver** (arriba) te lleva a la pantalla de la que venías.
 ## Cómo se carga
 1. Armás el reclamo (**Armar reclamo de conectividad**) y lo mandás por mail al CED.
 2. Tocás **Reclamo enviado**: queda registrado con tu nombre, la escuela, el tipo de reclamo, el asunto y el tipo de conexión de la escuela. Al CED le llega una notificación de reclamo nuevo.

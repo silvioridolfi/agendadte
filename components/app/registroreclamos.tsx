@@ -2,7 +2,7 @@
 
 import { PuntoTipo } from '@/components/app/tipocrono'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Check, ClipboardList, Copy, Eye, FileSpreadsheet, Loader2, Pencil, Search, Trash2 } from 'lucide-react'
+import { CalendarClock, Check, ClipboardList, Copy, Eye, FileSpreadsheet, Loader2, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -21,7 +21,8 @@ const ZONA = 'America/Argentina/Buenos_Aires'
 const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString('es-AR', { timeZone: ZONA, day: '2-digit', month: '2-digit', year: 'numeric' })
 
 // Registro de reclamos de conectividad. El CED anota el N° de ticket (PBA) o de incidencia (Educar) y si se resolvió; la administración y los FED lo ven en modo lectura.
-export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial, volver }: { profile: Fed, feds: Fed[], esAdmin: boolean, soloMiosInicial?: boolean, volver?: { destino: string, ir: () => void } }) {
+// `onNuevo`: abre el armado de un reclamo nuevo; `recargar` cambia cuando ese armado se cierra, para traer de nuevo la lista y los borradores.
+export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial, volver, onNuevo, recargar = 0 }: { profile: Fed, feds: Fed[], esAdmin: boolean, soloMiosInicial?: boolean, volver?: { destino: string, ir: () => void }, onNuevo?: () => void, recargar?: number }) {
   const [lista, setLista] = useState<Reclamo[] | null>(null)
   const [error, setError] = useState('')
   const [filtros, setFiltros] = useState<FiltrosReclamo>({ estado: 'abiertos', fedId: '', conexion: '', busqueda: '' })
@@ -35,7 +36,7 @@ export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial, volv
   const [exportando, setExportando] = useState(false)
   const [errorExcel, setErrorExcel] = useState('')
   const cargar = useCallback(() => { getReclamos().then(setLista).catch(e => setError(errMsg(e))); getCruceReclamos().then(setCruce).catch(() => {}) }, [])
-  useEffect(() => { cargar() }, [cargar])
+  useEffect(() => { cargar() }, [cargar, recargar])
   const nombreFed = useCallback((id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Ex integrante', [feds])
   const propios = useMemo(() => (lista ?? []).filter(r => !soloMios || r.fed_id === profile.id || esDelFed(r.school?.fed_a_cargo, profile.nombre_completo)), [lista, soloMios, profile.id, profile.nombre_completo])
   const visibles = useMemo(() => filtrarReclamos(propios, filtros, nombreFed).filter(r => !conCrono || (conCrono === 'proximo' ? !!cruce[r.id]?.proximos.length : !!cruce[r.id]?.pasado)), [propios, filtros, nombreFed, conCrono, cruce])
@@ -47,7 +48,10 @@ export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial, volv
     {volver && <BotonVolver onClick={volver.ir} destino={volver.destino} />}
     <p className={eyebrow}>Conectividad</p>
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-2xl font-bold">Registro de reclamos</h2>
+      <div className="flex flex-wrap items-center gap-2">
+      {onNuevo && <Button type="button" size="sm" onClick={onNuevo}><Plus data-icon="inline-start" />Nuevo reclamo</Button>}
       {lista && <Button type="button" variant="outline" size="sm" disabled={exportando || !visibles.length} onClick={async () => { setExportando(true); setErrorExcel(''); try { const { exportarReclamos } = await import('@/lib/exportar'); await exportarReclamos(visibles, nombreFed) } catch (e) { setErrorExcel(errMsg(e)) } finally { setExportando(false) } }}>{exportando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}Excel ({visibles.length})</Button>}
+      </div>
     </div>
     {errorExcel && <div className="mt-2"><ErrorBox message={errorExcel} /></div>}
     <p className="mt-1 text-sm text-dte-gris">Los reclamos que el equipo armó y mandó al CED, con el número de ticket o de incidencia que llega de Nivel Central.</p>
@@ -56,7 +60,7 @@ export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial, volv
     {error ? <div className="mt-4"><ErrorBox message={error} onRetry={() => { setError(''); cargar() }} /></div>
       : !lista ? <div className="mt-4 flex flex-col gap-3"><Skeleton className="h-16" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div>
       : <>
-        <BorradoresReclamos onEnviado={cargar} />
+        <BorradoresReclamos key={recargar} onEnviado={cargar} />
         <ul className="mt-4 grid grid-cols-3 gap-2">{([['enviado', resumen.enviados], ['en_proceso', resumen.enProceso], ['resuelto', resumen.resueltos]] as [EstadoReclamo, number][]).map(([e, n]) =>
           <li key={e} className="flex"><button type="button" aria-pressed={filtros.estado === e} onClick={() => set('estado', filtros.estado === e ? 'abiertos' : e)} className={`flex h-full w-full flex-col justify-between gap-1 rounded-control border px-3 py-2.5 text-left transition hover:shadow-e2 ${filtros.estado === e ? 'ring-2 ring-dte-petroleo/30' : ''} ${ESTADO_RECLAMO_CLASE[e]}`}><span className="block text-xl font-bold tabular-nums">{n}</span><span className="block text-xs leading-snug">{ESTADO_RECLAMO_PLURAL[e]}</span></button></li>)}</ul>
 
