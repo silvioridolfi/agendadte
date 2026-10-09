@@ -349,8 +349,9 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       // Licencia: las acciones planificadas de esos días pasan a reprogramadas (si se eligió).
       if (esLicencia && !item) {
         const ids = reprogramar ? (rango?.choques ?? []).map(i => i.id) : []
-        if (ids.length) await cambiarEstadoVarias(ids, 'reprogramada').catch(() => null)
-        onSaved({ creadas: r.creadas, mensaje: `Licencia cargada: ${r.creadas} ${r.creadas === 1 ? 'día hábil' : 'días hábiles'}${ids.length ? ` · ${ids.length} ${ids.length === 1 ? 'acción reprogramada' : 'acciones reprogramadas'}` : ''}` })
+        // Si no se pudo reprogramar, la licencia ya quedó cargada: se avisa para que las pasen a mano.
+        const fallo = ids.length ? await cambiarEstadoVarias(ids, 'reprogramada').then(() => false, () => true) : false
+        onSaved({ creadas: r.creadas, mensaje: `Licencia cargada: ${r.creadas} ${r.creadas === 1 ? 'día hábil' : 'días hábiles'}${fallo ? ' · no se pudieron reprogramar las acciones de esos días: pasalas a reprogramada a mano' : ids.length ? ` · ${ids.length} ${ids.length === 1 ? 'acción reprogramada' : 'acciones reprogramadas'}` : ''}` })
         return
       }
       onSaved({ creadas: r.creadas, id: r.id, mensaje: alcance === 'siguientes' && r.creadas > 1 ? `Se actualizaron este encuentro y ${r.creadas - 1} ${r.creadas === 2 ? 'fecha siguiente' : 'fechas siguientes'} de la serie` : estadoFinal !== form.estado ? 'La acción se marcó como realizada' : undefined }) } catch (err) {

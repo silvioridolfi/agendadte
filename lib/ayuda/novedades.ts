@@ -8,6 +8,7 @@ export type BannerNovedad = { para: Rol[], texto: string, corto: string, tema: s
 export type Novedad = { fecha: string, titulo: string, texto: string, para?: Rol[], banner?: BannerNovedad }
 
 export const NOVEDADES: Novedad[] = [
+  { fecha: '2026-10-09', titulo: 'Aviso si no se pueden reprogramar las acciones de una licencia', texto: 'Al cargar una licencia eligiendo reprogramar las acciones planificadas de esos días, si por algún problema no se pudieron reprogramar, el aviso ahora lo dice (antes figuraba como hecho). La licencia queda cargada igual y las acciones se pasan a mano.' },
   { fecha: '2026-10-08', titulo: 'Letra secundaria más grande', texto: 'Los textos secundarios de toda la agenda (fechas, estados, FED, avisos, etiquetas) pasaron de 12 a 13 píxeles para que se lean mejor en el celular, sobre todo al aire libre. El resto de los tamaños no cambió.' },
   { fecha: '2026-10-08', titulo: 'Colores más distinguibles en cuatro acciones', texto: 'Cuatro acciones tenían un color casi igual al de otra y se confundían en el calendario y en los gráficos: Planificación (ahora ciruela), Reunión con Nivel Central (azul profundo), Licencia (marrón) y Entrega de equipamiento (turquesa). El resto de los colores no cambió.' },
   { fecha: '2026-10-08', titulo: 'Comunicados: eliminar los retirados', texto: 'En Comunicados, los que ya están retirados o vencidos tienen un botón Eliminar: lo borra del todo junto con su registro de lecturas. Un comunicado vigente primero se retira.' },

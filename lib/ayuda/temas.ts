@@ -255,7 +255,7 @@ Desde el detalle: **Editar**, **Eliminar** (con confirmación) y **Ver historial
 1. Nueva acción › tipo **Licencia**.
 2. Indicá **Desde** y, si corresponde, **Hasta**. No lleva horario: abarca la jornada completa.
 3. Revisá el resumen de días hábiles y confirmá.
-Se registra un día por cada día hábil del período. Las acciones planificadas en esas fechas pueden pasar a reprogramadas automáticamente. La coordinación recibe un único aviso con el período. El campo **Motivo** es optativo y no debe incluir datos sensibles.
+Se registra un día por cada día hábil del período. Las acciones planificadas en esas fechas pueden pasar a reprogramadas automáticamente. Si por algún problema no se pueden reprogramar, la licencia igual queda cargada y el aviso te lo dice para que las pases a mano. La coordinación recibe un único aviso con el período. El campo **Motivo** es optativo y no debe incluir datos sensibles.
 ## Paros
 Se registran con el tipo **Paro**, sin establecimiento ni horario. Quedan registrados directamente como **realizados**, aunque la fecha todavía no haya llegado; si hace falta, se pueden editar o cambiar de estado.
 [!!] Licencias y paros no se computan en métricas, informes ni planillas. La constancia de justificación debe enviarse dentro de las 48 horas.` },

@@ -30,9 +30,10 @@ export async function GET(request: Request) {
       const { data: todos } = await db.from('feds').select('id').eq('rol', 'fed')
       const entregadas = async () => (await db.from('pve').select('fed_id').eq('mes', aviso.mes).not('file_id', 'is', null)).data ?? []
       // Antes de avisar se revisa el Drive de quienes figuran sin entregar: si la subieron hoy y la agenda todavía no la registró, no se les avisa.
+      let sinAcceso = 0
       for (const f of sinEntregar(todos ?? [], await entregadas())) {
         if (Date.now() - inicio > TOPE_MS / 2) break
-        try { await revisarPve(f.id) } catch { /* sin acceso a Drive: se los avisa igual */ }
+        try { await revisarPve(f.id) } catch (e) { sinAcceso++; console.error('cron fotos: no se pudo revisar la PVE de', f.id, e instanceof Error ? e.message : e) /* sin acceso a Drive: se los avisa igual */ }
       }
       const faltan = sinEntregar(todos ?? [], await entregadas())
       // No se repite si la tarea corre dos veces el mismo día.
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
         const { error } = await db.from('notificaciones').insert(avisar.map(f => ({ fed_id: f.id, tipo: 'pve', detalle: aviso.texto })))
         if (error) throw new Error(error.message)
       }
-      resultados.recordatorioPve = { tipo: aviso.tipo, avisados: avisar.length }
+      resultados.recordatorioPve = { tipo: aviso.tipo, avisados: avisar.length, sinAcceso }
     }
   } catch (e) { resultados.recordatorioPve = { error: e instanceof Error ? e.message : String(e) } }
 
