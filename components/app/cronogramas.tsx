@@ -5,6 +5,7 @@ import { CalendarClock, Check, ChevronDown, Copy, Eye, FileDown, FileSpreadsheet
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { SelectorFecha } from '@/components/ui/selector-fecha'
 import { Textarea } from '@/components/ui/textarea'
 import { type Fed } from '@/lib/agenda'
 import { ESTADOS_SEGUIMIENTO, ESTADO_SEGUIMIENTO_LABEL, FILTROS_VACIOS, HORAS_CONTACTO_PBA, VALIDEZ_DIAS, avisoDe, esReprogramacion, esVespertino, fechaCortaAR, limiteContactosPba, programaDe, validoHasta, mensajeEscuela, puedeAvisarJefatura, MAX_NOTA, PIDE_MOTIVO, SIN_FED, esDelFed, estadoDe, etiquetaTipo, llevaRecomendaciones, RECOMENDACIONES_ENLACE, filtrarCronogramas, puedeMarcar, resumenCronogramas, ventanaDe, type AvisoCronograma, type Cronograma, type EstadoSeguimiento, type FiltrosCronogramas, type PestanaCronogramas } from '@/lib/cronogramas'
@@ -105,8 +106,8 @@ export function Cronogramas({ profile, feds, esAdmin, cuenta, volver }: { profil
           <select aria-label="Tipo" className={`${selectClass} md:w-52`} value={filtros.tipo} onChange={e => set('tipo', e.target.value)}><option value="">Todo tipo</option>{tipos.map(t => <option key={t} value={t}>{etiquetaTipo(t)}</option>)}</select>
           <select aria-label="Proveedor" className={`${selectClass} md:w-40`} value={filtros.proveedor} onChange={e => set('proveedor', e.target.value)}><option value="">Todo proveedor</option>{proveedores.map(p => <option key={p} value={p}>{p}</option>)}</select>
           <div role="group" aria-label="Período" className="flex flex-col gap-1 rounded-control border border-dte-linea bg-dte-fondo px-2.5 py-1.5 sm:flex-row sm:items-center sm:gap-3">
-            <label className="flex items-center justify-between gap-2 text-sm font-semibold text-dte-gris">Desde<Input type="date" aria-label="Desde" value={filtros.desde} max={filtros.hasta || undefined} onChange={e => set('desde', e.target.value)} className="h-11 w-40 bg-white md:h-9" /></label>
-            <label className="flex items-center justify-between gap-2 text-sm font-semibold text-dte-gris">Hasta<Input type="date" aria-label="Hasta" value={filtros.hasta} min={filtros.desde || undefined} onChange={e => set('hasta', e.target.value)} className="h-11 w-40 bg-white md:h-9" /></label>
+            <div className="flex items-center justify-between gap-2 text-sm font-semibold text-dte-gris">Desde<SelectorFecha ariaLabel="Desde" value={filtros.desde} max={filtros.hasta || undefined} onChange={v => set('desde', v)} className="w-40" /></div>
+            <div className="flex items-center justify-between gap-2 text-sm font-semibold text-dte-gris">Hasta<SelectorFecha ariaLabel="Hasta" value={filtros.hasta} min={filtros.desde || undefined} onChange={v => set('hasta', v)} className="w-40" /></div>
           </div>
           <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-0"><input type="checkbox" checked={filtros.conReclamo} onChange={e => set('conReclamo', e.target.checked)} className="size-4" />Con reclamo abierto</label>
           {veTodos && <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-0"><input type="checkbox" checked={soloMios} onChange={e => setSoloMios(e.target.checked)} className="size-4" />Solo los míos</label>}

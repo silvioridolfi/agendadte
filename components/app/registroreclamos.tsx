@@ -6,6 +6,7 @@ import { CalendarClock, Check, ClipboardList, Copy, Eye, FileSpreadsheet, Loader
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { SelectorFecha } from '@/components/ui/selector-fecha'
 import { Textarea } from '@/components/ui/textarea'
 import { type Fed } from '@/lib/agenda'
 import { ESTADOS_RECLAMO, ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL, ESTADO_RECLAMO_PLURAL, filtrarReclamos, origenDeNumero, puedeResolverReclamo, resumenReclamos, sumarNota, type EstadoReclamo, type FiltrosReclamo, type Reclamo } from '@/lib/reclamos-registro'
@@ -187,7 +188,7 @@ function BorradoresReclamos({ onEnviado }: { onEnviado: () => void }) {
           : <Button type="button" variant="outline" size="sm" onClick={() => setAEliminar(b.id)}><Trash2 data-icon="inline-start" />Eliminar</Button>}
       </div>
       {enviando === b.id && <div className="mt-2 flex flex-col gap-2 rounded-control bg-dte-fondo p-2.5 sm:flex-row sm:items-end">
-        <label className="flex flex-col gap-1 text-xs font-semibold text-dte-gris">Fecha en que se envió<Input type="date" value={fecha} max={hoyAR()} onChange={e => setFecha(e.target.value)} className="h-11 md:h-10" /></label>
+        <div className="flex flex-col gap-1 text-xs font-semibold text-dte-gris">Fecha en que se envió<SelectorFecha ariaLabel="Fecha en que se envió" value={fecha} max={hoyAR()} limpiable={false} onChange={setFecha} className="sm:w-48" /></div>
         <Button type="button" disabled={ocupado || !fecha} onClick={() => enviar(b)} className="w-full sm:w-auto">{ocupado ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Confirmar envío</Button>
       </div>}
       {abierto === b.id && <div className="mt-2 flex flex-col gap-2 text-sm">
