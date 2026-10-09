@@ -97,13 +97,14 @@ export async function jefaturaDe(db: ReturnType<typeof supabaseServer>, distrito
 // Lo que la base sabe de la conectividad de una escuela (enlace, piso y proveedores): para armar reclamos de conectividad.
 export async function getConectividadEscuelaImpl(id: string): Promise<EscuelaConectividad> {
   if (!UUID.test(id)) throw new Error('Escuela inválida')
-  const { data, error } = await supabaseServer().from('establecimientos').select('id, cue, nombre, distrito, ciudad, direccion, matricula, plan_enlace, subplan_enlace, plan_piso_tecnologico, tipo_piso_instalado, tipo, proveedor_internet_pnce, proveedor_asignado_pba, reclamos_grupo_1_ani, recurso_primario, access_id').eq('id', id).maybeSingle()
+  const { data, error } = await supabaseServer().from('establecimientos').select('id, cue, nombre, distrito, ciudad, direccion, matricula, plan_enlace, subplan_enlace, plan_piso_tecnologico, tipo_piso_instalado, tipo, nivel, proveedor_internet_pnce, proveedor_asignado_pba, reclamos_grupo_1_ani, recurso_primario, access_id').eq('id', id).maybeSingle()
   if (error) throw new Error(error.message)
   if (!data) throw new Error('No se encontró la escuela')
   const t = (v: unknown) => (v == null || String(v).trim() === '' ? null : String(v).trim())
   return { id: data.id as string, cue: (data.cue as number | null) ?? null, nombre: t(data.nombre), distrito: t(data.distrito), ciudad: t(data.ciudad), direccion: t(data.direccion), matricula: data.matricula == null ? null : Number(data.matricula),
     plan_enlace: t(data.plan_enlace), subplan_enlace: t(data.subplan_enlace), plan_piso_tecnologico: t(data.plan_piso_tecnologico), tipo_piso_instalado: t(data.tipo_piso_instalado), tipo: t(data.tipo),
-    proveedor_pnce: t(data.proveedor_internet_pnce), proveedor_pba: t(data.proveedor_asignado_pba), ani: t(data.reclamos_grupo_1_ani), recurso_primario: t(data.recurso_primario), access_id: t(data.access_id) }
+    proveedor_pnce: t(data.proveedor_internet_pnce), proveedor_pba: t(data.proveedor_asignado_pba), ani: t(data.reclamos_grupo_1_ani), recurso_primario: t(data.recurso_primario), access_id: t(data.access_id),
+    nivel: t(data.nivel), contactos: await contactosDe(supabaseServer(), (data.cue as number | null) ?? null) }
 }
 
 // ---- Mis escuelas: las escuelas que tiene a cargo cada FED (establecimientos.fed_a_cargo). La coordinación y la administración ven todas.

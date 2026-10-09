@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { DATOS_VACIOS, gmailUrl, gmailAppUrl, plataformaDe, saludoDe, RECLAMOS_PARA, RECLAMOS_PARA_CLARO, armarReclamo, asuntoDe, codigoFecha, enlacesDe, faltantes, tipoDe, type DatosReclamo, type EscuelaConectividad } from '@/lib/reclamos'
+import { DATOS_VACIOS, directivoDe, esJardin, llevaChecklist, pisoPnce, puedeSerAmbos, gmailUrl, gmailAppUrl, plataformaDe, saludoDe, RECLAMOS_PARA, RECLAMOS_PARA_CLARO, armarReclamo, asuntoDe, codigoFecha, enlacesDe, faltantes, tipoDe, type DatosReclamo, type EscuelaConectividad } from '@/lib/reclamos'
 
 const esc = (p: Partial<EscuelaConectividad> = {}): EscuelaConectividad => ({ id: 'e', cue: 60897700, nombre: 'ESCUELA DE EDUCACIÓN SECUNDARIA N° 31', distrito: 'LA PLATA', ciudad: 'LA PLATA', direccion: 'BRASIL esq. EVA PERÓN', matricula: 784,
-  plan_enlace: 'PBA', subplan_enlace: 'PBA GRUPO 2 A', plan_piso_tecnologico: 'PBA', tipo_piso_instalado: 'Red Local Pequeña - Instalada', tipo: 'PISO TECNOLÓGICO + ENLACE', proveedor_pnce: null, proveedor_pba: 'Orbith S.A', ani: null, recurso_primario: null, access_id: null, ...p })
+  plan_enlace: 'PBA', subplan_enlace: 'PBA GRUPO 2 A', plan_piso_tecnologico: 'PBA', tipo_piso_instalado: 'Red Local Pequeña - Instalada', tipo: 'PISO TECNOLÓGICO + ENLACE', proveedor_pnce: null, proveedor_pba: 'Orbith S.A', ani: null, recurso_primario: null, access_id: null, nivel: 'Nivel Secundario', contactos: [], ...p })
 const datos = (p: Partial<DatosReclamo> = {}): DatosReclamo => ({ ...DATOS_VACIOS, enlace: 'PBA2', detalle: 'No hay internet desde el lunes', contactoNombre: 'María López', contactoCargo: 'Directora', contactoTelefono: '221 555 0000', contactoHorario: '8 a 16', ...p })
 const fed = 'Julio'
 // 10/08/2023 10:10 hora argentina = 13:10 UTC (la guía usa ese ejemplo).
@@ -35,7 +35,7 @@ describe('sin conectividad según enlace y piso', () => {
     const r = armarReclamo(esc({ plan_piso_tecnologico: null, tipo_piso_instalado: null }), tipo('sin_conectividad'), datos(), ahora, fed)
     expect(r.adjuntos.map(a => a.texto)).toEqual(['Fotos del módem (o de la antena, si el problema es ahí)'])
     expect(r.para).toBe(RECLAMOS_PARA)
-    expect(r.cuerpo).toContain('Contacto de la escuela:\nNombre: María López\nCargo: Directora\nTeléfono: 221 555 0000\nHorario: 8 a 16')
+    expect(r.cuerpo).toContain('Contacto del establecimiento:\nNombre: María López\nCargo: Directora\nTeléfono: 221 555 0000\nHorario: 8 a 16')
   })
   it('PBA Grupo 2 o 2019 con piso de PBA: suma el checklist USAP', () => {
     expect(armarReclamo(esc(), tipo('sin_conectividad'), datos(), ahora, fed).adjuntos.map(a => a.texto)).toEqual(['Fotos del módem (o de la antena, si el problema es ahí)', 'Checklist USAP completo'])
@@ -126,9 +126,12 @@ describe('otros tipos de reclamo', () => {
 
 describe('qué falta completar', () => {
   it('pide el contacto del directivo en los reclamos PBA y en "sin conectividad"', () => {
-    expect(faltantes(tipo('utm_switch'), esc(), datos({ contactoNombre: '', contactoCargo: '', contactoTelefono: '' })).contacto).toBeTruthy()
+    expect(faltantes(tipo('danos_robo'), esc(), datos({ contactoNombre: '', contactoCargo: '', contactoTelefono: '' })).contacto).toBeTruthy()
+    expect(faltantes(tipo('utm_switch'), esc(), datos({ contactoNombre: '', contactoCargo: '', contactoTelefono: '' })).contacto).toBeUndefined()
     expect(faltantes(tipo('utm_switch'), esc({ plan_enlace: 'PNCE', subplan_enlace: 'PNCE' }), datos({ enlace: 'PNCE', contactoNombre: '', contactoCargo: '', contactoTelefono: '' })).contacto).toBeUndefined()
-    expect(faltantes(tipo('sin_conectividad'), esc({ plan_enlace: 'PNCE', subplan_enlace: 'PNCE' }), datos({ enlace: 'PNCE', contactoNombre: '' })).contacto).toBeTruthy()
+    // Sin checklist (PBA con piso de PNCE: sólo la foto del módem) el contacto es obligatorio; con checklist, el checklist ya lo pide.
+    expect(faltantes(tipo('sin_conectividad'), esc({ plan_piso_tecnologico: 'PNCE' }), datos({ contactoNombre: '' })).contacto).toBeTruthy()
+    expect(faltantes(tipo('sin_conectividad'), esc({ plan_enlace: 'PNCE', subplan_enlace: 'PNCE' }), datos({ enlace: 'PNCE', contactoNombre: '' })).contacto).toBeUndefined()
     expect(faltantes(tipo('mudanza'), esc(), datos({ contactoNombre: '', contactoCargo: '', contactoTelefono: '' })).contacto).toBeUndefined()
   })
   it('con Movistar no pide contacto; con dos enlaces pide elegir; el CUE tiene que tener 8 dígitos', () => {
@@ -138,5 +141,70 @@ describe('qué falta completar', () => {
   })
   it('una escuela sin enlace no puede reclamar "sin conectividad"', () => {
     expect(faltantes(tipo('sin_conectividad'), esc({ plan_enlace: 'Sin enlace', subplan_enlace: 'Sin enlace' }), datos({ enlace: null })).enlace).toMatch(/Solicitud de Conectividad/)
+  })
+})
+
+describe('jardines, checklist y contactos', () => {
+  const pnce = { plan_enlace: 'PNCE', subplan_enlace: 'PNCE', plan_piso_tecnologico: 'PNCE', tipo_piso_instalado: 'Red Local Pequeña - Instalada' }
+  const jardin = { nivel: 'Nivel Inicial', ...pnce }
+  const textos = (r: ReturnType<typeof armarReclamo>) => r.adjuntos.map(a => a.texto)
+  it('esJardin: sólo nivel inicial a secas; pisoPnce: sólo PNCE', () => {
+    expect(esJardin({ nivel: 'Nivel Inicial' })).toBe(true)
+    expect(esJardin({ nivel: 'Formación Integral / Nivel Inicial / Nivel Primario' })).toBe(false)
+    expect(esJardin({ nivel: null })).toBe(false)
+    expect(pisoPnce({ plan_piso_tecnologico: 'PNCE' })).toBe(true)
+    expect(pisoPnce({ plan_piso_tecnologico: 'PBA' })).toBe(false)
+    expect(pisoPnce({ plan_piso_tecnologico: 'PBA - PNCE' })).toBe(false)
+  })
+  it('un jardín con piso PNCE lleva el checklist de predio pequeño (Z3), aunque el piso sea grande', () => {
+    for (const piso of ['Red Local Pequeña - Instalada', 'Red Local Grande - Instalada']) {
+      const r = armarReclamo(esc({ ...jardin, tipo_piso_instalado: piso }), tipo('sin_conectividad'), datos({ enlace: 'PNCE' }), ahora, fed)
+      expect(textos(r)).toEqual(['Checklist de Z3 (predio pequeño TAC o GAP) completo'])
+      expect(r.avisos.join(' ')).not.toContain('sin piso')
+    }
+    expect(textos(armarReclamo(esc({ ...jardin }), tipo('piso'), datos({ enlace: 'PNCE' }), ahora, fed))).toEqual(['Checklist de Z3 (predio pequeño TAC o GAP) completo'])
+  })
+  it('un establecimiento que no es jardín sigue con el USAP; un jardín con piso PBA también', () => {
+    expect(textos(armarReclamo(esc({ ...pnce, nivel: 'Nivel Primario' }), tipo('piso'), datos({ enlace: 'PNCE' }), ahora, fed))).toEqual(['Checklist USAP completo'])
+    expect(textos(armarReclamo(esc({ nivel: 'Nivel Inicial' }), tipo('piso'), datos(), ahora, fed))).toEqual(['Checklist USAP completo'])
+  })
+  it('enlace PBA con piso PNCE: problema del piso, sólo el checklist; del enlace, sólo la foto; de los dos, foto y checklist', () => {
+    const pba = esc({ plan_piso_tecnologico: 'PNCE' })
+    const foto = 'Fotos del módem (o de la antena, si el problema es ahí)'
+    expect(textos(armarReclamo(pba, tipo('piso'), datos(), ahora, fed))).toEqual(['Checklist USAP completo'])
+    expect(textos(armarReclamo(pba, tipo('utm_switch'), datos(), ahora, fed))).toEqual(['Checklist USAP completo'])
+    expect(textos(armarReclamo(pba, tipo('sin_conectividad'), datos(), ahora, fed))).toEqual([foto])
+    expect(textos(armarReclamo(pba, tipo('piso'), datos({ ambos: true }), ahora, fed))).toEqual([foto, 'Checklist USAP completo'])
+    expect(textos(armarReclamo(pba, tipo('sin_conectividad'), datos({ ambos: true }), ahora, fed))).toEqual([foto, 'Checklist USAP completo'])
+    expect(textos(armarReclamo(pba, tipo('sin_conectividad'), datos({ enlace: 'PBA1', proveedorG1: 'Claro', ambos: true }), ahora, fed))).toEqual([foto, 'Checklist USAP completo'])
+    // Un jardín con ese piso lleva el de predio pequeño.
+    expect(textos(armarReclamo(esc({ plan_piso_tecnologico: 'PNCE', nivel: 'Nivel Inicial' }), tipo('piso'), datos({ ambos: true }), ahora, fed))).toEqual([foto, 'Checklist de Z3 (predio pequeño TAC o GAP) completo'])
+  })
+  it('"ambos" sólo cuenta con enlace PBA y piso PNCE', () => {
+    expect(puedeSerAmbos('piso', { plan_piso_tecnologico: 'PNCE' }, 'PBA2')).toBe(true)
+    expect(puedeSerAmbos('piso', { plan_piso_tecnologico: 'PBA' }, 'PBA2')).toBe(false)
+    expect(puedeSerAmbos('piso', { plan_piso_tecnologico: 'PNCE' }, 'PNCE')).toBe(false)
+    expect(puedeSerAmbos('mudanza', { plan_piso_tecnologico: 'PNCE' }, 'PBA2')).toBe(false)
+    // Con piso de PBA, "ambos" no cambia nada.
+    expect(textos(armarReclamo(esc(), tipo('piso'), datos({ ambos: true }), ahora, fed))).toEqual(['Checklist USAP completo'])
+  })
+  it('con checklist el mensaje no lleva el contacto; con foto del módem sin checklist, sí', () => {
+    const conChecklist = armarReclamo(esc({ ...jardin }), tipo('sin_conectividad'), datos({ enlace: 'PNCE' }), ahora, fed)
+    expect(llevaChecklist(tipo('sin_conectividad'), esc({ ...jardin }), datos({ enlace: 'PNCE' }))).toBe(true)
+    expect(conChecklist.cuerpo).not.toContain('Contacto del establecimiento')
+    expect(conChecklist.cuerpo).toContain('Establecimiento: ')
+    const soloFoto = armarReclamo(esc({ plan_piso_tecnologico: 'PNCE' }), tipo('sin_conectividad'), datos(), ahora, fed)
+    expect(soloFoto.cuerpo).toContain('Contacto del establecimiento:\nNombre: María López')
+  })
+  it('los pedidos con formulario conservan el contacto opcional', () => {
+    expect(armarReclamo(esc(), tipo('mudanza'), datos(), ahora, fed).cuerpo).toContain('Contacto del establecimiento')
+  })
+  it('directivoDe: el principal con cargo directivo, si no el director, si no el principal', () => {
+    const c = (nombre: string, cargo: string | null, es_principal = false) => ({ nombre, apellido: 'X', cargo, telefono: '1', correo: null, correo_laboral: null, es_principal })
+    expect(directivoDe([c('Ana', 'Secretaria'), c('Beto', 'Vicedirector'), c('Carla', 'Directora')])?.nombre).toBe('Carla')
+    expect(directivoDe([c('Ana', 'Secretaria', true), c('Beto', 'Vicedirector')])?.nombre).toBe('Beto')
+    expect(directivoDe([c('Ana', 'Secretaria', true), c('Beto', 'Preceptor')])?.nombre).toBe('Ana')
+    expect(directivoDe([c('Ana', 'Secretaria'), c('Beto', 'Preceptor')])).toBeNull()
+    expect(directivoDe([])).toBeNull()
   })
 })

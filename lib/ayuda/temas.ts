@@ -128,21 +128,23 @@ La ficha de una jefatura muestra su domicilio, el contacto, el teléfono y el co
   { id: 'reclamos', titulo: 'Reclamos de conectividad', para: ['fed', 'ced'], md: () => `
 Arma el asunto y el cuerpo del mail de un reclamo de conectividad, con la lista de lo que hay que adjuntar, según la guía de la DTE. Se abre desde el menú de las iniciales (**Reclamo de conectividad**), desde la ficha de una escuela y desde una acción de **Conectividad** (con la escuela ya elegida).
 ## Cómo se arma
-1. **Escuela:** la agenda muestra su enlace (PNCE o PBA y su grupo) y su piso tecnológico, que salen de la base de conectividad de la región.
+1. **Establecimiento** (escuela, jardín, instituto, CENS…): la agenda muestra su enlace (PNCE o PBA y su grupo) y su piso tecnológico, que salen de la base de conectividad de la región.
 2. **Tipo de reclamo:** los 15 de la guía, con su asunto (Sin Conectividad, Problemas con UTM o Switch, Mudanza, etc.). Cada uno pide solo los datos que corresponden.
-3. **Contacto del directivo:** nombre, cargo (director/a, secretario/a…), teléfono y horario. Es obligatorio en "Sin Conectividad" y en los reclamos de enlaces PBA.
+3. **Contacto del directivo:** nombre, cargo, teléfono y horario. La agenda lo precarga desde los contactos de la base (el director o vicedirector) y podés elegir otro de la lista o editarlo. Solo es obligatorio, y solo va en el mensaje, cuando el reclamo es de enlace PBA y se adjunta únicamente la foto del módem. Cuando se adjunta un checklist, el checklist ya pide esos datos y la agenda no los incluye.
 4. **Armar reclamo:** sale el asunto con el formato 06-01-DDMMAAAAHHMM - CUE XXXXXXXX - Asunto (con la fecha y la hora de ese momento), el cuerpo y los adjuntos. El mensaje va dirigido al CED, con el saludo según la hora y los datos del contacto uno por renglón. Podés copiar cada parte o abrir tu correo con todo cargado. Con **Cancelar** descartás el reclamo.
 ## Qué adjuntar según la infraestructura
 | Caso | Qué se adjunta |
 | PBA Grupo 2 o 2019, sin piso | Fotos del módem (o de la antena, si el problema es ahí) y contacto. |
 | PBA Grupo 2 o 2019, con piso de PBA | Lo anterior y el checklist USAP. Con piso de PNCE alcanza con las fotos. |
+| PBA con piso de PNCE, problema solo del piso (UTM, switch u otro) | El checklist que corresponda, sin fotos del módem. |
+| PBA con piso de PNCE, problema del enlace y también del piso | Fotos del módem y el checklist. Se marca con la casilla que aparece en el formulario. Si el problema es solo del enlace, solo las fotos. |
 | PBA Grupo 1 con Claro | Fotos del módem y contacto, por mail a ${RECLAMOS_PARA_CLARO}. |
 | PBA Grupo 1 con Movistar | No es un mail: el establecimiento llama al ${TEL_MOVISTAR} con el ANI y el recurso primario, que la agenda muestra. |
-| PNCE, sin piso | Checklist de Z3 (predio pequeño) y contacto. También puede llamar la escuela al ${TEL_EDUCAR} (Mesa de Ayuda Educar). |
-| PNCE, con piso | Checklist USAP. |
+| PNCE, sin piso | Checklist de Z3 (predio pequeño). También puede llamar el establecimiento al ${TEL_EDUCAR} (Mesa de Ayuda Educar). |
+| PNCE, con piso | Checklist USAP. Los jardines con piso de PNCE llevan siempre el de predio pequeño (Z3, TAC o GAP): el USAP es para los establecimientos más grandes. |
 Los demás tipos piden lo que indica la guía: formulario y plano (mudanza, solicitudes), medición y checklist (ancho de banda), denuncia e imágenes (daños o robo), etc.
-[i] El mail va a ${RECLAMOS_PARA}: lo recibe el CED, que lo reenvía a la DTE (ella lo deriva a PBA o a Educar). Un mail por escuela y con el CUE de 8 dígitos. El botón abre Gmail con tu cuenta institucional; en el celular lo abre directo en la app de Gmail (con la cuenta que tengas activa ahí) y, si no la tenés instalada, en el navegador. Los archivos los adjuntás vos, la agenda no los envía.
-[!] Si la escuela ya tiene un reclamo abierto, no abras una cadena nueva: respondé en la original, sin el "Fwd" antes del código. Si lo enviás más tarde, volvé a armar el reclamo para que el asunto lleve la hora correcta.` },
+[i] El mail va a ${RECLAMOS_PARA}: lo recibe el CED, que lo reenvía a la DTE (ella lo deriva a PBA o a Educar). Un mail por establecimiento y con el CUE de 8 dígitos. El botón abre Gmail con tu cuenta institucional; en el celular lo abre directo en la app de Gmail (con la cuenta que tengas activa ahí) y, si no la tenés instalada, en el navegador. Los archivos los adjuntás vos, la agenda no los envía.
+[!] Si el establecimiento ya tiene un reclamo abierto, no abras una cadena nueva: respondé en la original, sin el "Fwd" antes del código. Si lo enviás más tarde, volvé a armar el reclamo para que el asunto lleve la hora correcta.` },
   { id: 'registro-reclamos', titulo: 'Registro de reclamos de conectividad', para: ['fed', 'ced'], md: () => `
 Es el seguimiento de todos los reclamos de conectividad del equipo. Reemplaza la planilla manual. Se abre desde el menú de las iniciales (**Registro de reclamos**) o desde el acceso del Tablero; en el celular, **Volver** (arriba) te lleva a la pantalla de la que venías.
 ## Cómo se carga

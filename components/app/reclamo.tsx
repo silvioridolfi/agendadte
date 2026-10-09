@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { type School } from '@/lib/agenda'
-import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, enlacesDe, faltantes, gmailAppUrl, gmailUrl, plataformaDe, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
+import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, directivoDe, enlacesDe, faltantes, llevaChecklist, nombreContacto, puedeSerAmbos, gmailAppUrl, gmailUrl, plataformaDe, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
 import { titleCase } from '@/lib/format'
 import { ESTADO_RECLAMO_LABEL, type Reclamo as ReclamoRegistrado } from '@/lib/reclamos-registro'
 import { ErrorBox, errMsg, getConectividadEscuela, reclamosAbiertosDe, registrarReclamo, selectClass } from '@/components/app/comun'
@@ -15,7 +15,7 @@ import { Field, SchoolPicker } from '@/components/app/formulario'
 
 type Errores = ReturnType<typeof faltantes>
 
-// Reclamo de conectividad: con la escuela y el tipo de reclamo arma el asunto, el cuerpo del mail y la lista de adjuntos según la guía de la DTE.
+// Reclamo de conectividad: con el establecimiento y el tipo de reclamo arma el asunto, el cuerpo del mail y la lista de adjuntos según la guía de la DTE.
 // `cuenta`: correo institucional con el que se inició sesión (Gmail se abre con esa cuenta). `ced`: nombre de pila del CED, a quien va dirigido el mensaje.
 export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial }: { open: boolean, onClose: () => void, cuenta: string, ced: string | null, escuelaInicial: School | null }) {
   const [escuela, setEscuela] = useState<School | null>(escuelaInicial)
@@ -27,17 +27,23 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
   const [errores, setErrores] = useState<Errores>({})
   const [reclamo, setReclamo] = useState<Reclamo | null>(null)
   const [copiado, setCopiado] = useState('')
-  // Reclamos que la escuela ya tiene abiertos (para seguir esa cadena) y registro del reclamo armado.
+  // Al cargar el establecimiento se precarga el contacto del directivo desde la base (se puede cambiar o editar).
+  const recibir = (c: EscuelaConectividad) => {
+    setCon(c)
+    const dir = directivoDe(c.contactos)
+    if (dir) setD(x => (x.contactoNombre || x.contactoTelefono ? x : { ...x, contactoNombre: nombreContacto(dir), contactoCargo: (dir.cargo ?? '').trim(), contactoTelefono: (dir.telefono ?? '').trim() }))
+  }
+  // Reclamos que el establecimiento ya tiene abiertos (para seguir esa cadena) y registro del reclamo armado.
   const [abiertos, setAbiertos] = useState<ReclamoRegistrado[]>([])
   const [registrando, setRegistrando] = useState(false)
   const [registrado, setRegistrado] = useState(false)
 
-  // Escuela que viene elegida (desde su ficha o desde una acción de conectividad): se cargan sus datos al abrir.
+  // Establecimiento que viene elegido (desde su ficha o desde una acción de conectividad): se cargan sus datos al abrir.
   useEffect(() => {
     if (!escuelaInicial) return
     let vivo = true
     reclamosAbiertosDe(escuelaInicial.id).then(a => { if (vivo) setAbiertos(a) }).catch(() => {})
-    getConectividadEscuela(escuelaInicial.id).then(c => { if (vivo) setCon(c) }).catch(e => { if (vivo) setError(errMsg(e)) }).finally(() => { if (vivo) setCargando(false) })
+    getConectividadEscuela(escuelaInicial.id).then(c => { if (vivo) recibir(c) }).catch(e => { if (vivo) setError(errMsg(e)) }).finally(() => { if (vivo) setCargando(false) })
     return () => { vivo = false }
   }, [escuelaInicial])
 
@@ -46,7 +52,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
     if (!s) return
     setCargando(true)
     reclamosAbiertosDe(s.id).then(setAbiertos).catch(() => {})
-    getConectividadEscuela(s.id).then(setCon).catch(e => setError(errMsg(e))).finally(() => setCargando(false))
+    getConectividadEscuela(s.id).then(recibir).catch(e => setError(errMsg(e))).finally(() => setCargando(false))
   }
   const enlaces = con ? enlacesDe(con.plan_enlace, con.subplan_enlace) : []
   const tipo = tipoDe(tipoId)
@@ -54,7 +60,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
   const elegirTipo = (id: string) => {
     setTipoId(id); setReclamo(null); setRegistrado(false); setErrores({})
     const t = tipoDe(id)
-    setD(x => ({ ...x, subtipo: '', matricula: t?.campos.includes('matricula') && !x.matricula && con?.matricula ? String(con.matricula) : x.matricula, enlace: enlaces.length === 1 ? enlaces[0] : x.enlace }))
+    setD(x => ({ ...x, subtipo: '', ambos: false, matricula: t?.campos.includes('matricula') && !x.matricula && con?.matricula ? String(con.matricula) : x.matricula, enlace: enlaces.length === 1 ? enlaces[0] : x.enlace }))
   }
   const enlaceElegido = d.enlace ?? (enlaces.length === 1 ? enlaces[0] : null)
   const datos: DatosReclamo = { ...d, enlace: enlaceElegido }
@@ -76,21 +82,24 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
     try { await navigator.clipboard.writeText(texto); setCopiado(clave); setTimeout(() => setCopiado(c => (c === clave ? '' : c)), 2000) } catch { setError('No se pudo copiar: seleccioná el texto y copialo a mano.') }
   }
   const cerrar = () => onClose()
-  const contactoPide = !!tipo && (tipo.contacto === 'siempre' || (tipo.contacto === 'pba' && !!enlaceElegido && enlaceElegido !== 'PNCE'))
+  // Con checklist adjunto, el checklist ya pide los datos de contacto: no se piden ni van en el mensaje.
+  const conChecklist = !!con && !!tipo && llevaChecklist(tipo, con, datos)
+  const contactoPide = !!tipo && !conChecklist && (tipo.contacto === 'siempre' || (tipo.contacto === 'pba' && !!enlaceElegido && enlaceElegido !== 'PNCE'))
+  const cargarContacto = (c: { nombre: string | null, apellido: string | null, cargo: string | null, telefono: string | null }) => { setD(x => ({ ...x, contactoNombre: nombreContacto(c), contactoCargo: (c.cargo ?? '').trim(), contactoTelefono: (c.telefono ?? '').trim() })); setReclamo(null); setRegistrado(false); setErrores(e => ({ ...e, contacto: undefined })) }
 
   return <Dialog open={open} onOpenChange={o => !o && cerrar()}>
     {/* En el celular se ancla arriba: abajo el teclado taparía los campos. */}
     <DialogContent className="overflow-y-auto bg-white max-sm:top-[calc(env(safe-area-inset-top,0px)+0.5rem)]! max-sm:bottom-auto! max-sm:max-h-[calc(100dvh-1rem)]! max-sm:rounded-b-2xl! max-sm:pb-4! sm:max-w-xl">
       <DialogTitle className="flex items-center gap-2"><Wifi className="size-5 text-dte-petroleo" aria-hidden />Reclamo de conectividad</DialogTitle>
-      <DialogDescription className="text-sm text-dte-gris">Elegí la escuela y el tipo de reclamo: se arma el asunto, el cuerpo del mail y la lista de lo que hay que adjuntar, según la guía de la DTE.</DialogDescription>
+      <DialogDescription className="text-sm text-dte-gris">Elegí el establecimiento y el tipo de reclamo: se arma el asunto, el cuerpo del mail y la lista de lo que hay que adjuntar, según la guía de la DTE.</DialogDescription>
 
-      <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">1. Escuela</span><SchoolPicker enLinea value={escuela} onChange={elegir} /></div>
+      <div className="flex flex-col gap-1.5"><span className="text-sm font-semibold">1. Establecimiento</span><SchoolPicker enLinea value={escuela} onChange={elegir} /></div>
       {cargando && <div className="flex items-center gap-2 text-sm text-dte-gris"><Loader2 className="size-4 animate-spin" aria-hidden />Buscando los datos de conectividad…</div>}
       {error && <ErrorBox message={error} />}
 
       {con && <>
         {abiertos.length > 0 && <section role="status" className="rounded-card border-l-4 border-l-aviso-borde bg-aviso-fondo p-3.5 text-sm">
-          <h3 className="mb-1 flex items-center gap-1.5 font-bold text-aviso-fuerte"><AlertTriangle className="size-4" aria-hidden />Esta escuela ya tiene {abiertos.length === 1 ? 'un reclamo abierto' : `${abiertos.length} reclamos abiertos`}</h3>
+          <h3 className="mb-1 flex items-center gap-1.5 font-bold text-aviso-fuerte"><AlertTriangle className="size-4" aria-hidden />Este establecimiento ya tiene {abiertos.length === 1 ? 'un reclamo abierto' : `${abiertos.length} reclamos abiertos`}</h3>
           <p className="text-xs">No abras una cadena nueva: seguí la original (respondé ese mail, sin el “Fwd” antes del código) o consultá con el CED.</p>
           <ul className="mt-2 flex flex-col gap-1.5">{abiertos.map(a => <li key={a.id} className="rounded-control bg-white/70 px-2.5 py-1.5"><span className="block break-words font-mono text-[0.75rem] font-medium">{a.asunto}</span><span className="text-xs text-dte-gris">{ESTADO_RECLAMO_LABEL[a.estado]} · enviado el {new Date(a.enviado_at).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}{a.nro_incidencia ? ` · ${a.nro_incidencia}` : ''}</span></li>)}</ul>
         </section>}
@@ -100,7 +109,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
             <div><dt className="text-xs font-semibold text-dte-gris">Enlace</dt><dd className="font-medium">{enlaces.length ? enlaces.map(e => ENLACE_LABEL[e]).join(' + ') : 'Sin enlace cargado'}{(con.proveedor_pnce || con.proveedor_pba) && <span className="font-normal text-dte-gris"> · {[enlaces.includes('PNCE') ? con.proveedor_pnce : null, enlaces.some(e => e !== 'PNCE') ? con.proveedor_pba : null].filter(Boolean).join(' / ')}</span>}</dd></div>
             <div><dt className="text-xs font-semibold text-dte-gris">Piso tecnológico</dt><dd className="font-medium">{tienePiso(con) ? `${con.plan_piso_tecnologico}${con.tipo_piso_instalado ? ` · ${con.tipo_piso_instalado.replace(/\s*-\s*Instalada$/i, '')}` : ''}` : 'Sin piso'}</dd></div>
           </dl>
-          <p className="mt-1.5 text-xs text-dte-gris">Datos de la base de conectividad de la región; si algo no coincide con lo que ves en la escuela, corregilo en el cuerpo del mail.</p>
+          <p className="mt-1.5 text-xs text-dte-gris">Datos de la base de conectividad de la región; si algo no coincide con lo que ves en el establecimiento, corregilo en el cuerpo del mail.</p>
           {avisoEspecial(con) && <p className="mt-2 flex items-start gap-1.5 text-xs font-semibold text-aviso-fuerte"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />{avisoEspecial(con)}</p>}
         </section>
         {errores.escuela && <p role="alert" className="text-sm font-medium text-peligro">{errores.escuela}</p>}
@@ -127,10 +136,13 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
           </div>}
           {tipo.campos.includes('direccion') && <Field label="Dirección correcta" required error={errores.direccion}><Input value={d.direccion} onChange={e => set('direccion', e.target.value)} placeholder={con.direccion ? `Figura: ${titleCase(con.direccion)}` : undefined} className="h-11 md:h-10" /></Field>}
           {tipo.campos.includes('coordenadas') && <Field label="Coordenadas geográficas" required error={errores.coordenadas}><Input value={d.coordenadas} onChange={e => set('coordenadas', e.target.value)} placeholder="Ej.: -34.9205, -57.9536" className="h-11 md:h-10" /></Field>}
+          {con && puedeSerAmbos(tipo.id, con, enlaceElegido) && !porTelefonoSeleccionado && <label className="flex items-start gap-2.5 rounded-control border border-dte-linea bg-dte-fondo p-2.5 text-sm"><input type="checkbox" checked={d.ambos} onChange={e => set('ambos', e.target.checked)} className="mt-0.5 size-5 shrink-0" /><span>{tipo.id === 'sin_conectividad' ? <>El problema es del enlace y <b>también del piso tecnológico</b> (suma el checklist).</> : <>El problema es del piso y <b>también del enlace</b> (suma la foto del módem).</>}</span></label>}
           {tipo.campos.includes('serie') && <Field label="N° de serie del equipamiento" hint="(si lo tenés)"><Input value={d.serie} onChange={e => set('serie', e.target.value)} className="h-11 md:h-10" /></Field>}
           {tipo.campos.includes('detalle') && <Field label={tipo.id === 'instaladores' ? 'Explicá la situación' : 'Descripción'} required={tipo.requeridos.includes('detalle')} hint={tipo.requeridos.includes('detalle') ? undefined : '(opcional)'} error={errores.detalle}><Textarea value={d.detalle} onChange={e => set('detalle', e.target.value)} placeholder="Qué pasa, desde cuándo y qué se probó" className="min-h-20" /></Field>}
 
-          {!porTelefonoSeleccionado && <fieldset className="flex flex-col gap-2"><legend className="mb-1 text-sm font-semibold">Contacto del directivo o jerárquico{contactoPide ? <span className="text-dte-magenta" aria-hidden> *</span> : <span className="ml-1 text-xs font-normal text-dte-gris">(opcional)</span>}</legend>
+          {!porTelefonoSeleccionado && conChecklist && <p className="text-xs text-dte-gris">El checklist que adjuntás ya pide los datos de contacto del establecimiento: no hace falta incluirlos en el mensaje.</p>}
+          {!porTelefonoSeleccionado && !conChecklist && <fieldset className="flex flex-col gap-2"><legend className="mb-1 text-sm font-semibold">Contacto del directivo o jerárquico{contactoPide ? <span className="text-dte-magenta" aria-hidden> *</span> : <span className="ml-1 text-xs font-normal text-dte-gris">(opcional)</span>}</legend>
+            {con && con.contactos.length > 1 && <select aria-label="Elegir el contacto de la base" className={`${selectClass} h-11 md:h-10`} value="" onChange={e => { const c = con.contactos[Number(e.target.value)]; if (c) cargarContacto(c) }}><option value="">Elegir otro contacto de la base…</option>{con.contactos.map((c, i) => <option key={i} value={i}>{nombreContacto(c) || 'Sin nombre'}{c.cargo ? ` · ${c.cargo}` : ''}</option>)}</select>}
             <div className="grid gap-2 sm:grid-cols-2"><Input placeholder="Nombre y apellido" aria-label="Nombre del contacto" value={d.contactoNombre} onChange={e => set('contactoNombre', e.target.value)} className="h-11 md:h-10" />
               <Input list="cargos-contacto" placeholder="Cargo (director/a, secretario/a…)" aria-label="Cargo del contacto" value={d.contactoCargo} onChange={e => set('contactoCargo', e.target.value)} className="h-11 md:h-10" /><datalist id="cargos-contacto"><option value="Director/a" /><option value="Vicedirector/a" /><option value="Secretario/a" /><option value="Prosecretario/a" /><option value="Jefe/a de área" /><option value="Referente técnico" /></datalist>
               <Input type="tel" placeholder="Teléfono" aria-label="Teléfono del contacto" value={d.contactoTelefono} onChange={e => set('contactoTelefono', e.target.value)} className="h-11 md:h-10" /></div>
@@ -146,7 +158,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
           {reclamo.avisos.map(a => <p key={a} className="flex items-start gap-1.5 rounded-control bg-aviso-fondo-fuerte px-3 py-2 text-xs font-semibold text-aviso-fuerte"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />{a}</p>)}
           {reclamo.porTelefono ? <div className="rounded-card border-l-4 border-l-aviso-borde bg-aviso-fondo p-3.5 text-sm">
             <p className="flex items-center gap-1.5 font-bold"><Phone className="size-4" aria-hidden />Este reclamo no va por mail</p>
-            <p className="mt-1">PBA Grupo 1 con Movistar: el establecimiento tiene que llamar al <b>{reclamo.porTelefono.telefono}</b> e indicar los ID de la escuela.</p>
+            <p className="mt-1">PBA Grupo 1 con Movistar: el establecimiento tiene que llamar al <b>{reclamo.porTelefono.telefono}</b> e indicar los ID del establecimiento.</p>
             {reclamo.porTelefono.datos.length ? <ul className="mt-2 flex flex-col gap-1">{reclamo.porTelefono.datos.map(x => <li key={x.label}><span className="text-xs text-dte-gris">{x.label}: </span><b className="tabular-nums">{x.valor}</b></li>)}</ul> : <p className="mt-2 text-xs text-dte-gris">No hay ID cargados para esta escuela: buscalos en el consolidado de la región (columnas AQ, AR y AS).</p>}
           </div> : <>
             <div className="flex flex-col gap-1"><span className="text-xs font-semibold text-dte-gris">Para</span><div className="flex items-center justify-between gap-2 rounded-control bg-dte-fondo px-3 py-2 text-sm"><span className="min-w-0 break-all font-medium">{reclamo.para}</span><Button type="button" variant="ghost" size="sm" onClick={() => copiar(reclamo.para!, 'para')}>{copiado === 'para' ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado === 'para' ? 'Copiado' : 'Copiar'}</Button></div></div>
@@ -160,7 +172,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
             </div>
             {registrado ? <p role="status" className="flex items-start gap-1.5 rounded-control bg-exito-fondo px-3 py-2 text-sm font-semibold text-exito"><Check className="mt-0.5 size-4 shrink-0" aria-hidden />Registrado en el panel de reclamos. El CED va a anotar el número de ticket o de incidencia cuando llegue.</p>
               : <div className="rounded-card border border-dte-linea bg-dte-fondo p-3"><p className="text-xs text-dte-gris">Cuando lo hayas mandado por mail al CED, registralo para llevar el seguimiento.</p><Button type="button" onClick={registrar} disabled={registrando} className="mt-2 w-full sm:w-auto">{registrando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Reclamo enviado</Button></div>}
-            <p className="text-xs text-dte-gris">El mensaje va al correo regional y de ahí lo deriva el CED. Se abre con tu cuenta institucional (en el celular, en la app de Gmail); los archivos los adjuntás vos. El asunto lleva la hora de este momento: si lo enviás más tarde, volvé a armarlo. Si la escuela ya tiene un reclamo abierto, <b>no abras una cadena nueva</b>: respondé en la original (sin el “Fwd” antes del código). <a href={DOC_BUSCADOR_CUE} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Buscar reclamos anteriores por CUE</a>.</p>
+            <p className="text-xs text-dte-gris">El mensaje va al correo regional y de ahí lo deriva el CED. Se abre con tu cuenta institucional (en el celular, en la app de Gmail); los archivos los adjuntás vos. El asunto lleva la hora de este momento: si lo enviás más tarde, volvé a armarlo. Si el establecimiento ya tiene un reclamo abierto, <b>no abras una cadena nueva</b>: respondé en la original (sin el “Fwd” antes del código). <a href={DOC_BUSCADOR_CUE} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Buscar reclamos anteriores por CUE</a>.</p>
           </>}
         </section>}
       </>}
