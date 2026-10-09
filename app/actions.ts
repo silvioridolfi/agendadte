@@ -141,3 +141,4 @@ export const retirarComunicado = async (id: string) => conUsuario(yo => comunica
 
 // ---------- Reporte de jornadas pedagógicas (formulario de Nivel Central): sólo CED y administración ----------
 export const getJornadas = async () => conUsuario(yo => jornadas.jornadasImpl(yo))
+export const marcarJornada = async (encuentroId: string, cargada: boolean) => conUsuario(yo => jornadas.marcarJornadaImpl(yo, encuentroId, cargada))

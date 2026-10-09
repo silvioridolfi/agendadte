@@ -61,7 +61,7 @@ export function MenuPerfil({ profile, feds, esAdmin, hayNovedades = false, onAyu
       <button role="menuitem" onClick={() => { setOpen(false); onCronogramas() }} className={item}><CalendarClock className="size-4 text-dte-petroleo" />Cronogramas</button>
       {(admin || profile.rol === 'coordinacion') && <div role="separator" className="my-1 border-t border-dte-linea" />}
       {(admin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onComunicados() }} className={item}><Megaphone className="size-4 text-dte-petroleo" />Comunicados</button>}
-      {(admin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onJornadas() }} className={item}><GraduationCap className="size-4 text-dte-petroleo" />Reporte de jornadas</button>}
+      <button role="menuitem" onClick={() => { setOpen(false); onJornadas() }} className={item}><GraduationCap className="size-4 text-dte-petroleo" />{admin || profile.rol === 'coordinacion' ? 'Reporte de jornadas' : 'Mis jornadas'}</button>
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onEquipo() }} className={item}><LayoutDashboard className="size-4 text-dte-petroleo" />Vista de coordinación</button>}
       {admin && <button role="menuitem" onClick={() => { setOpen(false); onUsuarios() }} className={item}><Users className="size-4 text-dte-petroleo" />Usuarios</button>}
       {(admin || profile.rol === 'coordinacion') && <button role="menuitem" onClick={() => { setOpen(false); onPve() }} className={item}><FileText className="size-4 text-dte-petroleo" />PVE del equipo</button>}

@@ -43,7 +43,7 @@ export const ESTILO_TEMA: Record<string, { familia: Familia, icono: Icono }> = {
   'ced-agenda': { familia: 'azul', icono: 'calendario' },
   'ced-fotos': { familia: 'celeste', icono: 'fotos' },
   'ced-pve': { familia: 'celeste', icono: 'pve' },
-  'ced-jornadas': { familia: 'celeste', icono: 'pve' },
+  'jornadas': { familia: 'celeste', icono: 'pve' },
   'ced-ausencias': { familia: 'rosa', icono: 'ausencias' },
   'ced-notificaciones': { familia: 'amarillo', icono: 'campana' },
   'ced-faq': { familia: 'lila', icono: 'pregunta' },

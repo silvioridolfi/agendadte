@@ -521,22 +521,24 @@ Desde **Mi equipo**, cada tarjeta incluye el acceso a la carpeta de fotos del in
 - Subir solo fotos con autorización de uso de imagen, en especial si aparecen estudiantes.
 [i] Si un FED no tiene la carpeta configurada, su tarjeta de Mi equipo no muestra el acceso, y tampoco puede entregar la PVE.` },
 
-  { id: 'ced-jornadas', titulo: 'Reporte de jornadas pedagógicas', para: ['ced'], md: () => `
-Arma, con lo que el equipo ya registró, los datos que pide Nivel Central en el formulario **Registro de Acciones Pedagógicas**, para copiarlos y pegarlos. Lo ven la coordinación y la administración. Está en el menú de las iniciales, en **Reporte de jornadas**.
-## Qué incluye
-- Clubes de Tecnología, PEAT, talleres y capacitaciones con **participantes** cargados. Una fila por club o PEAT (con todos sus encuentros) y una por cada taller o capacitación.
-- Quedan afuera las visitas, las charlas con EMATP o directivos, los eventos y las formaciones internas.
-- Por defecto solo las **finalizadas** (los clubes y PEAT, cuando tienen fecha de cierre). Con **Incluir los que siguen en curso** se suman las demás, con la fecha de su último encuentro.
+  { id: 'jornadas', titulo: 'Reporte de jornadas pedagógicas', para: ['fed', 'ced'], md: () => `
+Arma, con lo que registraste en la agenda, los datos que pide Nivel Central en el formulario **Registro de Acciones Pedagógicas**, para copiarlos y pegarlos, y lleva la cuenta de lo que ya cargaste para no repetirlo. Está en el menú de las iniciales: **Mis jornadas** (cada FED) o **Reporte de jornadas** (coordinación y administración).
+## Qué muestra
+- **Una fila por encuentro**, como pide el formulario: no se agrupan jornadas ni se carga una propuesta con varios encuentros. En cada una, la cantidad de encuentros es 1.
+- Entran los encuentros de clubes, PEAT, talleres y capacitaciones **con participantes** cargados. Quedan afuera las visitas, las charlas con EMATP o directivos, los eventos y las formaciones internas.
+- **Cada FED ve solo los encuentros que creó él.** Si alguien te acompañó, el responsable de cargarlo es quien creó la acción (no se carga dos veces). La coordinación y la administración ven los de todo el equipo, con filtro por FED.
+- **FED / CED a cargo de la jornada:** figura quien creó la acción y, a continuación, quienes la acompañan, hayan confirmado o no (salvo quien avisó que no puede).
 ## Cómo se usa
-1. Elegí el período (por defecto, desde el 1 del mes hasta hoy) y, si querés, FED, distrito o tipo.
-2. Abrí una jornada: los datos aparecen en el orden del formulario. **Copiar** copia uno; **Copiar todos los datos** copia los catorce, uno por renglón.
-3. Los enlaces de **Fotos** abren la carpeta de Drive de cada fecha (necesitás acceso de lectura a las carpetas del equipo).
-4. **Excel** baja la lista completa con las mismas columnas.
+1. Elegí **Pendientes** (lo que falta cargar), **Cargadas** o **Todas**, y el período (por defecto, desde el 1 del mes hasta hoy; ampliá el período para ver lo anterior).
+2. Abrí un encuentro: los datos aparecen en el orden del formulario. **Copiar** copia uno; **Copiar todos los datos** copia los catorce, uno por renglón. **Abrir el formulario** (arriba y en cada encuentro) abre el de Nivel Central en otra pestaña.
+3. Cuando lo cargues en el formulario, tocá **Ya la cargué**. La marca la ven los demás, así que nadie lo repite. **Deshacer marca** la quita.
+4. Si después de marcarlo alguien corrige el encuentro en la agenda, figura como **Modificada después de cargarla** y vuelve a pendientes: revisá si hay que corregirlo en el formulario y volvé a marcarlo.
+5. Los enlaces de **Fotos** abren la carpeta de Drive de la acción (necesitás acceso a la carpeta del FED). **Excel** baja lo que ves, con el estado de carga.
 ## Cómo se completan los datos
-- **Inscriptos y participantes:** el máximo entre los encuentros.
+- **Inscriptos y participantes:** los del encuentro.
 - **Destinatarios:** se pasan a las casillas del formulario (Docentes, Estudiantes, Equipo de Conducción…); lo que no encaja va a Otros y se aclara en observaciones.
 - **CUE:** el de la sede y, si es otra, el de la escuela de origen de los estudiantes.
-[i] Si faltan inscriptos o el tipo de jornada, completalos en el encuentro de la agenda antes de copiar.` },
+[i] Si faltan inscriptos o el tipo de jornada, completalos en el encuentro de la agenda antes de copiar: se actualiza solo y, si ya lo habías marcado, te avisa.` },
 
   { id: 'ced-pve', titulo: 'PVE del equipo', para: ['ced'], md: () => `
 Circuito completo de la Planilla de Visita a Escuelas, desde la entrega de cada FED hasta el envío a Nivel Central.
