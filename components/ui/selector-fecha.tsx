@@ -4,14 +4,14 @@ import { useRef, useState } from 'react'
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from 'cn'
-import { DIAS_CORTOS, dentroDeRango, esIso, fueraDeRango, partesFechaHora, semanasDelMes, sumarDias, sumarMeses, textoFecha, textoFechaHora, tituloMes } from '@/lib/calendario'
+import { DIAS_CORTOS, dentroDeRango, esFinDeSemana, esIso, fueraDeRango, partesFechaHora, semanasDelMes, sumarDias, sumarMeses, textoFecha, textoFechaHora, tituloMes } from '@/lib/calendario'
 import { hoyAR, horaAR } from '@/lib/hora'
 
 // Selector de fechas con el estilo de la agenda (el calendario del navegador no se puede personalizar). Valores AAAA-MM-DD.
 // Teclado: flechas (día y semana), Inicio y Fin (semana), RePág y AvPág (mes). Celdas de 44 px de alto en el celular.
-type Comun = { ariaLabel: string, min?: string, max?: string, limpiable?: boolean, className?: string, placeholder?: string, disabled?: boolean }
+type Comun = { marcas?: Record<string, string>, ariaLabel: string, min?: string, max?: string, limpiable?: boolean, className?: string, placeholder?: string, disabled?: boolean }
 
-function Calendario({ valor, onElegir, min, max, limpiable, onBorrar, onHoy, pie }: { valor: string, onElegir: (f: string) => void, min?: string, max?: string, limpiable?: boolean, onBorrar: () => void, onHoy: () => void, pie?: React.ReactNode }) {
+function Calendario({ valor, onElegir, min, max, limpiable, onBorrar, onHoy, pie, marcas }: { marcas?: Record<string, string>, valor: string, onElegir: (f: string) => void, min?: string, max?: string, limpiable?: boolean, onBorrar: () => void, onHoy: () => void, pie?: React.ReactNode }) {
   const hoy = hoyAR()
   const [mes, setMes] = useState(esIso(valor) ? valor : dentroDeRango(hoy, min, max))
   const [foco, setFoco] = useState(esIso(valor) ? valor : dentroDeRango(hoy, min, max))
@@ -22,6 +22,8 @@ function Calendario({ valor, onElegir, min, max, limpiable, onBorrar, onHoy, pie
     if (paso[e.key]) { e.preventDefault(); moverFoco(paso[e.key]) }
   }
   const semanas = semanasDelMes(mes)
+  // Los feriados y recesos del mes que se está viendo, para leerlos también en el celular (donde no hay cursor para ver el nombre del día).
+  const delMesMarcas = Object.entries(marcas ?? {}).filter(([f]) => f.slice(0, 7) === mes.slice(0, 7)).sort(([a], [b]) => a.localeCompare(b))
   const cambiarMes = (n: number) => { const m = sumarMeses(mes, n); setMes(m); setFoco(m) }
   return <div className="flex flex-col gap-2">
     <div className="flex items-center justify-between gap-1">
@@ -31,14 +33,15 @@ function Calendario({ valor, onElegir, min, max, limpiable, onBorrar, onHoy, pie
     </div>
     <div ref={grilla} role="group" aria-label={tituloMes(mes)} onKeyDown={tecla} className="grid grid-cols-7 gap-y-0.5">
       {DIAS_CORTOS.map(d => <span key={d} aria-hidden className="pb-1 text-center text-xs font-bold text-dte-gris">{d}</span>)}
-      {semanas.flat().map(({ iso, delMes }) => {
-        const elegido = iso === valor, esHoy = iso === hoy, fuera = fueraDeRango(iso, min, max)
-        return <button key={iso} type="button" data-f={iso} disabled={fuera} tabIndex={iso === foco ? 0 : -1} aria-pressed={elegido} aria-current={esHoy ? 'date' : undefined} aria-label={textoFecha(iso)} onClick={() => onElegir(iso)}
+      {semanas.flat().map(({ iso, delMes }, i) => {
+        const elegido = iso === valor, esHoy = iso === hoy, fuera = fueraDeRango(iso, min, max), marca = marcas?.[iso], finde = esFinDeSemana(i % 7)
+        return <button key={iso} type="button" data-f={iso} disabled={fuera} tabIndex={iso === foco ? 0 : -1} aria-pressed={elegido} aria-current={esHoy ? 'date' : undefined} aria-label={marca ? `${textoFecha(iso)}: ${marca}` : textoFecha(iso)} title={marca} onClick={() => onElegir(iso)}
           className={cn('mx-auto flex h-11 w-full max-w-11 items-center justify-center rounded-lg text-sm font-semibold tabular-nums transition md:h-9 md:max-w-9',
-            elegido ? 'bg-dte-petroleo text-white' : delMes ? 'text-dte-tinta hover:bg-dte-fondo' : 'text-dte-gris-claro hover:bg-dte-fondo',
-            esHoy && !elegido && 'ring-2 ring-inset ring-dte-petroleo/50', fuera && 'cursor-not-allowed opacity-30 hover:bg-transparent')}>{Number(iso.slice(8, 10))}</button>
+            elegido ? 'bg-dte-petroleo text-white' : marca ? 'font-bold text-dte-magenta hover:bg-dte-fondo' : delMes ? (finde ? 'text-dte-gris hover:bg-dte-fondo' : 'text-dte-tinta hover:bg-dte-fondo') : 'text-dte-gris-claro hover:bg-dte-fondo',
+            esHoy && !elegido && 'ring-2 ring-inset ring-dte-petroleo/50', fuera && 'cursor-not-allowed opacity-30 hover:bg-transparent')}>{Number(iso.slice(8, 10))}{marca && !elegido && <span aria-hidden className="ml-0.5 size-1 self-end rounded-full bg-dte-magenta" />}</button>
       })}
     </div>
+    {delMesMarcas.length > 0 && <ul aria-label="Feriados y recesos del mes" className="flex flex-col gap-0.5 border-t border-dte-linea pt-2 text-xs text-dte-gris">{delMesMarcas.map(([f, t]) => <li key={f} className="flex items-start gap-1.5"><span aria-hidden className="mt-1 size-1.5 shrink-0 rounded-full bg-dte-magenta" /><span><b className="tabular-nums text-dte-tinta">{Number(f.slice(8, 10))}</b> {t}</span></li>)}</ul>}
     {pie}
     <div className="flex items-center justify-between border-t border-dte-linea pt-2">
       {limpiable ? <button type="button" onClick={onBorrar} className="min-h-11 rounded-lg px-2 text-sm font-semibold text-dte-petroleo hover:bg-dte-fondo md:min-h-9">Borrar</button> : <span />}
@@ -62,21 +65,21 @@ function Contenedor({ texto, placeholder, ariaLabel, className, disabled, childr
   </PopoverPrimitive.Root>
 }
 
-export function SelectorFecha({ value, onChange, ariaLabel, min, max, limpiable = true, className, placeholder = 'dd/mm/aaaa', disabled }: Comun & { value: string, onChange: (v: string) => void }) {
+export function SelectorFecha({ marcas, value, onChange, ariaLabel, min, max, limpiable = true, className, placeholder = 'dd/mm/aaaa', disabled }: Comun & { value: string, onChange: (v: string) => void }) {
   return <Contenedor texto={textoFecha(value)} placeholder={placeholder} ariaLabel={ariaLabel} className={className} disabled={disabled}>
-    {cerrar => <Calendario valor={value} min={min} max={max} limpiable={limpiable} onElegir={f => { onChange(f); cerrar() }} onBorrar={() => { onChange(''); cerrar() }} onHoy={() => { onChange(dentroDeRango(hoyAR(), min, max)); cerrar() }} />}
+    {cerrar => <Calendario marcas={marcas} valor={value} min={min} max={max} limpiable={limpiable} onElegir={f => { onChange(f); cerrar() }} onBorrar={() => { onChange(''); cerrar() }} onHoy={() => { onChange(dentroDeRango(hoyAR(), min, max)); cerrar() }} />}
   </Contenedor>
 }
 
 // Fecha y hora (AAAA-MM-DDTHH:mm): el calendario más dos selectores de hora y minutos.
-export function SelectorFechaHora({ value, onChange, ariaLabel, min, max, className, placeholder = 'dd/mm/aaaa hh:mm', disabled }: Omit<Comun, 'limpiable'> & { value: string, onChange: (v: string) => void }) {
+export function SelectorFechaHora({ marcas, value, onChange, ariaLabel, min, max, className, placeholder = 'dd/mm/aaaa hh:mm', disabled }: Omit<Comun, 'limpiable'> & { value: string, onChange: (v: string) => void }) {
   const p = partesFechaHora(value)
   const hora = p.hora || horaAR().slice(0, 2), minuto = p.minuto || horaAR().slice(3, 5)
   const poner = (fecha: string, h: string, m: string) => onChange(fecha ? `${fecha}T${h}:${m}` : '')
   const opciones = (n: number) => Array.from({ length: n }, (_, i) => String(i).padStart(2, '0'))
   const selClase = 'h-11 rounded-control border border-input bg-white px-2 text-base text-dte-tinta tabular-nums md:h-9 md:text-sm'
   return <Contenedor texto={textoFechaHora(value)} placeholder={placeholder} ariaLabel={ariaLabel} className={className} disabled={disabled}>
-    {cerrar => <Calendario valor={p.fecha} min={min} max={max} limpiable={false} onBorrar={() => undefined}
+    {cerrar => <Calendario marcas={marcas} valor={p.fecha} min={min} max={max} limpiable={false} onBorrar={() => undefined}
       onElegir={f => poner(f, hora, minuto)} onHoy={() => poner(dentroDeRango(hoyAR(), min, max), hora, minuto)}
       pie={<div className="flex items-center gap-2 border-t border-dte-linea pt-2"><span className="text-sm font-semibold text-dte-gris">Hora</span>
         <select aria-label="Hora" className={selClase} value={hora} onChange={e => poner(p.fecha || dentroDeRango(hoyAR(), min, max), e.target.value, minuto)}>{opciones(24).map(h => <option key={h} value={h}>{h}</option>)}</select><span aria-hidden>:</span>

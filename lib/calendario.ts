@@ -1,3 +1,6 @@
+import type { Feriado } from '@/lib/agenda'
+import { titleCase } from '@/lib/format'
+
 // Lógica del selector de fechas (calendario propio): todo con cadenas AAAA-MM-DD para no depender de la zona horaria del dispositivo.
 
 export const DIAS_CORTOS = ['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'] as const
@@ -38,3 +41,16 @@ export const partesFechaHora = (v: string): { fecha: string, hora: string, minut
   return m && esIso(m[1]) ? { fecha: m[1], hora: m[2], minuto: m[3] } : { fecha: '', hora: '', minuto: '' }
 }
 export const textoFechaHora = (v: string) => { const p = partesFechaHora(v); return p.fecha ? `${textoFecha(p.fecha)} ${p.hora}:${p.minuto}` : '' }
+
+// Texto de las marcas del calendario (día → descripción), a nivel global: todos los feriados y recesos cargados, sean nacionales, provinciales,
+// turísticos, no laborables o distritales (de estos se aclara el distrito). Si un día tiene más de uno, se unen.
+export function marcasFeriados(feriados: Pick<Feriado, 'fecha' | 'nombre' | 'tipo' | 'distrito' | 'confirmado'>[]): Record<string, string> {
+  const out: Record<string, string[]> = {}
+  for (const f of feriados) {
+    const texto = `${f.nombre}${f.tipo === 'distrital' && f.distrito ? ` (distrito ${titleCase(f.distrito)})` : ''}${f.confirmado ? '' : ' · a confirmar'}`
+    out[f.fecha] = [...(out[f.fecha] ?? []), texto]
+  }
+  return Object.fromEntries(Object.entries(out).map(([f, t]) => [f, t.join(' · ')]))
+}
+// Sábado o domingo, según la columna de la grilla (0 = lunes … 6 = domingo).
+export const esFinDeSemana = (columna: number) => columna >= 5

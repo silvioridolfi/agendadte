@@ -6,7 +6,7 @@ import { CalendarClock, Check, ClipboardList, Copy, Eye, FileSpreadsheet, Loader
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { SelectorFecha } from '@/components/ui/selector-fecha'
+import { SelectorFecha } from '@/components/app/selectorfecha'
 import { Textarea } from '@/components/ui/textarea'
 import { type Fed } from '@/lib/agenda'
 import { ESTADOS_RECLAMO, ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL, ESTADO_RECLAMO_PLURAL, filtrarReclamos, origenDeNumero, puedeResolverReclamo, resumenReclamos, sumarNota, type EstadoReclamo, type FiltrosReclamo, type Reclamo } from '@/lib/reclamos-registro'
