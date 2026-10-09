@@ -54,6 +54,14 @@ describe('documento del PDF', () => {
     expect(html).toContain('src="https://x.test/brand/oficial-blanco.png"'); expect(html).toContain('alt="Dirección de Tecnología Educativa')
     expect(html).not.toMatch(/geolocaliz|ubicaci[oó]n de las fotos/i)
   })
+  it('la tabla es lo último del documento (sin pie ni nota después), para que nunca salga una hoja casi en blanco', () => {
+    const html = htmlExtracto({ titulo: 't', periodo: 'p', filas: filasExtracto([c({})]), emitido: 'e', origen: 'https://x.test' })
+    const despues = html.slice(html.indexOf('</table></div>') + '</table></div>'.length).replace(/<script>[\s\S]*<\/script>/, '').replace(/<\/body><\/html>/, '').trim()
+    expect(despues).toBe('')
+    expect(html).not.toContain('class="pie"')
+    expect(html.indexOf('class="nota"')).toBeLessThan(html.indexOf('<table>'))
+    expect(html).toContain('pueden modificarse')
+  })
   it('sin personal ni enlace dice "A confirmar"', () => {
     expect(htmlExtracto({ titulo: 't', periodo: 'p', filas: filasExtracto([c({ instaladores: null })]), emitido: 'e', origen: 'https://x.test' })).toContain('A confirmar')
   })

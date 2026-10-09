@@ -39,7 +39,8 @@ export function periodoExtracto(filas: FilaExtracto[], desde: string, hasta: str
 
 export const tituloExtracto = (distrito: string) => `Cronogramas de conectividad${distrito ? ` · ${titleCase(distrito)}` : ''}`
 
-// Documento para imprimir o guardar como PDF (apaisado). `origen`: dirección de la app, para el logo y la tipografía.
+// Documento para imprimir o guardar como PDF (apaisado). La tabla es lo último del documento a propósito: si después de ella hubiera una nota o un pie, cuando
+// la tabla llena la hoja eso pasaba solo a una hoja extra (casi en blanco). `origen`: dirección de la app, para el logo y la tipografía.
 export function htmlExtracto({ titulo, periodo, filas, emitido, origen }: { titulo: string, periodo: string, filas: FilaExtracto[], emitido: string, origen: string }): string {
   const personal = (f: FilaExtracto) => [...f.personal.map(p => `<div>${esc(p)}</div>`), ...f.enlaces.map(e => `<div><a href="${esc(e)}">Datos del personal</a></div>`)].join('') || '<span class="vacio">A confirmar</span>'
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>${esc(titulo)}</title>
@@ -61,8 +62,7 @@ tr:nth-child(even) td { background: #f6f5f9; } tr { break-inside: avoid; } thead
 td small { display: block; color: #5b6474; font-size: 7.5pt; }
 .vacio { color: #5b6474; font-style: italic; }
 a { color: #05476e; }
-.nota { margin: 3mm 0 0; font-size: 8pt; color: #5b6474; }
-.pie { margin-top: 6mm; border-top: 1px solid #e3e1ea; padding-top: 2mm; font-size: 7.5pt; color: #5b6474; }
+.nota { margin: 0 0 3mm; font-size: 8pt; color: #5b6474; }
 .barra { position: sticky; top: 0; z-index: 1; display: flex; gap: 8px; padding: 8px 0; background: #fff; }
 .barra button { font: 600 15px 'Encode Sans', sans-serif; min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #05476e; background: #fff; color: #05476e; }
 .barra button.pri { background: #05476e; color: #fff; }
@@ -75,11 +75,10 @@ a { color: #05476e; }
 <p class="aviso">Para guardarlo, elegí <b>Guardar como PDF</b> en la ventana de impresión (en el celular: Compartir › Imprimir).</p>
 <div class="banda"><div><small>Región 1</small><h1>${esc(titulo)}</h1></div><img class="logo" src="${esc(origen)}/brand/oficial-blanco.png" alt="Dirección de Tecnología Educativa · Dirección General de Cultura y Educación · Gobierno de la Provincia de Buenos Aires"></div>
 <div class="datos"><div><b>Período</b>${esc(periodo)}</div><div><b>Intervenciones</b>${filas.length}</div><div><b>Emitido</b>${esc(emitido)}</div></div>
+<p class="nota">Las fechas y el personal pueden modificarse: se informa a las instituciones para que estén al tanto y faciliten el ingreso y el acceso a los espacios correspondientes.</p>
 <div class="tabla"><table><thead><tr><th>Fecha</th><th>Establecimiento</th><th>Localidad</th><th>Tarea</th><th>Empresa</th><th>Personal a cargo</th></tr></thead><tbody>
 ${filas.map(f => `<tr><td>${esc(fechasDe(f))}</td><td><b>${esc(f.establecimiento)}</b><small>CUE ${f.cue}${f.direccion ? ` · ${esc(f.direccion)}` : ''}</small></td><td>${esc([f.localidad, f.distrito].filter((x, i, a) => x && a.indexOf(x) === i).join(', '))}</td><td>${esc(f.tarea)}${f.observaciones ? `<small>${esc(f.observaciones)}</small>` : ''}</td><td>${esc(f.empresa)}${f.programa ? `<small>${esc(f.programa)}</small>` : ''}</td><td>${personal(f)}</td></tr>`).join('\n')}
 </tbody></table></div>
-<p class="nota">Las fechas y el personal pueden modificarse: se informa a las instituciones para que estén al tanto y faciliten el ingreso y el acceso a los espacios correspondientes.</p>
-<div class="pie">Agenda Territorial · Dirección de Tecnología Educativa · Región 1</div>
 <script>
 // En la app instalada (iPhone) la ventana no tiene botón de cerrar: si no se puede cerrar, vuelve a la agenda.
 function volver() { window.close(); setTimeout(() => { location.href = '${esc(origen)}/' }, 300) }
