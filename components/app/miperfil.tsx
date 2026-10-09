@@ -10,6 +10,7 @@ import { SITIO_DTE_URL, type Fed } from '@/lib/agenda'
 import { horasSemanales, textoCarga, armarDdjj, cargosDe, franjasDte, validarDdjj, type Cargo, type Franja } from '@/lib/ddjj'
 import { titleCase } from '@/lib/format'
 import { eyebrow, errMsg, fedColor, initials, storage, updateMiPerfil, ErrorBox } from '@/components/app/comun'
+import { SelectorHora } from '@/components/app/selectorfecha'
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
 const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
@@ -113,7 +114,6 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
   }
 
   const panel = 'rounded-card border border-dte-linea bg-white p-4 shadow-e1 sm:p-5'
-  const time = 'h-11 min-w-0 px-2 tabular-nums md:h-9'
   return <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-32 pt-6 lg:px-10">
     <header className="mb-5 flex items-center gap-3">
       <Avatar className="size-12"><AvatarFallback className={`${fedColor(feds, fed.id)} font-bold text-dte-petroleo-oscuro`}>{initials(fed.nombre_completo)}</AvatarFallback></Avatar>
@@ -144,9 +144,9 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
                 : <button type="button" onClick={() => setFranjas(s => ({ ...s, [dia]: s[dia].slice(0, 1) }))} className="-my-2 inline-flex min-h-11 md:min-h-10 items-center gap-1 px-1 text-xs font-semibold text-dte-gris hover:text-peligro sm:hidden"><X className="size-3.5" />Quitar segunda franja</button>}
             </div>
             <div className="flex flex-col gap-2">{f.map((x, j) => <div key={j} className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto]">
-              <Input type="time" aria-label={`${nombre}, franja ${j + 1}, desde`} value={x.desde} onChange={e => setFranja(dia, j, { desde: e.target.value })} className={time} />
+              <SelectorHora ariaLabel={`${nombre}, franja ${j + 1}, desde`} value={x.desde} onChange={v => setFranja(dia, j, { desde: v })} />
               <span className="text-sm text-dte-gris">a</span>
-              <Input type="time" aria-label={`${nombre}, franja ${j + 1}, hasta`} value={x.hasta} onChange={e => setFranja(dia, j, { hasta: e.target.value })} className={time} />
+              <SelectorHora ariaLabel={`${nombre}, franja ${j + 1}, hasta`} value={x.hasta} onChange={v => setFranja(dia, j, { hasta: v })} />
               <span className="hidden sm:block">{j === 0 && f.length === 1
                 ? <Button variant="ghost" size="icon-sm" onClick={() => setFranjas(s => ({ ...s, [dia]: [...s[dia], { desde: '', hasta: '' }] }))} aria-label={`Agregar segunda franja el ${nombre.toLowerCase()}`} title="Agregar segunda franja"><Plus /></Button>
                 : <Button variant="ghost" size="icon-sm" onClick={() => setFranjas(s => ({ ...s, [dia]: s[dia].length > 1 ? s[dia].filter((_, k) => k !== j) : [{ desde: '', hasta: '' }] }))} aria-label={`Quitar franja ${j + 1} del ${nombre.toLowerCase()}`} title="Quitar franja" className="text-dte-gris hover:text-peligro"><X /></Button>}</span>
@@ -167,9 +167,9 @@ export function MiPerfilView({ fed, feds, onSaved }: { fed: Fed, feds: Fed[], on
             <div className="flex flex-wrap gap-1.5">{DIAS_CORTOS.map((d, k) => <Pill key={d} conIcono={false} on={c.dias.includes(k + 1)} onClick={() => setCargo(c.key, { dias: c.dias.includes(k + 1) ? c.dias.filter(x => x !== k + 1) : [...c.dias, k + 1].sort() })}>{d}</Pill>)}</div>
           </fieldset>
           <div className="grid max-w-sm grid-cols-[1fr_auto_1fr] items-center gap-2">
-            <Input type="time" aria-label="Desde" value={c.desde} onChange={e => setCargo(c.key, { desde: e.target.value })} className={time} />
+            <SelectorHora ariaLabel="Desde" value={c.desde} onChange={v => setCargo(c.key, { desde: v })} />
             <span className="text-sm text-dte-gris">a</span>
-            <Input type="time" aria-label="Hasta" value={c.hasta} onChange={e => setCargo(c.key, { hasta: e.target.value })} className={time} />
+            <SelectorHora ariaLabel="Hasta" value={c.hasta} onChange={v => setCargo(c.key, { hasta: v })} />
           </div>
         </li>)}</ul>}
         <Button variant="outline" onClick={() => setCargos(l => [...l, { key: Date.now(), nombre: '', dias: [], desde: '', hasta: '' }])}><Plus data-icon="inline-start" />Agregar cargo</Button>

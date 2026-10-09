@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 import { cn } from 'cn'
 import { DIAS_CORTOS, agruparMarcas, dentroDeRango, esFinDeSemana, esIso, fueraDeRango, partesFechaHora, type Marca, semanasDelMes, sumarDias, sumarMeses, textoFecha, textoFechaHora, tituloMes } from '@/lib/calendario'
 import { hoyAR, horaAR } from '@/lib/hora'
@@ -50,16 +50,16 @@ function Calendario({ valor, onElegir, min, max, limpiable, onBorrar, onHoy, pie
   </div>
 }
 
-function Contenedor({ texto, placeholder, ariaLabel, className, disabled, children }: { texto: string, placeholder: string, ariaLabel: string, className?: string, disabled?: boolean, children: (cerrar: () => void) => React.ReactNode }) {
+function Contenedor({ texto, placeholder, ariaLabel, className, disabled, children, icono: Icono = CalendarDays, ancho = 'w-[min(20rem,calc(100vw-1rem))]' }: { icono?: typeof CalendarDays, ancho?: string, texto: string, placeholder: string, ariaLabel: string, className?: string, disabled?: boolean, children: (cerrar: () => void) => React.ReactNode }) {
   const [abierto, setAbierto] = useState(false)
   return <PopoverPrimitive.Root open={abierto} onOpenChange={setAbierto}>
     <PopoverPrimitive.Trigger disabled={disabled} aria-label={`${ariaLabel}${texto ? `: ${texto}` : ''}`}
       className={cn('inline-flex h-11 w-full items-center justify-between gap-2 rounded-control border border-input bg-white px-2.5 text-left text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 md:h-9 md:text-sm', texto ? 'text-dte-tinta' : 'text-dte-gris', className)}>
-      <span className="truncate tabular-nums">{texto || placeholder}</span><CalendarDays className="size-4 shrink-0 text-dte-gris" aria-hidden />
+      <span className="truncate tabular-nums">{texto || placeholder}</span><Icono className="size-4 shrink-0 text-dte-gris" aria-hidden />
     </PopoverPrimitive.Trigger>
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner side="bottom" align="start" sideOffset={6} collisionPadding={8} className="z-toast">
-        <PopoverPrimitive.Popup aria-label={ariaLabel} className="w-[min(20rem,calc(100vw-1rem))] rounded-card border border-dte-linea bg-white p-3 shadow-e3 outline-none">{children(() => setAbierto(false))}</PopoverPrimitive.Popup>
+        <PopoverPrimitive.Popup aria-label={ariaLabel} className={cn(ancho, 'rounded-card border border-dte-linea bg-white p-3 shadow-e3 outline-none')}>{children(() => setAbierto(false))}</PopoverPrimitive.Popup>
       </PopoverPrimitive.Positioner>
     </PopoverPrimitive.Portal>
   </PopoverPrimitive.Root>
@@ -85,5 +85,20 @@ export function SelectorFechaHora({ marcas, value, onChange, ariaLabel, min, max
         <select aria-label="Hora" className={selClase} value={hora} onChange={e => poner(p.fecha || dentroDeRango(hoyAR(), min, max), e.target.value, minuto)}>{opciones(24).map(h => <option key={h} value={h}>{h}</option>)}</select><span aria-hidden>:</span>
         <select aria-label="Minutos" className={selClase} value={minuto} onChange={e => poner(p.fecha || dentroDeRango(hoyAR(), min, max), hora, e.target.value)}>{opciones(60).map(m => <option key={m} value={m}>{m}</option>)}</select>
         <button type="button" onClick={cerrar} className="ml-auto min-h-11 rounded-lg bg-dte-petroleo px-4 text-sm font-semibold text-white md:min-h-9">Listo</button></div>} />}
+  </Contenedor>
+}
+
+// Hora (HH:mm) con el mismo estilo: dos selectores de hora y minutos. Sin valor, propone 08:00 al elegir.
+export function SelectorHora({ value, onChange, ariaLabel, limpiable = true, className, placeholder = '--:--', disabled }: Pick<Comun, 'ariaLabel' | 'limpiable' | 'className' | 'placeholder' | 'disabled'> & { value: string, onChange: (v: string) => void }) {
+  const [h, m] = /^\d{2}:\d{2}/.test(value) ? [value.slice(0, 2), value.slice(3, 5)] : ['08', '00']
+  const opciones = (n: number) => Array.from({ length: n }, (_, i) => String(i).padStart(2, '0'))
+  const selClase = 'h-11 rounded-control border border-input bg-white px-2 text-base text-dte-tinta tabular-nums md:h-9 md:text-sm'
+  return <Contenedor icono={Clock} ancho="w-[min(17rem,calc(100vw-1rem))]" texto={/^\d{2}:\d{2}/.test(value) ? value.slice(0, 5) : ''} placeholder={placeholder} ariaLabel={ariaLabel} className={className} disabled={disabled}>
+    {cerrar => <div className="flex flex-wrap items-center gap-2">
+      <select aria-label="Hora" className={selClase} value={h} onChange={e => onChange(`${e.target.value}:${m}`)}>{opciones(24).map(x => <option key={x} value={x}>{x}</option>)}</select><span aria-hidden>:</span>
+      <select aria-label="Minutos" className={selClase} value={m} onChange={e => onChange(`${h}:${e.target.value}`)}>{opciones(60).map(x => <option key={x} value={x}>{x}</option>)}</select>
+      <div className="ml-auto flex items-center gap-1">
+        {limpiable && value && <button type="button" onClick={() => { onChange(''); cerrar() }} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-dte-petroleo md:min-h-9">Borrar</button>}
+        <button type="button" onClick={() => { if (!value) onChange(`${h}:${m}`); cerrar() }} className="min-h-11 rounded-lg bg-dte-petroleo px-4 text-sm font-semibold text-white md:min-h-9">Listo</button></div></div>}
   </Contenedor>
 }

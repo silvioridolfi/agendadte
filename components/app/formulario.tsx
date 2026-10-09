@@ -20,6 +20,7 @@ import { lineaPredio, buscarOrganismos, crearClubPorIniciar, actionStyle, status
 import { encolarOffline, encolarVisitaOffline } from '@/components/app/offline'
 import { alternarTipo, esSumable, datosDeAccion, datosVacios, inputDeTipo, type DatosTipo } from '@/lib/visita'
 import { hoyAR } from '@/lib/hora'
+import { SelectorFecha, SelectorHora } from '@/components/app/selectorfecha'
 
 
 // =====================================================================
@@ -229,6 +230,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
   // Sólo días hábiles: ni fines de semana ni feriados o recesos (al editar sin cambiar la fecha, se respeta lo cargado).
   const diaSemana = parse(form.fecha).getDay(), noHabil = delDia.feriados.find(f => f.tipo !== 'distrital')
   const fechaError = aDefinir || item?.fecha === form.fecha ? ''
+    : !form.fecha ? 'Elegí la fecha.'
     : diaSemana === 0 || diaSemana === 6 ? 'Es fin de semana: sólo se pueden cargar acciones de lunes a viernes.'
     : noHabil ? `Es ${noHabil.tipo === 'receso' ? 'receso escolar' : 'feriado'} (${noHabil.nombre}): elegí un día hábil.` : ''
   // Licencia por período: desde la fecha elegida hasta `licHasta`, un registro por día hábil, sin horario (todo el día).
@@ -365,10 +367,10 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
 
     {modoT === 'nuevo' && <label className="flex items-start gap-2.5 rounded-control border border-dte-linea bg-dte-fondo p-2.5 text-sm"><input type="checkbox" checked={aDefinirMarcado} onChange={e => setADefinir(e.target.checked)} className="mt-0.5 size-5" style={{ accentColor: marca.acento }} /><span><b>Fecha a definir.</b> {marca.corto === 'club' ? 'El club queda' : 'La práctica queda'} “por iniciar” y no se agrega a tu agenda hasta que programes el primer encuentro.</span></label>}
     {!aDefinir && <div className="grid gap-4 sm:grid-cols-3">
-      <Field id="campo-fecha" label={modoT === 'nuevo' ? 'Fecha del primer encuentro' : esLicencia && !item ? 'Desde' : 'Fecha'} required className="scroll-mt-24" error={fechaError} errorId="err-fecha"><Input type="date" required value={form.fecha} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, fecha: v, estado: item?.estado === 'reprogramada' && f.estado === 'reprogramada' && v !== item.fecha ? 'planificada' : !item && v && v < hoyAR() ? 'realizada' : !item && v > hoyAR() && f.estado === 'realizada' ? 'planificada' : f.estado })) }} aria-invalid={!!fechaError || undefined} aria-describedby={fechaError ? 'err-fecha' : undefined} className="md:h-10" /></Field>
-      {esLicencia ? !item && <Field label="Hasta" hint="(si dura más de un día)"><Input type="date" min={form.fecha} value={licHasta} onChange={e => { setLicHasta(e.target.value); limpiar('fecha') }} className="md:h-10" aria-label="Último día de la licencia" /></Field>
-      : !esParo && <><Field label="Desde" hint="(opcional)"><Input type="time" value={form.hora_inicio} onChange={e => set('hora_inicio', e.target.value)} className="md:h-10" /></Field>
-      <Field label="Hasta" hint="(opcional)"><Input type="time" value={form.hora_fin} onChange={e => set('hora_fin', e.target.value)} aria-invalid={!!timeError} className="md:h-10" /></Field></>}
+      <Field id="campo-fecha" label={modoT === 'nuevo' ? 'Fecha del primer encuentro' : esLicencia && !item ? 'Desde' : 'Fecha'} required className="scroll-mt-24" error={fechaError} errorId="err-fecha"><SelectorFecha ariaLabel="Fecha" limpiable={false} value={form.fecha} onChange={v => { setForm(f => ({ ...f, fecha: v, estado: item?.estado === 'reprogramada' && f.estado === 'reprogramada' && v !== item.fecha ? 'planificada' : !item && v && v < hoyAR() ? 'realizada' : !item && v > hoyAR() && f.estado === 'realizada' ? 'planificada' : f.estado })) }} className={fechaError ? 'border-destructive' : undefined} /></Field>
+      {esLicencia ? !item && <Field label="Hasta" hint="(si dura más de un día)"><SelectorFecha ariaLabel="Último día de la licencia" min={form.fecha} value={licHasta} onChange={v => { setLicHasta(v); limpiar('fecha') }} /></Field>
+      : !esParo && <><Field label="Desde" hint="(opcional)"><SelectorHora ariaLabel="Desde" value={form.hora_inicio} onChange={v => set('hora_inicio', v)} /></Field>
+      <Field label="Hasta" hint="(opcional)"><SelectorHora ariaLabel="Hasta" value={form.hora_fin} onChange={v => set('hora_fin', v)} className={timeError ? 'border-destructive' : undefined} /></Field></>}
     </div>}
     {!aDefinir && timeError && <p id="campo-hora" role="alert" className="-mt-3 scroll-mt-24 text-sm font-medium text-peligro">{timeError}</p>}
     {!aDefinir && ddjjDia && !esParo && !esLicencia && <p className={`-mt-3 flex items-start gap-1.5 text-xs ${fueraDeHorario ? 'text-aviso-fuerte' : 'text-dte-gris'}`}><Clock className="mt-px size-3.5 shrink-0" /><span>Tu horario DTE ese día (DD.JJ.): <b>{horario.franjas.length ? textoFranjas(horario.franjas) : ddjjDia.dte || 'sin horario DTE'}</b>{(ddjjDia.cargos ?? []).map(c => ` · ${c.nombre}: ${c.desde} a ${c.hasta}`).join('')}{horario.fuera ? '. La acción queda fuera de tu horario DTE.' : ''}{horario.choques.length ? `. Se superpone con ${horario.choques.map(c => c.nombre).join(' y ')}.` : ''}</span></p>}
@@ -529,7 +531,7 @@ export function ItemForm({ fed, feds, item, defaultFecha, preset, onCancel, onSa
       <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={repetir} onChange={e => { setRepetir(e.target.checked); limpiar('serie') }} className="size-5" />Se repite cada semana <span className="font-normal text-dte-gris">(ej.: el club todos los miércoles)</span></label>
       {repetir && <div className="mt-3 flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-1.5"><span className="mr-1 text-xs font-semibold uppercase tracking-wider text-dte-gris">Días</span>{DIAS_HABILES.map((d, i) => { const n = i + 1, on = diasSerie.includes(n); return <Pill key={d} on={on} conIcono={false} className="min-w-11 justify-center font-semibold" onClick={() => { limpiar('serie'); setDias((on ? diasSerie.filter(x => x !== n) : [...diasSerie, n]).sort()) }}>{d}</Pill> })}</div>
-        <Field label="Hasta" className="max-w-48"><Input type="date" min={form.fecha} value={hastaSerie} onChange={e => setHasta(e.target.value)} className="md:h-10" /></Field>
+        <Field label="Hasta" className="max-w-48"><SelectorFecha ariaLabel="Repetir hasta el" min={form.fecha} value={hastaSerie} onChange={setHasta} /></Field>
         <p className="text-xs text-dte-gris">Se crean como <b>planificadas</b> con los mismos datos, salteando feriados y recesos. Después completás cada encuentro{esClub ? ` y queda asociado al ${marca.corto}` : ''}. Máximo 60 fechas.</p>
         {errores.serie && <p role="alert" className="text-sm font-medium text-peligro">{errores.serie}</p>}
       </div>}

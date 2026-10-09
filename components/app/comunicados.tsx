@@ -13,6 +13,7 @@ import { hoyAR } from '@/lib/hora'
 import { Field } from '@/components/app/formulario'
 import { BotonVolver, ErrorBox, Skeleton, crearComunicado, editarComunicado, eliminarComunicado, errMsg, eyebrow, getComunicadosGestion, getComunicadosPendientes, marcarComunicadoLeido, retirarComunicado } from '@/components/app/comun'
 import type * as api from '@/app/actions'
+import { SelectorFecha } from '@/components/app/selectorfecha'
 
 const fechaHoraAR = (iso: string) => new Date(iso).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
 const fechaAR = (aaaammdd: string) => `${aaaammdd.slice(8, 10)}/${aaaammdd.slice(5, 7)}/${aaaammdd.slice(0, 4)}`
@@ -172,7 +173,7 @@ export function FormComunicado({ feds, actual, onClose, onGuardado }: { feds: Fe
           <label className="inline-flex min-h-10 items-center gap-2 text-sm"><input type="radio" name="para" checked={!aTodos} onChange={() => setATodos(false)} className="size-4" />Elegir FED</label>
           {!aTodos && <ul className="grid gap-x-3 sm:grid-cols-2">{solo.map(f => <li key={f.id}><label className="inline-flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" checked={elegidos.includes(f.id)} onChange={e => setElegidos(l => (e.target.checked ? [...l, f.id] : l.filter(x => x !== f.id)))} className="size-4" />{f.nombre_completo}</label></li>)}</ul>}
         </fieldset>
-        <Field label="Vence el" hint="(opcional: después de esa fecha deja de mostrarse)"><Input type="date" value={venceEl} min={hoyAR()} onChange={e => setVenceEl(e.target.value)} className="h-11 md:h-9 sm:max-w-48" /></Field>
+        <Field label="Vence el" hint="(opcional: después de esa fecha deja de mostrarse)"><SelectorFecha ariaLabel="Vence el" value={venceEl} min={hoyAR()} onChange={setVenceEl} className="sm:max-w-48" /></Field>
         {actual && cambiaMensaje && <p className="rounded-control bg-aviso-fondo px-3 py-2 text-xs font-semibold text-aviso-fuerte">Cambiaste el título, el mensaje o el nivel: los FED que ya lo leyeron tienen que leerlo de nuevo.</p>}
         {error && <ErrorBox message={error} />}
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={onClose} disabled={guardando}>Cancelar</Button>

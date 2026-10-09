@@ -218,7 +218,7 @@ Se lee sola cada madrugada y se guardan los cronogramas que terminaron hasta ${D
   { id: 'registro', titulo: 'Registrar una acción', para: ['fed'], md: () => `
 ## Paso a paso
 1. **Establecimiento:** búsqueda por nombre, localidad o CUE (incluye jefaturas y organismos). Para otros lugares se completa el campo libre.
-2. **Fecha y horario:** se muestra tu horario DTE declarado para ese día y se advierte si la acción queda fuera de él.
+2. **Fecha y horario:** se muestra tu horario DTE declarado para ese día y se advierte si la acción queda fuera de él. Las fechas se eligen en un calendario que marca feriados y recesos, y los horarios con dos selectores de hora y minutos (el mismo estilo en toda la agenda).
 3. **Tipo de acción:** arriba figuran las más usadas; el buscador encuentra cualquier tipo.
 4. **Sub-acción y detalle** (opcionales), con sugerencias según el tipo.
 5. **Acompañado por:** integrantes que participan; se informa su disponibilidad.

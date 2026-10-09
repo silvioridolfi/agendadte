@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { CAMPOS_ESCUELA, DOMINIO_LABORAL, fechaAIso, fechaDeIso, resumenContacto, type CampoEscuela, type ContactoEditable, type ContactoInput, type EdicionEscuela } from '@/lib/escuelas-edicion'
 import { Field } from '@/components/app/formulario'
 import { ErrorBox, Skeleton, borrarContacto, contactoPrincipal, errMsg, fmt, getEdicionEscuela, guardarContacto, guardarEscuela, selectClass } from '@/components/app/comun'
+import { SelectorFecha } from '@/components/app/selectorfecha'
 
 type Vista = 'datos' | 'conectividad' | 'contactos' | 'historial'
 const GRUPOS: { titulo: string, claves: string[], avanzado?: boolean }[] = [
@@ -57,7 +58,7 @@ export function EditarEscuela({ id, nombre, onClose, onCambio }: { id: string, n
 function Control({ campo, valor, onChange, datos }: { campo: CampoEscuela, valor: string, onChange: (v: string) => void, datos: EdicionEscuela }) {
   const opciones = datos.opciones[campo.clave] ?? []
   if (campo.tipo === 'largo') return <Textarea value={valor} onChange={e => onChange(e.target.value)} maxLength={campo.max} className="min-h-20" />
-  if (campo.tipo === 'fecha') return <Input type="date" value={fechaAIso(valor)} onChange={e => onChange(fechaDeIso(e.target.value))} min="2000-01-01" max="2100-12-31" className="h-11 md:h-9" />
+  if (campo.tipo === 'fecha') return <SelectorFecha ariaLabel={campo.label} value={fechaAIso(valor)} onChange={v => onChange(fechaDeIso(v))} min="2000-01-01" max="2100-12-31" />
   if (campo.tipo === 'lista') return <select value={valor} onChange={e => onChange(e.target.value)} className={selectClass}>
     {(campo.clave === 'fed_a_cargo' || valor === '' || campo.clave === 'plan_piso_tecnologico') && <option value="">{campo.clave === 'fed_a_cargo' ? 'Sin FED asignado' : 'Sin dato'}</option>}
     {valor && !opciones.includes(valor) && <option value={valor}>{valor}</option>}

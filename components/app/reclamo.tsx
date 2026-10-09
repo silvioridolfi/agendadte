@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { SelectorFechaHora } from '@/components/app/selectorfecha'
+import { SelectorFecha, SelectorFechaHora } from '@/components/app/selectorfecha'
 import { type School } from '@/lib/agenda'
 import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, directivoDe, enlacesDe, faltantes, llevaChecklist, nombreContacto, puedeSerAmbos, gmailAppUrl, gmailUrl, plataformaDe, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
 import { titleCase } from '@/lib/format'
@@ -157,7 +157,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
           {enlaceElegido === 'PBA1' && tipo.id === 'sin_conectividad' && <Field label="Proveedor del enlace (PBA Grupo 1)" required error={errores.proveedor}><select className={`${selectClass} h-11 md:h-10`} value={d.proveedorG1 ?? ''} onChange={e => set('proveedorG1', (e.target.value || null) as DatosReclamo['proveedorG1'])}><option value="">Elegí…</option><option>Movistar</option><option>Claro</option></select></Field>}
 
           {tipo.campos.includes('subtipo') && <Field label="Caso" required error={errores.subtipo}><select className={`${selectClass} h-11 md:h-10`} value={d.subtipo} onChange={e => set('subtipo', e.target.value)}><option value="">Elegí…</option>{SUBTIPOS_INSTALACION.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></Field>}
-          {tipo.campos.includes('fechaCronograma') && <Field label="Fecha en la que tendrían que haber visitado el establecimiento" required error={errores.fechaCronograma}><Input type="date" value={d.fechaCronograma} onChange={e => set('fechaCronograma', e.target.value)} className="h-11 md:h-10" /></Field>}
+          {tipo.campos.includes('fechaCronograma') && <Field label="Fecha en la que tendrían que haber visitado el establecimiento" required error={errores.fechaCronograma}><SelectorFecha ariaLabel="Fecha del cronograma incumplido" value={d.fechaCronograma} onChange={v => set('fechaCronograma', v)} /></Field>}
           {(tipo.campos.includes('aulas') || tipo.campos.includes('matricula')) && <div className="grid gap-3 sm:grid-cols-2">
             {tipo.campos.includes('aulas') && <Field label="Cantidad de aulas" required error={errores.aulas}><Input inputMode="numeric" value={d.aulas} onChange={e => set('aulas', e.target.value.replace(/\D/g, ''))} className="h-11 md:h-10" /></Field>}
             {tipo.campos.includes('matricula') && <Field label="Matrícula del establecimiento" required error={errores.matricula}><Input inputMode="numeric" value={d.matricula} onChange={e => set('matricula', e.target.value.replace(/\D/g, ''))} className="h-11 md:h-10" /></Field>}
