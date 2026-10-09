@@ -213,14 +213,13 @@ function MensajeEscuela({ c, cuenta, avisada, onClose, onAvisada }: { c: Cronogr
   const [copiado, setCopiado] = useState(false)
   const [copiadoRec, setCopiadoRec] = useState(false)
   const [marcando, setMarcando] = useState(false)
-  const [ahora] = useState(() => new Date())
   useEffect(() => {
     let vigente = true
     getContactosCronograma(c.id).then(l => { if (vigente) { setContactos(l); setElegido(l.map(k => k.correo_laboral || k.correo).find(Boolean) ?? '') } }).catch(e => { if (vigente) setError(errMsg(e)) })
     return () => { vigente = false }
   }, [c.id])
   const contacto = contactos?.find(k => (k.correo_laboral || k.correo) === elegido)?.nombre ?? null
-  const msg = mensajeEscuela(c, ahora, contacto)
+  const msg = mensajeEscuela(c, contacto)
   const borrador = { asunto: msg.asunto, para: elegido || null, cuerpo: msg.cuerpo }
   const copiar = async () => { try { await navigator.clipboard.writeText(msg.cuerpo); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { setCopiado(false) } }
   const copiarRec = async () => { try { await navigator.clipboard.writeText(RECOMENDACIONES_ENLACE); setCopiadoRec(true); setTimeout(() => setCopiadoRec(false), 2000) } catch { setCopiadoRec(false) } }

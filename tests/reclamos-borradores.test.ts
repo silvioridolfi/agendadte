@@ -29,7 +29,7 @@ import { hoyAR } from '@/lib/hora'
 const UID = '11111111-1111-4111-8111-111111111111'
 const yoFed = { fed: { id: 'f1', nombre_completo: 'Ana Pérez', rol: 'fed' }, userId: 'u1', email: 'a@x', esAdmin: false, debeCambiar: false } as never
 const ASUNTO = '06-01-091020260800 - CUE 61139000 - Sin Conectividad'
-const entrada = { school_id: UID, tipo: 'sin_conectividad', asunto: ASUNTO, para: 'reclamos@x.gob.ar', cuerpo: 'Hola Julio, buen día.', adjuntos: [{ texto: 'Checklist USAP completo', enlace: 'https://docs.google.com/spreadsheets/d/x' }] }
+const entrada = { school_id: UID, tipo: 'sin_conectividad', asunto: ASUNTO, para: 'reclamos@x.gob.ar', cuerpo: 'Hola Julio, ¿cómo estás?', adjuntos: [{ texto: 'Checklist USAP completo', enlace: 'https://docs.google.com/spreadsheets/d/x' }] }
 const de = (tabla: string, m: string) => estado.llamadas.filter(l => l.tabla === tabla && l.ops.some(o => o.m === m))
 const arg = (l: Llamada, m: string) => l.ops.find(o => o.m === m)?.args
 beforeEach(() => { estado.llamadas = []; estado.responder = () => ({}) })
