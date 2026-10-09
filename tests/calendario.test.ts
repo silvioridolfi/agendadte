@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aIso, dentroDeRango, esIso, fueraDeRango, partesFechaHora, semanasDelMes, sumarDias, sumarMeses, textoFecha, textoFechaHora, tituloMes } from '@/lib/calendario'
+import { aIso, dentroDeRango, esFinDeSemana, esIso, marcasFeriados, fueraDeRango, partesFechaHora, semanasDelMes, sumarDias, sumarMeses, textoFecha, textoFechaHora, tituloMes } from '@/lib/calendario'
 
 describe('calendario del selector de fechas', () => {
   it('valida fechas AAAA-MM-DD reales', () => {
@@ -45,3 +45,22 @@ describe('calendario del selector de fechas', () => {
     expect(partesFechaHora('basura')).toEqual({ fecha: '', hora: '', minuto: '' })
   })
 })
+
+describe('marcas de feriados (a nivel global)', () => {
+  const f = (fecha: string, nombre: string, tipo: 'nacional' | 'distrital' | 'receso', distrito: string | null = null, confirmado = true) => ({ fecha, nombre, tipo, distrito, confirmado })
+  it('marca todos los feriados y recesos, y aclara el distrito de los distritales', () => {
+    const m = marcasFeriados([f('2026-10-12', 'Día del Respeto a la Diversidad Cultural', 'nacional'), f('2026-11-19', 'Día de la ciudad', 'distrital', 'LA PLATA'), f('2026-07-20', 'Receso escolar', 'receso')])
+    expect(m['2026-10-12']).toBe('Día del Respeto a la Diversidad Cultural')
+    expect(m['2026-11-19']).toBe('Día de la ciudad (distrito La Plata)')
+    expect(m['2026-07-20']).toBe('Receso escolar')
+    expect(m['2026-10-13']).toBeUndefined()
+  })
+  it('une los que caen el mismo día y avisa los que faltan confirmar', () => {
+    const m = marcasFeriados([f('2026-11-20', 'Feriado nacional', 'nacional', null, false), f('2026-11-20', 'Aniversario', 'distrital', 'ENSENADA')])
+    expect(m['2026-11-20']).toBe('Feriado nacional · a confirmar · Aniversario (distrito Ensenada)')
+  })
+  it('sábado y domingo son las dos últimas columnas', () => {
+    expect([0, 1, 2, 3, 4, 5, 6].map(esFinDeSemana)).toEqual([false, false, false, false, false, true, true])
+  })
+})
+

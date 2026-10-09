@@ -5,7 +5,7 @@ import { CalendarClock, Check, ChevronDown, Copy, Eye, FileDown, FileSpreadsheet
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { SelectorFecha } from '@/components/ui/selector-fecha'
+import { SelectorFecha } from '@/components/app/selectorfecha'
 import { Textarea } from '@/components/ui/textarea'
 import { type Fed } from '@/lib/agenda'
 import { ESTADOS_SEGUIMIENTO, ESTADO_SEGUIMIENTO_LABEL, FILTROS_VACIOS, HORAS_CONTACTO_PBA, VALIDEZ_DIAS, avisoDe, esReprogramacion, esVespertino, fechaCortaAR, limiteContactosPba, programaDe, validoHasta, mensajeEscuela, puedeAvisarJefatura, MAX_NOTA, PIDE_MOTIVO, SIN_FED, esDelFed, estadoDe, etiquetaTipo, llevaRecomendaciones, RECOMENDACIONES_ENLACE, filtrarCronogramas, puedeMarcar, resumenCronogramas, ventanaDe, type AvisoCronograma, type Cronograma, type EstadoSeguimiento, type FiltrosCronogramas, type PestanaCronogramas } from '@/lib/cronogramas'
