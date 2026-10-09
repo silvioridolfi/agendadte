@@ -222,3 +222,16 @@ describe('familias de color por tipo', () => {
     expect([familiaTipo('Asistencia técnica'), familiaTipo('Reubicación'), familiaTipo(null), familiaTipo('raro')]).toEqual(['otros', 'otros', 'otros', 'otros'])
   })
 })
+
+describe('filtro por fechas', () => {
+  const c = (id: string, ini: string, fin: string) => ({ id, cue: 1, fecha_inicio: ini, fecha_fin: fin, tipo: 'LAC_M', proveedor: 'PBA', nro: null, semana: null, estado_planilla: null, instaladores: null, descripcion: null, observaciones: null, nombre_planilla: null, primera_vez_at: '', actualizado_at: '', historial: [], school: { id: 's', nombre: 'EES N° 1', distrito: 'LA PLATA', ciudad: null, fed_a_cargo: null } }) as Cronograma
+  const lista = [c('a', '2026-10-01', '2026-10-05'), c('b', '2026-10-12', '2026-10-16'), c('c', '2026-11-02', '2026-11-06')]
+  const f = (desde: string, hasta: string) => filtrarCronogramas(lista, { ...FILTROS_VACIOS, pestana: 'todos', desde, hasta }, '2026-10-09').map(x => x.id)
+  it('deja lo que se superpone con el período, inclusive', () => {
+    expect(f('', '')).toEqual(['a', 'b', 'c'])
+    expect(f('2026-10-06', '2026-10-31')).toEqual(['b'])
+    expect(f('2026-10-16', '')).toEqual(['b', 'c'])
+    expect(f('', '2026-10-01')).toEqual(['a'])
+    expect(f('2026-10-14', '2026-10-14')).toEqual(['b'])
+  })
+})

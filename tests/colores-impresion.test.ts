@@ -14,6 +14,11 @@ describe('colores de impresión y gráficos', () => {
     expect(hex.length).toBeGreaterThan(5)
     expect(hex.filter(h => !css.includes(h))).toEqual([])
   })
+  it('los del extracto de cronogramas están en la paleta de globals.css', () => {
+    const hex = hexDe('lib/extracto.ts')
+    expect(hex.length).toBeGreaterThan(5)
+    expect(hex.filter(h => !css.includes(h))).toEqual([])
+  })
   it('los de los gráficos están en la paleta de globals.css', () => {
     const hex = hexDe('lib/graficos.ts').filter(h => !SOLO_GRAFICOS.includes(h))
     expect(hex.length).toBeGreaterThan(5)

@@ -161,10 +161,10 @@ export type Cronograma = {
   reclamos?: { id: string, tipo_label: string, estado: string, nro_incidencia: string | null, enviado_at: string }[],
 }
 export type PestanaCronogramas = 'proximos' | 'pasados' | 'todos'
-export type FiltrosCronogramas = { pestana: PestanaCronogramas, busqueda: string, distrito: string, fed: string, tipo: string, proveedor: string, estado: '' | 'sin_marcar' | EstadoSeguimiento, aviso: '' | 'sin_escuela' | 'sin_jefatura', conReclamo: boolean }
+export type FiltrosCronogramas = { pestana: PestanaCronogramas, busqueda: string, distrito: string, fed: string, tipo: string, proveedor: string, estado: '' | 'sin_marcar' | EstadoSeguimiento, aviso: '' | 'sin_escuela' | 'sin_jefatura', conReclamo: boolean, desde: string, hasta: string }
 
 const norm = (s: string | null | undefined) => sinTildes(s ?? '')
-export const FILTROS_VACIOS: FiltrosCronogramas = { pestana: 'proximos', busqueda: '', distrito: '', fed: '', tipo: '', proveedor: '', estado: '', aviso: '', conReclamo: false }
+export const FILTROS_VACIOS: FiltrosCronogramas = { pestana: 'proximos', busqueda: '', distrito: '', fed: '', tipo: '', proveedor: '', estado: '', aviso: '', conReclamo: false, desde: '', hasta: '' }
 
 // FED a cargo de una escuela: en la base figura por nombre ("Macarena Duarte Buschiazzo"); acá se compara con el nombre del perfil ("Macarena Duarte").
 export function esDelFed(fedACargo: string | null | undefined, nombreFed: string): boolean {
@@ -198,6 +198,9 @@ export function filtrarCronogramas(lista: Cronograma[], f: FiltrosCronogramas, h
   return lista.filter(c => {
     if (f.pestana === 'proximos' && !esProximo(c, hoy)) return false
     if (f.pestana === 'pasados' && esProximo(c, hoy)) return false
+    // Ventana de fechas: queda lo que se superpone con el período elegido (Desde y Hasta, inclusive).
+    if (f.desde && c.fecha_fin < f.desde) return false
+    if (f.hasta && c.fecha_inicio > f.hasta) return false
     if (f.distrito && norm(c.school?.distrito) !== norm(f.distrito)) return false
     if (f.fed && !(f.fed === SIN_FED ? sinFed(c.school?.fed_a_cargo) : esDelFed(c.school?.fed_a_cargo, f.fed))) return false
     if (f.aviso === 'sin_escuela' && avisoDe(c, 'escuela_avisada')) return false
@@ -281,7 +284,7 @@ export function cuandoEmpieza(hoy: string, habil: string): string {
 
 // ---------- Mensaje a la escuela ----------
 
-const esEnlace = (t: string) => /^https?:\/\//i.test(t.trim())
+export const esEnlace = (t: string) => /^https?:\/\//i.test(t.trim())
 
 // Una línea de la columna de instaladores, lista para leer: sin el código inicial ("DT01 Cañete.Zenteno"), con los puntos entre apellidos como espacio,
 // en formato nombre si venía todo en mayúsculas, y el DNI o CUIL entre paréntesis y sin puntos ("Sadoski Victor (DNI 35610950)"). Lo que no es un nombre

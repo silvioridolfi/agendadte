@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Check, ChevronDown, Copy, Eye, Info, Loader2, Mail, MapPin, Phone, RefreshCw, Search, Send, Wifi } from 'lucide-react'
+import { CalendarClock, Check, ChevronDown, Copy, Eye, FileDown, FileSpreadsheet, Info, Loader2, Mail, MapPin, Phone, RefreshCw, Search, Send, Wifi } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,7 @@ import { hoyAR } from '@/lib/hora'
 import { gmailAppUrl, gmailUrl, plataformaDe } from '@/lib/reclamos'
 import type { ContactoEscuela } from '@/lib/mis-escuelas'
 import { siglaNombre } from '@/lib/siglas'
+import { filasExtracto, htmlExtracto, periodoExtracto, tituloExtracto } from '@/lib/extracto'
 import { titleCase } from '@/lib/format'
 import { EtiquetaTipo, LeyendaTipos } from '@/components/app/tipocrono'
 import { BotonVolver, ErrorBox, Skeleton, eyebrow, errMsg, avisarCronograma, getContactosCronograma, getCronogramas, marcarCronograma, selectClass, sincronizarCronogramasAhora } from '@/components/app/comun'
@@ -43,6 +44,22 @@ export function Cronogramas({ profile, feds, esAdmin, cuenta, volver }: { profil
   const propios = useMemo(() => (lista ?? []).filter(c => !soloMios || esDelFed(c.school?.fed_a_cargo, profile.nombre_completo)), [lista, soloMios, profile.nombre_completo])
   const visibles = useMemo(() => filtrarCronogramas(propios, filtros, hoy), [propios, filtros, hoy])
   const resumen = resumenCronogramas(propios, hoy)
+  // Extracto para adjuntar en los mails a jefaturas y escuelas: lo que se ve con los filtros, sin lo ya realizado, ordenado por fecha.
+  const filasExt = useMemo(() => filasExtracto(visibles), [visibles])
+  const [armandoExt, setArmandoExt] = useState(false)
+  const [errorExt, setErrorExt] = useState('')
+  const tituloExt = tituloExtracto(filtros.distrito), periodoExt = periodoExtracto(filasExt, filtros.desde, filtros.hasta)
+  function extractoPdf() {
+    setErrorExt('')
+    const w = window.open('', '_blank')
+    if (!w) { setErrorExt('El navegador bloqueó la ventana del extracto: permití ventanas emergentes para este sitio.'); return }
+    w.document.write(htmlExtracto({ titulo: tituloExt, periodo: periodoExt, filas: filasExt, emitido: new Date().toLocaleDateString('es-AR', { timeZone: ZONA }), origen: location.origin }))
+    w.document.close()
+  }
+  async function extractoExcel() {
+    setArmandoExt(true); setErrorExt('')
+    try { const { exportarExtracto } = await import('@/lib/exportar'); await exportarExtracto(filasExt, tituloExt, periodoExt) } catch (e) { setErrorExt(errMsg(e)) } finally { setArmandoExt(false) }
+  }
   const nombreFed = (id: string | null) => feds.find(f => f.id === id)?.nombre_completo ?? 'Ex integrante'
   const anotado = (id: string, h: Cronograma['historial'][number]) => setDatos(d => d && ({ ...d, lista: d.lista.map(c => (c.id === id ? { ...c, historial: [h, ...c.historial] } : c)) }))
   const set = <K extends keyof FiltrosCronogramas>(k: K, v: FiltrosCronogramas[K]) => setFiltros(f => ({ ...f, [k]: v }))
@@ -87,12 +104,20 @@ export function Cronogramas({ profile, feds, esAdmin, cuenta, volver }: { profil
           <select aria-label="Avisos" className={`${selectClass} md:w-48`} value={filtros.aviso} onChange={e => set('aviso', e.target.value as FiltrosCronogramas['aviso'])}><option value="">Todo aviso</option><option value="sin_escuela">Escuela sin avisar</option>{avisaJefatura && <option value="sin_jefatura">Jefatura sin avisar</option>}</select>
           <select aria-label="Tipo" className={`${selectClass} md:w-52`} value={filtros.tipo} onChange={e => set('tipo', e.target.value)}><option value="">Todo tipo</option>{tipos.map(t => <option key={t} value={t}>{etiquetaTipo(t)}</option>)}</select>
           <select aria-label="Proveedor" className={`${selectClass} md:w-40`} value={filtros.proveedor} onChange={e => set('proveedor', e.target.value)}><option value="">Todo proveedor</option>{proveedores.map(p => <option key={p} value={p}>{p}</option>)}</select>
+          <label className="flex min-h-11 items-center gap-1.5 text-sm md:min-h-0">Desde<Input type="date" aria-label="Desde" value={filtros.desde} max={filtros.hasta || undefined} onChange={e => set('desde', e.target.value)} className="h-11 w-40 md:h-9" /></label>
+          <label className="flex min-h-11 items-center gap-1.5 text-sm md:min-h-0">Hasta<Input type="date" aria-label="Hasta" value={filtros.hasta} min={filtros.desde || undefined} onChange={e => set('hasta', e.target.value)} className="h-11 w-40 md:h-9" /></label>
           <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-0"><input type="checkbox" checked={filtros.conReclamo} onChange={e => set('conReclamo', e.target.checked)} className="size-4" />Con reclamo abierto</label>
           {veTodos && <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-0"><input type="checkbox" checked={soloMios} onChange={e => setSoloMios(e.target.checked)} className="size-4" />Solo los míos</label>}
         </div>
 
         {(resumen.sinCerrar > 0 || resumen.sinAvisarEscuela > 0 || (veTodos && resumen.sinFed > 0)) && <p className="mt-3 text-xs text-dte-gris">{[resumen.sinAvisarEscuela > 0 && <span key="a">Próximos con la escuela sin avisar: <b className="tabular-nums">{resumen.sinAvisarEscuela}</b></span>, resumen.sinCerrar > 0 && <span key="c">Pasados sin marcar: <b className="tabular-nums">{resumen.sinCerrar}</b></span>, veTodos && resumen.sinFed > 0 && <span key="f">Próximos sin FED asignado: <b className="tabular-nums">{resumen.sinFed}</b></span>].filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x]))}</p>}
-        <p className="mt-3 text-xs text-dte-gris" aria-live="polite">{visibles.length} {visibles.length === 1 ? 'cronograma' : 'cronogramas'}</p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-dte-gris" aria-live="polite">{visibles.length} {visibles.length === 1 ? 'cronograma' : 'cronogramas'}</p>
+          {filasExt.length > 0 && <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-semibold text-dte-gris">Extracto para adjuntar ({filasExt.length}):</span>
+            <Button type="button" variant="outline" size="sm" onClick={extractoPdf}><FileDown data-icon="inline-start" />PDF</Button>
+            <Button type="button" variant="outline" size="sm" disabled={armandoExt} onClick={extractoExcel}>{armandoExt ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}Excel</Button></div>}
+        </div>
+        {errorExt && <p role="alert" className="mt-1 text-sm font-medium text-peligro">{errorExt}</p>}
         <LeyendaTipos />
         {visibles.length ? <ul className="mt-3 flex flex-col gap-2">{visibles.map(c => <Tarjeta key={c.id} c={c} hoy={hoy} abierta={abierto === c.id} onAbrir={() => setAbierto(a => (a === c.id ? null : c.id))} puedeMarcar={puedeMarcar(quien, c)} avisaJefatura={avisaJefatura} esCed={veTodos} cuenta={cuenta} nombreFed={nombreFed} onAnotado={h => anotado(c.id, h)} />)}</ul>
           : <div className="mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-dte-linea px-4 py-10 text-center text-sm text-dte-gris"><CalendarClock className="size-6" aria-hidden />{propios.length ? 'No hay cronogramas con esos filtros.' : 'Todavía no hay cronogramas cargados.'}</div>}

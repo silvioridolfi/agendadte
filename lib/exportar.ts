@@ -1,4 +1,5 @@
 // Exportación a Excel (planilla mensual por FED y consolidado regional). Se genera en el navegador.
+import type { FilaExtracto } from '@/lib/extracto'
 import { escuelaDelClub } from '@/lib/encuentro'
 import { ESTADO_RECLAMO_LABEL, type Reclamo } from '@/lib/reclamos-registro'
 import { nombreContacto, type ResumenEscuela } from '@/lib/mis-escuelas'
@@ -283,6 +284,33 @@ export async function exportarReclamos(reclamos: Reclamo[], nombreFed: (id: stri
   const buf = await wb.xlsx.writeBuffer()
   const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
   const a = document.createElement('a'); a.href = url; a.download = nombreArchivo(`Reclamos de conectividad ${new Date().toLocaleDateString('en-CA', { timeZone: ZONA })}`); a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+}
+
+// Extracto de cronogramas de conectividad (lista de intervenciones por fecha) para adjuntar en los mails a jefaturas y escuelas.
+export async function exportarExtracto(filas: FilaExtracto[], titulo: string, periodo: string) {
+  const ExcelJS = (await import('exceljs')).default
+  const wb = new ExcelJS.Workbook()
+  wb.creator = 'Agenda Territorial DTE'; wb.created = new Date()
+  const ws = wb.addWorksheet('Cronograma', { views: [{ state: 'frozen', ySplit: 3 }] })
+  const cols = [['Desde', 12], ['Hasta', 12], ['Establecimiento', 44], ['CUE', 11], ['Dirección', 30], ['Localidad', 18], ['Distrito', 16], ['Tarea', 30], ['Empresa', 18], ['Programa', 11], ['Personal a cargo', 44], ['Datos del personal (enlace)', 40], ['Observaciones', 16]] as const
+  cols.forEach(([, w], i) => { ws.getColumn(i + 1).width = w })
+  ws.getCell('A1').value = titulo; ws.getCell('A1').font = { bold: true, size: 14, color: { argb: PETROLEO } }
+  ws.getCell('A2').value = `Período: ${periodo} · Emitido el ${new Date().toLocaleDateString('es-AR', { timeZone: ZONA })}`; ws.getCell('A2').font = { color: { argb: 'FF5B6474' } }
+  const head = ws.getRow(3)
+  cols.forEach(([h], i) => { head.getCell(i + 1).value = h })
+  head.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+  head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PETROLEO } }
+  const dia = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}`
+  filas.forEach((f, n) => {
+    const row = ws.addRow([dia(f.desde), dia(f.hasta), f.establecimiento, f.cue, f.direccion, f.localidad, f.distrito, f.tarea, f.empresa, f.programa, f.personal.join('\n') || 'A confirmar', f.enlaces.join('\n'), f.observaciones])
+    row.alignment = { vertical: 'top', wrapText: true }
+    if (n % 2) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINTE } }
+  })
+  ws.autoFilter = { from: { row: 3, column: 1 }, to: { row: 3, column: cols.length } }
+  const buf = await wb.xlsx.writeBuffer()
+  const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
+  const a = document.createElement('a'); a.href = url; a.download = nombreArchivo(`Cronograma de conectividad ${new Date().toLocaleDateString('en-CA', { timeZone: ZONA })}`); a.click()
   setTimeout(() => URL.revokeObjectURL(url), 5000)
 }
 
