@@ -182,7 +182,7 @@ export default function Page() {
       </div>
     </header>
 
-    <div className="sticky top-[calc(4.25rem+env(safe-area-inset-top,0px))] z-fab">
+    <div className="sticky top-[calc(4.25rem+env(safe-area-inset-top,0px))] z-fab bg-background">
     {vista && <div role="status" className="border-b border-aviso-borde bg-aviso-fondo-fuerte px-4 py-1.5 text-sm text-aviso-fuerte">
       {/* Una sola línea: en el celular el texto se acorta y el botón queda al lado. */}
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-2 lg:px-6">
