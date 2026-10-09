@@ -66,16 +66,16 @@ describe('sin conectividad según enlace y piso', () => {
 describe('mensaje al CED', () => {
   const r = armarReclamo(esc(), tipo('sin_conectividad'), datos({ detalle: 'La antena está a punto de caerse' }), ahora, 'Julio')
   it('va dirigido al CED, sin firma ni fórmulas formales', () => {
-    expect(r.cuerpo.startsWith('Hola Julio, ¿cómo estás?\n\nTe paso un reclamo de conectividad:')).toBe(true)
+    expect(r.cuerpo.startsWith('Hola Julio,\n\nTe paso un reclamo de conectividad:')).toBe(true)
     expect(r.cuerpo.endsWith('\nSaludos')).toBe(true)
     expect(r.cuerpo).not.toMatch(/Quedamos a disposición|Facilitador|Silvio/)
-    expect(armarReclamo(esc(), tipo('piso'), datos(), ahora, null).cuerpo.startsWith('Hola, ¿cómo estás?')).toBe(true)
+    expect(armarReclamo(esc(), tipo('piso'), datos(), ahora, null).cuerpo.startsWith('Hola,\n\nTe paso')).toBe(true)
   })
   it('el enlace y el piso van en renglones separados', () => {
     expect(r.cuerpo).toContain('Enlace: PBA Grupo 2 A (Orbith S.A)\nPiso tecnológico: PBA (Red Local Pequeña)\n')
   })
   it('el saludo es general: no depende de la hora', () => {
-    for (const h of ['2026-10-02T12:00:00Z', '2026-10-02T23:30:00Z', '2026-10-03T07:00:00Z']) expect(armarReclamo(esc(), tipo('piso'), datos(), new Date(h), 'Julio').cuerpo.startsWith('Hola Julio, ¿cómo estás?\n')).toBe(true)
+    for (const h of ['2026-10-02T12:00:00Z', '2026-10-02T23:30:00Z', '2026-10-03T07:00:00Z']) expect(armarReclamo(esc(), tipo('piso'), datos(), new Date(h), 'Julio').cuerpo.startsWith('Hola Julio,\n')).toBe(true)
   })
   it('Gmail se abre con la cuenta institucional', () => {
     expect(gmailUrl(r, 'sridolfi@abc.gob.ar')).toContain('authuser=sridolfi%40abc.gob.ar&view=cm')

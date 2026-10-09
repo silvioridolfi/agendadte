@@ -328,11 +328,12 @@ export function mensajeEscuela(c: Pick<Cronograma, 'cue' | 'fecha_inicio' | 'fec
   const enlaces = personal.filter(esEnlace), responsables = personal.filter(x => !esEnlace(x)).map(personaDe).filter(Boolean)
   const programa = programaDe(c.semana)
   const nombre = (contacto ?? '').trim().split(/\s+/)[0]
-  // Saludo general, sin hora (el mensaje puede salir en cualquier momento del día).
-  const apertura = nombre ? `Hola ${titleCase(nombre)}, ¿cómo estás?` : 'Hola, ¿cómo están?'
+  // Saludo simple, sin hora (el mensaje puede salir en cualquier momento del día); cada uno lo adapta en el cuadro de texto.
+  const apertura = nombre ? `Hola ${titleCase(nombre)},` : 'Hola,'
   const quien = c.proveedor ? `personal de la empresa ${c.proveedor}` : 'personal técnico'
   const cuerpo = [
-    `${apertura} Desde la Dirección de Tecnología Educativa informamos que, según el cronograma ${programa ? `de ${programa === 'Educar' ? 'EDUCAR' : programa}` : 'establecido'}, ${cuandoTxt(c)}, ${quien} realizará ${tareaDe(c.tipo)} en ${lugar}.`,
+    apertura,
+    `Desde la Dirección de Tecnología Educativa informamos que, según el cronograma ${programa ? `de ${programa === 'Educar' ? 'EDUCAR' : programa}` : 'establecido'}, ${cuandoTxt(c)}, ${quien} realizará ${tareaDe(c.tipo)} en ${lugar}.`,
     responsables.length === 1 ? `La intervención estará a cargo de ${responsables[0]}.` : responsables.length > 1 ? `La intervención estará a cargo de:\n${responsables.map(r => `- ${r}`).join('\n')}` : null,
     enlaces.length ? `Datos de quienes estarán a cargo: ${enlaces.join(' ')}` : null,
     `Se informa a la institución a fin de que pueda estar al tanto y facilitar su ingreso y acceso a los espacios correspondientes.${pideRack(c.tipo) ? ' Se solicita tener disponible y accesible el rack para poder llevar adelante la instalación.' : ''}`,

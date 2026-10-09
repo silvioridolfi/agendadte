@@ -29,7 +29,7 @@ import { hoyAR } from '@/lib/hora'
 const UID = '11111111-1111-4111-8111-111111111111'
 const yoFed = { fed: { id: 'f1', nombre_completo: 'Ana Pérez', rol: 'fed' }, userId: 'u1', email: 'a@x', esAdmin: false, debeCambiar: false } as never
 const ASUNTO = '06-01-091020260800 - CUE 61139000 - Sin Conectividad'
-const entrada = { school_id: UID, tipo: 'sin_conectividad', asunto: ASUNTO, para: 'reclamos@x.gob.ar', cuerpo: 'Hola Julio, ¿cómo estás?', adjuntos: [{ texto: 'Checklist USAP completo', enlace: 'https://docs.google.com/spreadsheets/d/x' }] }
+const entrada = { school_id: UID, tipo: 'sin_conectividad', asunto: ASUNTO, para: 'reclamos@x.gob.ar', cuerpo: 'Hola Julio,', adjuntos: [{ texto: 'Checklist USAP completo', enlace: 'https://docs.google.com/spreadsheets/d/x' }] }
 const de = (tabla: string, m: string) => estado.llamadas.filter(l => l.tabla === tabla && l.ops.some(o => o.m === m))
 const arg = (l: Llamada, m: string) => l.ops.find(o => o.m === m)?.args
 beforeEach(() => { estado.llamadas = []; estado.responder = () => ({}) })
@@ -52,10 +52,13 @@ describe('guardar borrador', () => {
     expect(de('reclamos_conectividad', 'insert')).toHaveLength(0)
     expect(de('notificaciones', 'insert')).toHaveLength(0)
   })
-  it('un mismo asunto no se guarda dos veces', async () => {
+  it('un mismo asunto no se guarda dos veces: se actualiza el mensaje', async () => {
     estado.responder = l => (l.tabla === 'establecimientos' ? { data: { id: UID, cue: 61139000, nombre: 'J' } } : l.tabla === 'reclamos_borradores' ? { data: { id: 'ya' } } : {})
-    await expect(R.guardarBorradorImpl(yoFed, entrada)).resolves.toBe('ya')
+    await expect(R.guardarBorradorImpl(yoFed, { ...entrada, cuerpo: 'Hola Julio,\n\nTe paso un reclamo.' })).resolves.toBe('ya')
     expect(de('reclamos_borradores', 'insert')).toHaveLength(0)
+    const up = de('reclamos_borradores', 'update')[0]
+    expect((arg(up, 'update')![0] as { cuerpo: string }).cuerpo).toBe('Hola Julio,\n\nTe paso un reclamo.')
+    expect(up.ops.filter(o => o.m === 'eq').map(o => o.args)).toContainEqual(['fed_id', 'f1'])
   })
   it('tiene un tope de borradores', async () => {
     estado.responder = l => (l.tabla === 'establecimientos' ? { data: { id: UID, cue: 61139000, nombre: 'J' } } : { data: null, count: 30 })

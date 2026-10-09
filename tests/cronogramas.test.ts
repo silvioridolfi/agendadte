@@ -141,7 +141,7 @@ describe('avisos a la jefatura y a la escuela', () => {
   it('arma el mensaje informativo para el directivo', () => {
     const m = mensajeEscuela({ ...c, semana: 'Semana 5 - Educar' }, 'celeste María')
     expect(m.asunto).toBe('Cronograma de conectividad: EES N° 31, 12/10 al 16/10')
-    expect(m.cuerpo).toContain('Hola Celeste, ¿cómo estás? Desde la Dirección de Tecnología Educativa informamos que, según el cronograma de EDUCAR, entre los días 12/10/2026 y 16/10/2026, personal de la empresa PBA realizará tareas de mantenimiento del piso tecnológico en EES N° 31 (CUE 61000001).')
+    expect(m.cuerpo).toContain('Hola Celeste,\n\nDesde la Dirección de Tecnología Educativa informamos que, según el cronograma de EDUCAR, entre los días 12/10/2026 y 16/10/2026, personal de la empresa PBA realizará tareas de mantenimiento del piso tecnológico en EES N° 31 (CUE 61000001).')
     expect(m.cuerpo).toContain('La intervención estará a cargo de:\n- Juan Pérez (DNI 30111222)\n- Ana Gómez (CUIL 27-30111222-4)')
     expect(m.cuerpo).toContain('facilitar su ingreso y acceso a los espacios correspondientes.\n\n¡Saludos!')
     expect(m.cuerpo).not.toContain('rack')
@@ -149,7 +149,7 @@ describe('avisos a la jefatura y a la escuela', () => {
   })
   it('sin contacto saluda en general, un día, un responsable y sin empresa ni programa', () => {
     const m = mensajeEscuela({ ...c, fecha_fin: '2026-10-12', proveedor: null, instaladores: 'DT01 Cañete.Zenteno' })
-    expect(m.cuerpo).toContain('Hola, ¿cómo están? Desde la Dirección')
+    expect(m.cuerpo).toContain('Hola,\n\nDesde la Dirección')
     expect(m.cuerpo).toContain('según el cronograma establecido, el día 12/10/2026, personal técnico realizará')
     expect(m.cuerpo).toContain('La intervención estará a cargo de Cañete Zenteno.')
   })

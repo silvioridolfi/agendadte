@@ -188,7 +188,7 @@ export function armarReclamo(esc: EscuelaConectividad, tipo: TipoReclamo, d: Dat
   const contacto = !adjuntos.some(a => a.enlace === DOC_CHECKLIST_USAP || a.enlace === DOC_CHECKLIST_Z3) && (d.contactoNombre.trim() || d.contactoTelefono.trim())
     ? `\nContacto del establecimiento:\n${linea('Nombre', d.contactoNombre)}${linea('Cargo', d.contactoCargo)}${linea('Teléfono', d.contactoTelefono)}${linea('Horario', d.contactoHorario)}`
     : ''
-  const cuerpo = `Hola${ced ? ` ${ced}` : ''}, ¿cómo estás?\n\nTe paso un reclamo de conectividad:\n\n`
+  const cuerpo = `Hola${ced ? ` ${ced}` : ''},\n\nTe paso un reclamo de conectividad:\n\n`
     + linea('Establecimiento', `${esc.nombre ? nombrePropio(esc.nombre) : 'Sin nombre'} (CUE ${esc.cue})`)
     + linea('Localidad', [esc.ciudad, esc.distrito].filter((x, i, a) => x && a.indexOf(x) === i).map(x => nombrePropio(x!)).join(', '))
     + linea('Dirección', esc.direccion ? nombrePropio(esc.direccion) : null)
