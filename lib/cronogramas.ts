@@ -254,8 +254,9 @@ export function repartirPorFed<T extends { school: { fed_a_cargo: string | null 
 }
 
 const corta = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`
-type ParaAviso = Pick<Cronograma, 'fecha_inicio' | 'fecha_fin' | 'tipo' | 'cue'> & { school: { nombre: string | null } | null }
-const quien = (c: ParaAviso) => `${c.school?.nombre ? siglaNombre(titleCase(c.school.nombre)) : `CUE ${c.cue}`} (${etiquetaTipo(c.tipo)}, ${ventanaDe(c)})`
+type ParaAviso = Pick<Cronograma, 'fecha_inicio' | 'fecha_fin' | 'tipo' | 'cue'> & { school: { nombre: string | null, ciudad?: string | null } | null }
+// Con la localidad, porque hay escuelas con el mismo nombre en distintas localidades (por ejemplo, varios JI N° 913).
+const quien = (c: ParaAviso) => `${c.school?.nombre ? siglaNombre(titleCase(c.school.nombre)) : `CUE ${c.cue}`}${c.school?.ciudad ? `, ${titleCase(c.school.ciudad)}` : ''} (${etiquetaTipo(c.tipo)}, ${ventanaDe(c)})`
 // Hasta tres cronogramas en el texto; el resto se cuenta.
 const lista = (cs: ParaAviso[]) => cs.slice(0, 3).map(quien).join(' · ') + (cs.length > 3 ? ` · y ${cs.length - 3} más` : '')
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`

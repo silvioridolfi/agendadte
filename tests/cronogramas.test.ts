@@ -108,6 +108,7 @@ describe('avisos', () => {
   })
   it('arma los textos', () => {
     expect(avisoNuevosFed([c(1, 'x')])).toBe('1 cronograma nuevo en tus escuelas: EES N° 31 (Mantenimiento de piso, 12/10 al 16/10)')
+    expect(avisoNuevosFed([{ ...c(1, 'x'), school: { nombre: 'JARDÍN DE INFANTES N° 913', ciudad: 'ISLA SANTIAGO' } }])).toBe('1 cronograma nuevo en tus escuelas: JI N° 913, Isla Santiago (Mantenimiento de piso, 12/10 al 16/10)')
     expect(avisoNuevosFed([c(1, 'x'), c(2, 'x'), c(3, 'x'), c(4, 'x'), c(5, 'x')])).toContain('· y 2 más')
     expect(avisoNuevosCed(8, 2)).toBe('Cronogramas nuevos en la planilla: 8 (2 sin FED asignado)')
     expect(avisoNuevosCed(3, 0)).toBe('Cronogramas nuevos en la planilla: 3')
