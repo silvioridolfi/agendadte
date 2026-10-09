@@ -42,15 +42,34 @@ export const partesFechaHora = (v: string): { fecha: string, hora: string, minut
 }
 export const textoFechaHora = (v: string) => { const p = partesFechaHora(v); return p.fecha ? `${textoFecha(p.fecha)} ${p.hora}:${p.minuto}` : '' }
 
-// Texto de las marcas del calendario (día → descripción), a nivel global: todos los feriados y recesos cargados, sean nacionales, provinciales,
-// turísticos, no laborables o distritales (de estos se aclara el distrito). Si un día tiene más de uno, se unen.
-export function marcasFeriados(feriados: Pick<Feriado, 'fecha' | 'nombre' | 'tipo' | 'distrito' | 'confirmado'>[]): Record<string, string> {
-  const out: Record<string, string[]> = {}
+// Marcas del calendario (día → descripción y tipo), a nivel global: todos los feriados y recesos cargados, sean nacionales, provinciales, turísticos,
+// no laborables o distritales (de estos se aclara el distrito). Igual que en el calendario de la agenda, un día con feriado "para todos" se ve como feriado
+// aunque tenga también un aniversario distrital; si tiene más de uno, se unen los nombres.
+export type TipoMarca = 'feriado' | 'aniversario'
+export type Marca = { texto: string, tipo: TipoMarca }
+export function marcasFeriados(feriados: Pick<Feriado, 'fecha' | 'nombre' | 'tipo' | 'distrito' | 'confirmado'>[]): Record<string, Marca> {
+  const out: Record<string, { textos: string[], tipo: TipoMarca }> = {}
   for (const f of feriados) {
     const texto = `${f.nombre}${f.tipo === 'distrital' && f.distrito ? ` (distrito ${titleCase(f.distrito)})` : ''}${f.confirmado ? '' : ' · a confirmar'}`
-    out[f.fecha] = [...(out[f.fecha] ?? []), texto]
+    const tipo: TipoMarca = f.tipo === 'distrital' ? 'aniversario' : 'feriado'
+    const previo = out[f.fecha]
+    out[f.fecha] = { textos: [...(previo?.textos ?? []), texto], tipo: previo?.tipo === 'feriado' || tipo === 'feriado' ? 'feriado' : 'aniversario' }
   }
-  return Object.fromEntries(Object.entries(out).map(([f, t]) => [f, t.join(' · ')]))
+  return Object.fromEntries(Object.entries(out).map(([f, m]) => [f, { texto: m.textos.join(' · '), tipo: m.tipo }]))
+}
+
+export type RangoMarca = { desde: string, hasta: string, texto: string, tipo: TipoMarca }
+// El día hábil que sigue a `f` (de lunes a viernes).
+const siguienteHabil = (f: string) => { const d = (new Date(`${f}T12:00:00Z`).getUTCDay() + 6) % 7; return sumarDias(f, d === 4 ? 3 : d === 5 ? 2 : 1) }
+// Junta los días seguidos con la misma descripción (un receso de varias semanas es una sola línea). Entre un viernes y el lunes siguiente se considera seguido.
+export function agruparMarcas(marcas: [string, Marca][]): RangoMarca[] {
+  const orden = [...marcas].sort(([a], [b]) => a.localeCompare(b)), out: RangoMarca[] = []
+  for (const [fecha, m] of orden) {
+    const ultimo = out[out.length - 1]
+    if (ultimo && ultimo.texto === m.texto && ultimo.tipo === m.tipo && (fecha === sumarDias(ultimo.hasta, 1) || fecha === siguienteHabil(ultimo.hasta))) ultimo.hasta = fecha
+    else out.push({ desde: fecha, hasta: fecha, texto: m.texto, tipo: m.tipo })
+  }
+  return out
 }
 // Sábado o domingo, según la columna de la grilla (0 = lunes … 6 = domingo).
 export const esFinDeSemana = (columna: number) => columna >= 5
