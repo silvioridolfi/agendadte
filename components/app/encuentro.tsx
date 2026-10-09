@@ -11,6 +11,7 @@ import { CLUB_MIN_ENCUENTROS, MODALIDADES, TIPOS_JORNADA, TRAYECTO_MARCA, clubEn
 import { az, errMsg, getClubes, saveItem, selectClass, shortSchoolName, ErrorBox } from '@/components/app/comun'
 import { hoyAR } from '@/lib/hora'
 import { escuelaDelClub, proximoEncuentro, textoMinimo } from '@/lib/encuentro'
+import { SelectorFecha, SelectorHora } from '@/components/app/selectorfecha'
 
 const OTRA = '__otra'
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
@@ -55,7 +56,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
   const [inscriptos, setInscriptos] = useState('')
   const [asistentes, setAsistentes] = useState('')
   const [descripcion, setDescripcion] = useState('')
-  const [errores, setErrores] = useState<{ club?: string, propuesta?: string, hora?: string, serie?: string }>({})
+  const [errores, setErrores] = useState<{ club?: string, fecha?: string, propuesta?: string, hora?: string, serie?: string }>({})
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const num = (v: string) => (v.trim() === '' ? null : Number(v))
@@ -63,6 +64,7 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
     const errs: typeof errores = {}
+    if (!fecha) errs.fecha = 'Elegí la fecha.'
     if (!club) errs.club = `Elegí ${marca.corto === 'club' ? 'el club' : 'la práctica'}.`
     if (propuesta === OTRA && !otraPropuesta.trim()) errs.propuesta = 'Escribí la propuesta dictada.'
     if (enOtraSede && !otraSede) errs.club = 'Elegí la escuela donde se hizo el encuentro.'
@@ -123,20 +125,20 @@ export function RegistroEncuentro({ fed, tipo, clubId, onCancel, onSaved }: { fe
     {propuesta === OTRA && <Input aria-label="Otra propuesta" placeholder="Ej.: Taller de robótica" value={otraPropuesta} onChange={e => setOtraPropuesta(e.target.value)} className="-mt-2" />}
 
     <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
-      <Field label="Fecha" required><Input type="date" required value={fecha} onChange={e => setFecha(e.target.value)} /></Field>
+      <Field label="Fecha" required error={errores.fecha} errorId="err-fecha"><SelectorFecha ariaLabel="Fecha" limpiable={false} value={fecha} onChange={setFecha} /></Field>
       {tipo === 'CLUB DE TECNOLOGÍA' && <Field label="Encuentros previstos" hint={`(opcional · el mínimo es ${CLUB_MIN_ENCUENTROS})`}><Input type="number" min={1} inputMode="numeric" placeholder={String(CLUB_MIN_ENCUENTROS)} value={previstos} onChange={e => setPrevistos(e.target.value)} /></Field>}
       <Field label="Tipo de jornada"><select className={selectClass} value={jornada} onChange={e => setJornada(e.target.value as TipoJornada | '')}><option value="">Elegí…</option>{[...TIPOS_JORNADA].sort(az).map(t => <option key={t}>{t}</option>)}</select></Field>
       <Field label="Formato de participación"><select className={selectClass} value={modalidad} onChange={e => setModalidad(e.target.value as Modalidad)}>{[...MODALIDADES].sort(az).map(m => <option key={m}>{m}</option>)}</select></Field>
     </div>
     <div className="grid grid-cols-2 gap-4">
-      <Field label="Desde" hint="(opcional)"><Input type="time" value={desde} onChange={e => setDesde(e.target.value)} /></Field>
-      <Field label="Hasta" hint="(opcional)" error={errores.hora} errorId="err-hora"><Input type="time" value={hasta} onChange={e => setHasta(e.target.value)} /></Field>
+      <Field label="Desde" hint="(opcional)"><SelectorHora ariaLabel="Desde" value={desde} onChange={setDesde} /></Field>
+      <Field label="Hasta" hint="(opcional)" error={errores.hora} errorId="err-hora"><SelectorHora ariaLabel="Hasta" value={hasta} onChange={setHasta} /></Field>
     </div>
     <fieldset className="rounded-tile border border-dte-linea bg-dte-fondo/60 p-3">
       <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={repetir} onChange={e => setRepetir(e.target.checked)} className="size-5" style={{ accentColor: marca.acento }} />Se repite cada semana <span className="font-normal text-dte-gris">(agenda los próximos encuentros)</span></label>
       {repetir && <div className="mt-3 flex flex-col gap-3">
         <div><p className="mb-1.5 text-sm font-semibold">Días</p><div className="flex flex-wrap gap-1.5">{DIAS.map((d, k) => <Pill key={d} conIcono={false} on={diasSerie.includes(k + 1)} onClick={() => setDias(l => { const base = l.length ? l : diasSerie; return base.includes(k + 1) ? base.filter(x => x !== k + 1) : [...base, k + 1].sort() })}>{d}</Pill>)}</div></div>
-        <Field label="Hasta el" error={errores.serie} errorId="err-serie"><Input type="date" min={fecha} value={serieHasta} onChange={e => setSerieHasta(e.target.value)} /></Field>
+        <Field label="Hasta el" error={errores.serie} errorId="err-serie"><SelectorFecha ariaLabel="Repetir hasta el" min={fecha} value={serieHasta} onChange={setSerieHasta} /></Field>
         <p className="text-xs text-dte-gris">Se saltean feriados y recesos. Las fechas futuras quedan planificadas en tu agenda: el día del encuentro abrilo y completá inscriptos, participantes y descripción.</p>
       </div>}
     </fieldset>

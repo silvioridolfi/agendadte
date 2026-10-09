@@ -12,6 +12,7 @@ import { MODALIDADES_EVENTO, type EventoDte, type ModalidadEvento } from '@/lib/
 import type { EventoInput } from '@/app/actions'
 import { cap, errMsg, fmt, parse, selectClass, getEventos, listarEventos, guardarEvento, eliminarEvento, miParticipacion, registrarParticipacion, ErrorBox, Skeleton } from '@/components/app/comun'
 import { anioAR } from '@/lib/hora'
+import { SelectorFecha, SelectorHora } from '@/components/app/selectorfecha'
 
 // Aviso para que las vistas recarguen sus datos (p. ej., después de registrar la participación en un evento).
 export const RECARGAR = 'agenda-recargar'
@@ -127,12 +128,12 @@ export function EventosPanel({ onSaved }: { onSaved: (msg: string) => void }) {
     <div className="mb-4 grid gap-2 rounded-tile bg-dte-fondo p-3 sm:grid-cols-2">
       <label className={`${lbl} sm:col-span-2`}>Nombre<Input value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Ej.: JED 2026 · Jornadas de Educación Digital" className="h-11 bg-white md:h-9" /></label>
       <div className={`${lbl} sm:col-span-2`}>Fechas
-        <div className="flex flex-wrap items-center gap-2">{form.fechas.map((f, i) => <span key={i} className="flex items-center gap-1"><Input type="date" aria-label={`Fecha ${i + 1}`} value={f} onChange={e => setFecha(i, e.target.value)} className="h-11 w-40 bg-white md:h-9" />
+        <div className="flex flex-wrap items-center gap-2">{form.fechas.map((f, i) => <span key={i} className="flex items-center gap-1"><SelectorFecha ariaLabel={`Fecha ${i + 1}`} limpiable={false} value={f} onChange={v => setFecha(i, v)} className="w-40" />
           {form.fechas.length > 1 && <Button variant="ghost" size="icon-sm" onClick={() => set('fechas', form.fechas.filter((_, j) => j !== i))} aria-label={`Quitar fecha ${i + 1}`}><X /></Button>}</span>)}
           {form.fechas.length < 10 && <Button variant="outline" size="sm" onClick={() => set('fechas', [...form.fechas, ''])}><Plus data-icon="inline-start" />Otra fecha</Button>}</div>
       </div>
-      <div className="grid grid-cols-2 gap-2"><label className={lbl}>Desde (opcional)<Input type="time" value={form.hora_inicio ?? ''} onChange={e => set('hora_inicio', e.target.value || null)} className="h-11 bg-white md:h-9" /></label>
-        <label className={lbl}>Hasta (opcional)<Input type="time" value={form.hora_fin ?? ''} onChange={e => set('hora_fin', e.target.value || null)} className="h-11 bg-white md:h-9" /></label></div>
+      <div className="grid grid-cols-2 gap-2"><label className={lbl}>Desde (opcional)<SelectorHora ariaLabel="Desde" value={form.hora_inicio ?? ''} onChange={v => set('hora_inicio', v || null)} /></label>
+        <label className={lbl}>Hasta (opcional)<SelectorHora ariaLabel="Hasta" value={form.hora_fin ?? ''} onChange={v => set('hora_fin', v || null)} /></label></div>
       <label className={lbl}>Modalidad<select className={selectClass} value={form.modalidad} onChange={e => set('modalidad', e.target.value as ModalidadEvento)}>{MODALIDADES_EVENTO.map(m => <option key={m}>{m}</option>)}</select></label>
       <label className={lbl}>Lugar (opcional)<Input value={form.lugar ?? ''} onChange={e => set('lugar', e.target.value || null)} placeholder="Ej.: Teatro Argentino, La Plata" className="h-11 bg-white md:h-9" /></label>
       <label className={lbl}>Enlace (opcional)<Input value={form.enlace ?? ''} onChange={e => set('enlace', e.target.value || null)} placeholder="https://…" className="h-11 bg-white md:h-9" /></label>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { SelectorFecha as Base, SelectorFechaHora as BaseHora } from '@/components/ui/selector-fecha'
+import { SelectorFecha as Base, SelectorFechaHora as BaseHora, SelectorHora } from '@/components/ui/selector-fecha'
 import { getFeriados } from '@/components/app/comun'
 import { marcasFeriados, type Marca } from '@/lib/calendario'
 import { anioAR } from '@/lib/hora'
@@ -21,3 +21,4 @@ function useMarcas() {
 
 export function SelectorFecha(props: Omit<React.ComponentProps<typeof Base>, 'marcas'>) { return <Base {...props} marcas={useMarcas()} /> }
 export function SelectorFechaHora(props: Omit<React.ComponentProps<typeof BaseHora>, 'marcas'>) { return <BaseHora {...props} marcas={useMarcas()} /> }
+export { SelectorHora }
