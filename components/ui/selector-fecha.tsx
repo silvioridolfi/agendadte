@@ -4,14 +4,14 @@ import { useRef, useState } from 'react'
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from 'cn'
-import { DIAS_CORTOS, dentroDeRango, esFinDeSemana, esIso, fueraDeRango, partesFechaHora, semanasDelMes, sumarDias, sumarMeses, textoFecha, textoFechaHora, tituloMes } from '@/lib/calendario'
+import { DIAS_CORTOS, agruparMarcas, dentroDeRango, esFinDeSemana, esIso, fueraDeRango, partesFechaHora, type Marca, semanasDelMes, sumarDias, sumarMeses, textoFecha, textoFechaHora, tituloMes } from '@/lib/calendario'
 import { hoyAR, horaAR } from '@/lib/hora'
 
 // Selector de fechas con el estilo de la agenda (el calendario del navegador no se puede personalizar). Valores AAAA-MM-DD.
 // Teclado: flechas (día y semana), Inicio y Fin (semana), RePág y AvPág (mes). Celdas de 44 px de alto en el celular.
-type Comun = { marcas?: Record<string, string>, ariaLabel: string, min?: string, max?: string, limpiable?: boolean, className?: string, placeholder?: string, disabled?: boolean }
+type Comun = { marcas?: Record<string, Marca>, ariaLabel: string, min?: string, max?: string, limpiable?: boolean, className?: string, placeholder?: string, disabled?: boolean }
 
-function Calendario({ valor, onElegir, min, max, limpiable, onBorrar, onHoy, pie, marcas }: { marcas?: Record<string, string>, valor: string, onElegir: (f: string) => void, min?: string, max?: string, limpiable?: boolean, onBorrar: () => void, onHoy: () => void, pie?: React.ReactNode }) {
+function Calendario({ valor, onElegir, min, max, limpiable, onBorrar, onHoy, pie, marcas }: { marcas?: Record<string, Marca>, valor: string, onElegir: (f: string) => void, min?: string, max?: string, limpiable?: boolean, onBorrar: () => void, onHoy: () => void, pie?: React.ReactNode }) {
   const hoy = hoyAR()
   const [mes, setMes] = useState(esIso(valor) ? valor : dentroDeRango(hoy, min, max))
   const [foco, setFoco] = useState(esIso(valor) ? valor : dentroDeRango(hoy, min, max))
@@ -22,8 +22,8 @@ function Calendario({ valor, onElegir, min, max, limpiable, onBorrar, onHoy, pie
     if (paso[e.key]) { e.preventDefault(); moverFoco(paso[e.key]) }
   }
   const semanas = semanasDelMes(mes)
-  // Los feriados y recesos del mes que se está viendo, para leerlos también en el celular (donde no hay cursor para ver el nombre del día).
-  const delMesMarcas = Object.entries(marcas ?? {}).filter(([f]) => f.slice(0, 7) === mes.slice(0, 7)).sort(([a], [b]) => a.localeCompare(b))
+  // Los feriados y recesos del mes que se está viendo, juntando los días seguidos con el mismo nombre; se leen también en el celular (donde no hay cursor para ver el nombre del día).
+  const delMesMarcas = agruparMarcas(Object.entries(marcas ?? {}).filter(([f]) => f.slice(0, 7) === mes.slice(0, 7)))
   const cambiarMes = (n: number) => { const m = sumarMeses(mes, n); setMes(m); setFoco(m) }
   return <div className="flex flex-col gap-2">
     <div className="flex items-center justify-between gap-1">
@@ -35,13 +35,13 @@ function Calendario({ valor, onElegir, min, max, limpiable, onBorrar, onHoy, pie
       {DIAS_CORTOS.map(d => <span key={d} aria-hidden className="pb-1 text-center text-xs font-bold text-dte-gris">{d}</span>)}
       {semanas.flat().map(({ iso, delMes }, i) => {
         const elegido = iso === valor, esHoy = iso === hoy, fuera = fueraDeRango(iso, min, max), marca = marcas?.[iso], finde = esFinDeSemana(i % 7)
-        return <button key={iso} type="button" data-f={iso} disabled={fuera} tabIndex={iso === foco ? 0 : -1} aria-pressed={elegido} aria-current={esHoy ? 'date' : undefined} aria-label={marca ? `${textoFecha(iso)}: ${marca}` : textoFecha(iso)} title={marca} onClick={() => onElegir(iso)}
+        return <button key={iso} type="button" data-f={iso} disabled={fuera} tabIndex={iso === foco ? 0 : -1} aria-pressed={elegido} aria-current={esHoy ? 'date' : undefined} aria-label={marca ? `${textoFecha(iso)}: ${marca.texto}` : textoFecha(iso)} title={marca?.texto} onClick={() => onElegir(iso)}
           className={cn('mx-auto flex h-11 w-full max-w-11 items-center justify-center rounded-lg text-sm font-semibold tabular-nums transition md:h-9 md:max-w-9',
-            elegido ? 'bg-dte-petroleo text-white' : marca ? 'font-bold text-dte-magenta hover:bg-dte-fondo' : delMes ? (finde ? 'text-dte-gris hover:bg-dte-fondo' : 'text-dte-tinta hover:bg-dte-fondo') : 'text-dte-gris-claro hover:bg-dte-fondo',
-            esHoy && !elegido && 'ring-2 ring-inset ring-dte-petroleo/50', fuera && 'cursor-not-allowed opacity-30 hover:bg-transparent')}>{Number(iso.slice(8, 10))}{marca && !elegido && <span aria-hidden className="ml-0.5 size-1 self-end rounded-full bg-dte-magenta" />}</button>
+            elegido ? 'bg-dte-petroleo text-white' : marca ? (marca.tipo === 'feriado' ? 'bg-feriado-marca font-bold text-peligro hover:brightness-95' : 'bg-aniversario-marca font-bold text-aniversario-texto hover:brightness-95') : delMes ? (finde ? 'text-dte-gris hover:bg-dte-fondo' : 'text-dte-tinta hover:bg-dte-fondo') : 'text-dte-gris-claro hover:bg-dte-fondo',
+            esHoy && !elegido && 'ring-2 ring-inset ring-dte-petroleo/50', fuera && 'cursor-not-allowed opacity-30 hover:bg-transparent')}>{Number(iso.slice(8, 10))}</button>
       })}
     </div>
-    {delMesMarcas.length > 0 && <ul aria-label="Feriados y recesos del mes" className="flex flex-col gap-0.5 border-t border-dte-linea pt-2 text-xs text-dte-gris">{delMesMarcas.map(([f, t]) => <li key={f} className="flex items-start gap-1.5"><span aria-hidden className="mt-1 size-1.5 shrink-0 rounded-full bg-dte-magenta" /><span><b className="tabular-nums text-dte-tinta">{Number(f.slice(8, 10))}</b> {t}</span></li>)}</ul>}
+    {delMesMarcas.length > 0 && <ul aria-label="Feriados y recesos del mes" className="flex flex-col gap-1 border-t border-dte-linea pt-2 text-xs text-dte-gris">{delMesMarcas.map(r => <li key={r.desde} className="flex items-start gap-1.5"><span aria-hidden className={cn('mt-0.5 size-2.5 shrink-0 rounded-sm ring-1', r.tipo === 'feriado' ? 'bg-feriado-marca ring-pba-fucsia/40' : 'bg-aniversario-marca ring-cat-institucional/40')} /><span><b className="tabular-nums text-dte-tinta">{r.desde === r.hasta ? Number(r.desde.slice(8, 10)) : `${Number(r.desde.slice(8, 10))} al ${Number(r.hasta.slice(8, 10))}`}</b> {r.texto}</span></li>)}</ul>}
     {pie}
     <div className="flex items-center justify-between border-t border-dte-linea pt-2">
       {limpiable ? <button type="button" onClick={onBorrar} className="min-h-11 rounded-lg px-2 text-sm font-semibold text-dte-petroleo hover:bg-dte-fondo md:min-h-9">Borrar</button> : <span />}

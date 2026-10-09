@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aIso, dentroDeRango, esFinDeSemana, esIso, marcasFeriados, fueraDeRango, partesFechaHora, semanasDelMes, sumarDias, sumarMeses, textoFecha, textoFechaHora, tituloMes } from '@/lib/calendario'
+import { agruparMarcas, aIso, dentroDeRango, esFinDeSemana, esIso, marcasFeriados, fueraDeRango, partesFechaHora, semanasDelMes, sumarDias, sumarMeses, textoFecha, textoFechaHora, tituloMes } from '@/lib/calendario'
 
 describe('calendario del selector de fechas', () => {
   it('valida fechas AAAA-MM-DD reales', () => {
@@ -48,19 +48,32 @@ describe('calendario del selector de fechas', () => {
 
 describe('marcas de feriados (a nivel global)', () => {
   const f = (fecha: string, nombre: string, tipo: 'nacional' | 'distrital' | 'receso', distrito: string | null = null, confirmado = true) => ({ fecha, nombre, tipo, distrito, confirmado })
-  it('marca todos los feriados y recesos, y aclara el distrito de los distritales', () => {
+  it('marca todos los feriados y recesos como feriado, y los distritales como aniversario con su distrito', () => {
     const m = marcasFeriados([f('2026-10-12', 'Día del Respeto a la Diversidad Cultural', 'nacional'), f('2026-11-19', 'Día de la ciudad', 'distrital', 'LA PLATA'), f('2026-07-20', 'Receso escolar', 'receso')])
-    expect(m['2026-10-12']).toBe('Día del Respeto a la Diversidad Cultural')
-    expect(m['2026-11-19']).toBe('Día de la ciudad (distrito La Plata)')
-    expect(m['2026-07-20']).toBe('Receso escolar')
+    expect(m['2026-10-12']).toEqual({ texto: 'Día del Respeto a la Diversidad Cultural', tipo: 'feriado' })
+    expect(m['2026-11-19']).toEqual({ texto: 'Día de la ciudad (distrito La Plata)', tipo: 'aniversario' })
+    expect(m['2026-07-20']).toEqual({ texto: 'Receso escolar', tipo: 'feriado' })
     expect(m['2026-10-13']).toBeUndefined()
   })
-  it('une los que caen el mismo día y avisa los que faltan confirmar', () => {
-    const m = marcasFeriados([f('2026-11-20', 'Feriado nacional', 'nacional', null, false), f('2026-11-20', 'Aniversario', 'distrital', 'ENSENADA')])
-    expect(m['2026-11-20']).toBe('Feriado nacional · a confirmar · Aniversario (distrito Ensenada)')
+  it('une los que caen el mismo día: si hay uno para todos, se ve como feriado; avisa los que faltan confirmar', () => {
+    const m = marcasFeriados([f('2026-11-20', 'Aniversario', 'distrital', 'ENSENADA'), f('2026-11-20', 'Feriado nacional', 'nacional', null, false)])
+    expect(m['2026-11-20']).toEqual({ texto: 'Aniversario (distrito Ensenada) · Feriado nacional · a confirmar', tipo: 'feriado' })
+  })
+  it('un receso de varias semanas es una sola línea de la lista', () => {
+    const dias = ['2027-01-04', '2027-01-05', '2027-01-06', '2027-01-07', '2027-01-08', '2027-01-11', '2027-01-12', '2027-01-15']
+    const m = marcasFeriados([f('2027-01-01', 'Año Nuevo', 'nacional'), ...dias.map(d => f(d, 'Vacaciones de verano', 'receso'))])
+    const r = agruparMarcas(Object.entries(m))
+    expect(r).toEqual([
+      { desde: '2027-01-01', hasta: '2027-01-01', texto: 'Año Nuevo', tipo: 'feriado' },
+      { desde: '2027-01-04', hasta: '2027-01-12', texto: 'Vacaciones de verano', tipo: 'feriado' },
+      { desde: '2027-01-15', hasta: '2027-01-15', texto: 'Vacaciones de verano', tipo: 'feriado' },
+    ])
+  })
+  it('no junta días con nombres distintos ni tipos distintos', () => {
+    const r = agruparMarcas([['2026-11-19', { texto: 'A', tipo: 'feriado' }], ['2026-11-20', { texto: 'B', tipo: 'feriado' }], ['2026-11-23', { texto: 'B', tipo: 'aniversario' }]])
+    expect(r).toHaveLength(3)
   })
   it('sábado y domingo son las dos últimas columnas', () => {
     expect([0, 1, 2, 3, 4, 5, 6].map(esFinDeSemana)).toEqual([false, false, false, false, false, true, true])
   })
 })
-
