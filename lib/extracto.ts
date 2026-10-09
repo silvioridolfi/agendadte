@@ -37,7 +37,7 @@ export function periodoExtracto(filas: FilaExtracto[], desde: string, hasta: str
   return d === h ? completa(d) : `${completa(d)} al ${completa(h)}`
 }
 
-export const tituloExtracto = (distrito: string) => `Cronograma de intervenciones de conectividad${distrito ? ` · ${titleCase(distrito)}` : ''}`
+export const tituloExtracto = (distrito: string) => `Cronogramas de conectividad${distrito ? ` · ${titleCase(distrito)}` : ''}`
 
 // Documento para imprimir o guardar como PDF (apaisado). `origen`: dirección de la app, para el logo y la tipografía.
 export function htmlExtracto({ titulo, periodo, filas, emitido, origen }: { titulo: string, periodo: string, filas: FilaExtracto[], emitido: string, origen: string }): string {
@@ -48,7 +48,8 @@ export function htmlExtracto({ titulo, periodo, filas, emitido, origen }: { titu
 @page { size: A4 landscape; margin: 12mm 12mm 18mm; }
 * { box-sizing: border-box; } html { -webkit-print-color-adjust: exact; print-color-adjust: exact; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { font-family: 'Encode Sans', sans-serif; color: #1f2a3a; font-size: 9pt; margin: 0; }
-.banda { background: linear-gradient(135deg, #04364f, #05476e 45%, #683a74 80%, #d41c6c); color: #fff; border-radius: 3mm; padding: 5mm 6mm; }
+.banda { background: linear-gradient(135deg, #04364f, #05476e 45%, #683a74 80%, #d41c6c); color: #fff; border-radius: 3mm; padding: 5mm 6mm; display: flex; align-items: center; justify-content: space-between; gap: 6mm; }
+.banda .logo { height: 14mm; width: auto; flex: none; }
 .banda small { letter-spacing: .2em; text-transform: uppercase; font-weight: 700; color: #8fd6e5; font-size: 7.5pt; }
 .banda h1 { margin: 1mm 0 0; font-size: 16pt; font-weight: 800; }
 .datos { display: flex; flex-wrap: wrap; gap: 2mm 8mm; margin: 4mm 0; font-size: 9pt; }
@@ -68,10 +69,11 @@ a { color: #05476e; }
 .aviso { font-family: sans-serif; background: #fdf6e3; color: #6b5210; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
 @media print { .aviso, .barra { display: none; } }
 @media screen { body { padding: 0 16px 24px; } .tabla { overflow-x: auto; } table { min-width: 820px; } }
+@media screen and (max-width: 640px) { .banda { flex-direction: column; align-items: flex-start; } .banda .logo { height: auto; width: 100%; max-width: 280px; } }
 </style></head><body>
 <div class="barra"><button type="button" onclick="volver()">‹ Volver a la agenda</button><button type="button" class="pri" onclick="print()">Guardar PDF</button></div>
 <p class="aviso">Para guardarlo, elegí <b>Guardar como PDF</b> en la ventana de impresión (en el celular: Compartir › Imprimir).</p>
-<div class="banda"><small>Dirección de Tecnología Educativa · Región 1</small><h1>${esc(titulo)}</h1></div>
+<div class="banda"><div><small>Región 1</small><h1>${esc(titulo)}</h1></div><img class="logo" src="${esc(origen)}/brand/oficial-blanco.png" alt="Dirección de Tecnología Educativa · Dirección General de Cultura y Educación · Gobierno de la Provincia de Buenos Aires"></div>
 <div class="datos"><div><b>Período</b>${esc(periodo)}</div><div><b>Intervenciones</b>${filas.length}</div><div><b>Emitido</b>${esc(emitido)}</div></div>
 <div class="tabla"><table><thead><tr><th>Fecha</th><th>Establecimiento</th><th>Localidad</th><th>Tarea</th><th>Empresa</th><th>Personal a cargo</th></tr></thead><tbody>
 ${filas.map(f => `<tr><td>${esc(fechasDe(f))}</td><td><b>${esc(f.establecimiento)}</b><small>CUE ${f.cue}${f.direccion ? ` · ${esc(f.direccion)}` : ''}</small></td><td>${esc([f.localidad, f.distrito].filter((x, i, a) => x && a.indexOf(x) === i).join(', '))}</td><td>${esc(f.tarea)}${f.observaciones ? `<small>${esc(f.observaciones)}</small>` : ''}</td><td>${esc(f.empresa)}${f.programa ? `<small>${esc(f.programa)}</small>` : ''}</td><td>${personal(f)}</td></tr>`).join('\n')}
@@ -81,6 +83,6 @@ ${filas.map(f => `<tr><td>${esc(fechasDe(f))}</td><td><b>${esc(f.establecimiento
 <script>
 // En la app instalada (iPhone) la ventana no tiene botón de cerrar: si no se puede cerrar, vuelve a la agenda.
 function volver() { window.close(); setTimeout(() => { location.href = '${esc(origen)}/' }, 300) }
-document.fonts.ready.then(() => setTimeout(() => print(), 250))</script>
+Promise.all([document.fonts.ready, new Promise(r => { const i = document.querySelector('.logo'); if (i.complete) r(); else { i.onload = r; i.onerror = r } })]).then(() => setTimeout(() => print(), 250))</script>
 </body></html>`
 }

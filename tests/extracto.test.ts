@@ -39,8 +39,8 @@ describe('período y título', () => {
     expect(fechasDe({ desde: '2026-10-12', hasta: '2026-10-12' })).toBe('12/10/2026')
   })
   it('el título nombra el distrito si se filtró uno', () => {
-    expect(tituloExtracto('')).toBe('Cronograma de intervenciones de conectividad')
-    expect(tituloExtracto('LA PLATA')).toBe('Cronograma de intervenciones de conectividad · La Plata')
+    expect(tituloExtracto('')).toBe('Cronogramas de conectividad')
+    expect(tituloExtracto('LA PLATA')).toBe('Cronogramas de conectividad · La Plata')
   })
 })
 
@@ -51,6 +51,7 @@ describe('documento del PDF', () => {
     expect(html).toContain('Juan Pérez (DNI 30111222)'); expect(html).toContain('Dinatech ST'); expect(html).toContain('CUE 61000001')
     expect(html).toContain('&lt;b&gt; &amp; Co'); expect(html).not.toContain('<b> &')
     expect(html).toContain('A4 landscape')
+    expect(html).toContain('src="https://x.test/brand/oficial-blanco.png"'); expect(html).toContain('alt="Dirección de Tecnología Educativa')
     expect(html).not.toMatch(/geolocaliz|ubicaci[oó]n de las fotos/i)
   })
   it('sin personal ni enlace dice "A confirmar"', () => {
