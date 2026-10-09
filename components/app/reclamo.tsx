@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Check, Copy, ExternalLink, Loader2, Mail, Paperclip, Phone, Wifi, X } from 'lucide-react'
+import { AlertTriangle, Check, ClipboardList, Copy, ExternalLink, Loader2, Mail, Paperclip, Phone, Wifi, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -10,7 +10,7 @@ import { type School } from '@/lib/agenda'
 import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, directivoDe, enlacesDe, faltantes, llevaChecklist, nombreContacto, puedeSerAmbos, gmailAppUrl, gmailUrl, plataformaDe, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
 import { titleCase } from '@/lib/format'
 import { ESTADO_RECLAMO_LABEL, type Reclamo as ReclamoRegistrado } from '@/lib/reclamos-registro'
-import { ErrorBox, errMsg, getConectividadEscuela, reclamosAbiertosDe, registrarReclamo, selectClass } from '@/components/app/comun'
+import { ErrorBox, errMsg, getConectividadEscuela, guardarBorradorReclamo, reclamosAbiertosDe, registrarReclamo, selectClass } from '@/components/app/comun'
 import { Field, SchoolPicker } from '@/components/app/formulario'
 
 type Errores = ReturnType<typeof faltantes>
@@ -37,6 +37,9 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
   const [abiertos, setAbiertos] = useState<ReclamoRegistrado[]>([])
   const [registrando, setRegistrando] = useState(false)
   const [registrado, setRegistrado] = useState(false)
+  // Asunto del reclamo que ya quedó guardado en borradores (el asunto lleva la hora, así que identifica este armado).
+  const [borradorAsunto, setBorradorAsunto] = useState('')
+  const [guardando, setGuardando] = useState(false)
 
   // Establecimiento que viene elegido (desde su ficha o desde una acción de conectividad): se cargan sus datos al abrir.
   useEffect(() => {
@@ -77,6 +80,11 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
     if (!con || !tipo || !reclamo) return
     setRegistrando(true); setError('')
     try { await registrarReclamo({ school_id: con.id, tipo: tipo.id, asunto: reclamo.asunto }); setRegistrado(true) } catch (e) { setError(errMsg(e)) } finally { setRegistrando(false) }
+  }
+  async function guardarBorrador() {
+    if (!con || !tipo || !reclamo) return
+    setGuardando(true); setError('')
+    try { await guardarBorradorReclamo({ school_id: con.id, tipo: tipo.id, asunto: reclamo.asunto, para: reclamo.para, cuerpo: reclamo.cuerpo, adjuntos: reclamo.adjuntos }); setBorradorAsunto(reclamo.asunto) } catch (e) { setError(errMsg(e)) } finally { setGuardando(false) }
   }
   async function copiar(texto: string, clave: string) {
     try { await navigator.clipboard.writeText(texto); setCopiado(clave); setTimeout(() => setCopiado(c => (c === clave ? '' : c)), 2000) } catch { setError('No se pudo copiar: seleccioná el texto y copialo a mano.') }
@@ -171,7 +179,11 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
               <Button type="button" variant="outline" onClick={cerrar} className="min-h-11 border-dte-gris/60 font-semibold text-dte-tinta hover:bg-dte-fondo md:min-h-9"><X className="size-4" aria-hidden />{registrado ? 'Cerrar' : 'Cancelar'}</Button>
             </div>
             {registrado ? <p role="status" className="flex items-start gap-1.5 rounded-control bg-exito-fondo px-3 py-2 text-sm font-semibold text-exito"><Check className="mt-0.5 size-4 shrink-0" aria-hidden />Registrado en el panel de reclamos. El CED va a anotar el número de ticket o de incidencia cuando llegue.</p>
-              : <div className="rounded-card border border-dte-linea bg-dte-fondo p-3"><p className="text-xs text-dte-gris">Cuando lo hayas mandado por mail al CED, registralo para llevar el seguimiento.</p><Button type="button" onClick={registrar} disabled={registrando} className="mt-2 w-full sm:w-auto">{registrando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Reclamo enviado</Button></div>}
+              : <div className="rounded-card border border-dte-linea bg-dte-fondo p-3"><p className="text-xs text-dte-gris">Cuando lo hayas mandado por mail al CED, registralo para llevar el seguimiento.</p><Button type="button" onClick={registrar} disabled={registrando || guardando} className="mt-2 w-full sm:w-auto">{registrando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Reclamo enviado</Button>
+                <div className="mt-3 border-t border-dte-linea pt-3">
+                  {borradorAsunto === reclamo.asunto ? <p role="status" className="flex items-start gap-1.5 text-sm font-semibold text-exito"><Check className="mt-0.5 size-4 shrink-0" aria-hidden />Guardado en borradores. Cuando salga el mail, marcalo como enviado desde el Registro de reclamos.</p>
+                    : <><p className="text-xs text-dte-gris">¿Lo dejaste programado o lo vas a mandar después? Guardalo en borradores y marcalo como enviado cuando salga: no se avisa al CED hasta entonces.</p><Button type="button" variant="outline" onClick={guardarBorrador} disabled={guardando || registrando} className="mt-2 w-full sm:w-auto">{guardando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <ClipboardList data-icon="inline-start" />}Guardar en borradores</Button></>}
+                </div></div>}
             <p className="text-xs text-dte-gris">El mensaje va al correo regional y de ahí lo deriva el CED. Se abre con tu cuenta institucional (en el celular, en la app de Gmail); los archivos los adjuntás vos. El asunto lleva la hora de este momento: si lo enviás más tarde, volvé a armarlo. Si el establecimiento ya tiene un reclamo abierto, <b>no abras una cadena nueva</b>: respondé en la original (sin el “Fwd” antes del código). <a href={DOC_BUSCADOR_CUE} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Buscar reclamos anteriores por CUE</a>.</p>
           </>}
         </section>}

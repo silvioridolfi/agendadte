@@ -2,7 +2,7 @@
 
 import { PuntoTipo } from '@/components/app/tipocrono'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Check, ClipboardList, Eye, FileSpreadsheet, Loader2, Pencil, Search } from 'lucide-react'
+import { CalendarClock, Check, ClipboardList, Copy, Eye, FileSpreadsheet, Loader2, Pencil, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,9 @@ import { ESTADOS_RECLAMO, ESTADO_RECLAMO_CLASE, ESTADO_RECLAMO_LABEL, ESTADO_REC
 import { titleCase } from '@/lib/format'
 import { esDelFed, etiquetaTipo, ventanaDe } from '@/lib/cronogramas'
 import type { CruceReclamo } from '@/lib/cruce'
-import { BotonVolver, ErrorBox, Skeleton, actualizarReclamo, eyebrow, errMsg, getCruceReclamos, getReclamos, resolverReclamo, selectClass } from '@/components/app/comun'
+import { BotonVolver, ErrorBox, Skeleton, actualizarReclamo, eliminarBorradorReclamo, enviarBorradorReclamo, eyebrow, errMsg, getBorradoresReclamo, getCruceReclamos, getReclamos, resolverReclamo, selectClass } from '@/components/app/comun'
+import type { Borrador } from '@/app/actions'
+import { hoyAR } from '@/lib/hora'
 import { Field } from '@/components/app/formulario'
 
 const ZONA = 'America/Argentina/Buenos_Aires'
@@ -54,6 +56,7 @@ export function RegistroReclamos({ profile, feds, esAdmin, soloMiosInicial, volv
     {error ? <div className="mt-4"><ErrorBox message={error} onRetry={() => { setError(''); cargar() }} /></div>
       : !lista ? <div className="mt-4 flex flex-col gap-3"><Skeleton className="h-16" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div>
       : <>
+        <BorradoresReclamos onEnviado={cargar} />
         <ul className="mt-4 grid grid-cols-3 gap-2">{([['enviado', resumen.enviados], ['en_proceso', resumen.enProceso], ['resuelto', resumen.resueltos]] as [EstadoReclamo, number][]).map(([e, n]) =>
           <li key={e} className="flex"><button type="button" aria-pressed={filtros.estado === e} onClick={() => set('estado', filtros.estado === e ? 'abiertos' : e)} className={`flex h-full w-full flex-col justify-between gap-1 rounded-control border px-3 py-2.5 text-left transition hover:shadow-e2 ${filtros.estado === e ? 'ring-2 ring-dte-petroleo/30' : ''} ${ESTADO_RECLAMO_CLASE[e]}`}><span className="block text-xl font-bold tabular-nums">{n}</span><span className="block text-xs leading-snug">{ESTADO_RECLAMO_PLURAL[e]}</span></button></li>)}</ul>
 
@@ -140,4 +143,55 @@ function ResolverReclamo({ reclamo, onClose, onResuelto }: { reclamo: Reclamo, o
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={onClose}>Cancelar</Button><Button type="button" onClick={guardar} disabled={guardando}>{guardando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Marcar resuelto</Button></div>
     </DialogContent>
   </Dialog>
+}
+
+// Reclamos armados que todavía no salieron (por ejemplo, programados en Gmail para otro momento). Cada uno ve solo los suyos.
+// Al marcarlo como enviado pasa al registro con la fecha de envío y recién ahí se avisa al CED.
+function BorradoresReclamos({ onEnviado }: { onEnviado: () => void }) {
+  const [lista, setLista] = useState<Borrador[]>([])
+  const [error, setError] = useState('')
+  const [abierto, setAbierto] = useState<string | null>(null)
+  const [enviando, setEnviando] = useState<string | null>(null)
+  const [fecha, setFecha] = useState(() => hoyAR())
+  const [ocupado, setOcupado] = useState(false)
+  const [copiado, setCopiado] = useState('')
+  const [aEliminar, setAEliminar] = useState<string | null>(null)
+  useEffect(() => { let vivo = true; getBorradoresReclamo().then(l => { if (vivo) setLista(l) }).catch(() => {}); return () => { vivo = false } }, [])
+  if (!lista.length && !error) return null
+  const copiar = async (texto: string, clave: string) => { try { await navigator.clipboard.writeText(texto); setCopiado(clave); setTimeout(() => setCopiado(c => (c === clave ? '' : c)), 2000) } catch { setError('No se pudo copiar: seleccioná el texto y copialo a mano.') } }
+  async function enviar(b: Borrador) {
+    setOcupado(true); setError('')
+    try { await enviarBorradorReclamo(b.id, fecha); setLista(l => l.filter(x => x.id !== b.id)); setEnviando(null); onEnviado() } catch (e) { setError(errMsg(e)) } finally { setOcupado(false) }
+  }
+  async function eliminar(b: Borrador) {
+    setOcupado(true); setError('')
+    try { await eliminarBorradorReclamo(b.id); setLista(l => l.filter(x => x.id !== b.id)); setAEliminar(null) } catch (e) { setError(errMsg(e)) } finally { setOcupado(false) }
+  }
+  return <section aria-label="Borradores" className="mt-4 rounded-card border border-aviso-borde bg-aviso-fondo p-3.5">
+    <h3 className="flex items-center gap-1.5 text-sm font-bold text-aviso-fuerte"><ClipboardList className="size-4" aria-hidden />Mis borradores ({lista.length})</h3>
+    <p className="mt-0.5 text-xs text-dte-gris">Reclamos armados que todavía no salieron. Cuando los mandes, marcalos como enviados: recién ahí pasan al registro y se avisa al CED.</p>
+    {error && <div className="mt-2"><ErrorBox message={error} /></div>}
+    <ul className="mt-2 flex flex-col gap-2">{lista.map(b => <li key={b.id} className="rounded-control border border-dte-linea bg-white p-3">
+      <p className="text-sm font-semibold">{b.tipo_label}</p>
+      <p className="break-words text-sm">{b.escuela_nombre ? titleCase(b.escuela_nombre) : 'Establecimiento'}{b.cue ? <span className="text-dte-gris"> · CUE {b.cue}</span> : null}</p>
+      <p className="mt-1 break-words font-mono text-[0.8125rem] font-medium">{b.asunto}</p>
+      <p className="mt-0.5 text-xs text-dte-gris">Guardado el {fechaCorta(b.created_at)}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={() => setAbierto(abierto === b.id ? null : b.id)} aria-expanded={abierto === b.id}><Eye data-icon="inline-start" />{abierto === b.id ? 'Ocultar mensaje' : 'Ver mensaje'}</Button>
+        <Button type="button" size="sm" onClick={() => { setEnviando(enviando === b.id ? null : b.id); setFecha(hoyAR()) }} aria-expanded={enviando === b.id}><Check data-icon="inline-start" />Marcar como enviado</Button>
+        {aEliminar === b.id ? <><Button type="button" variant="destructive" size="sm" disabled={ocupado} onClick={() => eliminar(b)}>{ocupado ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Trash2 data-icon="inline-start" />}Sí, eliminar</Button><Button type="button" variant="outline" size="sm" onClick={() => setAEliminar(null)}>No</Button></>
+          : <Button type="button" variant="outline" size="sm" onClick={() => setAEliminar(b.id)}><Trash2 data-icon="inline-start" />Eliminar</Button>}
+      </div>
+      {enviando === b.id && <div className="mt-2 flex flex-col gap-2 rounded-control bg-dte-fondo p-2.5 sm:flex-row sm:items-end">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-dte-gris">Fecha en que se envió<Input type="date" value={fecha} max={hoyAR()} onChange={e => setFecha(e.target.value)} className="h-11 md:h-10" /></label>
+        <Button type="button" disabled={ocupado || !fecha} onClick={() => enviar(b)} className="w-full sm:w-auto">{ocupado ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Confirmar envío</Button>
+      </div>}
+      {abierto === b.id && <div className="mt-2 flex flex-col gap-2 text-sm">
+        {b.para && <div className="flex items-center justify-between gap-2 rounded-control bg-dte-fondo px-3 py-2"><span className="min-w-0 break-all"><span className="text-xs font-semibold text-dte-gris">Para: </span>{b.para}</span><Button type="button" variant="ghost" size="sm" onClick={() => copiar(b.para!, `p${b.id}`)}>{copiado === `p${b.id}` ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}Copiar</Button></div>}
+        <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold text-dte-gris">Asunto y mensaje</span><span className="flex gap-1"><Button type="button" variant="ghost" size="sm" onClick={() => copiar(b.asunto, `a${b.id}`)}>{copiado === `a${b.id}` ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}Asunto</Button><Button type="button" variant="ghost" size="sm" onClick={() => copiar(b.cuerpo, `c${b.id}`)}>{copiado === `c${b.id}` ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}Mensaje</Button></span></div>
+        <pre className="whitespace-pre-wrap break-words rounded-control bg-dte-fondo p-3 font-sans text-[0.8125rem]">{b.cuerpo}</pre>
+        {b.adjuntos.length > 0 && <ul className="list-disc pl-5 text-sm">{b.adjuntos.map(a => <li key={a.texto}>{a.texto}</li>)}</ul>}
+      </div>}
+    </li>)}</ul>
+  </section>
 }

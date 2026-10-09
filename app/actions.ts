@@ -57,6 +57,11 @@ export const sincronizarCronogramasAhora = async () => conUsuario(yo => rc.sincr
 export const reclamosAbiertosDe = async (schoolId: string) => conUsuario(() => rc.reclamosAbiertosDeImpl(schoolId))
 export const resolverReclamo = async (id: string, nota: string | null) => conUsuario(yo => rc.resolverReclamoImpl(yo, id, nota))
 export const actualizarReclamo = async (id: string, cambios: { estado?: EstadoReclamo, nro_incidencia?: string | null, notas?: string | null }) => conUsuario(yo => rc.actualizarReclamoImpl(yo, id, cambios))
+export type { Borrador } from '@/lib/servidor/reclamos-cronogramas'
+export const guardarBorradorReclamo = async (input: { school_id: string, tipo: string, asunto: string, para: string | null, cuerpo: string, adjuntos: { texto: string, enlace?: string }[] }) => conUsuario(yo => rc.guardarBorradorImpl(yo, input))
+export const getBorradoresReclamo = async () => conUsuario(yo => rc.getBorradoresImpl(yo))
+export const eliminarBorradorReclamo = async (id: string) => conUsuario(yo => rc.eliminarBorradorImpl(yo, id))
+export const enviarBorradorReclamo = async (id: string, fecha: string | null) => conUsuario(yo => rc.enviarBorradorImpl(yo, id, fecha))
 
 export const buscarOrganismos = async (query: string) => conUsuario(yo => ag.buscarOrganismos(yo, query))
 export const ubicacionDe = async (schoolId: string | null, lugar: string | null) => conUsuario(yo => ag.ubicacionDe(yo, schoolId, lugar))
