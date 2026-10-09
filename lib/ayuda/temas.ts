@@ -530,7 +530,7 @@ Arma, con lo que registraste en la agenda, los datos que pide Nivel Central en e
 - **FED / CED a cargo de la jornada:** figura quien creó la acción y, a continuación, quienes la acompañan, hayan confirmado o no (salvo quien avisó que no puede).
 ## Cómo se usa
 1. Elegí **Pendientes** (lo que falta cargar), **Cargadas** o **Todas**, y el período (por defecto, desde el 1 del mes hasta hoy; ampliá el período para ver lo anterior).
-2. Abrí un encuentro: los datos aparecen en el orden del formulario. **Copiar** copia uno; **Copiar todos los datos** copia los catorce, uno por renglón.
+2. Abrí un encuentro: los datos aparecen en el orden del formulario. **Copiar** copia uno; **Copiar todos los datos** copia los catorce, uno por renglón. **Abrir el formulario** (arriba y en cada encuentro) abre el de Nivel Central en otra pestaña.
 3. Cuando lo cargues en el formulario, tocá **Ya la cargué**. La marca la ven los demás, así que nadie lo repite. **Deshacer marca** la quita.
 4. Si después de marcarlo alguien corrige el encuentro en la agenda, figura como **Modificada después de cargarla** y vuelve a pendientes: revisá si hay que corregirlo en el formulario y volvé a marcarlo.
 5. Los enlaces de **Fotos** abren la carpeta de Drive de la acción (necesitás acceso a la carpeta del FED). **Excel** baja lo que ves, con el estado de carga.

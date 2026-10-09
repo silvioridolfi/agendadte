@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Camera, Check, CheckCircle2, ChevronDown, Copy, ExternalLink, FileSpreadsheet, GraduationCap, Loader2, TriangleAlert, Undo2, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { type Fed } from '@/lib/agenda'
+import { FORMULARIO_NC } from '@/lib/jornadas-campos'
 import { camposDeJornada, estaPendiente, fechaJornada, filtrarJornadas, FILTROS_JORNADAS, textoDeJornada, type EstadoCarga, type FiltrosJornadas, type Jornada } from '@/lib/jornadas'
 import { hoyAR } from '@/lib/hora'
 import { SelectorFecha } from '@/components/app/selectorfecha'
@@ -46,7 +47,8 @@ export function JornadasReporte({ feds, volver, veTodos }: { feds: Fed[], volver
     {volver && <BotonVolver onClick={volver.ir} destino={volver.destino} />}
     <p className={eyebrow}>Acciones pedagógicas</p>
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-2xl font-bold">{veTodos ? 'Reporte de jornadas' : 'Mis jornadas'}</h2>
-      {lista && <Button type="button" variant="outline" size="sm" disabled={exportando || !visibles.length} onClick={excel}>{exportando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}Excel ({visibles.length})</Button>}
+      <span className="flex flex-wrap items-center gap-2"><a href={FORMULARIO_NC} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-dte-petroleo px-3 text-sm font-semibold text-white hover:opacity-90"><ExternalLink className="size-4" aria-hidden />Abrir el formulario</a>
+      {lista && <Button type="button" variant="outline" size="sm" disabled={exportando || !visibles.length} onClick={excel}>{exportando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <FileSpreadsheet data-icon="inline-start" />}Excel ({visibles.length})</Button>}</span>
     </div>
     <p className="mt-1 text-sm text-dte-gris">Una fila por encuentro, con los datos en el orden del formulario de Nivel Central (Registro de Acciones Pedagógicas), para copiar y pegar. {veTodos ? 'Ves los de todo el equipo.' : 'Ves los que creaste vos: si te acompañó alguien, lo carga quien lo creó.'} Solo clubes, PEAT y talleres o capacitaciones con participantes. Marcá cada uno cuando lo cargues, así no se repite.</p>
 
@@ -84,6 +86,7 @@ export function JornadasReporte({ feds, volver, veTodos }: { feds: Fed[], volver
               {j.cargada?.modificada && <p role="status" className="rounded-control bg-aviso-fondo px-3 py-2 text-sm text-aviso-fuerte">Este encuentro se modificó después de marcarlo como cargado ({j.cargada.por}, {diaAR(j.cargada.cuando)}). Revisá si hay que corregirlo en el formulario y volvé a marcarlo.</p>}
               <div className="flex flex-wrap items-center gap-2">
                 <Button type="button" size="sm" onClick={() => copiar(textoDeJornada(j), `t${j.clave}`)}>{copiado === `t${j.clave}` ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado === `t${j.clave}` ? 'Copiado' : 'Copiar todos los datos'}</Button>
+                <a href={FORMULARIO_NC} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-input bg-white px-2.5 text-sm font-medium hover:bg-dte-tinte"><ExternalLink className="size-4" aria-hidden />Abrir el formulario</a>
                 {estaPendiente(j) && <Button type="button" size="sm" variant="outline" disabled={ocupada} onClick={() => marcar(j, true)}>{ocupada ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <CheckCircle2 data-icon="inline-start" />}{j.cargada ? 'Ya la actualicé en el formulario' : 'Ya la cargué'}</Button>}
                 {j.cargada && <Button type="button" size="sm" variant="ghost" disabled={ocupada} onClick={() => marcar(j, false)}><Undo2 data-icon="inline-start" />Deshacer marca</Button>}
               </div>
