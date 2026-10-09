@@ -276,9 +276,13 @@ export async function guardarBorradorImpl(yo: Usuario, input: { school_id: strin
   if (error) throw new Error(error.message)
   if (!esc) throw new Error('No se encontró el establecimiento')
   if (!/^06-01-\d{12} - CUE \d{8} - .+/.test(asunto) || !asunto.includes(`CUE ${esc.cue} - `)) throw new Error('El asunto no tiene el formato de la guía')
-  // Un mismo asunto no se guarda dos veces (doble toque).
+  // Un mismo asunto no se guarda dos veces (doble toque): si ya estaba, se actualiza el mensaje (por ejemplo, si se cambió el saludo).
   const { data: previo } = await db.from('reclamos_borradores').select('id').eq('fed_id', yo.fed.id).eq('asunto', asunto).maybeSingle()
-  if (previo) return previo.id as string
+  if (previo) {
+    const up = await db.from('reclamos_borradores').update({ para: input.para || null, cuerpo, adjuntos: input.adjuntos }).eq('id', previo.id as string).eq('fed_id', yo.fed.id)
+    if (up.error) throw new Error(up.error.message)
+    return previo.id as string
+  }
   const { count } = await db.from('reclamos_borradores').select('id', { count: 'exact', head: true }).eq('fed_id', yo.fed.id)
   if ((count ?? 0) >= MAX_BORRADORES) throw new Error(`Tenés ${MAX_BORRADORES} borradores: marcá como enviados o eliminá algunos antes de guardar otro`)
   const row = { fed_id: yo.fed.id, school_id: esc.id, cue: esc.cue, escuela_nombre: esc.nombre, tipo: tipo.id, tipo_label: tipo.asunto, asunto, para: input.para || null, cuerpo, adjuntos: input.adjuntos }

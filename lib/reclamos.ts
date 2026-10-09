@@ -169,9 +169,11 @@ export function saludoDe(ahora: Date): string {
   return h < 12 ? 'buen día' : h < 20 ? 'buenas tardes' : 'buenas noches'
 }
 
+export const SALUDOS = ['buen día', 'buenas tardes', 'buenas noches'] as const
 // Arma el reclamo. Lo recibe el CED por el correo regional, y es él quien lo reenvía a la DTE (que lo deriva a PBA o a Educar): por eso el mensaje
 // va dirigido al CED, sin firma ni cargo (el correo oficial ya los lleva). `ced`: nombre de pila del CED, si se conoce. Si faltan datos, usar `faltantes` antes.
-export function armarReclamo(esc: EscuelaConectividad, tipo: TipoReclamo, d: DatosReclamo, ahora: Date, ced: string | null): Reclamo {
+// `saludo`: si el mensaje sale en otro momento (programado para el día siguiente, por ejemplo), el saludo que corresponde a ese momento; por defecto, el de la hora actual.
+export function armarReclamo(esc: EscuelaConectividad, tipo: TipoReclamo, d: DatosReclamo, ahora: Date, ced: string | null, saludo?: string): Reclamo {
   const enlaces = enlacesDe(esc.plan_enlace, esc.subplan_enlace)
   const enlace = d.enlace ?? (enlaces.length === 1 ? enlaces[0] : null)
   const datos = { ...d, enlace }
@@ -194,7 +196,7 @@ export function armarReclamo(esc: EscuelaConectividad, tipo: TipoReclamo, d: Dat
   const contacto = !adjuntos.some(a => a.enlace === DOC_CHECKLIST_USAP || a.enlace === DOC_CHECKLIST_Z3) && (d.contactoNombre.trim() || d.contactoTelefono.trim())
     ? `\nContacto del establecimiento:\n${linea('Nombre', d.contactoNombre)}${linea('Cargo', d.contactoCargo)}${linea('Teléfono', d.contactoTelefono)}${linea('Horario', d.contactoHorario)}`
     : ''
-  const cuerpo = `Hola${ced ? ` ${ced}` : ''}, ${saludoDe(ahora)}.\n\nTe paso un reclamo de conectividad:\n\n`
+  const cuerpo = `Hola${ced ? ` ${ced}` : ''}, ${saludo ?? saludoDe(ahora)}.\n\nTe paso un reclamo de conectividad:\n\n`
     + linea('Establecimiento', `${esc.nombre ? nombrePropio(esc.nombre) : 'Sin nombre'} (CUE ${esc.cue})`)
     + linea('Localidad', [esc.ciudad, esc.distrito].filter((x, i, a) => x && a.indexOf(x) === i).map(x => nombrePropio(x!)).join(', '))
     + linea('Dirección', esc.direccion ? nombrePropio(esc.direccion) : null)

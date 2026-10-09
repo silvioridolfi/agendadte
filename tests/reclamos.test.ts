@@ -208,3 +208,14 @@ describe('jardines, checklist y contactos', () => {
     expect(directivoDe([])).toBeNull()
   })
 })
+
+describe('saludo a elección', () => {
+  it('usa el saludo indicado en lugar del de la hora, sin cambiar el asunto', () => {
+    const noche = new Date('2026-10-09T01:30:00Z') // 22:30 en Argentina
+    const base = armarReclamo(esc(), tipo('piso'), datos(), noche, fed)
+    const manana = armarReclamo(esc(), tipo('piso'), datos(), noche, fed, 'buen día')
+    expect(base.cuerpo).toContain('Hola Julio, buenas noches.')
+    expect(manana.cuerpo).toContain('Hola Julio, buen día.')
+    expect(manana.asunto).toBe(base.asunto)
+  })
+})

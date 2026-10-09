@@ -52,10 +52,13 @@ describe('guardar borrador', () => {
     expect(de('reclamos_conectividad', 'insert')).toHaveLength(0)
     expect(de('notificaciones', 'insert')).toHaveLength(0)
   })
-  it('un mismo asunto no se guarda dos veces', async () => {
+  it('un mismo asunto no se guarda dos veces: se actualiza el mensaje', async () => {
     estado.responder = l => (l.tabla === 'establecimientos' ? { data: { id: UID, cue: 61139000, nombre: 'J' } } : l.tabla === 'reclamos_borradores' ? { data: { id: 'ya' } } : {})
-    await expect(R.guardarBorradorImpl(yoFed, entrada)).resolves.toBe('ya')
+    await expect(R.guardarBorradorImpl(yoFed, { ...entrada, cuerpo: 'Hola Julio, buen día.' })).resolves.toBe('ya')
     expect(de('reclamos_borradores', 'insert')).toHaveLength(0)
+    const up = de('reclamos_borradores', 'update')[0]
+    expect((arg(up, 'update')![0] as { cuerpo: string }).cuerpo).toBe('Hola Julio, buen día.')
+    expect(up.ops.filter(o => o.m === 'eq').map(o => o.args)).toContainEqual(['fed_id', 'f1'])
   })
   it('tiene un tope de borradores', async () => {
     estado.responder = l => (l.tabla === 'establecimientos' ? { data: { id: UID, cue: 61139000, nombre: 'J' } } : { data: null, count: 30 })

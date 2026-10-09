@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { type School } from '@/lib/agenda'
-import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, armarReclamo, avisoEspecial, directivoDe, enlacesDe, faltantes, llevaChecklist, nombreContacto, puedeSerAmbos, gmailAppUrl, gmailUrl, plataformaDe, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
+import { DATOS_VACIOS, DOC_BUSCADOR_CUE, ENLACE_LABEL, SUBTIPOS_INSTALACION, TIPOS, SALUDOS, armarReclamo, avisoEspecial, directivoDe, enlacesDe, faltantes, llevaChecklist, nombreContacto, puedeSerAmbos, gmailAppUrl, gmailUrl, plataformaDe, tienePiso, tipoDe, type DatosReclamo, type Enlace, type EscuelaConectividad, type Reclamo } from '@/lib/reclamos'
 import { titleCase } from '@/lib/format'
 import { ESTADO_RECLAMO_LABEL, type Reclamo as ReclamoRegistrado } from '@/lib/reclamos-registro'
 import { ErrorBox, errMsg, getConectividadEscuela, guardarBorradorReclamo, reclamosAbiertosDe, registrarReclamo, selectClass } from '@/components/app/comun'
@@ -37,9 +37,12 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
   const [abiertos, setAbiertos] = useState<ReclamoRegistrado[]>([])
   const [registrando, setRegistrando] = useState(false)
   const [registrado, setRegistrado] = useState(false)
-  // Asunto del reclamo que ya quedó guardado en borradores (el asunto lleva la hora, así que identifica este armado).
+  // Asunto y mensaje del reclamo que ya quedó guardado en borradores (el asunto lleva la hora, así que identifica este armado).
   const [borradorAsunto, setBorradorAsunto] = useState('')
   const [guardando, setGuardando] = useState(false)
+  // Saludo del mensaje: por defecto el de la hora actual; si sale en otro momento se elige el que corresponde. El asunto conserva la hora del armado.
+  const [saludo, setSaludo] = useState<'' | typeof SALUDOS[number]>('')
+  const [armadoEn, setArmadoEn] = useState<Date | null>(null)
 
   // Establecimiento que viene elegido (desde su ficha o desde una acción de conectividad): se cargan sus datos al abrir.
   useEffect(() => {
@@ -74,7 +77,8 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
     const f = faltantes(tipo, con, datos)
     setErrores(f)
     if (Object.keys(f).length) return
-    setRegistrado(false); setReclamo(armarReclamo(con, tipo, datos, new Date(), ced))
+    const ahora = new Date()
+    setArmadoEn(ahora); setRegistrado(false); setReclamo(armarReclamo(con, tipo, datos, ahora, ced, saludo || undefined))
   }
   async function registrar() {
     if (!con || !tipo || !reclamo) return
@@ -84,7 +88,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
   async function guardarBorrador() {
     if (!con || !tipo || !reclamo) return
     setGuardando(true); setError('')
-    try { await guardarBorradorReclamo({ school_id: con.id, tipo: tipo.id, asunto: reclamo.asunto, para: reclamo.para, cuerpo: reclamo.cuerpo, adjuntos: reclamo.adjuntos }); setBorradorAsunto(reclamo.asunto) } catch (e) { setError(errMsg(e)) } finally { setGuardando(false) }
+    try { await guardarBorradorReclamo({ school_id: con.id, tipo: tipo.id, asunto: reclamo.asunto, para: reclamo.para, cuerpo: reclamo.cuerpo, adjuntos: reclamo.adjuntos }); setBorradorAsunto(`${reclamo.asunto}\n${reclamo.cuerpo}`) } catch (e) { setError(errMsg(e)) } finally { setGuardando(false) }
   }
   async function copiar(texto: string, clave: string) {
     try { await navigator.clipboard.writeText(texto); setCopiado(clave); setTimeout(() => setCopiado(c => (c === clave ? '' : c)), 2000) } catch { setError('No se pudo copiar: seleccioná el texto y copialo a mano.') }
@@ -169,6 +173,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
             <p className="mt-1">PBA Grupo 1 con Movistar: el establecimiento tiene que llamar al <b>{reclamo.porTelefono.telefono}</b> e indicar los ID del establecimiento.</p>
             {reclamo.porTelefono.datos.length ? <ul className="mt-2 flex flex-col gap-1">{reclamo.porTelefono.datos.map(x => <li key={x.label}><span className="text-xs text-dte-gris">{x.label}: </span><b className="tabular-nums">{x.valor}</b></li>)}</ul> : <p className="mt-2 text-xs text-dte-gris">No hay ID cargados para esta escuela: buscalos en el consolidado de la región (columnas AQ, AR y AS).</p>}
           </div> : <>
+            <label className="flex flex-col gap-1 text-xs font-semibold text-dte-gris">Saludo del mensaje<select aria-label="Saludo del mensaje" className={`${selectClass} h-11 md:h-10 sm:w-72`} value={saludo} onChange={e => { const v = e.target.value as typeof saludo; setSaludo(v); if (con && tipo && armadoEn) setReclamo(armarReclamo(con, tipo, datos, armadoEn, ced, v || undefined)) }}><option value="">Según la hora de ahora</option>{SALUDOS.map(x => <option key={x} value={x}>{x.charAt(0).toUpperCase() + x.slice(1)}</option>)}</select><span className="font-normal">Si lo vas a mandar en otro momento (por ejemplo, programado para mañana), elegí el saludo que corresponda a ese momento.</span></label>
             <div className="flex flex-col gap-1"><span className="text-xs font-semibold text-dte-gris">Para</span><div className="flex items-center justify-between gap-2 rounded-control bg-dte-fondo px-3 py-2 text-sm"><span className="min-w-0 break-all font-medium">{reclamo.para}</span><Button type="button" variant="ghost" size="sm" onClick={() => copiar(reclamo.para!, 'para')}>{copiado === 'para' ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado === 'para' ? 'Copiado' : 'Copiar'}</Button></div></div>
             <div className="flex flex-col gap-1"><span className="text-xs font-semibold text-dte-gris">Asunto</span><div className="flex items-start justify-between gap-2 rounded-control bg-dte-fondo px-3 py-2 text-sm"><span className="min-w-0 break-words font-mono text-[0.8125rem] font-medium">{reclamo.asunto}</span><Button type="button" variant="ghost" size="sm" onClick={() => copiar(reclamo.asunto, 'asunto')}>{copiado === 'asunto' ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado === 'asunto' ? 'Copiado' : 'Copiar'}</Button></div></div>
             <div className="flex flex-col gap-1"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-dte-gris">Cuerpo del mail</span><Button type="button" variant="ghost" size="sm" onClick={() => copiar(reclamo.cuerpo, 'cuerpo')}>{copiado === 'cuerpo' ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado === 'cuerpo' ? 'Copiado' : 'Copiar'}</Button></div><pre className="whitespace-pre-wrap break-words rounded-control bg-dte-fondo px-3 py-2.5 font-sans text-sm leading-relaxed">{reclamo.cuerpo}</pre></div>
@@ -181,7 +186,7 @@ export function ReclamoConectividad({ open, onClose, cuenta, ced, escuelaInicial
             {registrado ? <p role="status" className="flex items-start gap-1.5 rounded-control bg-exito-fondo px-3 py-2 text-sm font-semibold text-exito"><Check className="mt-0.5 size-4 shrink-0" aria-hidden />Registrado en el panel de reclamos. El CED va a anotar el número de ticket o de incidencia cuando llegue.</p>
               : <div className="rounded-card border border-dte-linea bg-dte-fondo p-3"><p className="text-xs text-dte-gris">Cuando lo hayas mandado por mail al CED, registralo para llevar el seguimiento.</p><Button type="button" onClick={registrar} disabled={registrando || guardando} className="mt-2 w-full sm:w-auto">{registrando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Check data-icon="inline-start" />}Reclamo enviado</Button>
                 <div className="mt-3 border-t border-dte-linea pt-3">
-                  {borradorAsunto === reclamo.asunto ? <p role="status" className="flex items-start gap-1.5 text-sm font-semibold text-exito"><Check className="mt-0.5 size-4 shrink-0" aria-hidden />Guardado en borradores. Cuando salga el mail, marcalo como enviado desde el Registro de reclamos.</p>
+                  {borradorAsunto === `${reclamo.asunto}\n${reclamo.cuerpo}` ? <p role="status" className="flex items-start gap-1.5 text-sm font-semibold text-exito"><Check className="mt-0.5 size-4 shrink-0" aria-hidden />Guardado en borradores. Cuando salga el mail, marcalo como enviado desde el Registro de reclamos.</p>
                     : <><p className="text-xs text-dte-gris">¿Lo dejaste programado o lo vas a mandar después? Guardalo en borradores y marcalo como enviado cuando salga: no se avisa al CED hasta entonces.</p><Button type="button" variant="outline" onClick={guardarBorrador} disabled={guardando || registrando} className="mt-2 w-full sm:w-auto">{guardando ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <ClipboardList data-icon="inline-start" />}Guardar en borradores</Button></>}
                 </div></div>}
             <p className="text-xs text-dte-gris">El mensaje va al correo regional y de ahí lo deriva el CED. Se abre con tu cuenta institucional (en el celular, en la app de Gmail); los archivos los adjuntás vos. El asunto lleva la hora de este momento: si lo enviás más tarde, volvé a armarlo. Si el establecimiento ya tiene un reclamo abierto, <b>no abras una cadena nueva</b>: respondé en la original (sin el “Fwd” antes del código). <a href={DOC_BUSCADOR_CUE} target="_blank" rel="noopener noreferrer" className="font-semibold text-dte-petroleo underline underline-offset-2">Buscar reclamos anteriores por CUE</a>.</p>
