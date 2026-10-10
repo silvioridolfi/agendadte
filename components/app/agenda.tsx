@@ -15,7 +15,7 @@ import { Confirmar } from '@/components/ui/confirmar'
 import { cambiarEstadoVarias, errMsg, BotonRealizar, Despliegue, DestacadosCtx, SelloRealizada, claseDestacado, puedeRealizar, EtiquetasAccion, actionStyle, eyebrow, iso, parse, addDays, fmt, cap, hhmm, timeRange, weekTitle, schoolName, ddjjFor, itemTitle, itemCorto, lugarDeTarjeta, marcaModalidad, firstName, getFedItems, storage, StatusBadge, ErrorBox, Skeleton, Vacio, useItems, WeekNav, CalView, CAL_VIEWS, CAL_KEY, DIAS_HABILES, isWeekday, toWeekday, monthStart, calBounds, calShift, monthWeeks, useFeriados, FeriadoTag } from '@/components/app/comun'
 import { hoyAR, fechaHoyAR } from '@/lib/hora'
 
-export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio, onRealizar }: { fed: Fed, feds: Fed[], reloadKey: number, onNew?: (fecha?: string) => void, onSelect: (item: AgendaItem) => void, onCambio?: (msg: string) => void, onRealizar?: (item: AgendaItem) => void }) {
+export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio, onRealizar, arriba }: { arriba?: React.ReactNode, fed: Fed, feds: Fed[], reloadKey: number, onNew?: (fecha?: string) => void, onSelect: (item: AgendaItem) => void, onCambio?: (msg: string) => void, onRealizar?: (item: AgendaItem) => void }) {
   // Selección múltiple (null = apagada): sólo acciones propias, para cambiar estado o eliminar en bloque.
   const [sel, setSel] = useState<string[] | null>(null)
   const editable = !!onNew && !!onCambio
@@ -69,6 +69,7 @@ export function AgendaView({ fed, feds, reloadKey, onNew, onSelect, onCambio, on
   }
 
   return <main className={`mx-auto w-full min-w-0 max-w-[1440px] px-4 pt-6 lg:px-10 ${sel ? 'pb-64 md:pb-40' : 'pb-8 lg:pb-10'}`}>
+    {arriba}
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
         <p className={eyebrow}>Mi agenda · {CAL_VIEWS.find(v => v[0] === view)?.[1]}</p>
