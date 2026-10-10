@@ -69,6 +69,13 @@ describe('armarJornadas: una fila por encuentro', () => {
     expect(j.aCargo).toEqual(['Ana Pérez', 'Carlos Gómez', 'Luz Díaz'])
     expect(camposDeJornada(j).find(c => c.clave === 'fed')?.valor).toBe('Ana Pérez, Carlos Gómez, Luz Díaz')
   })
+  it('fotos: si las sacó quien acompañó, dice de quién son', () => {
+    const f2 = [...feds, { id: 'f2', nombre_completo: 'Carlos Franco' }]
+    const [j] = armarJornadas({ encuentros: [enc({ agenda_item_id: 'i1' })], clubes: [], feds: f2, carpetaAccion: new Map([['i1', { url: 'u', n: 3, fedId: 'f2' }]]), carpetaDia: new Map() })
+    expect(j.foto).toMatchObject({ n: 3, de: 'Carlos Franco' })
+    const [propia] = armarJornadas({ encuentros: [enc({ agenda_item_id: 'i1' })], clubes: [], feds: f2, carpetaAccion: new Map([['i1', { url: 'u', n: 3, fedId: 'f1' }]]), carpetaDia: new Map() })
+    expect(propia.foto?.de).toBeUndefined()
+  })
   it('fotos: la de la acción o, si no, la del día', () => {
     const r = armarJornadas({ encuentros: [enc({ agenda_item_id: 'i1' }), enc({ id: 'e2', fecha: '2026-09-11' }), enc({ id: 'e3', fecha: '2026-09-12' })], clubes: [], feds,
       carpetaAccion: new Map([['i1', { url: 'u-accion', n: 3 }]]), carpetaDia: new Map([['f1|2026-09-11', { url: 'u-dia', n: 5 }]]) })

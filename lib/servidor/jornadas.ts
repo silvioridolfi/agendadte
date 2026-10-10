@@ -37,18 +37,18 @@ async function armar(yo: Usuario, soloEncuentro?: string): Promise<Jornada[]> {
   if (eFeds) throw new Error(eFeds.message)
 
   // Fotos: la carpeta de la acción (si ya tiene fotos asignadas por hora) o, si no, la del día con fotos que no quedaron asignadas a ninguna acción.
-  const carpetas = new Map<string, string>()
+  const carpetas = new Map<string, { folder: string, fed: string | null }>()
   for (let i = 0; i < itemIds.length; i += 150) {
-    const { data, error } = await db.from('fotos_acciones').select('item_id, folder_id').in('item_id', itemIds.slice(i, i + 150))
+    const { data, error } = await db.from('fotos_acciones').select('item_id, folder_id, fed_id').in('item_id', itemIds.slice(i, i + 150))
     if (error) throw new Error(error.message)
-    for (const c of data ?? []) carpetas.set(c.item_id as string, c.folder_id as string)
+    for (const c of data ?? []) carpetas.set(c.item_id as string, { folder: c.folder_id as string, fed: (c.fed_id as string | null) ?? null })
   }
   const dias = new Map((await fetchAll<{ fed_id: string, fecha: string, folder_id: string }>((a, b) => db.from('fotos_dias').select('fed_id, fecha, folder_id').gte('fecha', desde).order('fecha').order('fed_id').range(a, b))).map(d => [`${d.fed_id}|${d.fecha}`, d.folder_id]))
   const procesadas = await fetchAll<{ fed_id: string, fecha: string | null, item_id: string | null, file_id: string }>((a, b) => db.from('fotos_procesadas').select('fed_id, fecha, item_id, file_id').gte('fecha', desde).order('file_id').range(a, b))
   const nAccion = new Map<string, number>(), nDia = new Map<string, number>()
   for (const p of procesadas) { if (p.item_id) nAccion.set(p.item_id, (nAccion.get(p.item_id) ?? 0) + 1); else if (p.fecha) nDia.set(`${p.fed_id}|${p.fecha}`, (nDia.get(`${p.fed_id}|${p.fecha}`) ?? 0) + 1) }
   const carpetaAccion = new Map<string, CarpetaFotos>(), carpetaDia = new Map<string, CarpetaFotos>()
-  for (const [item, folder] of carpetas) if ((nAccion.get(item) ?? 0) > 0) carpetaAccion.set(item, { url: urlCarpeta(folder), n: nAccion.get(item)! })
+  for (const [item, c] of carpetas) if ((nAccion.get(item) ?? 0) > 0) carpetaAccion.set(item, { url: urlCarpeta(c.folder), n: nAccion.get(item)!, fedId: c.fed })
   for (const [clave, folder] of dias) if ((nDia.get(clave) ?? 0) > 0) carpetaDia.set(clave, { url: urlCarpeta(folder), n: nDia.get(clave)! })
 
   const acompanantes = new Map<string, { fed_id: string, respuesta?: string }[]>()

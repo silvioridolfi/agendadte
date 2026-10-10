@@ -95,8 +95,9 @@ export function JornadasReporte({ feds, volver, veTodos }: { feds: Fed[], volver
                 {c.valor && <Button type="button" variant="ghost" size="sm" aria-label={`Copiar: ${c.etiqueta}`} onClick={() => copiar(c.valor, `${j.clave}${c.clave}`)}>{copiado === `${j.clave}${c.clave}` ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copiado === `${j.clave}${c.clave}` ? 'Copiado' : 'Copiar'}</Button>}
               </div>)}</dl>
               <div><h4 className="text-xs font-bold uppercase tracking-wider text-dte-gris">Fotos</h4>
-                {j.foto ? <a href={j.foto.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex min-h-9 items-center gap-1 rounded-full border border-dte-petroleo/30 bg-white px-3 text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte">{j.foto.n} {j.foto.n === 1 ? 'foto' : 'fotos'} del {fechaJornada(j.foto.fecha).slice(0, 5)}<ExternalLink className="size-3" aria-hidden /></a>
+                {j.foto ? <a href={j.foto.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex min-h-9 items-center gap-1 rounded-full border border-dte-petroleo/30 bg-white px-3 text-xs font-semibold text-dte-petroleo hover:bg-dte-tinte">{j.foto.n} {j.foto.n === 1 ? 'foto' : 'fotos'} del {fechaJornada(j.foto.fecha).slice(0, 5)}{j.foto.de ? ` · de ${j.foto.de}` : ''}<ExternalLink className="size-3" aria-hidden /></a>
                   : <p className="mt-1 text-sm text-dte-gris">Todavía no hay fotos ordenadas de este encuentro.</p>}
+                {j.foto?.de && <p role="status" className="mt-1 rounded-control bg-aviso-fondo px-3 py-2 text-xs text-aviso-fuerte">Estas fotos están en el Drive de {j.foto.de}, no en el tuyo: si el enlace pide acceso, pedile que te comparta la carpeta.</p>}
                 <p className="mt-1 text-xs text-dte-gris">Abre la carpeta de Drive de la acción (o la del día si las fotos no se asignaron a una acción).</p></div>
             </div>}
           </li>
