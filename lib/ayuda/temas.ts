@@ -533,7 +533,7 @@ Arma, con lo que registraste en la agenda, los datos que pide Nivel Central en e
 2. Abrí un encuentro: los datos aparecen en el orden del formulario. **Copiar** copia uno; **Copiar todos los datos** copia los catorce, uno por renglón. **Abrir el formulario** (arriba y en cada encuentro) abre el de Nivel Central en otra pestaña.
 3. Cuando lo cargues en el formulario, tocá **Ya la cargué**. La marca la ven los demás, así que nadie lo repite. **Deshacer marca** la quita.
 4. Si después de marcarlo alguien corrige el encuentro en la agenda, figura como **Modificada después de cargarla** y vuelve a pendientes: revisá si hay que corregirlo en el formulario y volvé a marcarlo.
-5. Los enlaces de **Fotos** abren la carpeta de Drive de la acción (necesitás acceso a la carpeta del FED). **Excel** baja lo que ves, con el estado de carga.
+5. Los enlaces de **Fotos** abren la carpeta de Drive de la acción (necesitás acceso a la carpeta del FED). Si las fotos las sacó quien te acompañó, están en su Drive: el enlace lo aclara (*de* y su nombre) y, si pide acceso, hay que pedirle que comparta la carpeta. **Excel** baja lo que ves, con el estado de carga.
 ## Cómo se completan los datos
 - **Inscriptos y participantes:** los del encuentro.
 - **Destinatarios:** se pasan a las casillas del formulario (Docentes, Estudiantes, Equipo de Conducción…); lo que no encaja va a Otros y se aclara en observaciones.

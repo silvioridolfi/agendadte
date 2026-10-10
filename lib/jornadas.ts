@@ -13,8 +13,9 @@ export type EncuentroJ = {
   tipo_jornada: string | null, club_id: string | null, destinatarios: string | null, inscriptos: number | null, asistentes: number | null, descripcion: string | null, school: EscuelaJ,
 }
 export type ClubJ = { id: string, grupo: string | null, propuesta: string | null, fecha_cierre: string | null, school: EscuelaJ, escuela_origen: EscuelaJ }
-export type CarpetaFotos = { url: string, n: number }
-export type FotoJornada = { fecha: string, url: string, n: number, deAccion: boolean }
+export type CarpetaFotos = { url: string, n: number, fedId?: string | null }
+// `de`: nombre de quien tiene las fotos en su Drive, cuando no es quien creó la acción (por ejemplo, las sacó quien la acompañó).
+export type FotoJornada = { fecha: string, url: string, n: number, deAccion: boolean, de?: string }
 
 export type MarcaCarga = { por: string | null, cuando: string, datos: string }
 export type Jornada = {
@@ -76,7 +77,7 @@ export function armarJornadas({ encuentros, clubes, feds, carpetaAccion, carpeta
       distrito: (sede?.distrito ?? '') ? titleCase(sede!.distrito!) : '', lugar: lugarDe({ modalidad: e.modalidad, lugar: e.lugar, school: sede }),
       propuesta: (e.propuesta ?? club?.propuesta ?? '').trim() || '—', fecha: e.fecha, tipoJornada: (e.tipo_jornada ?? '').trim(), formato: (e.modalidad ?? '').trim(),
       destinatarios: destinatariosDeForm(dest), destinatariosTexto: dest, cues: cuesDe(sede, club?.escuela_origen ?? null), inscriptos: e.inscriptos, participantes: e.asistentes ?? 0,
-      observaciones: (e.descripcion ?? '').trim(), foto: a ? { fecha: e.fecha, url: a.url, n: a.n, deAccion: true } : d ? { fecha: e.fecha, url: d.url, n: d.n, deAccion: false } : null, cargada: null,
+      observaciones: (e.descripcion ?? '').trim(), foto: a ? { fecha: e.fecha, url: a.url, n: a.n, deAccion: true, ...(a.fedId && a.fedId !== e.fed_id ? { de: fedDe(a.fedId) } : {}) } : d ? { fecha: e.fecha, url: d.url, n: d.n, deAccion: false } : null, cargada: null,
     }
     const m = marcas.get(e.id)
     return m ? { ...j, cargada: { por: m.por ? fedDe(m.por) : 'Ex integrante', cuando: m.cuando, modificada: m.datos !== huellaDe(j) } } : j
