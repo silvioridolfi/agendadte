@@ -68,7 +68,14 @@ El botón **Guardar** se habilita al modificar algún dato; **Descartar** revier
 - **Etiquetas:** tipo de acción y estado.
 - **Compartida:** acción de otro integrante en la que te incorporaron. **+1, +2…** es la cantidad de acompañantes.
 - **Ícono de cámara:** la acción tiene fotos en Drive: las que quedaron asignadas a ella por horario o, si no tiene, fotos del día que no pertenecen a ninguna otra acción.
-Los feriados, recesos y aniversarios distritales se marcan en el calendario; los eventos DTE, con una marca violeta.` },
+Los feriados, recesos y aniversarios distritales se marcan en el calendario; los eventos DTE, con una marca violeta.
+## Para hacer (solo FED)
+Arriba de tu agenda aparece una tarjeta amarilla con lo que quedó pendiente de lo que registrás desde que se usa la agenda (desde el 28/09; lo anterior ya está cargado y auditado):
+- **Acciones planificadas con fecha pasada:** hay que marcarlas como realizadas o canceladas. Tocá la línea para ver cuáles son y abrirlas.
+- **Encuentros pedagógicos con datos que faltan:** clubes, PEAT, talleres y capacitaciones realizados sin participantes, inscriptos, tipo de jornada o destinatarios, que pide el formulario de Nivel Central. Cada uno dice qué falta.
+- **Jornadas pendientes de cargar** en el formulario: lleva a *Mis jornadas*.
+- **Cronogramas de conectividad** de tus escuelas de esta semana que todavía no marcaste: lleva a *Cronogramas*.
+Cuando no hay nada pendiente, queda una línea que dice *Todo al día*. Se actualiza sola cada vez que cambiás algo en la agenda.` },
   { id: 'buscador', titulo: 'Buscador de escuelas', para: ['fed', 'ced'], md: () => `
 La **lupa** de la barra de arriba abre el buscador de escuelas. Reemplaza al buscador anterior (v0-buscadordte1), que se retiró: sus datos, el mapa y la edición están ahora en la agenda. Escribí el nombre, la sigla o el CUE (por ejemplo "EP 4" o "ees 31") y elegí la escuela.
 ## Qué devuelve

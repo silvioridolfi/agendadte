@@ -16,6 +16,7 @@ import * as esc from '@/lib/servidor/escuelas'
 import * as ag from '@/lib/servidor/agenda'
 import * as usuarios from '@/lib/servidor/usuarios'
 import * as jornadas from '@/lib/servidor/jornadas'
+import * as parahacer from '@/lib/servidor/parahacer'
 import * as fotos from '@/lib/servidor/fotos-pve'
 import { errMsgServer, quienEs } from '@/lib/servidor/comun'
 import { type EstadoReclamo } from '@/lib/reclamos-registro'
@@ -141,4 +142,5 @@ export const retirarComunicado = async (id: string) => conUsuario(yo => comunica
 
 // ---------- Reporte de jornadas pedagógicas (formulario de Nivel Central): sólo CED y administración ----------
 export const getJornadas = async () => conUsuario(yo => jornadas.jornadasImpl(yo))
+export const getParaHacer = async () => conUsuario(yo => parahacer.paraHacerImpl(yo))
 export const marcarJornada = async (encuentroId: string, cargada: boolean) => conUsuario(yo => jornadas.marcarJornadaImpl(yo, encuentroId, cargada))

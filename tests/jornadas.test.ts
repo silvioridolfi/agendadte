@@ -16,7 +16,7 @@ vi.mock('@/lib/supabase-server', () => ({
 }))
 
 import { armarJornadas, camposDeJornada, cuesDe, destinatariosDeForm, estaPendiente, filtrarJornadas, FILTROS_JORNADAS, huellaDe, lugarDe, textoDeJornada, type EncuentroJ, type ClubJ } from '@/lib/jornadas'
-import { jornadasImpl, marcarJornadaImpl } from '@/lib/servidor/jornadas'
+import { contarJornadasPendientes, jornadasImpl, marcarJornadaImpl } from '@/lib/servidor/jornadas'
 import type { Usuario } from '@/lib/sesion'
 
 const esc = (cue: number, nombre: string, distrito = 'LA PLATA') => ({ cue, nombre, distrito })
@@ -155,5 +155,11 @@ describe('el servidor: quién ve y quién marca', () => {
     await marcarJornadaImpl(usuario('f1', 'fed'), UUID_E, false)
     expect(estado.llamadas.some(l => l.tabla === 'jornadas_cargadas' && l.ops.some(o => o.m === 'delete'))).toBe(true)
     await expect(marcarJornadaImpl(usuario('f1', 'fed'), 'x', true)).rejects.toThrow(/inválido/)
+  })
+  it('el contador de pendientes es solo de las propias (aunque sea coordinación) y no pide fotos', async () => {
+    estado.llamadas = []
+    expect(await contarJornadasPendientes(usuario('c1', 'coordinacion'), '2026-09-28')).toBe(1)
+    expect(lecturasEncuentros()[0].ops).toContainEqual({ m: 'eq', args: ['fed_id', 'c1'] })
+    expect(estado.llamadas.some(l => l.tabla.startsWith('fotos'))).toBe(false)
   })
 })
